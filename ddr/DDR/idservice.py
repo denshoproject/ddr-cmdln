@@ -50,7 +50,10 @@ class IDServiceClient():
             config.IDSERVICE_LOGIN_URL,
             data = {'username':username, 'password':password,},
         )
-        self.token = r.json().get('key')
+        try:
+            self.token = r.json().get('key')
+        except ValueError:
+            pass
         return r.status_code,r.reason
     
     def resume(self, username, token):
@@ -83,7 +86,11 @@ class IDServiceClient():
             config.IDSERVICE_USERINFO_URL,
             headers=self._auth_headers(),
         )
-        return r.status_code,r.reason,json.loads(r.content)
+        try:
+            data = json.loads(r.content)
+        except ValueError:
+            data = {}
+        return r.status_code,r.reason,data
     
     def next_object_id(self, oidentifier, model):
         """Get the next object ID of the specified type
