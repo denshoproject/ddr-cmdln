@@ -12,15 +12,21 @@ from DDR import identifier
 class IDServiceClient():
     """Client for interacting with ddr-idservice REST API
     
-    >>> from DDR import identifier
     >>> from DDR import idservice
     >>> ic = idservice.IDServiceClient()
-    >>> ic.login(username, password)
-    200
+    >>> ic.login('gjost', 'moonshapedpool')
+    (200, 'OK')
     >>> ic.username
-    'USERNAME'
+    'gjost'
     >>> ic.token
-    u'8df7a4b117edcdc8ca1ae318a403bacfa3cf8133'
+    u'9b68187429be07506dae2d1a493b74afd4ef7c35'
+    
+    >>> ic.resume('gjost', u'9b68187429be07506dae2d1a493b74afd4ef7c35')
+    (200, 'OK')
+    >>> ic.user_info()
+    (200, 'OK', {u'username': u'gjost', u'first_name': u'Geoffrey', u'last_name': u'Jost', u'email': u'geoffrey.jost@densho.org'})
+    
+    >>> from DDR import identifier
     >>> oidentifier = identifier.Identifier('ddr-test')
     >>> ic.next_id(oidentifier, 'collection')
     201,'ddr-test-123'
@@ -29,13 +35,13 @@ class IDServiceClient():
     201,'ddr-test-123-1'
     >>> ic.next_id(cidentifier, 'entity')
     201,'ddr-test-123-1'
+    
+    >>> ic.resume('gjost', u'9b68187429be07506dae2d1a493b74afd4ef7c35')
+    >>> ic.logout()
     """
     debug = False
     username = None
     token = None
-    
-    def _auth_headers(self):
-        return {'Authorization': 'Token %s' % self.token}
 
     def login(self, username, password):
         """Initiate a session.
@@ -56,14 +62,18 @@ class IDServiceClient():
             pass
         return r.status_code,r.reason
     
-    def resume(self, username, token):
+    def _auth_headers(self):
+        return {'Authorization': 'Token %s' % self.token}
+    
+    def resume(self, token):
         """Resume a session without logging in.
         
-        @param username: str
         @param token: str
+        @return: int,str (status_code,reason)
         """
-        self.username = username
         self.token = token
+        status_code,reason,data = self.user_info()
+        return status_code,reason
     
     def logout(self):
         """End a session.
