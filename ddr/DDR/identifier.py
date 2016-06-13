@@ -179,7 +179,31 @@ ADDITIONAL_PATHS = {
     i['model']: i['files']
     for i in IDENTIFIERS
 }
+
+
+def render_models_digraph(output_path):
+    """Generates DAG of model child->parent relationships
     
+    @param path: str Absolute path to output file
+    @returns: str path to output file
+    """
+    import graphviz
+    
+    filename,extension = os.path.splitext(output_path)
+    extension = extension.replace('.', '')
+    
+    g = graphviz.Digraph(format=extension)
+    
+    for model in MODELS:
+        g.node(model)
+    
+    for model,parents in PARENTS_ALL.iteritems():
+        if model and parents:
+            for parent in parents:
+                g.edge(model, parent)
+    
+    return g.render(filename)
+
 
 def identify_object(text, patterns):
     """Split ID, path, or URL into model and tokens and assign to Identifier
