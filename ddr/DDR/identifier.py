@@ -70,18 +70,30 @@ CONTAINERS = [
 CONTAINERS.reverse()
 
 # Pointers from models to their parent models
-PARENTS = {
-    i['model']: i.get('parent')
-    for i in IDENTIFIERS
-    if 'Stub' not in i['class']
-}
+PARENTS = {}
+for i in IDENTIFIERS:
+    if 'Stub' not in i['class']:
+        for parent in i['parents']:
+            if not PARENTS.get(i['model']):
+                PARENTS[i['model']] = []
+            PARENTS[i['model']].append(parent)
 # including Stubs
-PARENTS_ALL = {
-    i['model']: i.get('parents_all')
-    for i in IDENTIFIERS
-}
-CHILDREN = {val:key for key,val in PARENTS.iteritems() if val}
-CHILDREN_ALL = {val:key for key,val in PARENTS_ALL.iteritems() if val}
+PARENTS_ALL = {}
+for i in IDENTIFIERS:
+    for parent in i['parents_all']:
+        if not PARENTS_ALL.get(i['model']):
+            PARENTS_ALL[i['model']] = []
+        PARENTS_ALL[i['model']].append(parent)
+CHILDREN = {}
+for key,vals in PARENTS.iteritems():
+    if vals:
+        for val in vals:
+            CHILDREN[val] = key
+CHILDREN_ALL = {}
+for key,vals in PARENTS_ALL.iteritems():
+    if vals:
+        for val in vals:
+            CHILDREN_ALL[val] = key
 
 # Keywords that can legally appear in IDs
 # TODO list should include 'ext'?
