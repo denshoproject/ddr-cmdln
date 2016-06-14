@@ -338,6 +338,9 @@ def set_idparts(i, groupdict, components=ID_COMPONENTS):
         if val.isdigit():
             i.parts[key] = int(val)
 
+class IdentifierFormatException(Exception):
+    pass
+
 def format_id(i, model, templates=ID_TEMPLATES):
     """Format ID for the requested model using ID_TEMPLATES.
     
@@ -348,7 +351,13 @@ def format_id(i, model, templates=ID_TEMPLATES):
     @param templates: [optional] dict of str templates keyed to models
     @returns: str
     """
-    return templates[model].format(**i.parts)
+    for template in templates[model]:
+        # TODO put in try/except, first one that works is the ID
+        try:
+            return template.format(**i.parts)
+        except KeyError:
+            pass
+    raise IdentifierFormatException('Could not format ID for %s' % i.parts)
 
 def format_path(i, model, path_type, templates=PATH_TEMPLATES):
     """Format absolute or relative path using PATH_TEMPLATES.
@@ -362,12 +371,15 @@ def format_path(i, model, path_type, templates=PATH_TEMPLATES):
     if path_type and (path_type == 'abs') and (not i.basepath):
         raise MissingBasepathException('%s basepath not set.'% i)
     key = '-'.join([model, path_type])
-    template = templates.get(key, None)
-    if template:
+    for template in templates[key]:
         kwargs = {key: val for key,val in i.parts.items()}
         kwargs['basepath'] = i.basepath
-        return template.format(**kwargs)
-    return None
+        # TODO put in try/except, first one that works is the path
+        try:
+            return template.format(**kwargs)
+        except KeyError:
+            pass
+    raise IdentifierFormatException('Could not format path for %s' % i.parts)
 
 def format_url(i, model, url_type, templates=URL_TEMPLATES):
     """Format URL using URL_TEMPLATES.
@@ -378,11 +390,13 @@ def format_url(i, model, url_type, templates=URL_TEMPLATES):
     @param templates: [optional] dict of str templates keyed to models
     @returns: str
     """
-    try:
-        template = templates[url_type][model]
-        return template.format(**i.parts)
-    except KeyError:
-        return None
+    for template in templates[url_type][model]:
+        # TODO put in try/except, first one that works is the URL
+        try:
+            return template.format(**i.parts)
+        except KeyError:
+            pass
+    raise IdentifierFormatException('Could not format URL for %s' % i.parts)
 
 def matches_pattern(text, patterns):
     """True if text matches one of patterns
