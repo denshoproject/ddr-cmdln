@@ -775,39 +775,60 @@ class Identifier(object):
         
         @param stubs: boolean Whether or not to include Stub objects.
         """
-        if stubs:
-            parent_model = PARENTS_ALL.get(self.model, None)
-        else:
-            parent_model = PARENTS.get(self.model, None)
-        if not parent_model:
-            return None
-        return format_id(self, parent_model)
+        parent = self.parent(stubs=stubs)
+        if parent:
+            return parent.id
+        return None
     
     def parent_path(self, stubs=False):
         """Absolute path to parent object
         
         @param stubs: boolean Whether or not to include Stub objects.
         """
-        if stubs:
-            parent_model = PARENTS_ALL.get(self.model, None)
-        else:
-            parent_model = PARENTS.get(self.model, None)
-        if parent_model:
-            path = format_path(self, parent_model, 'abs')
-            if path:
-                return os.path.normpath(path)
+        parent = self.parent(stubs=stubs)
+        if parent:
+            return parent.path_abs()
         return None
-    
+
+    def _parent_parts(self):
+        return {
+            k:v
+            for k,v in [
+                x for x in self.parts.items()
+            ][:-1]
+        }
+
+    def _parent_models(self, stubs=False):
+        if stubs:
+            return PARENTS_ALL.get(self.model, [])
+        return PARENTS.get(self.model, [])
+        
     def parent(self, stubs=False):
         """Parent of the Identifier
         
         @param stub: boolean An archival object not just a Stub
         """
-        pid = self.parent_id(stubs)
-        if pid:
-            return self.__class__(id=pid, base_path=self.basepath)
+        parent_parts = self._parent_parts()
+        for model in self._parent_models(stubs):
+            idparts = parent_parts
+            idparts['model'] = model
+            i = Identifier(idparts, base_path=self.basepath)
+            if i:
+                return i
         return None
-
+    
+    def lineage(self, stubs=False):
+        """Identifier's lineage, starting with the Identifier itself.
+        
+        @param stubs: boolean Whether or not to include Stub objects.
+        """
+        i = self
+        identifiers = [i]
+        while(i.parent(stubs=stubs)):
+            i = i.parent(stubs=stubs)
+            identifiers.append(i)
+        return identifiers
+    
     def child_models(self, stubs=False):
         if stubs:
             return CHILDREN_ALL.get(self.model, [])
@@ -830,18 +851,6 @@ class Identifier(object):
             if key in ID_COMPONENTS:
                 child_parts[key] = val
         return self.__class__(child_parts, base_path=base_path)
-    
-    def lineage(self, stubs=False):
-        """Identifier's lineage, starting with the Identifier itself.
-        
-        @param stubs: boolean Whether or not to include Stub objects.
-        """
-        i = self
-        identifiers = [i]
-        while(i.parent(stubs=stubs)):
-            i = i.parent(stubs=stubs)
-            identifiers.append(i)
-        return identifiers
 
     def path_abs(self, append=None):
         """Return absolute path to object with optional file appended.
