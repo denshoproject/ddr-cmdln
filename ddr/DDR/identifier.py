@@ -125,9 +125,11 @@ FILETYPE_MATCH_ANNEX = {
 }
 
 # ----------------------------------------------------------------------
-# TODO are we using ID_PATTERNS memos?
+# Regex patterns used to link raw IDs/URLs/paths to models
+#
 # Regex patterns used to match IDs, paths, and URLs and extract model and tokens
 # Record format: (regex, memo, model)
+# TODO are we using ID_PATTERNS memos?
 #
 
 # (regex, memo, model) NOTE: 'memo' is not used for anything yet
@@ -165,12 +167,41 @@ URL_PATTERNS.reverse()
 # ----------------------------------------------------------------------
 # Templates used to generate IDs, paths, and URLs from model and tokens
 #
+# There may be multiple possible templates for a model.  This is to account
+# for multiple levels due to things like segments.  When generating an
+# ID/URL/PATH, templates will be tried in order until one works. Therefore,
+# put templates with the MOST components EARLIEST in the list.
+#
 
-ID_TEMPLATES = {
-    i['model']: i['templates']['id']
-    for i in IDENTIFIERS
-}
+# {
+#     'collection': [
+#         '{repo}-{org}-{cid}',
+#     ],
+#     'entity': [
+#         '{repo}-{org}-{cid}-{eid}',
+#     ],
+#     'file': [
+#         '{repo}-{org}-{cid}-{eid}-{sid}-{role}-{sha1}',
+#         '{repo}-{org}-{cid}-{eid}-{role}-{sha1}',
+#     ],
+# }
+ID_TEMPLATES = {}
+for i in IDENTIFIERS:
+    if not ID_TEMPLATES.get(i['model']):
+        ID_TEMPLATES[i['model']] = []
+    ID_TEMPLATES[i['model']] = [t for t in i['templates']['id']]
 
+# {
+#     'entity-rel': [
+#         'files/{repo}-{org}-{cid}-{eid}',
+#     ],
+#     'entity-abs': [
+#         '{basepath}/{repo}-{org}-{cid}/files/{repo}-{org}-{cid}-{eid}',
+#     ],
+#     'collection-abs': [
+#         '{basepath}/{repo}-{org}-{cid}',
+#     ],
+# }
 PATH_TEMPLATES = {}
 for i in IDENTIFIERS:
     for k,v in i['templates']['path'].iteritems():
@@ -178,13 +209,38 @@ for i in IDENTIFIERS:
             key = '%s-%s' % (i['model'],k)
             PATH_TEMPLATES[key] = v
 
+# {
+#     'editor': {
+#         'file': [
+#             '/ui/{repo}-{org}-{cid}-{eid}-{sid}-{role}-{sha1}',
+#             '/ui/{repo}-{org}-{cid}-{eid}-{role}-{sha1}',
+#         ],
+#         'entity': [
+#             '/ui/{repo}-{org}-{cid}-{eid}',
+#         ],
+#         'collection': [
+#             '/ui/{repo}-{org}-{cid}',
+#         ],
+#     },
+#     'public': {
+#         'file': [
+#             '/{repo}/{org}/{cid}/{eid}/{sid}/{role}/{sha1}',
+#             '/{repo}/{org}/{cid}/{eid}/{role}/{sha1}',
+#         ],
+#         'entity': [
+#             '/{repo}/{org}/{cid}/{eid}',
+#         ],
+#         'collection': [
+#             '/{repo}/{org}/{cid}',
+#         ],
+#     }
+# }
 URL_TEMPLATES = {}
 for i in IDENTIFIERS:
     for k,v in i['templates']['url'].iteritems():
-        if v:
-            if not URL_TEMPLATES.get(k):
-                URL_TEMPLATES[k] = {}
-            URL_TEMPLATES[k][i['model']] = v
+        if not URL_TEMPLATES.get(k):
+            URL_TEMPLATES[k] = {}
+        URL_TEMPLATES[k][i['model']] = [u for u in i['templates']['url'][k]]
 
 # Additional file types that may be present in a repo
 ADDITIONAL_PATHS = {
