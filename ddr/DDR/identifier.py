@@ -589,6 +589,9 @@ class MalformedPathException(Exception):
 class MalformedURLException(Exception):
     pass
 
+class InvalidInputException(Exception):
+    pass
+
 KWARG_KEYS = [
     'id',
     'parts',
@@ -647,6 +650,8 @@ class Identifier(object):
         elif blargs['parts']: self._from_idparts(blargs['parts'], blargs['base_path'])
         elif blargs['path']: self._from_path(blargs['path'], blargs['base_path'])
         elif blargs['url']: self._from_url(blargs['url'], blargs['base_path'])
+        else:
+            raise InvalidInputException('Could not grok Identifier input')
 
     def _from_id(self, object_id, base_path=None):
         """Make Identifier from object ID.
