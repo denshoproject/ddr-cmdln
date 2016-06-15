@@ -7,6 +7,25 @@ import re
 import string
 from urlparse import urlparse
 
+try:
+    from repo_models.identifier import IDENTIFIERS
+except ImportError:
+    raise Exception('Could not import Identifier definitions!')
+
+MODELS = [i['model'] for i in IDENTIFIERS]
+MODELS.reverse()
+MODULES = {key:None for key in MODELS}
+
+try:
+    from repo_models import collection as collectionmodule
+    from repo_models import entity as entitymodule
+    from repo_models import files as filemodule
+    MODULES['collection'] = collectionmodule
+    MODULES['entity'] = entitymodule
+    MODULES['file'] = filemodule
+except ImportError:
+    raise Exception('Could not import repo_models modules!')
+
 
 class Definitions():
     """Functions for parsing and extracting useful data from IDENTIFIERS
@@ -280,26 +299,6 @@ class Definitions():
             i['model']: i['files']
             for i in identifiers
         }
-
-
-# IDENTIFIERS are defined in ddr-defs
-try:
-    from repo_models.identifier import IDENTIFIERS
-except ImportError:
-    raise Exception('Could not import Identifier definitions!')
-
-MODELS = Definitions.models(IDENTIFIERS)
-MODULES = Definitions.modules(IDENTIFIERS)
-
-try:
-    from repo_models import collection as collectionmodule
-    from repo_models import entity as entitymodule
-    from repo_models import files as filemodule
-    MODULES['collection'] = collectionmodule
-    MODULES['entity'] = entitymodule
-    MODULES['file'] = filemodule
-except ImportError:
-    raise Exception('Could not import repo_models modules!')
 
 MODEL_CLASSES = Definitions.model_classes(IDENTIFIERS)
 MODEL_REPO_MODELS = Definitions.models_modules(MODULES)
