@@ -116,10 +116,12 @@ class Definitions():
     @staticmethod
     def children(parents):
         children = {}
-        for key,vals in parents.iteritems():
-            if vals:
-                for val in vals:
-                    children[val] = key
+        for child,folks in parents.iteritems():
+            if folks:
+                for parent in folks:
+                    if not children.get(parent):
+                        children[parent] = []
+                    children[parent].append(child)
         return children
 
     @staticmethod
