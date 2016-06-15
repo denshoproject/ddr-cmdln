@@ -8,11 +8,7 @@ import string
 from urlparse import urlparse
 
 
-# IDENTIFIERS are defined in ddr-defs
-try:
-    from repo_models.identifier import IDENTIFIERS
-except ImportError:
-    raise Exception('Could not import Identifier definitions!')
+# ----------------------------------------------------------------------
 
 def _map_models(identifiers):
     # Models in this Repository
@@ -22,22 +18,6 @@ def _map_models(identifiers):
 
 def _map_modules(identifiers):
     return {key:None for key in _map_models(identifiers)}
-
-MODELS = _map_models(IDENTIFIERS)
-MODULES = _map_modules(IDENTIFIERS)
-
-try:
-    from repo_models import collection as collectionmodule
-    from repo_models import entity as entitymodule
-    from repo_models import files as filemodule
-    MODULES['collection'] = collectionmodule
-    MODULES['entity'] = entitymodule
-    MODULES['file'] = filemodule
-except ImportError:
-    raise Exception('Could not import repo_models modules!')
-
-
-# ----------------------------------------------------------------------
 
 def _map_model_classes(identifiers):
     """map model names to DDR python classes
@@ -49,8 +29,6 @@ def _map_model_classes(identifiers):
         }
         for i in identifiers
     }
-
-MODEL_CLASSES = _map_model_classes(IDENTIFIERS)
 
 def _map_models_modules(modules):
     """map model names to module files in ddr repo's repo_models
@@ -64,18 +42,13 @@ def _map_models_modules(modules):
         for model,module in modules.iteritems() if module
     }
 
-MODEL_REPO_MODELS = _map_models_modules(MODULES)
-
-
-# TODO UPDATE
-# Models that are part of collection repositories. Repository and organizations
-# are above the level of the collection and are thus excluded.
-COLLECTION_MODELS = [
-    'file',
-    'file-role',
-    'entity',
-    'collection',   # required
-]
+def _map_collection_models(identifiers):
+    """Models that are part of collection repositories.
+    
+    Repository and organizations are above the level of the collection
+    and are thus excluded.
+    """
+    return [i['model'] for i in identifiers if i['level'] >= 0]
 
 def _map_containers(identifiers):
     """Models that can contain other models.
@@ -87,8 +60,6 @@ def _map_containers(identifiers):
     ]
     containers.reverse()
     return containers
-
-CONTAINERS = _map_containers(IDENTIFIERS)
 
 def _map_models_parents(identifiers):
     """Pointers from models to their parent models
@@ -102,8 +73,6 @@ def _map_models_parents(identifiers):
                 parents[i['model']].append(parent)
     return parents
 
-PARENTS = _map_models_parents(IDENTIFIERS)
-
 def _map_models_parents_all(identifiers):
     """Pointers from models to their parent models
     """
@@ -115,8 +84,6 @@ def _map_models_parents_all(identifiers):
             parents[i['model']].append(parent)
     return parents
 
-PARENTS_ALL = _map_models_parents_all(IDENTIFIERS)
-
 def _map_children(parents):
     children = {}
     for key,vals in parents.iteritems():
@@ -124,9 +91,6 @@ def _map_children(parents):
             for val in vals:
                 children[val] = key
     return children
-
-CHILDREN = _map_children(PARENTS)
-CHILDREN_ALL = _map_children(PARENTS_ALL)
 
 def _map_id_components(identifiers):
     """Keywords that can legally appear in IDs
@@ -138,8 +102,6 @@ def _map_id_components(identifiers):
         for i in identifiers
     ]
 
-ID_COMPONENTS = _map_id_components(IDENTIFIERS)
-
 def _map_valid_components(identifiers):
     """Components in VALID_COMPONENTS.keys() must appear in VALID_COMPONENTS[key] to be valid.
     """
@@ -149,8 +111,6 @@ def _map_valid_components(identifiers):
         if i['component']['valid']
     }
 
-VALID_COMPONENTS = _map_valid_components(IDENTIFIERS)
-
 def _map_nextable_models(identifiers):
     """Models whose components are sequential
     """
@@ -159,16 +119,6 @@ def _map_nextable_models(identifiers):
         for i in identifiers
         if i['component']['type'] == int
     ]
-
-NEXTABLE_MODELS = _map_nextable_models(IDENTIFIERS)
-
-# Bits of file paths that uniquely identify file types.
-# Suitable for use on command-line e.g. in git-annex-whereis.
-FILETYPE_MATCH_ANNEX = {
-    'access': '*-a.jpg',
-    'master': '*-master-*',
-    'mezzanine': '*-mezzanine-*',
-}
 
 # ----------------------------------------------------------------------
 # Regex patterns used to link raw IDs/URLs/paths to models
@@ -188,8 +138,6 @@ def _map_id_patterns(identifiers):
     patterns.reverse()
     return patterns
 
-ID_PATTERNS = _map_id_patterns(IDENTIFIERS)
-
 def _map_path_patterns(identifiers):
     # TODO are we using PATH_PATTERNS memos?
     # In the current path scheme, collection and entity ID components are repeated.
@@ -203,12 +151,6 @@ def _map_path_patterns(identifiers):
     patterns.reverse()
     return patterns
 
-PATH_PATTERNS = _map_path_patterns(IDENTIFIERS)
-
-# TODO check
-# Simple path regexes suitable for use inside for-loops
-PATH_PATTERNS_LOOP = []
-
 def _map_url_patterns(identifiers):
     # TODO check
     # (regex, memo, model) note: 'memo' is not used for anything yet
@@ -219,8 +161,6 @@ def _map_url_patterns(identifiers):
             patterns.append(p)
     patterns.reverse()
     return patterns
-
-URL_PATTERNS = _map_url_patterns(IDENTIFIERS)
 
 # ----------------------------------------------------------------------
 # Templates used to generate IDs, paths, and URLs from model and tokens
@@ -253,8 +193,6 @@ def _map_id_templates(identifiers):
         templates[i['model']] = [t for t in i['templates']['id']]
     return templates
 
-ID_TEMPLATES = _map_id_templates(IDENTIFIERS)
-
 def _map_path_templates(identifiers):
     """
     {
@@ -276,8 +214,6 @@ def _map_path_templates(identifiers):
                 key = '%s-%s' % (i['model'],k)
                 templates[key] = v
     return templates
-
-PATH_TEMPLATES = _map_path_templates(IDENTIFIERS)
 
 def _map_url_templates(identifiers):
     """
@@ -316,8 +252,6 @@ def _map_url_templates(identifiers):
             templates[k][i['model']] = [u for u in i['templates']['url'][k]]
     return templates
 
-URL_TEMPLATES = _map_url_templates(IDENTIFIERS)
-
 def _map_additional_paths(identifiers):
     """Additional file types that may be present in a repo
     """
@@ -326,8 +260,59 @@ def _map_additional_paths(identifiers):
         for i in identifiers
     }
 
+
+# ----------------------------------------------------------------------
+
+# IDENTIFIERS are defined in ddr-defs
+try:
+    from repo_models.identifier import IDENTIFIERS
+except ImportError:
+    raise Exception('Could not import Identifier definitions!')
+
+MODELS = _map_models(IDENTIFIERS)
+MODULES = _map_modules(IDENTIFIERS)
+
+try:
+    from repo_models import collection as collectionmodule
+    from repo_models import entity as entitymodule
+    from repo_models import files as filemodule
+    MODULES['collection'] = collectionmodule
+    MODULES['entity'] = entitymodule
+    MODULES['file'] = filemodule
+except ImportError:
+    raise Exception('Could not import repo_models modules!')
+
+MODEL_CLASSES = _map_model_classes(IDENTIFIERS)
+MODEL_REPO_MODELS = _map_models_modules(MODULES)
+COLLECTION_MODELS = _map_collection_models(IDENTIFIERS)
+CONTAINERS = _map_containers(IDENTIFIERS)
+PARENTS = _map_models_parents(IDENTIFIERS)
+PARENTS_ALL = _map_models_parents_all(IDENTIFIERS)
+CHILDREN = _map_children(PARENTS)
+CHILDREN_ALL = _map_children(PARENTS_ALL)
+ID_COMPONENTS = _map_id_components(IDENTIFIERS)
+VALID_COMPONENTS = _map_valid_components(IDENTIFIERS)
+NEXTABLE_MODELS = _map_nextable_models(IDENTIFIERS)
+# Bits of file paths that uniquely identify file types.
+# Suitable for use on command-line e.g. in git-annex-whereis.
+FILETYPE_MATCH_ANNEX = {
+    'access': '*-a.jpg',
+    'master': '*-master-*',
+    'mezzanine': '*-mezzanine-*',
+}
+ID_PATTERNS = _map_id_patterns(IDENTIFIERS)
+PATH_PATTERNS = _map_path_patterns(IDENTIFIERS)
+# TODO check
+# Simple path regexes suitable for use inside for-loops
+PATH_PATTERNS_LOOP = []
+URL_PATTERNS = _map_url_patterns(IDENTIFIERS)
+ID_TEMPLATES = _map_id_templates(IDENTIFIERS)
+PATH_TEMPLATES = _map_path_templates(IDENTIFIERS)
+URL_TEMPLATES = _map_url_templates(IDENTIFIERS)
 ADDITIONAL_PATHS = _map_additional_paths(IDENTIFIERS)
 
+
+# ----------------------------------------------------------------------
 
 def render_models_digraph(output_path):
     """Generates DAG of model child->parent relationships
