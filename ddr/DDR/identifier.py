@@ -8,260 +8,279 @@ import string
 from urlparse import urlparse
 
 
-# ----------------------------------------------------------------------
-
-def _map_models(identifiers):
-    # Models in this Repository
-    models = [i['model'] for i in identifiers]
-    models.reverse()
-    return models
-
-def _map_modules(identifiers):
-    return {key:None for key in _map_models(identifiers)}
-
-def _map_model_classes(identifiers):
-    """map model names to DDR python classes
+class Definitions():
+    """Functions for parsing and extracting useful data from IDENTIFIERS
     """
-    return {
-        i['model']: {
-            'module': i['class'][0:i['class'].rindex('.')],
-            'class': i['class'][i['class'].rindex('.')+1:],
+
+    @staticmethod
+    def models(identifiers):
+        # Models in this Repository
+        models = [i['model'] for i in identifiers]
+        models.reverse()
+        return models
+
+    @staticmethod
+    def modules(identifiers):
+        return {key:None for key in Definitions.models(identifiers)}
+
+    @staticmethod
+    def model_classes(identifiers):
+        """map model names to DDR python classes
+        """
+        return {
+            i['model']: {
+                'module': i['class'][0:i['class'].rindex('.')],
+                'class': i['class'][i['class'].rindex('.')+1:],
+            }
+            for i in identifiers
         }
-        for i in identifiers
-    }
 
-def _map_models_modules(modules):
-    """map model names to module files in ddr repo's repo_models
-    """
-    return {
-        model: {
-            'module': module.__name__,
-            'class': model,
-            'as': '%smodule' % model,
+    @staticmethod
+    def models_modules(modules):
+        """map model names to module files in ddr repo's repo_models
+        """
+        return {
+            model: {
+                'module': module.__name__,
+                'class': model,
+                'as': '%smodule' % model,
+            }
+            for model,module in modules.iteritems() if module
         }
-        for model,module in modules.iteritems() if module
-    }
 
-def _map_collection_models(identifiers):
-    """Models that are part of collection repositories.
-    
-    Repository and organizations are above the level of the collection
-    and are thus excluded.
-    """
-    return [i['model'] for i in identifiers if i['level'] >= 0]
+    @staticmethod
+    def collection_models(identifiers):
+        """Models that are part of collection repositories.
+        
+        Repository and organizations are above the level of the collection
+        and are thus excluded.
+        """
+        return [i['model'] for i in identifiers if i['level'] >= 0]
 
-def _map_containers(identifiers):
-    """Models that can contain other models.
-    """
-    containers = [
-        i['model']
-        for i in IDENTIFIERS
-        if i['children'] or i['children_all']
-    ]
-    containers.reverse()
-    return containers
+    @staticmethod
+    def containers(identifiers):
+        """Models that can contain other models.
+        """
+        containers = [
+            i['model']
+            for i in IDENTIFIERS
+            if i['children'] or i['children_all']
+        ]
+        containers.reverse()
+        return containers
 
-def _map_models_parents(identifiers):
-    """Pointers from models to their parent models
-    """
-    parents = {}
-    for i in identifiers:
-        if 'Stub' not in i['class']:
-            for parent in i['parents']:
+    @staticmethod
+    def models_parents(identifiers):
+        """Pointers from models to their parent models
+        """
+        parents = {}
+        for i in identifiers:
+            if 'Stub' not in i['class']:
+                for parent in i['parents']:
+                    if not parents.get(i['model']):
+                        parents[i['model']] = []
+                    parents[i['model']].append(parent)
+        return parents
+
+    @staticmethod
+    def models_parents_all(identifiers):
+        """Pointers from models to their parent models
+        """
+        parents = {}
+        for i in identifiers:
+            for parent in i['parents_all']:
                 if not parents.get(i['model']):
                     parents[i['model']] = []
                 parents[i['model']].append(parent)
-    return parents
+        return parents
 
-def _map_models_parents_all(identifiers):
-    """Pointers from models to their parent models
-    """
-    parents = {}
-    for i in identifiers:
-        for parent in i['parents_all']:
-            if not parents.get(i['model']):
-                parents[i['model']] = []
-            parents[i['model']].append(parent)
-    return parents
+    @staticmethod
+    def children(parents):
+        children = {}
+        for key,vals in parents.iteritems():
+            if vals:
+                for val in vals:
+                    children[val] = key
+        return children
 
-def _map_children(parents):
-    children = {}
-    for key,vals in parents.iteritems():
-        if vals:
-            for val in vals:
-                children[val] = key
-    return children
+    @staticmethod
+    def id_components(identifiers):
+        """Keywords that can legally appear in IDs
+        
+        TODO list should include 'ext'?
+        """
+        return [
+            i['component']['name']
+            for i in identifiers
+        ]
 
-def _map_id_components(identifiers):
-    """Keywords that can legally appear in IDs
-    
-    TODO list should include 'ext'?
-    """
-    return [
-        i['component']['name']
-        for i in identifiers
-    ]
+    @staticmethod
+    def valid_components(identifiers):
+        """Components in VALID_COMPONENTS.keys() must appear in VALID_COMPONENTS[key] to be valid.
+        """
+        return {
+            i['component']['name']: i['component']['valid']
+            for i in identifiers
+            if i['component']['valid']
+        }
 
-def _map_valid_components(identifiers):
-    """Components in VALID_COMPONENTS.keys() must appear in VALID_COMPONENTS[key] to be valid.
-    """
-    return {
-        i['component']['name']: i['component']['valid']
-        for i in identifiers
-        if i['component']['valid']
-    }
+    @staticmethod
+    def nextable_models(identifiers):
+        """Models whose components are sequential
+        """
+        return [
+            i['model']
+            for i in identifiers
+            if i['component']['type'] == int
+        ]
 
-def _map_nextable_models(identifiers):
-    """Models whose components are sequential
-    """
-    return [
-        i['model']
-        for i in identifiers
-        if i['component']['type'] == int
-    ]
+    # ----------------------------------------------------------------------
+    # Regex patterns used to link raw IDs/URLs/paths to models
+    #
+    # Regex patterns used to match IDs, paths, and URLs and extract model and tokens
+    # Record format: (regex, memo, model)
+    # TODO are we using ID_PATTERNS memos?
+    #
 
-# ----------------------------------------------------------------------
-# Regex patterns used to link raw IDs/URLs/paths to models
-#
-# Regex patterns used to match IDs, paths, and URLs and extract model and tokens
-# Record format: (regex, memo, model)
-# TODO are we using ID_PATTERNS memos?
-#
+    @staticmethod
+    def id_patterns(identifiers):
+        # (regex, memo, model) NOTE: 'memo' is not used for anything yet
+        patterns = []
+        for i in identifiers:
+            for regex in i['patterns']['id']:
+                p = (re.compile(regex), '', i['model'])
+                patterns.append(p)
+        patterns.reverse()
+        return patterns
 
-def _map_id_patterns(identifiers):
-    # (regex, memo, model) NOTE: 'memo' is not used for anything yet
-    patterns = []
-    for i in identifiers:
-        for regex in i['patterns']['id']:
-            p = (re.compile(regex), '', i['model'])
-            patterns.append(p)
-    patterns.reverse()
-    return patterns
+    @staticmethod
+    def path_patterns(identifiers):
+        # TODO are we using PATH_PATTERNS memos?
+        # In the current path scheme, collection and entity ID components are repeated.
+        # Fields can't appear multiple times in regexes so redundant fields have numbers.
+        # (regex, memo, model) note: 'memo' is not used for anything yet
+        patterns = []
+        for i in identifiers:
+            for regex in i['patterns']['path']:
+                p = (re.compile(regex), '', i['model'])
+                patterns.append(p)
+        patterns.reverse()
+        return patterns
 
-def _map_path_patterns(identifiers):
-    # TODO are we using PATH_PATTERNS memos?
-    # In the current path scheme, collection and entity ID components are repeated.
-    # Fields can't appear multiple times in regexes so redundant fields have numbers.
-    # (regex, memo, model) note: 'memo' is not used for anything yet
-    patterns = []
-    for i in identifiers:
-        for regex in i['patterns']['path']:
-            p = (re.compile(regex), '', i['model'])
-            patterns.append(p)
-    patterns.reverse()
-    return patterns
+    @staticmethod
+    def url_patterns(identifiers):
+        # TODO check
+        # (regex, memo, model) note: 'memo' is not used for anything yet
+        patterns = []
+        for i in identifiers:
+            for regex in i['patterns']['url']:
+                p = (re.compile(regex), '', i['model'])
+                patterns.append(p)
+        patterns.reverse()
+        return patterns
 
-def _map_url_patterns(identifiers):
-    # TODO check
-    # (regex, memo, model) note: 'memo' is not used for anything yet
-    patterns = []
-    for i in identifiers:
-        for regex in i['patterns']['url']:
-            p = (re.compile(regex), '', i['model'])
-            patterns.append(p)
-    patterns.reverse()
-    return patterns
+    # ----------------------------------------------------------------------
+    # Templates used to generate IDs, paths, and URLs from model and tokens
+    #
+    # There may be multiple possible templates for a model.  This is to account
+    # for multiple levels due to things like segments.  When generating an
+    # ID/URL/PATH, templates will be tried in order until one works. Therefore,
+    # put templates with the MOST components EARLIEST in the list.
+    #
 
-# ----------------------------------------------------------------------
-# Templates used to generate IDs, paths, and URLs from model and tokens
-#
-# There may be multiple possible templates for a model.  This is to account
-# for multiple levels due to things like segments.  When generating an
-# ID/URL/PATH, templates will be tried in order until one works. Therefore,
-# put templates with the MOST components EARLIEST in the list.
-#
-
-def _map_id_templates(identifiers):
-    """
-    {
-        'collection': [
-            '{repo}-{org}-{cid}',
-        ],
-        'entity': [
-            '{repo}-{org}-{cid}-{eid}',
-        ],
-        'file': [
-            '{repo}-{org}-{cid}-{eid}-{sid}-{role}-{sha1}',
-            '{repo}-{org}-{cid}-{eid}-{role}-{sha1}',
-        ],
-    }
-    """
-    templates = {}
-    for i in identifiers:
-        if not templates.get(i['model']):
-            templates[i['model']] = []
-        templates[i['model']] = [t for t in i['templates']['id']]
-    return templates
-
-def _map_path_templates(identifiers):
-    """
-    {
-        'entity-rel': [
-            'files/{repo}-{org}-{cid}-{eid}',
-        ],
-        'entity-abs': [
-            '{basepath}/{repo}-{org}-{cid}/files/{repo}-{org}-{cid}-{eid}',
-        ],
-        'collection-abs': [
-            '{basepath}/{repo}-{org}-{cid}',
-        ],
-    }
-    """
-    templates = {}
-    for i in identifiers:
-        for k,v in i['templates']['path'].iteritems():
-            if v:
-                key = '%s-%s' % (i['model'],k)
-                templates[key] = v
-    return templates
-
-def _map_url_templates(identifiers):
-    """
-    {
-        'editor': {
-            'file': [
-                '/ui/{repo}-{org}-{cid}-{eid}-{sid}-{role}-{sha1}',
-                '/ui/{repo}-{org}-{cid}-{eid}-{role}-{sha1}',
+    @staticmethod
+    def id_templates(identifiers):
+        """
+        {
+            'collection': [
+                '{repo}-{org}-{cid}',
             ],
             'entity': [
-                '/ui/{repo}-{org}-{cid}-{eid}',
+                '{repo}-{org}-{cid}-{eid}',
             ],
-            'collection': [
-                '/ui/{repo}-{org}-{cid}',
-            ],
-        },
-        'public': {
             'file': [
-                '/{repo}/{org}/{cid}/{eid}/{sid}/{role}/{sha1}',
-                '/{repo}/{org}/{cid}/{eid}/{role}/{sha1}',
-            ],
-            'entity': [
-                '/{repo}/{org}/{cid}/{eid}',
-            ],
-            'collection': [
-                '/{repo}/{org}/{cid}',
+                '{repo}-{org}-{cid}-{eid}-{sid}-{role}-{sha1}',
+                '{repo}-{org}-{cid}-{eid}-{role}-{sha1}',
             ],
         }
-    }
-    """
-    templates = {}
-    for i in identifiers:
-        for k,v in i['templates']['url'].iteritems():
-            if not templates.get(k):
-                templates[k] = {}
-            templates[k][i['model']] = [u for u in i['templates']['url'][k]]
-    return templates
+        """
+        templates = {}
+        for i in identifiers:
+            if not templates.get(i['model']):
+                templates[i['model']] = []
+            templates[i['model']] = [t for t in i['templates']['id']]
+        return templates
 
-def _map_additional_paths(identifiers):
-    """Additional file types that may be present in a repo
-    """
-    return {
-        i['model']: i['files']
-        for i in identifiers
-    }
+    @staticmethod
+    def path_templates(identifiers):
+        """
+        {
+            'entity-rel': [
+                'files/{repo}-{org}-{cid}-{eid}',
+            ],
+            'entity-abs': [
+                '{basepath}/{repo}-{org}-{cid}/files/{repo}-{org}-{cid}-{eid}',
+            ],
+            'collection-abs': [
+                '{basepath}/{repo}-{org}-{cid}',
+            ],
+        }
+        """
+        templates = {}
+        for i in identifiers:
+            for k,v in i['templates']['path'].iteritems():
+                if v:
+                    key = '%s-%s' % (i['model'],k)
+                    templates[key] = v
+        return templates
 
+    @staticmethod
+    def url_templates(identifiers):
+        """
+        {
+            'editor': {
+                'file': [
+                    '/ui/{repo}-{org}-{cid}-{eid}-{sid}-{role}-{sha1}',
+                    '/ui/{repo}-{org}-{cid}-{eid}-{role}-{sha1}',
+                ],
+                'entity': [
+                    '/ui/{repo}-{org}-{cid}-{eid}',
+                ],
+                'collection': [
+                    '/ui/{repo}-{org}-{cid}',
+                ],
+            },
+            'public': {
+                'file': [
+                    '/{repo}/{org}/{cid}/{eid}/{sid}/{role}/{sha1}',
+                    '/{repo}/{org}/{cid}/{eid}/{role}/{sha1}',
+                ],
+                'entity': [
+                    '/{repo}/{org}/{cid}/{eid}',
+                ],
+                'collection': [
+                    '/{repo}/{org}/{cid}',
+                ],
+            }
+        }
+        """
+        templates = {}
+        for i in identifiers:
+            for k,v in i['templates']['url'].iteritems():
+                if not templates.get(k):
+                    templates[k] = {}
+                templates[k][i['model']] = [u for u in i['templates']['url'][k]]
+        return templates
 
-# ----------------------------------------------------------------------
+    @staticmethod
+    def additional_paths(identifiers):
+        """Additional file types that may be present in a repo
+        """
+        return {
+            i['model']: i['files']
+            for i in identifiers
+        }
+
 
 # IDENTIFIERS are defined in ddr-defs
 try:
@@ -269,8 +288,8 @@ try:
 except ImportError:
     raise Exception('Could not import Identifier definitions!')
 
-MODELS = _map_models(IDENTIFIERS)
-MODULES = _map_modules(IDENTIFIERS)
+MODELS = Definitions.models(IDENTIFIERS)
+MODULES = Definitions.modules(IDENTIFIERS)
 
 try:
     from repo_models import collection as collectionmodule
@@ -282,17 +301,17 @@ try:
 except ImportError:
     raise Exception('Could not import repo_models modules!')
 
-MODEL_CLASSES = _map_model_classes(IDENTIFIERS)
-MODEL_REPO_MODELS = _map_models_modules(MODULES)
-COLLECTION_MODELS = _map_collection_models(IDENTIFIERS)
-CONTAINERS = _map_containers(IDENTIFIERS)
-PARENTS = _map_models_parents(IDENTIFIERS)
-PARENTS_ALL = _map_models_parents_all(IDENTIFIERS)
-CHILDREN = _map_children(PARENTS)
-CHILDREN_ALL = _map_children(PARENTS_ALL)
-ID_COMPONENTS = _map_id_components(IDENTIFIERS)
-VALID_COMPONENTS = _map_valid_components(IDENTIFIERS)
-NEXTABLE_MODELS = _map_nextable_models(IDENTIFIERS)
+MODEL_CLASSES = Definitions.model_classes(IDENTIFIERS)
+MODEL_REPO_MODELS = Definitions.models_modules(MODULES)
+COLLECTION_MODELS = Definitions.collection_models(IDENTIFIERS)
+CONTAINERS = Definitions.containers(IDENTIFIERS)
+PARENTS = Definitions.models_parents(IDENTIFIERS)
+PARENTS_ALL = Definitions.models_parents_all(IDENTIFIERS)
+CHILDREN = Definitions.children(PARENTS)
+CHILDREN_ALL = Definitions.children(PARENTS_ALL)
+ID_COMPONENTS = Definitions.id_components(IDENTIFIERS)
+VALID_COMPONENTS = Definitions.valid_components(IDENTIFIERS)
+NEXTABLE_MODELS = Definitions.nextable_models(IDENTIFIERS)
 # Bits of file paths that uniquely identify file types.
 # Suitable for use on command-line e.g. in git-annex-whereis.
 FILETYPE_MATCH_ANNEX = {
@@ -300,16 +319,16 @@ FILETYPE_MATCH_ANNEX = {
     'master': '*-master-*',
     'mezzanine': '*-mezzanine-*',
 }
-ID_PATTERNS = _map_id_patterns(IDENTIFIERS)
-PATH_PATTERNS = _map_path_patterns(IDENTIFIERS)
+ID_PATTERNS = Definitions.id_patterns(IDENTIFIERS)
+PATH_PATTERNS = Definitions.path_patterns(IDENTIFIERS)
 # TODO check
 # Simple path regexes suitable for use inside for-loops
 PATH_PATTERNS_LOOP = []
-URL_PATTERNS = _map_url_patterns(IDENTIFIERS)
-ID_TEMPLATES = _map_id_templates(IDENTIFIERS)
-PATH_TEMPLATES = _map_path_templates(IDENTIFIERS)
-URL_TEMPLATES = _map_url_templates(IDENTIFIERS)
-ADDITIONAL_PATHS = _map_additional_paths(IDENTIFIERS)
+URL_PATTERNS = Definitions.url_patterns(IDENTIFIERS)
+ID_TEMPLATES = Definitions.id_templates(IDENTIFIERS)
+PATH_TEMPLATES = Definitions.path_templates(IDENTIFIERS)
+URL_TEMPLATES = Definitions.url_templates(IDENTIFIERS)
+ADDITIONAL_PATHS = Definitions.additional_paths(IDENTIFIERS)
 
 
 # ----------------------------------------------------------------------
