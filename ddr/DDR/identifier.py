@@ -413,11 +413,14 @@ def set_idparts(i, groupdict, components=ID_COMPONENTS):
     if i.basepath:
         i.basepath = os.path.normpath(i.basepath)
     # list of object ID components
-    i.parts = OrderedDict([
+    id_components = [
         (key, groupdict[key])
         for key in components
         if groupdict.get(key)
-    ])
+    ]
+    i.parts = OrderedDict(id_components)
+    id_components.insert(0, ('model',i.model))
+    i.idparts = OrderedDict(id_components)
     # set object attributes with numbers as ints
     for key,val in i.parts.items():
         if val.isdigit():
@@ -781,11 +784,14 @@ class Identifier(object):
         self.method = 'parts'
         self.raw = idparts
         self.model = idparts['model']
-        self.parts = OrderedDict([
+        id_components = [
             (key, idparts[key])
             for key in ID_COMPONENTS
             if idparts.get(key)
-        ])
+        ]
+        self.parts = OrderedDict(id_components)
+        id_components.insert(0, ('model', self.model))
+        self.idparts = OrderedDict(id_components)
         self.id = format_id(self, self.model)
         if base_path and not self.basepath:
             self.basepath = base_path
