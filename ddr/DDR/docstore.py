@@ -45,7 +45,7 @@ import os
 from elasticsearch import Elasticsearch, TransportError
 
 from DDR import config
-from DDR.identifier import Identifier, MODULES
+from DDR.identifier import Identifier, MODULES, InvalidInputException
 from DDR import util
 
 MAX_SIZE = 1000000
@@ -727,7 +727,10 @@ def post( hosts, index, document, public_fields=[], additional_fields={}, privat
         for k,v in field.iteritems():
             if k == 'id':
                 document_id = v
-    identifier = Identifier(document_id)
+    try:
+        identifier = Identifier(document_id)
+    except InvalidInputException:
+        return {'status':4, 'response':'Could not get document Identifier.'}
     
     # die if document is public=False or status=incomplete
     if (not _is_publishable(document)) and (not private_ok):
