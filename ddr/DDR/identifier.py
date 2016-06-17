@@ -739,7 +739,7 @@ class Identifier(object):
         elif blargs['path']: self._from_path(blargs['path'], blargs['base_path'])
         elif blargs['url']: self._from_url(blargs['url'], blargs['base_path'])
         else:
-            raise InvalidInputException('Could not grok Identifier input')
+            raise InvalidInputException('Could not grok Identifier input: %s' % blargs)
 
     def _from_id(self, object_id, base_path=None):
         """Make Identifier from object ID.
