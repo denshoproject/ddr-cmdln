@@ -440,7 +440,7 @@ def format_id(i, model, templates=ID_TEMPLATES):
     @returns: str
     """
     for template in templates[model]:
-        # TODO put in try/except, first one that works is the ID
+        # first one that works is the ID (probably)
         try:
             return template.format(**i.parts)
         except KeyError:
@@ -978,9 +978,10 @@ class Identifier(object):
         for model in self._parent_models(stubs):
             idparts = parent_parts
             idparts['model'] = model
-            i = Identifier(idparts, base_path=self.basepath)
-            if i:
-                return i
+            try:
+                return Identifier(idparts, base_path=self.basepath)
+            except IdentifierFormatException:
+                pass
         return None
     
     def lineage(self, stubs=False):
