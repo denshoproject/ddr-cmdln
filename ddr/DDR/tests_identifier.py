@@ -3,6 +3,7 @@
 from datetime import datetime
 import json
 import os
+import re
 
 from nose.tools import assert_raises
 
@@ -16,6 +17,309 @@ BASE_PATHS = [
     '/tmp',
 ]
 
+
+# ----------------------------------------------------------------------
+
+def test_definitions_models():
+    IDENTIFIERS = [
+        {'model': 'collection'},
+        {'model': 'entity'},
+        {'model': 'file'},
+    ]
+    expected = ['file', 'entity', 'collection']
+    out = identifier.Definitions.models(IDENTIFIERS)
+    assert out == expected
+
+def test_definitions_modules():
+    IDENTIFIERS = [
+        {'model': 'collection'},
+        {'model': 'entity'},
+        {'model': 'file'},
+    ]
+    expected = {
+        'collection': None,
+        'entity': None,
+        'file': None,
+    }
+    out = identifier.Definitions.modules(IDENTIFIERS)
+    assert out == expected
+
+def test_definitions_model_classes():
+    IDENTIFIERS = [
+        {'model': 'collection', 'class':'DDR.models.Collection'},
+        {'model': 'entity',     'class':'DDR.models.Entity'},
+        {'model': 'file-role',  'class':'DDR.models.Stub'},
+        {'model': 'file',       'class':'DDR.models.File'},
+    ]
+    expected = {
+        'collection': {'class': 'Collection', 'module': 'DDR.models'},
+        'entity':     {'class': 'Entity',     'module': 'DDR.models'},
+        'file-role':  {'class': 'Stub',       'module': 'DDR.models'},
+        'file':       {'class': 'File',       'module': 'DDR.models'}
+    }
+    out = identifier.Definitions.model_classes(IDENTIFIERS)
+    assert out == expected
+
+#def test_definitions_models_modules():
+#    MODULES = {
+#        'repository': None,
+#        'organization': None,
+#        'collection': <module 'repo_models.collection' from '/etc/ddr/ddr-defs/repo_models/collection.pyc'>,
+#        'entity': <module 'repo_models.entity' from '/etc/ddr/ddr-defs/repo_models/entity.pyc'>,
+#        'segment': <module 'repo_models.entity' from '/etc/ddr/ddr-defs/repo_models/entity.pyc'>
+#        'file-role': None,
+#        'file': <module 'repo_models.files' from '/etc/ddr/ddr-defs/repo_models/files.pyc'>,
+#    }
+#    expected = {
+#        'collection': {'as': 'collectionmodule', 'class': 'collection', 'module': 'repo_models.collection'},
+#        'entity': {'as': 'entitymodule', 'class': 'entity', 'module': 'repo_models.entity'},
+#        'segment': {'as': 'segmentmodule', 'class': 'segment', 'module': 'repo_models.entity'},
+#        'file': {'as': 'filemodule', 'class': 'file', 'module': 'repo_models.files'},
+#    }
+#    out = identifier.Definitions.models_modules(MODULES)
+#    assert out == expected
+
+def test_definitions_collection_models():
+    IDENTIFIERS = [
+        {'level': -2, 'model': 'repository'},
+        {'level': -1, 'model': 'organization'},
+        {'level': 0, 'model': 'collection'},
+        {'level': 1, 'model': 'entity'},
+        {'level': 2, 'model': 'file'},
+    ]
+    expected = ['collection', 'entity', 'file']
+    out = identifier.Definitions.collection_models(IDENTIFIERS)
+    assert out == expected
+
+def test_definitions_containers():
+    IDENTIFIERS = [
+        {'model': 'collection', 'children': ['entity'], 'children_all': ['entity']},
+        {'model': 'entity',     'children': ['file'],   'children_all': ['file-role','file']},
+        {'model': 'file',       'children': [],         'children_all': []},
+    ]
+    expected = ['entity', 'collection']
+    out = identifier.Definitions.containers(IDENTIFIERS)
+    assert out == expected
+
+def test_definitions_models_parents():
+    IDENTIFIERS = [
+        {'model': 'organization', 'class': 'DDR.models.Stub',       'parents': []            },
+        {'model': 'collection',   'class': 'DDR.models.Collection', 'parents': []            },
+        {'model': 'entity',       'class': 'DDR.models.Entity',     'parents': ['collection']},
+        {'model': 'file-role',    'class': 'DDR.models.Stub',       'parents': []            },
+        {'model': 'file',         'class': 'DDR.models.File',       'parents': ['entity']    },
+    ]
+    expected = {
+        'file': ['entity'],
+        'entity': ['collection'],
+    }
+    out = identifier.Definitions.models_parents(IDENTIFIERS)
+    assert out == expected
+
+def test_definitions_models_parents_all():
+    IDENTIFIERS = [
+        {'model': 'organization', 'parents_all': []},
+        {'model': 'collection',   'parents_all': ['organization']},
+        {'model': 'entity',       'parents_all': ['collection']},
+        {'model': 'file-role',    'parents_all': ['entity']},
+        {'model': 'file',         'parents_all': ['file-fole']},
+    ]
+    expected = {
+        'collection': ['organization'],
+        'entity': ['collection'],
+        'file-role': ['entity'],
+        'file': ['file-fole'],
+    }
+    out = identifier.Definitions.models_parents_all(IDENTIFIERS)
+    assert out == expected
+
+def test_definitions_children():
+    PARENTS = {
+        'collection': [],
+        'entity': ['collection'],
+        'segment': ['entity'],
+        'file': ['segment', 'entity'],
+    }
+    expected = {
+        'collection': ['entity'],
+        'entity': ['segment', 'file'],
+        'segment': ['file'],
+    }
+    out = identifier.Definitions.children(PARENTS)
+    assert out == expected
+
+def test_definitions_id_components():
+    IDENTIFIERS = [
+        {'model': 'repository',   'component': {'name': 'repo'}},
+        {'model': 'organization', 'component': {'name': 'org'}},
+        {'model': 'collection',   'component': {'name': 'cid'}},
+    ]
+    expected = [
+        'repo', 'org', 'cid',
+    ]
+    out = identifier.Definitions.id_components(IDENTIFIERS)
+    assert out == expected
+
+def test_definitions_valid_components():
+    IDENTIFIERS = [
+        {'model': 'repository',   'component': {'name': 'repo', 'valid': ['ddr']}},
+        {'model': 'organization', 'component': {'name': 'org',  'valid': ['densho', 'testing']}},
+        {'model': 'collection',   'component': {'name': 'cid',  'valid': []}},
+    ]
+    expected = {
+        'repo': ['ddr'],
+        'org': ['densho', 'testing'],
+    }
+    out = identifier.Definitions.valid_components(IDENTIFIERS)
+    assert out == expected
+
+def test_definitions_nextable_models():
+    IDENTIFIERS = [
+        {'model': 'repository',   'component': {'name': 'repo', 'type': str}},
+        {'model': 'collection',   'component': {'name': 'cid',  'type': int}},
+    ]
+    expected = [
+        'collection'
+    ]
+    out = identifier.Definitions.nextable_models(IDENTIFIERS)
+    assert out == expected
+
+# TODO FILETYPE_MATCH_ANNEX
+
+def test_definitions_id_patterns():
+    regexes = {
+        'repo': r'^(?P<repo>[\w]+)$',
+        'coll': r'^(?P<repo>[\w]+)-(?P<org>[\w]+)-(?P<cid>[\d]+)$',
+    }
+    IDENTIFIERS = [
+        {'model': 'repository', 'patterns': {'id': [regexes['repo']]}},
+        {'model': 'collection', 'patterns': {'id': [regexes['coll']]}},
+    ]
+    expected = [
+        (re.compile(regexes['coll']), '', 'collection'),
+        (re.compile(regexes['repo']), '', 'repository'),
+    ]
+    out = identifier.Definitions.id_patterns(IDENTIFIERS)
+    assert out == expected
+
+def test_definitions_path_patterns():
+    regexes = {
+        'repo': r'^(?P<repo>[\w]+)$',
+        'coll': r'^(?P<repo>[\w]+)-(?P<org>[\w]+)-(?P<cid>[\d]+)$',
+    }
+    IDENTIFIERS = [
+        {'model': 'repository', 'patterns': {'path': [regexes['repo']]}},
+        {'model': 'collection', 'patterns': {'path': [regexes['coll']]}},
+    ]
+    expected = [
+        (re.compile(regexes['coll']), '', 'collection'),
+        (re.compile(regexes['repo']), '', 'repository'),
+    ]
+    out = identifier.Definitions.path_patterns(IDENTIFIERS)
+    assert out == expected
+
+# TODO PATH_PATTERNS_LOOP
+
+def test_definitions_url_patterns():
+    regexes = {
+        'repo': r'^(?P<repo>[\w]+)$',
+        'coll': r'^(?P<repo>[\w]+)-(?P<org>[\w]+)-(?P<cid>[\d]+)$',
+    }
+    IDENTIFIERS = [
+        {'model': 'repository', 'patterns': {'url': [regexes['repo']]}},
+        {'model': 'collection', 'patterns': {'url': [regexes['coll']]}},
+    ]
+    expected = [
+        (re.compile(regexes['coll']), '', 'collection'),
+        (re.compile(regexes['repo']), '', 'repository'),
+    ]
+    out = identifier.Definitions.url_patterns(IDENTIFIERS)
+    assert out == expected
+
+def test_definitions_id_templates():
+    IDENTIFIERS = [
+        {'model': 'segment',   'templates': {'id': [
+            'a',
+        ]}},
+        {'model': 'file-role', 'templates': {'id': [
+            'b', 'c',
+        ]}},
+    ]
+    expected = {
+        'segment': ['a'],
+        'file-role': ['b', 'c'],
+    }
+    out = identifier.Definitions.id_templates(IDENTIFIERS)
+    assert out == expected
+
+def test_definitions_path_templates():
+    IDENTIFIERS = [
+        {'model': 'segment',   'templates': {'path': {
+            'rel': ['a'],
+            'abs': ['A'],
+        }}},
+        {'model': 'file-role', 'templates': {'path': {
+            'rel': ['b', 'c'],
+            'abs': ['B', 'C'],
+        }}},
+    ]
+    expected = {
+        'segment-rel': ['a'],
+        'segment-abs': ['A'],
+        'file-role-rel': ['b', 'c'],
+        'file-role-abs': ['B', 'C'],
+    }
+    out = identifier.Definitions.path_templates(IDENTIFIERS)
+    assert out == expected
+
+def test_definitions_url_templates():
+    IDENTIFIERS = [
+        {'model': 'segment',   'templates': {'url': {
+            'editor': ['a'],
+            'public': ['A'],
+        }}},
+        {'model': 'file-role', 'templates': {'url': {
+            'editor': ['b', 'c'],
+            'public': ['B', 'C'],
+        }}},
+    ]
+    expected = {
+        'editor': {
+            'segment': ['a'],
+            'file-role': ['b', 'c']
+        },
+        'public': {
+            'segment': ['A'],
+            'file-role': ['B', 'C']
+        },
+    }
+    out = identifier.Definitions.url_templates(IDENTIFIERS)
+    print(out)
+    assert out == expected
+
+def test_definitions_additional_paths():
+    IDENTIFIERS = [
+        {'model': 'repository', 'files': {
+            'json': 'repository.json',
+        }},
+        {'model': 'collection', 'files': {
+            'annex': '.git/annex',
+            'files': 'files',
+            'json': 'collection.json',
+        }},
+        {'model': 'file-role', 'files': {
+        }},
+    ]
+    expected = {
+        'repository': {'json': 'repository.json'},
+        'collection': {'files': 'files', 'json': 'collection.json', 'annex': '.git/annex'},
+        'file-role': {},
+    }
+    out = identifier.Definitions.additional_paths(IDENTIFIERS)
+    assert out == expected
+
+
+# ----------------------------------------------------------------------
 
 # TODO test_compile_patterns
 
@@ -178,6 +482,9 @@ def test_field_names():
     template = '{a}-{b}-{c}'
     expected = ['a', 'b', 'c']
     assert identifier._field_names(template) == expected
+
+
+# ----------------------------------------------------------------------
 
 def test_identifier_first_id():
     out0 = identifier.first_id(
