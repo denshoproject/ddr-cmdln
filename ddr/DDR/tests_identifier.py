@@ -57,8 +57,8 @@ def test_set_idparts():
 
 def test_format_id():
     templates = {
-        'entity':       '{repo}-{org}-{cid}-{eid}',
-        'collection':   '{repo}-{org}-{cid}',
+        'entity':       ['{repo}-{org}-{cid}-{eid}'],
+        'collection':   ['{repo}-{org}-{cid}'],
     }
     i0 = 'ddr-test-123'
     i1 = 'ddr-test-123-456'
@@ -68,7 +68,7 @@ def test_format_id():
     assert identifier.format_id(identifier.Identifier(i1), 'collection', templates) == i0
     # but not the other way around
     assert_raises(
-        KeyError,
+        identifier.IdentifierFormatException,
         identifier.format_id,
         identifier.Identifier(i0), 'entity', templates
     )
@@ -76,9 +76,9 @@ def test_format_id():
 def test_format_path():
     for base_path in BASE_PATHS:
         templates = {
-            'entity-abs':       '{basepath}/{repo}-{org}-{cid}/files/{repo}-{org}-{cid}-{eid}',
-            'collection-abs':   '{basepath}/{repo}-{org}-{cid}',
-            'entity-rel':       'files/{repo}-{org}-{cid}-{eid}',
+            'entity-abs':       ['{basepath}/{repo}-{org}-{cid}/files/{repo}-{org}-{cid}-{eid}'],
+            'collection-abs':   ['{basepath}/{repo}-{org}-{cid}'],
+            'entity-rel':       ['files/{repo}-{org}-{cid}-{eid}'],
         }
         i0 = 'ddr-test-123'
         i1 = 'ddr-test-123-456'
@@ -93,7 +93,10 @@ def test_format_path():
         assert path1 == i1_abs_expected
         assert path2 == i1_rel_expected
         # missing patterns key
-        path3 = identifier.format_path(identifier.Identifier(i1, base_path), 'entity', 'meta-rel', templates)
+        try:
+            path3 = identifier.format_path(identifier.Identifier(i1, base_path), 'entity', 'meta-rel', templates)
+        except:
+            path3 = None
         assert path3 == None
         # no base_path in identifier
         assert_raises(
@@ -171,6 +174,11 @@ def test_parse_args_kwargs():
 # TODO test_module_for_name
 # TODO test_class_for_name
 
+def test_field_names():
+    template = '{a}-{b}-{c}'
+    expected = ['a', 'b', 'c']
+    assert identifier._field_names(template) == expected
+
 def test_identifier_first_id():
     out0 = identifier.first_id(
         identifier.Identifier('ddr-testing'),
@@ -208,7 +216,13 @@ def test_identifier_max_id():
     assert out1 == expected1
 
 def test_identifier_available():
-    assert False
+    a = ['a', 'b', 'c']
+    b = ['c', 'd', 'e']
+    c = ['x', 'y', 'z']
+    a_b = {'success': False, 'overlap': ['c']}
+    a_c = {'success': True, 'overlap': []}
+    assert identifier.available(a, b) == a_b
+    assert identifier.available(a, c) == a_c
 
 def test_identifier_wellformed():
     for base_path in BASE_PATHS:
@@ -807,9 +821,9 @@ def test_path_abs():
         assert_raises(Exception, fi1, 'path_abs', 'BAD')
 
 
-REPO_PATH_REL       = None
-ORG_PATH_REL        = None
-COLLECTION_PATH_REL = None
+REPO_PATH_REL       = ''
+ORG_PATH_REL        = ''
+COLLECTION_PATH_REL = ''
 ENTITY_PATH_REL     = 'files/ddr-test-123-456'
 FILE_PATH_REL       = 'files/ddr-test-123-456/files/ddr-test-123-456-master-a1b2c3d4e5'
 REPO_PATH_REL_JSON       = 'repository.json'

@@ -45,6 +45,20 @@ class Definitions():
     @staticmethod
     def model_classes(identifiers):
         """map model names to DDR python classes
+        
+        >>> identifiers = [
+        ...     {'model': 'collection', 'class':'DDR.models.Collection'},
+        ...     {'model': 'entity',     'class':'DDR.models.Entity'},
+        ...     {'model': 'file-role',  'class':'DDR.models.Stub'},
+        ...     {'model': 'file',       'class':'DDR.models.File'},
+        ... ]
+        >>> model_classes(identifiers)
+        {
+            'collection': {'class': 'Collection', 'module': 'DDR.models'},
+            'entity':     {'class': 'Entity',     'module': 'DDR.models'},
+            'file-role':  {'class': 'Stub',       'module': 'DDR.models'},
+            'file':       {'class': 'File',       'module': 'DDR.models'}
+        }
         """
         return {
             i['model']: {
@@ -91,6 +105,17 @@ class Definitions():
     @staticmethod
     def models_parents(identifiers):
         """Pointers from models to their parent models
+        
+        >>> identifiers = [
+        ...     {'model': 'collection', 'parents': []},
+        ...     {'model': 'entity',     'parents': ['collection']},
+        ...     {'model': 'file',       'parents': ['entity']},
+        ... ]
+        >>> models_parents(identifiers)
+        {
+           'entity': ['collection'],
+           'file': ['entity'],
+        }
         """
         parents = {}
         for i in identifiers:
@@ -104,6 +129,23 @@ class Definitions():
     @staticmethod
     def models_parents_all(identifiers):
         """Pointers from models to their parent models
+        
+        >>> identifiers = [
+        ...     {'model': 'repository',   'parents_all': []},
+        ...     {'model': 'organization', 'parents_all': ['repository']},
+        ...     {'model': 'collection',   'parents_all': ['organization]},
+        ...     {'model': 'entity',       'parents_all': ['collection']},
+        ...     {'model': 'file-role',    'parents_all': ['entity']},
+        ...     {'model': 'file',         'parents_all': ['file-role']},
+        ... ]
+        >>> models_parents_all(identifiers)
+        {
+            'organization': ['repository'],
+            'collection': ['organization'],
+            'entity': ['collection'],
+            'file-role': ['entity'],
+            'file': ['file-role'],
+        }
         """
         parents = {}
         for i in identifiers:
@@ -593,7 +635,7 @@ def first_id(i, model):
     @returns: Identifier
     """
     parts = {k:v for k,v in i.parts.iteritems()}
-    next_component = _field_names(ID_TEMPLATES[model]).pop()
+    next_component = _field_names(ID_TEMPLATES[model][0]).pop()
     parts[next_component] = 1
     parts['model'] = model
     new = Identifier(parts=parts)
@@ -606,7 +648,7 @@ def max_id(model, identifiers):
     @param i: Identifier
     @returns: int
     """
-    component = _field_names(ID_TEMPLATES[model]).pop()
+    component = _field_names(ID_TEMPLATES[model][0]).pop()
     existing = [i.parts[component] for i in identifiers]
     existing.sort()
     return existing[-1]
