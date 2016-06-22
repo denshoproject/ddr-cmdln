@@ -377,7 +377,9 @@ class Stub(object):
         return Stub(identifier)
     
     def __repr__(self):
-        return "<%s.%s '%s'>" % (self.__module__, self.__class__.__name__, self.id)
+        return "<%s.%s %s:%s>" % (
+            self.__module__, self.__class__.__name__, self.identifier.model, self.id
+        )
     
     def parent(self, stubs=False):
         return self.identifier.parent(stubs).object()
@@ -479,7 +481,9 @@ class Collection( object ):
         >>> c
         <Collection ddr-testing-123>
         """
-        return "<%s.%s '%s'>" % (self.__module__, self.__class__.__name__, self.id)
+        return "<%s.%s %s:%s>" % (
+            self.__module__, self.__class__.__name__, self.identifier.model, self.id
+        )
     
     @staticmethod
     def create(path_abs, identifier=None):
@@ -860,7 +864,9 @@ class Entity( object ):
         self._file_objects = []
     
     def __repr__(self):
-        return "<%s.%s '%s'>" % (self.__module__, self.__class__.__name__, self.id)
+        return "<%s.%s %s:%s>" % (
+            self.__module__, self.__class__.__name__, self.identifier.model, self.id
+        )
     
     @staticmethod
     def create(path_abs, identifier=None):
@@ -1387,7 +1393,9 @@ class File( object ):
         self.basename = os.path.basename(self.path_abs)
 
     def __repr__(self):
-        return "<%s.%s '%s'>" % (self.__module__, self.__class__.__name__, self.id)
+        return "<%s.%s %s:%s>" % (
+            self.__module__, self.__class__.__name__, self.identifier.model, self.id
+        )
     
     @staticmethod
     def create(path_abs, identifier=None):
