@@ -96,7 +96,7 @@ class Definitions():
         """
         containers = [
             i['model']
-            for i in IDENTIFIERS
+            for i in identifiers
             if i['children'] or i['children_all']
         ]
         containers.reverse()
