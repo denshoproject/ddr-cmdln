@@ -41,6 +41,7 @@ from lxml import etree
 from DDR import VERSION
 from DDR import format_json
 from DDR import changelog
+from DDR import commands
 from DDR import config
 from DDR.control import CollectionControlFile, EntityControlFile
 from DDR import docstore
@@ -498,6 +499,29 @@ class Collection( object ):
         return create_object(identifier)
     
     @staticmethod
+    def new(identifier, git_name, git_mail, agent='cmdln'):
+        """Creates new Collection, writes to filesystem, performs initial commit
+        
+        @param identifier: Identifier
+        @param git_name: str
+        @param git_mail: str
+        @param agent: str
+        @returns: exit,status int,str
+        """
+        collection = Collection.create(identifier.path_abs(), identifier)
+        fileio.write_text(
+            collection.dump_json(template=True),
+            config.TEMPLATE_CJSON
+        )
+        exit,status = commands.create(
+            git_name, git_mail,
+            identifier,
+            [config.TEMPLATE_CJSON, config.TEMPLATE_EAD],
+            agent=agent
+        )
+        return exit,status
+    
+    @staticmethod
     def from_json(path_abs, identifier=None):
         """Instantiates a Collection object from specified collection.json.
         
@@ -881,6 +905,44 @@ class Entity( object ):
         obj = create_object(identifier)
         obj.files = []
         return obj
+    
+    @staticmethod
+    def new(identifier, git_name, git_mail, agent='cmdln'):
+        """Creates new Entity, writes to , and does initial commit.
+        
+        @param identifier: Identifier
+        @param git_name: str
+        @param git_mail: str
+        @param agent: str
+        @returns: exit,status int,str
+        """
+        entity = Entity.create(identifier.path_abs(), identifier)
+        collection = entity.identifier.parent().object()
+        fileio.write_text(
+            entity.dump_json(template=True),
+            config.TEMPLATE_EJSON
+        )
+        exit,status = commands.entity_create(
+            git_name, git_mail,
+            collection, entity.identifier,
+            [collection.json_path_rel, collection.ead_path_rel],
+            [config.TEMPLATE_EJSON, config.TEMPLATE_METS],
+            agent=agent
+        )
+        if exit:
+            raise Exception('Could not create new Entity: %s, %s' % (exit, status))
+        # load Entity object, inherit values from parent, write back to file
+        entity = Entity.from_identifier(identifier)
+        entity.inherit(collection)
+        entity.write_json()
+        updated_files = [entity.json_path]
+        exit,status = commands.entity_update(
+            git_name, git_mail,
+            collection, entity,
+            updated_files,
+            agent=agent
+        )
+        return exit,status
     
     @staticmethod
     def from_json(path_abs, identifier=None):
@@ -1408,6 +1470,8 @@ class File( object ):
         if not identifier:
             identifier = Identifier(path=path_abs)
         return create_object(identifier)
+
+    # NEW: use Entity.add_file
     
     # _lockfile
     # lock
