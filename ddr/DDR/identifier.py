@@ -7,24 +7,6 @@ import re
 import string
 from urlparse import urlparse
 
-try:
-    from repo_models.identifier import IDENTIFIERS
-except ImportError:
-    raise Exception('Could not import Identifier definitions!')
-
-MODELS = [i['model'] for i in IDENTIFIERS]
-MODELS.reverse()
-MODULES = {key:None for key in MODELS}
-
-try:
-    from repo_models import collection as collectionmodule
-    from repo_models import entity as entitymodule
-    from repo_models import files as filemodule
-    MODULES['collection'] = collectionmodule
-    MODULES['entity'] = entitymodule
-    MODULES['file'] = filemodule
-except ImportError:
-    raise Exception('Could not import repo_models modules!')
 
 
 class Definitions():
@@ -37,10 +19,33 @@ class Definitions():
         models = [i['model'] for i in identifiers]
         models.reverse()
         return models
-
+    
     @staticmethod
-    def modules(identifiers):
+    def modules(identifiers):                                                                         
         return {key:None for key in Definitions.models(identifiers)}
+    
+    @staticmethod
+    def import_modules(identifiers, modules):
+        """Imports modules in IDENTIFIERS[N]['module'] and adds to MODULES
+        
+        @param identifiers: list
+        @param modules: dict
+        @returns: dict modules
+        """
+        models_modules = {
+            i['model']: i['module']
+            for i in identifiers
+            if i['module']
+        }
+        couldnt = []
+        for model,module in models_modules.iteritems():
+            try:
+                modules[model] = importlib.import_module(module)
+            except ImportError:
+                couldnt.append(module)
+        if couldnt:
+            raise Exception('Could not import module(s) %s' % couldnt)
+        return modules
 
     @staticmethod
     def model_classes(identifiers):
@@ -344,6 +349,14 @@ class Definitions():
             for i in identifiers
         }
 
+
+try:
+    from repo_models.identifier import IDENTIFIERS
+except ImportError:
+    raise Exception('Could not import Identifier definitions!')
+
+MODELS = Definitions.models(IDENTIFIERS)
+MODULES = Definitions.import_modules(IDENTIFIERS, Definitions.modules(IDENTIFIERS))
 MODEL_CLASSES = Definitions.model_classes(IDENTIFIERS)
 MODEL_REPO_MODELS = Definitions.models_modules(MODULES)
 COLLECTION_MODELS = Definitions.collection_models(IDENTIFIERS)
