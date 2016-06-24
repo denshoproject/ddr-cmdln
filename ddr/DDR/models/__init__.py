@@ -908,7 +908,7 @@ class Entity( object ):
     
     @staticmethod
     def new(identifier, git_name, git_mail, agent='cmdln'):
-        """Creates new Entity, writes to , and does initial commit.
+        """Creates new Entity, writes to filesystem, does initial commit.
         
         @param identifier: Identifier
         @param git_name: str
@@ -916,8 +916,10 @@ class Entity( object ):
         @param agent: str
         @returns: exit,status int,str
         """
+        collection = identifier.parent().object()
+        if not collection:
+            raise Exception('Parent collection for %s does not exist.' % identifier)
         entity = Entity.create(identifier.path_abs(), identifier)
-        collection = entity.identifier.parent().object()
         fileio.write_text(
             entity.dump_json(template=True),
             config.TEMPLATE_EJSON
