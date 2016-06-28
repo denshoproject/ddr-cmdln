@@ -569,6 +569,31 @@ class Collection( object ):
         )
         return exit,status
     
+    def save(self, git_name, git_mail, agent, cleaned_data={}):
+        """Writes specified Collection metadata, stages, and commits.
+        
+        @param git_name: str
+        @param git_mail: str
+        @param cleaned_data: dict
+        @param agent: str
+        """
+        self.write_json()
+        self.write_ead()
+        updated_files = [self.json_path, self.ead_path,]
+        # if inheritable fields selected, propagate changes to child objects
+        inheritables = self.selected_inheritables(cleaned_data)
+        modified_ids,modified_files = self.update_inheritables(inheritables, cleaned_data)
+        if modified_files:
+            updated_files = updated_files + modified_files
+        
+        exit,status = commands.update(
+            git_name, git_mail,
+            self,
+            updated_files,
+            agent
+        )
+        return exit,status
+    
     @staticmethod
     def from_json(path_abs, identifier=None):
         """Instantiates a Collection object from specified collection.json.
@@ -1006,6 +1031,35 @@ class Entity( object ):
             collection, entity,
             updated_files,
             agent=agent
+        )
+        return exit,status
+    
+    def save(self, git_name, git_mail, agent, collection=None, cleaned_data={}):
+        """Writes specified Entity metadata, stages, and commits.
+        
+        @param git_name: str
+        @param git_mail: str
+        @param agent: str
+        @param collection: Collection
+        @param cleaned_data: dict
+        """
+        if not collection:
+            collection = self.collection()
+        
+        self.write_json()
+        self.write_mets()
+        updated_files = [self.json_path, self.mets_path,]
+        
+        inheritables = self.selected_inheritables(cleaned_data)
+        modified_ids,modified_files = self.update_inheritables(inheritables, cleaned_data)
+        if modified_files:
+            updated_files = updated_files + modified_files
+        
+        exit,status = commands.entity_update(
+            git_name, git_mail,
+            collection, self,
+            updated_files,
+            agent
         )
         return exit,status
     
@@ -1595,6 +1649,27 @@ class File( object ):
         )
         return exit,status
     
+    def save(self, git_name, git_mail, agent, collection=None, parent=None):
+        """Writes File metadata, stages, and commits.
+        
+        @param git_name: str
+        @param git_mail: str
+        @param agent: str
+        @param collection: Collection
+        @param parent: Entity or Segment
+        """
+        if not collection:
+            collection = self.collection()
+        if not parent:
+            parent = self.parent()
+        exit,status = commands.entity_update(
+            git_name, git_mail,
+            collection, parent,
+            [self.json_path],
+            agent
+        )
+        return exit,status
+        
     # _lockfile
     # lock
     # unlock
