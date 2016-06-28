@@ -161,6 +161,54 @@ def is_object_metadata(data):
             return True
     return False
 
+def form_prep(document, module):
+    """Apply formprep_{field} functions to prep data dict to pass into DDRForm object.
+    
+    Certain fields require special processing.  Data may need to be massaged
+    and prepared for insertion into particular Django form objects.
+    If a "formprep_{field}" function is present in the collectionmodule
+    it will be executed.
+    
+    @param document: Collection, Entity, File document object
+    @param module: collection, entity, files model definitions module
+    @returns data: dict object as used by Django Form object.
+    """
+    data = {}
+    for f in module.FIELDS:
+        if hasattr(document, f['name']) and f.get('form',None):
+            key = f['name']
+            # run formprep_* functions on field data if present
+            value = modules.Module(module).function(
+                'formprep_%s' % key,
+                getattr(document, f['name'])
+            )
+            data[key] = value
+    return data
+    
+def form_post(document, module, cleaned_data):
+    """Apply formpost_{field} functions to process cleaned_data from CollectionForm
+    
+    Certain fields require special processing.
+    If a "formpost_{field}" function is present in the entitymodule
+    it will be executed.
+    
+    @param document: Collection, Entity, File document object
+    @param module: collection, entity, files model definitions module
+    @param cleaned_data: dict cleaned_data from DDRForm
+    """
+    for f in module.FIELDS:
+        if hasattr(document, f['name']) and f.get('form',None):
+            fieldname = f['name']
+            # run formpost_* functions on field data if present
+            field_data = modules.Module(module).function(
+                'formpost_%s' % fieldname,
+                cleaned_data[fieldname]
+            )
+            setattr(document, fieldname, field_data)
+    # update record_lastmod
+    if hasattr(document, 'record_lastmod'):
+        document.record_lastmod = datetime.now()
+
 def load_json(document, module, json_text):
     """Populates object from JSON-formatted text.
     
@@ -611,6 +659,20 @@ class Collection( object ):
         module = self.identifier.fields_module()
         return modules.Module(module).labels_values(self)
     
+    def form_prep(self):
+        """Apply formprep_{field} functions to prep data dict to pass into DDRForm object.
+        
+        @returns data: dict object as used by Django Form object.
+        """
+        return form_prep(self, self.identifier.fields_module())
+    
+    def form_post(self, cleaned_data):
+        """Apply formpost_{field} functions to process cleaned_data from DDRForm
+        
+        @param cleaned_data: dict
+        """
+        form_post(self, self.identifier.fields_module(), cleaned_data)
+    
     def inheritable_fields( self ):
         """Returns list of Collection object's field names marked as inheritable.
         
@@ -820,6 +882,7 @@ class Collection( object ):
 
 
 
+
 ENTITY_FILE_KEYS = ['path_rel',
                     'role',
                     'sha1',
@@ -998,6 +1061,25 @@ class Entity( object ):
         """
         module = self.identifier.fields_module()
         return modules.Module(module).labels_values(self)
+    
+    def form_prep(self):
+        """Apply formprep_{field} functions to prep data dict to pass into DDRForm object.
+        
+        @returns data: dict object as used by Django Form object.
+        """
+        data = form_prep(self, self.identifier.fields_module())
+        if not data.get('record_created', None):
+            data['record_created'] = datetime.now()
+        if not data.get('record_lastmod', None):
+            data['record_lastmod'] = datetime.now()
+        return data
+    
+    def form_post(self, cleaned_data):
+        """Apply formpost_{field} functions to process cleaned_data from DDRForm
+        
+        @param cleaned_data: dict
+        """
+        form_post(self, self.identifier.fields_module(), cleaned_data)
 
     def inheritable_fields( self ):
         module = self.identifier.fields_module()
@@ -1564,6 +1646,20 @@ class File( object ):
         """
         module = self.identifier.fields_module()
         return modules.Module(module).labels_values(self)
+    
+    def form_prep(self):
+        """Apply formprep_{field} functions to prep data dict to pass into DDRForm object.
+        
+        @returns data: dict object as used by Django Form object.
+        """
+        return form_prep(self, self.identifier.fields_module())
+    
+    def form_post(self, cleaned_data):
+        """Apply formpost_{field} functions to process cleaned_data from DDRForm
+        
+        @param cleaned_data: dict
+        """
+        form_post(self, self.identifier.fields_module(), cleaned_data)
     
     def files_rel( self ):
         """Returns list of the file, its metadata JSON, and access file, relative to collection.
