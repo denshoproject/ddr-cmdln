@@ -191,6 +191,7 @@ def form_post(document, module, cleaned_data):
     Certain fields require special processing.
     If a "formpost_{field}" function is present in the entitymodule
     it will be executed.
+    NOTE: cleaned_data must contain items for all module.FIELDS.
     
     @param document: Collection, Entity, File document object
     @param module: collection, entity, files model definitions module
@@ -574,12 +575,16 @@ class Collection( object ):
         
         @param git_name: str
         @param git_mail: str
-        @param cleaned_data: dict
         @param agent: str
+        @param cleaned_data: dict
         """
+        if cleaned_data:
+            self.form_post(cleaned_data)
+        
         self.write_json()
         self.write_ead()
         updated_files = [self.json_path, self.ead_path,]
+        
         # if inheritable fields selected, propagate changes to child objects
         inheritables = self.selected_inheritables(cleaned_data)
         modified_ids,modified_files = self.update_inheritables(inheritables, cleaned_data)
@@ -1045,6 +1050,9 @@ class Entity( object ):
         """
         if not collection:
             collection = self.collection()
+        
+        if cleaned_data:
+            self.form_post(cleaned_data)
         
         self.write_json()
         self.write_mets()
@@ -1649,7 +1657,7 @@ class File( object ):
         )
         return exit,status
     
-    def save(self, git_name, git_mail, agent, collection=None, parent=None):
+    def save(self, git_name, git_mail, agent, collection=None, parent=None, cleaned_data={}):
         """Writes File metadata, stages, and commits.
         
         @param git_name: str
@@ -1657,15 +1665,23 @@ class File( object ):
         @param agent: str
         @param collection: Collection
         @param parent: Entity or Segment
+        @param cleaned_data: dict
         """
         if not collection:
             collection = self.collection()
         if not parent:
             parent = self.parent()
+        
+        if cleaned_data:
+            self.form_post(cleaned_data)
+        
+        self.write_json()
+        updated_files = [self.json_path,]
+        
         exit,status = commands.entity_update(
             git_name, git_mail,
             collection, parent,
-            [self.json_path],
+            updated_files,
             agent
         )
         return exit,status
