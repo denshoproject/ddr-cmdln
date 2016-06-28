@@ -1472,8 +1472,46 @@ class File( object ):
         if not identifier:
             identifier = Identifier(path=path_abs)
         return create_object(identifier)
+    
+    @staticmethod
+    def new(identifier, git_name, git_mail, agent='cmdln'):
+        """Creates new File (metadata only!), writes to filesystem, performs initial commit
+        
+        @param identifier: Identifier
+        @param git_name: str
+        @param git_mail: str
+        @param agent: str
+        @returns: exit,status int,str
+        """
+        parent = identifier.parent().object()
+        if not parent:
+            raise Exception('Parent for %s does not exist.' % identifier)
+        file_ = File.create(identifier.path_abs(), identifier)
+        file_.write_json()
+        
+        entity_file_edit(request, collection, file_, git_name, git_mail)
 
-    # NEW: use Entity.add_file
+        exit,status = commands.entity_create(
+            git_name, git_mail,
+            collection, entity.identifier,
+            [collection.json_path_rel, collection.ead_path_rel],
+            [config.TEMPLATE_EJSON, config.TEMPLATE_METS],
+            agent=agent
+        )
+        if exit:
+            raise Exception('Could not create new Entity: %s, %s' % (exit, status))
+        # load Entity object, inherit values from parent, write back to file
+        entity = Entity.from_identifier(identifier)
+        entity.inherit(collection)
+        entity.write_json()
+        updated_files = [entity.json_path]
+        exit,status = commands.entity_update(
+            git_name, git_mail,
+            collection, entity,
+            updated_files,
+            agent=agent
+        )
+        return exit,status
     
     # _lockfile
     # lock
