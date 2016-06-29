@@ -576,7 +576,7 @@ class Collection( object ):
         @param git_name: str
         @param git_mail: str
         @param agent: str
-        @param cleaned_data: dict
+        @param cleaned_data: dict Form data (all fields required)
         @param commit: boolean
         @returns: exit,status (int,str)
         """
@@ -1052,7 +1052,7 @@ class Entity( object ):
         @param git_mail: str
         @param agent: str
         @param collection: Collection
-        @param cleaned_data: dict
+        @param cleaned_data: dict Form data (all fields required)
         @param commit: boolean
         @returns: exit,status (int,str)
         """
@@ -1677,7 +1677,7 @@ class File( object ):
         @param agent: str
         @param collection: Collection
         @param parent: Entity or Segment
-        @param cleaned_data: dict
+        @param cleaned_data: dict Form data (all fields required)
         @param commit: boolean
         @returns: exit,status (int,str)
         """
