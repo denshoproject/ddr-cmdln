@@ -570,13 +570,15 @@ class Collection( object ):
         )
         return exit,status
     
-    def save(self, git_name, git_mail, agent, cleaned_data={}):
+    def save(self, git_name, git_mail, agent, cleaned_data={}, commit=False):
         """Writes specified Collection metadata, stages, and commits.
         
         @param git_name: str
         @param git_mail: str
         @param agent: str
         @param cleaned_data: dict
+        @param commit: boolean
+        @returns: exit,status (int,str)
         """
         if cleaned_data:
             self.form_post(cleaned_data)
@@ -590,13 +592,17 @@ class Collection( object ):
         modified_ids,modified_files = self.update_inheritables(inheritables, cleaned_data)
         if modified_files:
             updated_files = updated_files + modified_files
-        
-        exit,status = commands.update(
-            git_name, git_mail,
-            self,
-            updated_files,
-            agent
-        )
+
+        if commit:
+            exit,status = commands.update(
+                git_name, git_mail,
+                self,
+                updated_files,
+                agent
+            )
+        else:
+            exit = 0
+            status = 'staged'
         return exit,status
     
     @staticmethod
@@ -1039,7 +1045,7 @@ class Entity( object ):
         )
         return exit,status
     
-    def save(self, git_name, git_mail, agent, collection=None, cleaned_data={}):
+    def save(self, git_name, git_mail, agent, collection=None, cleaned_data={}, commit=False):
         """Writes specified Entity metadata, stages, and commits.
         
         @param git_name: str
@@ -1047,6 +1053,8 @@ class Entity( object ):
         @param agent: str
         @param collection: Collection
         @param cleaned_data: dict
+        @param commit: boolean
+        @returns: exit,status (int,str)
         """
         if not collection:
             collection = self.collection()
@@ -1062,13 +1070,17 @@ class Entity( object ):
         modified_ids,modified_files = self.update_inheritables(inheritables, cleaned_data)
         if modified_files:
             updated_files = updated_files + modified_files
-        
-        exit,status = commands.entity_update(
-            git_name, git_mail,
-            collection, self,
-            updated_files,
-            agent
-        )
+
+        if commit:
+            exit,status = commands.entity_update(
+                git_name, git_mail,
+                collection, self,
+                updated_files,
+                agent
+            )
+        else:
+            exit = 0
+            status = 'staged'
         return exit,status
     
     @staticmethod
@@ -1657,7 +1669,7 @@ class File( object ):
         )
         return exit,status
     
-    def save(self, git_name, git_mail, agent, collection=None, parent=None, cleaned_data={}):
+    def save(self, git_name, git_mail, agent, collection=None, parent=None, cleaned_data={}, commit=False):
         """Writes File metadata, stages, and commits.
         
         @param git_name: str
@@ -1666,6 +1678,8 @@ class File( object ):
         @param collection: Collection
         @param parent: Entity or Segment
         @param cleaned_data: dict
+        @param commit: boolean
+        @returns: exit,status (int,str)
         """
         if not collection:
             collection = self.collection()
@@ -1677,13 +1691,17 @@ class File( object ):
         
         self.write_json()
         updated_files = [self.json_path,]
-        
-        exit,status = commands.entity_update(
-            git_name, git_mail,
-            collection, parent,
-            updated_files,
-            agent
-        )
+
+        if commit:
+            exit,status = commands.entity_update(
+                git_name, git_mail,
+                collection, parent,
+                updated_files,
+                agent
+            )
+        else:
+            exit = 0
+            status = 'staged'
         return exit,status
         
     # _lockfile
