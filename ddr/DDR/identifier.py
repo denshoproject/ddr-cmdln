@@ -172,6 +172,16 @@ class Definitions():
         return children
 
     @staticmethod
+    def endpoints(identifiers, fieldname):
+        """Nodes, leafs, endpoints. Things with no children or parents.
+        """
+        return [
+            i['model']
+            for i in identifiers
+            if i[fieldname] == []
+        ]
+
+    @staticmethod
     def id_components(identifiers):
         """Keywords that can legally appear in IDs
         
@@ -365,6 +375,8 @@ PARENTS = Definitions.models_parents(IDENTIFIERS)
 PARENTS_ALL = Definitions.models_parents_all(IDENTIFIERS)
 CHILDREN = Definitions.children(PARENTS)
 CHILDREN_ALL = Definitions.children(PARENTS_ALL)
+ROOTS = Definitions.endpoints(IDENTIFIERS, 'parents_all')
+NODES = Definitions.endpoints(IDENTIFIERS, 'children_all')
 ID_COMPONENTS = Definitions.id_components(IDENTIFIERS)
 VALID_COMPONENTS = Definitions.valid_components(IDENTIFIERS)
 NEXTABLE_MODELS = Definitions.nextable_models(IDENTIFIERS)
@@ -1085,7 +1097,7 @@ class Identifier(object):
         path = format_path(self, self.model, 'abs')
         if append:
             filename = ADDITIONAL_PATHS.get(self.model,None).get(append,None)
-            if filename and self.model == 'file':
+            if filename and (self.model in NODES):
                 # For files, bits are appended to file ID using string formatter
                 dirname,basename = os.path.split(path)
                 filename = filename.format(id=self.id)
