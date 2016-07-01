@@ -1574,17 +1574,24 @@ class File( object ):
         # only accept path_abs
         if kwargs and kwargs.get('path_abs',None):
             path_abs = kwargs['path_abs']
-        elif args and args[0]:
+        elif args and args[0] and isinstance(args[0], basestring):
             path_abs = args[0]  #     Use path_abs arg!!!
+        
+        i = None
+        for arg in args:
+            if isinstance(arg, Identifier):
+                i = arg
+        for key,arg in kwargs.iteritems():
+            if isinstance(arg, Identifier):
+                i = arg
+        self.identifier = i
+        
+        if self.identifier and not path_abs:
+            path_abs = self.identifier.path_abs()
         if not path_abs:
             # TODO accept path_rel plus base_path
             raise Exception("File must be instantiated with an absolute path!")
         path_abs = os.path.normpath(path_abs)
-        if kwargs and kwargs.get('identifier',None):
-            i = kwargs['identifier']
-        else:
-            i = Identifier(os.path.splitext(path_abs)[0])
-        self.identifier = i
         
         self.id = i.id
         self.idparts = i.parts.values()
