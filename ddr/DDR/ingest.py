@@ -315,17 +315,32 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
     log.ok('entity: %s' % entity.id)
     log.ok('data: %s' % data)
     
-    log.ok('Examining source file')
-    check_dir('| src_path', src_path, log, mkdir=False, perm=os.R_OK)
+    if data.get('external') and data['external']:
+        log.ok('External file')
+        normal = 0
+    else:
+        log.ok('Regular file (not external)')
+        normal = 1
+
+    if normal:
+        log.ok('Examining source file')
+        check_dir('| src_path', src_path, log, mkdir=False, perm=os.R_OK)
+        
+        src_size = os.path.getsize(src_path)
+        log.ok('| file size %s' % src_size)
+        # TODO check free space on dest
+        
+        md5,sha1,sha256 = checksums(src_path, log)
+        
+        log.ok('| extracting XMP data')
+        xmp = imaging.extract_xmp(src_path)
     
-    src_size = os.path.getsize(src_path)
-    log.ok('| file size %s' % src_size)
-    # TODO check free space on dest
-    
-    md5,sha1,sha256 = checksums(src_path, log)
-    
-    log.ok('| extracting XMP data')
-    xmp = imaging.extract_xmp(src_path)
+    else:
+        src_size = data.get('size', 0)
+        md5 = data.get('md5', '')
+        sha1 = data.get('sha1', '')
+        sha256 = data.get('sha256', '')
+        xmp = data.get('xmp', '')
     
     log.ok('Identifier')
     # note: we can't make this until we have the sha1
@@ -340,20 +355,21 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
     
     dest_path = destination_path(src_path, entity.files_path, fidentifier)
     tmp_path = temporary_path(src_path, config.MEDIA_BASE, fidentifier)
+    tmp_dir = os.path.dirname(tmp_path)
     tmp_path_renamed = temporary_path_renamed(tmp_path, dest_path)
     access_dest_path = access_path(file_class, tmp_path_renamed)
     dest_dir = os.path.dirname(dest_path)
-    tmp_dir = os.path.dirname(tmp_path)
-    
+         
     log.ok('Checking files/dirs')
     check_dir('| tmp_dir', tmp_dir, log, mkdir=True, perm=os.W_OK)
-    check_dir('| dest_dir', dest_dir, log, mkdir=True, perm=os.W_OK)
-    
-    log.ok('Copying to work dir')
-    copy_to_workdir(src_path, tmp_path, tmp_path_renamed, log)
-    
-    log.ok('Making access file')
-    tmp_access_path = make_access_file(src_path, access_dest_path, log)
+    if normal:
+        check_dir('| dest_dir', dest_dir, log, mkdir=True, perm=os.W_OK)
+         
+        log.ok('Copying to work dir')
+        copy_to_workdir(src_path, tmp_path, tmp_path_renamed, log)
+         
+        log.ok('Making access file')
+        tmp_access_path = make_access_file(src_path, access_dest_path, log)
     
     log.ok('File object')
     file_ = file_class(path_abs=dest_path, identifier=fidentifier)
@@ -377,21 +393,23 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
     # form data
     for field in data:
         setattr(file_, field, data[field])
+
+    if normal:
+        log.ok('Attaching access file')
+        if tmp_access_path and os.path.exists(tmp_access_path):
+            file_.set_access(tmp_access_path, entity)
+            log.ok('| file_.access_rel: %s' % file_.access_rel)
+            log.ok('| file_.access_abs: %s' % file_.access_abs)
+        else:
+            log.not_ok('no access file')
     
-    log.ok('Attaching access file')
-    if tmp_access_path and os.path.exists(tmp_access_path):
-        file_.set_access(tmp_access_path, entity)
-        log.ok('| file_.access_rel: %s' % file_.access_rel)
-        log.ok('| file_.access_abs: %s' % file_.access_abs)
-    else:
-        log.not_ok('no access file')
-    
-    log.ok('Attaching file to entity')
-    entity.files.append(file_)
-    if file_ in entity.files:
-        log.ok('| done')
-    else:
-        log.crash('Could not add file to entity.files!')
+    if normal:
+        log.ok('Attaching file to entity')
+        entity.files.append(file_)
+        if file_ in entity.files:
+            log.ok('| done')
+        else:
+            log.crash('Could not add file to entity.files!')
     
     log.ok('Writing object metadata')
     tmp_file_json = write_object_metadata(file_, tmp_dir, log)
@@ -401,13 +419,16 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
     
     log.ok('Moving files to dest_dir')
     new_files = [
-        (tmp_path_renamed, file_.path_abs),
         (tmp_file_json, file_.json_path),
     ]
-    if tmp_access_path and os.path.exists(tmp_access_path):
-        new_files.append(
-            (tmp_access_path, file_.access_abs)
-        )
+    if normal:
+        new_files = new_files + [
+            (tmp_path_renamed, file_.path_abs),
+        ]
+        if tmp_access_path and os.path.exists(tmp_access_path):
+            new_files.append(
+                (tmp_access_path, file_.access_abs)
+            )
     mvnew_fails = move_files(new_files, log)
     if mvnew_fails:
         log.not_ok('Failed to place one or more new files to destination repo')
@@ -432,11 +453,14 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
         entity.json_path_rel,
         file_.json_path_rel
     ]
-    annex_files = [
-        file_.path_abs.replace('%s/' % file_.collection_path, '')
-    ]
-    if file_.access_abs and os.path.exists(file_.access_abs):
-        annex_files.append(file_.access_abs.replace('%s/' % file_.collection_path, ''))
+    if normal:
+        annex_files = [
+            file_.path_abs.replace('%s/' % file_.collection_path, '')
+        ]
+        if file_.access_abs and os.path.exists(file_.access_abs):
+            annex_files.append(file_.access_abs.replace('%s/' % file_.collection_path, ''))
+    else:
+        annex_files = []
     repo = stage_files(entity, git_files, annex_files, new_files, log, show_staged=show_staged)
     
     # IMPORTANT: Files are only staged! Be sure to commit!

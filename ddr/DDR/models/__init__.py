@@ -1529,6 +1529,7 @@ FILE_KEYS = ['path_rel',
 class File( object ):
     id = None
     idparts = None
+    external = None
     collection_id = None
     parent_id = None
     entity_id = None
