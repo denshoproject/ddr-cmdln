@@ -140,7 +140,10 @@ def local_devices(udisks_dump_stdout):
     # While device is being mounted
     # - udisks --dump will list device as unmounted with no mountpath
     # - psutils will show a 'mount' process for the device/mountpath
-    procs = [p for p in psutil.process_iter() if 'mount' in p.name()]
+    try:
+        procs = [p for p in psutil.process_iter() if 'mount' in p.name()]
+    except psutil.NoSuchProcess:
+        procs = []
     for device in devices:
         if (not device['mounted']) and (not device['mountpath']):
             for proc in procs:
