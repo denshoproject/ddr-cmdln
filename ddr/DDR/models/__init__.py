@@ -1744,12 +1744,14 @@ class File( object ):
     
     @staticmethod
     def from_identifier(identifier):
-        """Instantiates a File object, loads data from FILE.json.
+        """Instantiates a File object, loads data from FILE.json or creates new object.
         
         @param identifier: Identifier
         @returns: File
         """
-        return File.from_json(identifier.path_abs('json'), identifier)
+        if os.path.exists(identifier.path_abs('json')):
+            return File.from_json(identifier.path_abs('json'), identifier)
+        return File.create(identifier.path_abs('json'), identifier)
     
     def parent( self ):
         i = Identifier(id=self.parent_id, base_path=self.identifier.basepath)
