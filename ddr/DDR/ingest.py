@@ -576,5 +576,5 @@ def add_file_commit(entity, file_, repo, log, git_name, git_mail, agent):
         log.not_ok('staged %s' % staged)
         log.not_ok('modified %s' % modified)
         log.not_ok('Can not commit!')
-        raise Exception()
+        raise Exception('Could not commit bc %s unstaged files: %s' % (len(modified), modified))
     return file_,repo,log
