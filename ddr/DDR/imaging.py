@@ -85,7 +85,7 @@ def analyze(path):
         raise Exception('path does not exist %s' % path)
     # test for multiple frames/layers/pages
     # if there are multiple frames, we only want the first one
-    cmd = 'identify %s' % path
+    cmd = 'identify "%s"' % path
     out = subprocess.check_output(cmd, shell=True)
     return analyze_magick(out)
 
@@ -95,7 +95,7 @@ def geometry_is_ok(geometry):
     return False
 
 def make_convert_cmd(src, dest, geometry):
-    return "convert %s[0] -resize '%s' %s" % (src, geometry, dest)
+    return "convert \"%s\"[0] -resize '%s' %s" % (src, geometry, dest)
 
 def thumbnail(src, dest, geometry):
     """Attempt to make thumbnail
