@@ -378,6 +378,8 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
     copy_to_workdir(src_path, tmp_path, tmp_path_renamed, log)
     
     log.ok('Making access file')
+    if os.path.exists(access_dest_path):
+        log.not_ok('Access tmpfile already exists: %s' % access_dest_path)
     tmp_access_path = make_access_file(src_path, access_dest_path, log)
     
     log.ok('File object')
