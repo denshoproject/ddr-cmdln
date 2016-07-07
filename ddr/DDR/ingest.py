@@ -299,8 +299,11 @@ def stage_files(entity, git_files, annex_files, new_files, log, show_staged=True
             #      This clause moves the *symlinks* to annex files but leaves
             #      the actual binaries in the .git/annex objects dir.
             for tmp,dest in new_files:
-                log.not_ok('| mv %s %s' % (dest,tmp))
-                os.rename(dest,tmp)
+                if os.path.islink(dest):
+                    log.not_ok('| link (not moving) %s' % dest)
+                else:
+                    log.not_ok('| mv %s %s' % (dest,tmp))
+                    os.rename(dest,tmp)
             log.not_ok('finished cleanup. good luck...')
             log.crash('Add file aborted, see log file for details: %s' % log.logpath)
     return repo
