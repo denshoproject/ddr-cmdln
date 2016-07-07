@@ -123,6 +123,7 @@ def thumbnail(src, dest, geometry):
         'dest': dest,
         'geometry': geometry,
         'analysis': None,
+        'convert': None,
         'attempted': None,
         'status_code': None,
         'std_out': None,
@@ -134,6 +135,7 @@ def thumbnail(src, dest, geometry):
     analysis = analyze(src)
     data['analysis'] = analysis
     cmd = CONVERT_CMD.format(src=src, geometry=geometry, dest=dest)
+    data['convert'] = cmd
     r = envoy.run(cmd)
     data['attempted'] = True
     data['status_code'] = r.status_code

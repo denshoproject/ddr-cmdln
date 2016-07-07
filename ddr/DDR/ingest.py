@@ -159,6 +159,7 @@ def make_access_file(src_path, access_dest_path, log):
         if data['analysis'].get('std_err'):
             log.not_ok('| identify: %s' % data['analysis']['std_err'])
         # convert
+        log.ok('| %s' % data['convert'])
         log.ok('| convert: status:%s exists:%s islink:%s size:%s' % (
             data['status_code'],
             data['exists'],
