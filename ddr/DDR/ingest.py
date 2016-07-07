@@ -301,7 +301,7 @@ def stage_files(entity, git_files, annex_files, new_files, log, show_staged=True
                 log.not_ok('| mv %s %s' % (dest,tmp))
                 os.rename(dest,tmp)
             log.not_ok('finished cleanup. good luck...')
-            log.crash('Add file aborted, see log file for details.')
+            log.crash('Add file aborted, see log file for details: %s' % log.logpath)
     return repo
 
 def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_path=None, show_staged=True):
