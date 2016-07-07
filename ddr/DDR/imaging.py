@@ -24,11 +24,15 @@ CalledProcessError: Command 'identify /tmp/DDRWorkbenchScreenShots.docx' returne
 import os
 import subprocess
 
+import envoy
 import libxmp
 from lxml import etree
 
+IDENTIFY_CMD = 'identify "{path}"'
+CONVERT_CMD  = "convert \"{src}\"[0] -resize '{geometry}' {dest}"
 
-def analyze_magick(txt):
+
+def analyze_magick(std_out, std_err):
     """Returns information about the first frame of the image file.
     
     JPEG:
@@ -46,7 +50,8 @@ def analyze_magick(txt):
     DOCX:
     identify.im6: no decode delegate for this image format `/tmp/DDRWorkbenchScreenShots.docx' @ error/constitute.c/ReadImage/544.
     
-    @param txt: String
+    @param std_out: String
+    @param std_err: String
     @returns: str
     """
     analysis = {
@@ -54,8 +59,10 @@ def analyze_magick(txt):
         'format': None,
         'frames': None,
         'can_thumbnail': None,
+        'std_out': std_out.strip(),
+        'std_err': std_err.strip(),
     }
-    lines = txt.strip().split('\n')
+    lines = std_out.strip().split('\n')
     analysis['frames'] = len(lines)
     line = lines[0]
     # if this is an image the first chunk of line 1 should be the path
@@ -85,17 +92,16 @@ def analyze(path):
         raise Exception('path does not exist %s' % path)
     # test for multiple frames/layers/pages
     # if there are multiple frames, we only want the first one
-    cmd = 'identify "%s"' % path
-    out = subprocess.check_output(cmd, shell=True)
-    return analyze_magick(out)
+    cmd = IDENTIFY_CMD.format(path=path)
+    r = envoy.run(cmd)
+    if r.status_code != 0:
+        raise Exception(r.std_err)
+    return analyze_magick(r.std_out, r.std_err)
 
 def geometry_is_ok(geometry):
     if ('x' in geometry) and (len(geometry.split('x')) == 2):
         return True
     return False
-
-def make_convert_cmd(src, dest, geometry):
-    return "convert \"%s\"[0] -resize '%s' %s" % (src, geometry, dest)
 
 def thumbnail(src, dest, geometry):
     """Attempt to make thumbnail
@@ -112,14 +118,31 @@ def thumbnail(src, dest, geometry):
     assert os.path.exists(src)
     assert os.path.exists(os.path.dirname(dest))
     assert geometry_is_ok(geometry)
+    data = {
+        'src': src,
+        'dest': dest,
+        'geometry': geometry,
+        'analysis': None,
+        'attempted': None,
+        'status_code': None,
+        'std_out': None,
+        'std_err': None,
+        'exists': None,
+        'size': None,
+        'islink': None,
+    }
     analysis = analyze(src)
-    cmd = make_convert_cmd(src, dest, geometry)
-    out = subprocess.check_output(cmd, shell=True)
-    if not os.path.exists(dest):
-        raise Exception('access file was not created: %s' % dest)
-    if not os.path.getsize(dest):
-        raise Exception('dest file created but zero length: %s' % dest)
-    return dest
+    data['analysis'] = analysis
+    cmd = CONVERT_CMD.format(src=src, geometry=geometry, dest=dest)
+    r = envoy.run(cmd)
+    data['attempted'] = True
+    data['status_code'] = r.status_code
+    data['std_out'] = r.std_out
+    data['std_err'] = r.std_err
+    data['exists'] = os.path.exists(dest)
+    data['size'] = os.path.getsize(dest)
+    data['islink'] = os.path.islink(dest)
+    return data
 
 def extract_xmp(path_abs):
     """Attempts to extract XMP data from a file, returns as dict.

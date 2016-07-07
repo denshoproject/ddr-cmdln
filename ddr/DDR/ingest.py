@@ -149,11 +149,32 @@ def copy_to_workdir(src_path, tmp_path, tmp_path_renamed, log):
 def make_access_file(src_path, access_dest_path, log):
     log.ok('| %s' % access_dest_path)
     try:
-        tmp_access_path = imaging.thumbnail(
+        data = imaging.thumbnail(
             src_path,
             access_dest_path,
             geometry=config.ACCESS_FILE_GEOMETRY
         )
+        # identify
+        log.ok('| identify: %s' % data['analysis']['std_out'])
+        if data['analysis'].get('std_err'):
+            log.not_ok('| identify: %s' % data['analysis']['std_err'])
+        # convert
+        log.ok('| convert: status:%s exists:%s islink:%s size:%s' % (
+            data['status_code'],
+            data['exists'],
+            data['islink'],
+            data['size'],
+        ))
+        if data.get('std_err'):
+            log.not_ok('| convert: %s' % data['std_err'])
+        if not data['exists']:
+            log.not_ok('Access file was not created!')
+        if not data['size']:
+            log.not_ok('Dest file created but zero length!')
+        if data['islink']:
+            log.not_ok('DEST FILE IS A SYMLINK!')
+        #
+        tmp_access_path = data['dest']
         log.ok('| done')
     except:
         # write traceback to log and continue on
