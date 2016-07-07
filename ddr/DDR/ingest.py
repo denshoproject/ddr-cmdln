@@ -535,7 +535,7 @@ def add_access( entity, ddrfile, git_name, git_mail, agent='', log_path=None, sh
     # if new tmp_access_path and access_dest_path are same, declare success and quit
     existing_sha1 = None
     tmp_sha1 = None
-    if os.path.exists(src_path):
+    if os.path.exists(access_final_path):
         # if src_path is an existing file, it's probably a git-annex symlink
         # we want to compare two actual files, not a file and a symlink
         access_final_path_real = os.path.realpath(access_final_path)
