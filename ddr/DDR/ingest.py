@@ -149,11 +149,33 @@ def copy_to_workdir(src_path, tmp_path, tmp_path_renamed, log):
 def make_access_file(src_path, access_dest_path, log):
     log.ok('| %s' % access_dest_path)
     try:
-        tmp_access_path = imaging.thumbnail(
+        data = imaging.thumbnail(
             src_path,
             access_dest_path,
             geometry=config.ACCESS_FILE_GEOMETRY
         )
+        # identify
+        log.ok('| identify: %s' % data['analysis']['std_out'])
+        if data['analysis'].get('std_err'):
+            log.not_ok('| identify: %s' % data['analysis']['std_err'])
+        # convert
+        log.ok('| %s' % data['convert'])
+        log.ok('| convert: status:%s exists:%s islink:%s size:%s' % (
+            data['status_code'],
+            data['exists'],
+            data['islink'],
+            data['size'],
+        ))
+        if data.get('std_err'):
+            log.not_ok('| convert: %s' % data['std_err'])
+        if not data['exists']:
+            log.not_ok('Access file was not created!')
+        if not data['size']:
+            log.not_ok('Dest file created but zero length!')
+        if data['islink']:
+            log.not_ok('DEST FILE IS A SYMLINK!')
+        #
+        tmp_access_path = data['dest']
         log.ok('| done')
     except:
         # write traceback to log and continue on
@@ -277,10 +299,13 @@ def stage_files(entity, git_files, annex_files, new_files, log, show_staged=True
             #      This clause moves the *symlinks* to annex files but leaves
             #      the actual binaries in the .git/annex objects dir.
             for tmp,dest in new_files:
-                log.not_ok('| mv %s %s' % (dest,tmp))
-                os.rename(dest,tmp)
+                if os.path.islink(dest):
+                    log.not_ok('| link (not moving) %s' % dest)
+                else:
+                    log.not_ok('| mv %s %s' % (dest,tmp))
+                    os.rename(dest,tmp)
             log.not_ok('finished cleanup. good luck...')
-            log.crash('Add file aborted, see log file for details.')
+            log.crash('Add file aborted, see log file for details: %s' % log.logpath)
     return repo
 
 def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_path=None, show_staged=True):
@@ -353,6 +378,8 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
     copy_to_workdir(src_path, tmp_path, tmp_path_renamed, log)
     
     log.ok('Making access file')
+    if os.path.exists(access_dest_path):
+        log.not_ok('Access tmpfile already exists: %s' % access_dest_path)
     tmp_access_path = make_access_file(src_path, access_dest_path, log)
     
     log.ok('File object')
@@ -459,7 +486,7 @@ def add_access( entity, ddrfile, git_name, git_mail, agent='', log_path=None, sh
     @param agent: str (optional) Name of software making the change.
     @param log_path: str (optional) Absolute path to addfile log
     @param show_staged: boolean Log list of staged files
-    @return file_ File object
+    @returns: file_,repo,log,next_op
     """
     f = None
     repo = None
@@ -491,6 +518,8 @@ def add_access( entity, ddrfile, git_name, git_mail, agent='', log_path=None, sh
     access_dest_path = access_path(file_class, tmp_path_renamed)
     dest_dir = os.path.dirname(dest_path)
     tmp_dir = os.path.dirname(tmp_path)
+    # this is the final path of the access file
+    access_final_path = ddrfile.identifier.path_abs('access')
     
     log.ok('Checking files/dirs')
     check_dir('| tmp_dir', tmp_dir, log, mkdir=True, perm=os.W_OK)
@@ -502,6 +531,22 @@ def add_access( entity, ddrfile, git_name, git_mail, agent='', log_path=None, sh
     log.ok('File object')
     file_ = ddrfile
     log.ok('| file_ %s' % file_)
+    
+    # if new tmp_access_path and access_dest_path are same, declare success and quit
+    existing_sha1 = None
+    tmp_sha1 = None
+    if os.path.exists(access_final_path):
+        # if src_path is an existing file, it's probably a git-annex symlink
+        # we want to compare two actual files, not a file and a symlink
+        access_final_path_real = os.path.realpath(access_final_path)
+        existing_sha1 = util.file_hash(access_final_path_real, 'sha1')
+        log.ok('| existing_sha1: %s' % existing_sha1)
+    if os.path.exists(access_dest_path):
+        tmp_sha1 = util.file_hash(access_dest_path, 'sha1')
+        log.ok('| tmp_sha1:      %s' % tmp_sha1)
+    if tmp_sha1 == existing_sha1:
+        log.ok('New access file same as existing. Nothing to see here, move along.')
+        return file_,repo,log,'pass'
     
     log.ok('Writing object metadata')
     tmp_file_json = write_object_metadata(file_, tmp_dir, log)
@@ -543,7 +588,7 @@ def add_access( entity, ddrfile, git_name, git_mail, agent='', log_path=None, sh
     
     # IMPORTANT: Files are only staged! Be sure to commit!
     # IMPORTANT: changelog is not staged!
-    return file_,repo,log
+    return file_,repo,log,'continue'
 
 def add_file_commit(entity, file_, repo, log, git_name, git_mail, agent):
     log.ok('add_file_commit(%s, %s, %s, %s, %s, %s)' % (file_, repo, log, git_name, git_mail, agent))
@@ -576,5 +621,5 @@ def add_file_commit(entity, file_, repo, log, git_name, git_mail, agent):
         log.not_ok('staged %s' % staged)
         log.not_ok('modified %s' % modified)
         log.not_ok('Can not commit!')
-        raise Exception()
+        raise Exception('Could not commit bc %s unstaged files: %s' % (len(modified), modified))
     return file_,repo,log
