@@ -1119,8 +1119,8 @@ class Entity( object ):
 #        cidentifier = self.identifier.parent()
 #        return Collection.from_identifier(cidentifier)
    
-    def children( self, role=None, quick=None ):
-        self.load_file_objects()
+    def children( self, role=None, quick=None, force_read=False ):
+        self.load_file_objects(force_read=force_read)
         if role:
             files = [
                 f for f in self._file_objects
@@ -1128,7 +1128,8 @@ class Entity( object ):
             ]
         else:
             files = [f for f in self._file_objects]
-        return sorted(files, key=lambda f: f.sort)
+        self.files = sorted(files, key=lambda f: f.sort)
+        return self.files
     
     def labels_values(self):
         """Apply display_{field} functions to prep object data for the UI.
@@ -1414,19 +1415,33 @@ class Entity( object ):
             )
         return []
     
-    def load_file_objects( self ):
+    def load_file_objects(self, force_read=False):
         """Replaces list of file info dicts with list of File objects
         
         TODO Don't call in loop - causes all file .JSONs to be loaded!
+        
+        @param force_read: bool Traverse filesystem if true.
+        @returns: None
         """
         self._file_objects = []
-        for f in self.files:
-            if f and f.get('path_rel',None):
-                basename = os.path.basename(f['path_rel'])
-                fid = os.path.splitext(basename)[0]
-                identifier = Identifier(id=fid, base_path=self.identifier.basepath)
-                file_ = File.from_identifier(identifier)
+        if force_read:
+            # filesystem
+            for json_path in self._file_paths():
+                file_ = File.from_identifier(
+                    Identifier(
+                        os.path.splitext(os.path.basename(json_path))[0],
+                        self.identifier.basepath
+                    )
+                )
                 self._file_objects.append(file_)
+        else:
+            for f in self.files:
+                if f and f.get('path_rel',None):
+                    basename = os.path.basename(f['path_rel'])
+                    fid = os.path.splitext(basename)[0]
+                    identifier = Identifier(id=fid, base_path=self.identifier.basepath)
+                    file_ = File.from_identifier(identifier)
+                    self._file_objects.append(file_)
         # keep track of how many times this gets loaded...
         self._file_objects_loaded = self._file_objects_loaded + 1
     
