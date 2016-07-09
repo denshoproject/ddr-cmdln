@@ -430,13 +430,12 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
         else:
             log.not_ok('no access file')
     
-    if normal:
-        log.ok('Attaching file to entity')
-        entity.files.append(file_)
-        if file_ in entity.files:
-            log.ok('| done')
-        else:
-            log.crash('Could not add file to entity.files!')
+    log.ok('Attaching file to entity')
+    entity.files.append(file_)
+    if file_ in entity.files:
+        log.ok('| done')
+    else:
+        log.crash('Could not add file to entity.files!')
     
     log.ok('Writing object metadata')
     tmp_file_json = write_object_metadata(file_, tmp_dir, log)
