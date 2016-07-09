@@ -1360,45 +1360,59 @@ class Entity( object ):
     def checksum_algorithms():
         return ['md5', 'sha1', 'sha256']
     
-    def checksums( self, algo ):
+    def checksums(self, algo, force_read=False):
         """Calculates hash checksums for the Entity's files.
         
         Gets hashes from FILE.json metadata if the file(s) are absent
         from the filesystem (i.e. git-annex file symlinks).
         Overrides DDR.models.Entity.checksums.
+        
+        @param algo: str
+        @param force_read: bool Traverse filesystem if true.
+        @returns: list of (checksum, filepath) tuples
         """
         checksums = []
         if algo not in self.checksum_algorithms():
             raise Error('BAD ALGORITHM CHOICE: {}'.format(algo))
         for f in self._file_paths():
             cs = None
-            fpath = os.path.join(self.files_path, f)
-            # git-annex files are present
-            if os.path.exists(fpath) and not os.path.islink(fpath):
-                cs = util.file_hash(fpath, algo)
-            # git-annex files NOT present - get checksum from entity._files
-            # WARNING: THIS MODULE SHOULD NOT KNOW ANYTHING ABOUT HIGHER-LEVEL CODE!
-            elif os.path.islink(fpath) and hasattr(self, '_files'):
-                for fdict in self._files:
-                    if os.path.basename(fdict['path_rel']) == os.path.basename(fpath):
-                        cs = fdict[algo]
+            ext = None
+            pathname = os.path.splitext(f)[0]
+            # from metadata file
+            json_path = os.path.join(self.files_path, f)
+            for field in json.loads(fileio.read_text(json_path)):
+                for k,v in field.iteritems():
+                    if k == algo:
+                        cs = v
+                    if k == 'basename_orig':
+                        ext = os.path.splitext(v)[-1]
+            fpath = pathname + ext
+            if force_read:
+                # from filesystem
+                # git-annex files are present
+                if os.path.exists(fpath):
+                    cs = util.file_hash(fpath, algo)
             if cs:
-                checksums.append( (cs, fpath) )
+                checksums.append( (cs, os.path.basename(fpath)) )
         return checksums
     
-    def _file_paths( self ):
-        """Returns relative paths to payload files.
-        TODO use util.find_meta_files()
+    def _file_paths(self, rel=False):
+        """Searches filesystem for childrens' metadata files, returns relative paths.
+        @param rel: bool Return relative paths
+        @returns: list
         """
-        paths = []
-        prefix_path = self.files_path
-        if prefix_path[-1] != '/':
-            prefix_path = '{}/'.format(prefix_path)
         if os.path.exists(self.files_path):
-            for f in os.listdir(self.files_path):
-                paths.append(f.replace(prefix_path, ''))
-        paths = sorted(paths, key=lambda f: util.natural_order_string(f))
-        return paths
+            prefix_path = 'THISWILLNEVERMATCHANYTHING'
+            if rel:
+                prefix_path = '{}/'.format(os.path.normpath(self.files_path))
+            return sorted(
+                [
+                    f.replace(prefix_path, '')
+                    for f in util.find_meta_files(self.files_path, recursive=False)
+                ],
+                key=lambda f: util.natural_order_string(f)
+            )
+        return []
     
     def load_file_objects( self ):
         """Replaces list of file info dicts with list of File objects
