@@ -2067,3 +2067,36 @@ class File( object ):
             if l not in links:
                 links.append(l)
         return links
+
+    def exists(self):
+        """Indicates whether the exits or not; takes File.external into account.
+        
+        @returns: bool
+        """
+        FILE_EXISTS = {
+           # J   - JSON exists
+           # |E  - external == truthy
+           # ||F - file exists
+            '---': False,
+            'J--': False,
+           #'-E-'
+           #'--F'
+            'JE-': True,
+            'J-F': True,
+           #'-EF'
+            'JEF': True,
+        }
+        score = ''
+        if os.path.exists(self.identifier.path_abs('json')):
+            score += 'J'
+        else:
+            score += '-'
+        if self.external:
+            score += 'E'
+        else:
+            score += '-'
+        if self.path_abs and os.path.exists(self.path_abs):
+            score += 'F'
+        else:
+            score += '-'
+        return FILE_EXISTS[score]
