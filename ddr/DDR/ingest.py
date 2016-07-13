@@ -309,7 +309,10 @@ def stage_files(entity, git_files, annex_files, new_files, log, show_staged=True
     return repo
 
 def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_path=None, show_staged=True):
-    """Add file to entity
+    """Add a "normal" file to entity
+    
+    "Normal" files are those in which a binary file is added to the repository
+    as part of the ingest process.
     
     This method breaks out of OOP and manipulates entity.json directly.
     Thus it needs to lock to prevent other edits while it does its thing.
@@ -340,32 +343,17 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
     log.ok('entity: %s' % entity.id)
     log.ok('data: %s' % data)
     
-    if data.get('external') and data['external']:
-        log.ok('External file')
-        normal = 0
-    else:
-        log.ok('Regular file (not external)')
-        normal = 1
-
-    if normal:
-        log.ok('Examining source file')
-        check_dir('| src_path', src_path, log, mkdir=False, perm=os.R_OK)
-        
-        src_size = os.path.getsize(src_path)
-        log.ok('| file size %s' % src_size)
-        # TODO check free space on dest
-        
-        md5,sha1,sha256 = checksums(src_path, log)
-        
-        log.ok('| extracting XMP data')
-        xmp = imaging.extract_xmp(src_path)
+    log.ok('Examining source file')
+    check_dir('| src_path', src_path, log, mkdir=False, perm=os.R_OK)
     
-    else:
-        src_size = data.get('size', 0)
-        md5 = data.get('md5', '')
-        sha1 = data.get('sha1', '')
-        sha256 = data.get('sha256', '')
-        xmp = data.get('xmp', '')
+    src_size = os.path.getsize(src_path)
+    log.ok('| file size %s' % src_size)
+    # TODO check free space on dest
+    
+    md5,sha1,sha256 = checksums(src_path, log)
+    
+    log.ok('| extracting XMP data')
+    xmp = imaging.extract_xmp(src_path)
     
     log.ok('Identifier')
     # note: we can't make this until we have the sha1
@@ -387,16 +375,15 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
          
     log.ok('Checking files/dirs')
     check_dir('| tmp_dir', tmp_dir, log, mkdir=True, perm=os.W_OK)
-    if normal:
-        check_dir('| dest_dir', dest_dir, log, mkdir=True, perm=os.W_OK)
-        
-        log.ok('Copying to work dir')
-        copy_to_workdir(src_path, tmp_path, tmp_path_renamed, log)
-        
-        log.ok('Making access file')
-        if os.path.exists(access_dest_path):
-            log.not_ok('Access tmpfile already exists: %s' % access_dest_path)
-        tmp_access_path = make_access_file(src_path, access_dest_path, log)
+    check_dir('| dest_dir', dest_dir, log, mkdir=True, perm=os.W_OK)
+    
+    log.ok('Copying to work dir')
+    copy_to_workdir(src_path, tmp_path, tmp_path_renamed, log)
+    
+    log.ok('Making access file')
+    if os.path.exists(access_dest_path):
+        log.not_ok('Access tmpfile already exists: %s' % access_dest_path)
+    tmp_access_path = make_access_file(src_path, access_dest_path, log)
     
     log.ok('File object')
     file_ = file_class(path_abs=dest_path, identifier=fidentifier)
@@ -420,15 +407,14 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
     # form data
     for field in data:
         setattr(file_, field, data[field])
-
-    if normal:
-        log.ok('Attaching access file')
-        if tmp_access_path and os.path.exists(tmp_access_path):
-            file_.set_access(tmp_access_path, entity)
-            log.ok('| file_.access_rel: %s' % file_.access_rel)
-            log.ok('| file_.access_abs: %s' % file_.access_abs)
-        else:
-            log.not_ok('no access file')
+    
+    log.ok('Attaching access file')
+    if tmp_access_path and os.path.exists(tmp_access_path):
+        file_.set_access(tmp_access_path, entity)
+        log.ok('| file_.access_rel: %s' % file_.access_rel)
+        log.ok('| file_.access_abs: %s' % file_.access_abs)
+    else:
+        log.not_ok('no access file')
     
     log.ok('Attaching file to entity')
     entity.files.append(file_)
@@ -447,14 +433,13 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
     new_files = [
         (tmp_file_json, file_.json_path),
     ]
-    if normal:
-        new_files = new_files + [
-            (tmp_path_renamed, file_.path_abs),
-        ]
-        if tmp_access_path and os.path.exists(tmp_access_path):
-            new_files.append(
-                (tmp_access_path, file_.access_abs)
-            )
+    new_files = new_files + [
+        (tmp_path_renamed, file_.path_abs),
+    ]
+    if tmp_access_path and os.path.exists(tmp_access_path):
+        new_files.append(
+            (tmp_access_path, file_.access_abs)
+        )
     mvnew_fails = move_files(new_files, log)
     if mvnew_fails:
         log.not_ok('Failed to place one or more new files to destination repo')
@@ -479,15 +464,102 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
         entity.json_path_rel,
         file_.json_path_rel
     ]
-    if normal:
-        annex_files = [
-            file_.path_abs.replace('%s/' % file_.collection_path, '')
-        ]
-        if file_.access_abs and os.path.exists(file_.access_abs):
-            annex_files.append(file_.access_abs.replace('%s/' % file_.collection_path, ''))
-    else:
-        annex_files = []
+    annex_files = [
+        file_.path_abs.replace('%s/' % file_.collection_path, '')
+    ]
+    if file_.access_abs and os.path.exists(file_.access_abs):
+        annex_files.append(file_.access_abs.replace('%s/' % file_.collection_path, ''))
     repo = stage_files(entity, git_files, annex_files, new_files, log, show_staged=show_staged)
+    
+    # IMPORTANT: Files are only staged! Be sure to commit!
+    # IMPORTANT: changelog is not staged!
+    return file_,repo,log
+
+def add_external_file(entity, data, git_name, git_mail, agent='', log_path=None, show_staged=True):
+    """Add external-binary (i.e. metadata-only) file to entity
+    
+    "External" files are those in which no binary file is ingested, only metadata.
+    This metadata will include SHA1 and other hashes that are normally collected
+    from the file to be ingested.
+
+    This method breaks out of OOP and manipulates entity.json directly.
+    Thus it needs to lock to prevent other edits while it does its thing.
+    Writes a log to ${entity}/addfile.log, formatted in pseudo-TAP.
+    This log is returned along with a File object.
+    
+    IMPORTANT: Files are only staged! Be sure to commit!
+    
+    @param entity: Entity object
+    @param data: dict
+    @param git_name: Username of git committer.
+    @param git_mail: Email of git committer.
+    @param agent: str (optional) Name of software making the change.
+    @param log_path: str (optional) Absolute path to addfile log
+    @param show_staged: boolean Log list of staged files
+    @return File,repo,log
+    """
+    f = None
+    repo = None
+    if log_path:
+        log = addfile_logger(log_path=log_path)
+    else:
+        log = addfile_logger(identifier=entity.identifier)
+    
+    log.ok('------------------------------------------------------------------------')
+    log.ok('DDR.models.Entity.add_file: START')
+    log.ok('entity: %s' % entity.id)
+    log.ok('data: %s' % data)
+    
+    if not (data.get('external') and data['external']):
+        log.ok('Regular file (not external)')
+        raise Exception('Not an external (metadata-only) file: %s' % file_)
+    
+    log.ok('Identifier')
+    # note: we can't make this until we have the sha1
+    idparts = entity.identifier.idparts
+    idparts['model'] = 'file'
+    idparts['role'] = data['role']
+    idparts['sha1'] = data['sha1'][:10]
+    log.ok('| idparts %s' % idparts)
+    fidentifier = identifier.Identifier(idparts, entity.identifier.basepath)
+    log.ok('| identifier %s' % fidentifier)
+    
+    log.ok('File object')
+    file_ = fidentifier.object()
+    # add extension to path_abs
+    basename_ext = os.path.splitext(data['basename_orig'])[1]
+    path_abs_ext = os.path.splitext(file_.path_abs)[1]
+    if basename_ext and not path_abs_ext:
+        file_.path_abs = file_.path_abs + basename_ext
+        log.ok('| basename_ext %s' % basename_ext)
+    for field in data:
+        setattr(file_, field, data[field])
+    
+    # WE ARE NOW MAKING CHANGES TO THE REPO ------------------------
+    
+    log.ok('Writing file metadata')
+    file_.write_json()
+    
+    log.ok('Attaching file to entity')
+    #entity.load_file_objects(force_read=True)
+    entity.children(force_read=True)
+    log.ok('BLAT file_ %s' % file_)
+    log.ok('BLAT entity.files %s' % entity.files)
+    #if file_ in entity.files:
+    #    log.ok('| done')
+    #else:
+    #    log.crash('Could not add file to entity.files!')
+    
+    log.ok('Writing entity metadata')
+    entity.write_json()
+    
+    log.ok('Staging files')
+    git_files = [
+        entity.json_path_rel,
+        file_.json_path_rel
+    ]
+    annex_files = []
+    repo = stage_files(entity, git_files, annex_files, git_files, log, show_staged=show_staged)
     
     # IMPORTANT: Files are only staged! Be sure to commit!
     # IMPORTANT: changelog is not staged!
