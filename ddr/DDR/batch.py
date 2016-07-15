@@ -614,26 +614,39 @@ class Importer():
         # e.g. whether they are local/normal or external/metadata-only
         return {
             # TODO don't hard-code object class!!!
-            fid: models.File.from_identifier(fi)
+            fid: fi.object()
             for fid,fi in fidentifiers.iteritems()
         }
     
     @staticmethod
     def _rowds_new_existing(rowds, files):
-        """separates rowds into new,existing lists"""
+        """separates rowds into new,existing lists
+        
+        This is more complicated than before because the "files" may actually be
+        Stubs, which don't have .jsons or .exists() methods.
+        """
         new = []
         existing = []
         for n,rowd in enumerate(rowds):
-            if files.get(rowd['id']) and not files[rowd['id']].exists():
-                new.append(rowd)
+            # gather facts
+            has_id = rowd.get('id')
+            obj = files.get(rowd['id'], None)
+            obj_not_stub = not isinstance(obj, models.Stub)
+            if obj and obj_not_stub:
+                json_exists = obj.exists()
             else:
+                json_exists = False
+            # decide
+            if has_id and obj and obj_not_stub and json_exists:
                 existing.append(rowd)
+            else:
+                new.append(rowd)
         return new,existing
 
     @staticmethod
     def _rowd_is_external(rowd):
         """indicates whether or not rowd represents an external file."""
-        if rowd.get('external'):
+        if int(rowd.get('external', 0)):
             return True
         return False
     
@@ -804,13 +817,13 @@ class Importer():
                 git_files.append(file_)
             
             # normal files
-            elif rowd.get('src_path') and not dryrun:
+            elif not dryrun:
                 # ingest
                 # TODO make sure this updates entity.files
                 file_,repo2,log2 = ingest.add_local_file(
                     entity,
-                    rowd['src_path'],
-                    fidentifier.parts['role'],
+                    rowd['basename_orig'],
+                    file_.identifier.parts['role'],
                     rowd,
                     git_name, git_mail, agent,
                     log_path=log_path,
