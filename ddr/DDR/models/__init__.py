@@ -1503,8 +1503,10 @@ class Entity( object ):
     def add_file(self, src_path, role, data, git_name, git_mail, agent=''):
         return ingest.add_file(self, src_path, role, data, git_name, git_mail, agent)
     
-    def add_access(self, ddrfile, git_name, git_mail, agent=''):
-        return ingest.add_access(self, ddrfile, git_name, git_mail, agent='')
+    def add_access(self, ddrfile, src_file, git_name, git_mail, agent=''):
+        return ingest.add_access(
+            self, ddrfile, src_file, git_name, git_mail, agent=''
+        )
     
     def add_file_commit(self, file_, repo, log, git_name, git_mail, agent):
         return ingest.add_file_commit(self, file_, repo, log, git_name, git_mail, agent)

@@ -565,7 +565,7 @@ def add_external_file(entity, data, git_name, git_mail, agent='', log_path=None,
     # IMPORTANT: changelog is not staged!
     return file_,repo,log
 
-def add_access( entity, ddrfile, git_name, git_mail, agent='', log_path=None, show_staged=True ):
+def add_access( entity, ddrfile, src_path, git_name, git_mail, agent='', log_path=None, show_staged=True ):
     """Generate new access file for entity
     
     This method breaks out of OOP and manipulates entity.json directly.
@@ -575,7 +575,9 @@ def add_access( entity, ddrfile, git_name, git_mail, agent='', log_path=None, sh
     
     TODO Refactor this function! It is waaay too long!
     
+    @param entity: Entity object
     @param ddrfile: File
+    @param src_path: str Absolute path to the access file (ddrfile.path_abs)
     @param git_name: Username of git committer.
     @param git_mail: Email of git committer.
     @param agent: str (optional) Name of software making the change.
@@ -589,8 +591,6 @@ def add_access( entity, ddrfile, git_name, git_mail, agent='', log_path=None, sh
         log = addfile_logger(log_path=log_path)
     else:
         log = addfile_logger(identifier=entity.identifier)
-    
-    src_path = ddrfile.path_abs
     
     log.ok('------------------------------------------------------------------------')
     log.ok('DDR.models.Entity.add_access: START')
