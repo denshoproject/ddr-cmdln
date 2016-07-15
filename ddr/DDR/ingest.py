@@ -308,7 +308,7 @@ def stage_files(entity, git_files, annex_files, new_files, log, show_staged=True
             log.crash('Add file aborted, see log file for details: %s' % log.logpath)
     return repo
 
-def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_path=None, show_staged=True):
+def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='', log_path=None, show_staged=True):
     """Add a "normal" file to entity
     
     "Normal" files are those in which a binary file is added to the repository
