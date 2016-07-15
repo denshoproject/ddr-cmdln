@@ -793,6 +793,14 @@ class Importer():
                     log_path=log_path,
                     show_staged=False
                 )
+                if rowd.get('access_path'):
+                    file_,repo3,log3,status = ingest.add_access(
+                        entity, file_,
+                        rowd['access_path'],
+                        git_name, git_mail, agent,
+                        log_path=log_path,
+                        show_staged=False
+                    )
                 git_files.append(file_)
             
             # normal files
