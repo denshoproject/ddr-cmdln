@@ -1500,7 +1500,7 @@ class Entity( object ):
     def addfile_logger(self):
         return ingest.addfile_logger(self)
     
-    def add_file(self, src_path, role, data, git_name, git_mail, agent=''):
+    def add_local_file(self, src_path, role, data, git_name, git_mail, agent=''):
         return ingest.add_local_file(self, src_path, role, data, git_name, git_mail, agent)
     
     def add_access(self, ddrfile, src_file, git_name, git_mail, agent=''):
