@@ -47,6 +47,7 @@ import traceback
 
 from DDR import config
 from DDR import batch
+from DDR import dvcs
 from DDR import identifier
 from DDR import idservice
 
@@ -111,6 +112,7 @@ def main():
     parser.add_argument('-i', '--idservice', help='URL of ID service, if different from configs.')
     parser.add_argument('-N', '--nocheck', action='store_true', help='Do not run checking/validation (large collections may take time).')
     parser.add_argument('-d', '--dryrun', action='store_true', help="Simulated run-through; don't modify files.")
+    parser.add_argument('-R', '--remove', action='store_true', help="Remove untracked files (use with 'cleanup').")
     parser.add_argument('-D', '--debug', action='store_true', help='Print error tracebacks.')
     parser.add_argument('-u', '--user', help='Git user name (required if importing)')
     parser.add_argument('-m', '--mail', help='Git user e-mail address (required if importing)')
@@ -162,6 +164,20 @@ def main():
         if passed != tests:
             logging.error('TESTS FAILED--QUITTING!')
             sys.exit(1)
+    
+    if args.command == 'cleanup':
+        repo = dvcs.repository('/var/www/base/ddr-testing-333')
+        logging.debug('Resetting staged files')
+        dvcs.reset(repo)
+        logging.debug('Reverting modified files')
+        dvcs.revert(repo)
+        if args.remove:
+            logging.debug('Removing untracked files')
+            dvcs.remove_untracked(repo)
+        logging.debug('status:')
+        status = dvcs.repo_status(repo)
+        logging.debug(status)
+        sys.exit(0)
     
     if   args.command == 'entity':
         try:
