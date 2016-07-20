@@ -133,6 +133,26 @@ def cmp_commits(repo, a, b, abbrev=False):
 
 # git diff
 
+def _parse_list_untracked( text='' ):
+    """Parses output of "git status --short".
+    """
+    return [
+        line.split(' ')[1]
+        for line in text.strip().split('\n')[1:]
+        if ('??' in line)
+    ]
+
+def list_untracked(repo):
+    """Returns list of untracked files
+    
+    Works for git-annex files just like for regular files.
+    
+    @param repo: A Gitpython Repo object
+    @return: List of filenames
+    """
+    stdout = repo_status(repo, short=True)
+    return _parse_list_untracked(stdout)
+
 def _parse_list_modified( diff ):
     """Parses output of "git stage --name-only".
     """
@@ -404,6 +424,30 @@ def commit(repo, msg, agent):
     commit_message = compose_commit_message(msg, agent=agent)
     commit = repo.index.commit(commit_message)
     return commit
+
+def reset(repo):
+    """Resets all staged files in repo."""
+    return repo.git.reset('HEAD')
+
+def revert(repo):
+    """Reverts all modified files in repo."""
+    return repo.git.checkout('--', '.')
+
+def remove_untracked(repo):
+    """Deletes all untracked files in the repo."""
+    out = []
+    untracked_paths = [
+        os.path.join(repo.working_dir, p)
+        for p in list_untracked(repo)
+    ]
+    for untracked in untracked_paths:
+        try:
+            os.remove(untracked)
+            out.append('OK %s' % untracked)
+        except:
+            out.append('FAIL %s' % untracked)
+    return out
+
 
 # git merge ------------------------------------------------------------
 

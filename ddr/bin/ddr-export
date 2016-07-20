@@ -19,25 +19,19 @@ Sample ID formats:
 
 Examples:
 
-    $ ddr-export entity /var/www/media/base/ddr-testing-123 /tmp
-    $ ddr-export file /var/www/media/base/ddr-testing-123 /tmp
+    $ ddr-export entity /PATH/TO/ddr/ddr-testing-123 /tmp/ddr-test-123-entity.csv
+    $ ddr-export file /PATH/TO/ddr/ddr-testing-123 /tmp/just-some-files-YYYYMMDD.csv
 
 You can also print out blank CSV files with all fields:
 
-    $ ddr-export -b entity /var/www/media/base/ddr-testing-123 /tmp
-    $ ddr-export -b file /var/www/media/base/ddr-testing-123 /tmp
+    $ ddr-export -b file ...
 
-And with only required fields:
+And blank with only required fields:
 
-    $ ddr-export -B entity /var/www/media/base/ddr-testing-123 /tmp
-    $ ddr-export -B file /var/www/media/base/ddr-testing-123 /tmp
+    $ ddr-export -br entity ...
 
-You can specify the exact filename:
-
-    $ ddr-export entity /var/www/media/base/ddr-testing-123 /tmp/ddr-testing-123-entities.csv
-    $ ddr-export file /var/www/media/base/ddr-testing-123 /tmp/just-some-files-YYYYMMDD.csv
-
-ddr-export"""
+Please see "ddr-import --help" for information on importing CSV files.
+---"""
 
 
 import argparse

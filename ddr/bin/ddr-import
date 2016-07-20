@@ -7,48 +7,33 @@
 description = """Imports new entities or files with data from CSV files."""
 
 epilog = """
+Verify CSV file, do various integrity checks.
 
-#EXAMPLES:
-#    ddr-import entity --check /tmp/ddr-import/ddr-test-123-entity-20150123.csv
-#    ddr-import entity --user=gjost --mail=gjost@densho.org /tmp/ddr-import/ddr-test-123-entity-20150123.csv /tmp/ddr/ddr-test-123/
-#    ddr-import entity --register /tmp/ddr-import/ddr-test-123-entity-20150123.csv
+    $ ddr-import check /tmp/ddr-test-123-entity.csv /PATH/TO/ddr/ddr-test-123/
 
+Import entity records.
 
-I want to be able to edit the CSV, stick it in a directory
+    $ ddr-import entity /tmp/ddr-test-123-entity.csv /PATH/TO/ddr/ddr-test-123/
 
-Check integrity of CSV and other stuff:
+Import file records.  Note that slightly different fields are required for
+"external" files than for normal ones for which binaries will be imported.
 
-    $ ddr-import check /path/to/ddr-test-123-entity-new.csv \
-      /var/www/media/ddr/ddr-test-123/
+    $ ddr-import file /tmp/ddr-test-123-file.csv /PATH/TO/ddr/ddr-test-123/
 
-Import the entities, disabling checking since we just did it:
+Register entity IDs with the ID service API:
 
-    $ ddr-import entity -N -u gjost -m gjost@densho.org \
-      /path/to/ddr-test-123-entity-new.csv \
-      /var/www/media/ddr/ddr-test-123/
+    $ ddr-import register /tmp/ddr-test-123-entity.csv /PATH/TO/ddr/ddr-test-123
 
-This should
-- check CSV file, alert me if problems
-- make sure not importing existing entities/files
-- check with ID service to make sure IDs available
-  (i.e. not trying to register existing ones)
-- import data, create new entities/files
-- stage changes to git repo
+Most commands require authentication with the ID service. You can specify
+username and/or password at the commandline to skip the prompts:
 
-When it's all done I want to run a command to register the new IDs
+    $ ddr-import check -U gjost -P REDACTED ...
 
-    $ ddr-import register -Ugjost /path/to/ddr-test-123-entity-new.csv \
-      /var/www/media/ddr/ddr-test-123/
+You can send all add-file log entries to the same file:
 
-This should
-- ask for password
-- read all the IDs in CSV
-- get existing IDs from ID service
-- figure out which ones are new
-- register new IDs
+    $ ddr-import file -L /tmp/mylogfile.log ...
 
-And then I want to run a command to commit the changes
-
+Please see "ddr-export --help" for information on exporting CSV files.
 ---"""
 
 
@@ -62,6 +47,7 @@ import traceback
 
 from DDR import config
 from DDR import batch
+from DDR import dvcs
 from DDR import identifier
 from DDR import idservice
 
@@ -126,6 +112,7 @@ def main():
     parser.add_argument('-i', '--idservice', help='URL of ID service, if different from configs.')
     parser.add_argument('-N', '--nocheck', action='store_true', help='Do not run checking/validation (large collections may take time).')
     parser.add_argument('-d', '--dryrun', action='store_true', help="Simulated run-through; don't modify files.")
+    parser.add_argument('-R', '--remove', action='store_true', help="Remove untracked files (use with 'cleanup').")
     parser.add_argument('-D', '--debug', action='store_true', help='Print error tracebacks.')
     parser.add_argument('-u', '--user', help='Git user name (required if importing)')
     parser.add_argument('-m', '--mail', help='Git user e-mail address (required if importing)')
@@ -177,6 +164,20 @@ def main():
         if passed != tests:
             logging.error('TESTS FAILED--QUITTING!')
             sys.exit(1)
+    
+    if args.command == 'cleanup':
+        repo = dvcs.repository('/var/www/base/ddr-testing-333')
+        logging.debug('Resetting staged files')
+        dvcs.reset(repo)
+        logging.debug('Reverting modified files')
+        dvcs.revert(repo)
+        if args.remove:
+            logging.debug('Removing untracked files')
+            dvcs.remove_untracked(repo)
+        logging.debug('status:')
+        status = dvcs.repo_status(repo)
+        logging.debug(status)
+        sys.exit(0)
     
     if   args.command == 'entity':
         try:

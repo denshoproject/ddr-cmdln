@@ -41,6 +41,7 @@ from lxml import etree
 from DDR import VERSION
 from DDR import format_json
 from DDR import changelog
+from DDR import commands
 from DDR import config
 from DDR.control import CollectionControlFile, EntityControlFile
 from DDR import docstore
@@ -159,6 +160,55 @@ def is_object_metadata(data):
         if key in data.keys():
             return True
     return False
+
+def form_prep(document, module):
+    """Apply formprep_{field} functions to prep data dict to pass into DDRForm object.
+    
+    Certain fields require special processing.  Data may need to be massaged
+    and prepared for insertion into particular Django form objects.
+    If a "formprep_{field}" function is present in the collectionmodule
+    it will be executed.
+    
+    @param document: Collection, Entity, File document object
+    @param module: collection, entity, files model definitions module
+    @returns data: dict object as used by Django Form object.
+    """
+    data = {}
+    for f in module.FIELDS:
+        if hasattr(document, f['name']) and f.get('form',None):
+            key = f['name']
+            # run formprep_* functions on field data if present
+            value = modules.Module(module).function(
+                'formprep_%s' % key,
+                getattr(document, f['name'])
+            )
+            data[key] = value
+    return data
+    
+def form_post(document, module, cleaned_data):
+    """Apply formpost_{field} functions to process cleaned_data from CollectionForm
+    
+    Certain fields require special processing.
+    If a "formpost_{field}" function is present in the entitymodule
+    it will be executed.
+    NOTE: cleaned_data must contain items for all module.FIELDS.
+    
+    @param document: Collection, Entity, File document object
+    @param module: collection, entity, files model definitions module
+    @param cleaned_data: dict cleaned_data from DDRForm
+    """
+    for f in module.FIELDS:
+        if hasattr(document, f['name']) and f.get('form',None):
+            fieldname = f['name']
+            # run formpost_* functions on field data if present
+            field_data = modules.Module(module).function(
+                'formpost_%s' % fieldname,
+                cleaned_data[fieldname]
+            )
+            setattr(document, fieldname, field_data)
+    # update record_lastmod
+    if hasattr(document, 'record_lastmod'):
+        document.record_lastmod = datetime.now()
 
 def load_json(document, module, json_text):
     """Populates object from JSON-formatted text.
@@ -377,7 +427,9 @@ class Stub(object):
         return Stub(identifier)
     
     def __repr__(self):
-        return "<%s.%s '%s'>" % (self.__module__, self.__class__.__name__, self.id)
+        return "<%s.%s %s:%s>" % (
+            self.__module__, self.__class__.__name__, self.identifier.model, self.id
+        )
     
     def parent(self, stubs=False):
         return self.identifier.parent(stubs).object()
@@ -479,7 +531,9 @@ class Collection( object ):
         >>> c
         <Collection ddr-testing-123>
         """
-        return "<%s.%s '%s'>" % (self.__module__, self.__class__.__name__, self.id)
+        return "<%s.%s %s:%s>" % (
+            self.__module__, self.__class__.__name__, self.identifier.model, self.id
+        )
     
     @staticmethod
     def create(path_abs, identifier=None):
@@ -492,6 +546,64 @@ class Collection( object ):
         if not identifier:
             identifier = Identifier(path=path_abs)
         return create_object(identifier)
+    
+    @staticmethod
+    def new(identifier, git_name, git_mail, agent='cmdln'):
+        """Creates new Collection, writes to filesystem, performs initial commit
+        
+        @param identifier: Identifier
+        @param git_name: str
+        @param git_mail: str
+        @param agent: str
+        @returns: exit,status int,str
+        """
+        collection = Collection.create(identifier.path_abs(), identifier)
+        fileio.write_text(
+            collection.dump_json(template=True),
+            config.TEMPLATE_CJSON
+        )
+        exit,status = commands.create(
+            git_name, git_mail,
+            identifier,
+            [config.TEMPLATE_CJSON, config.TEMPLATE_EAD],
+            agent=agent
+        )
+        return exit,status
+    
+    def save(self, git_name, git_mail, agent, cleaned_data={}, commit=False):
+        """Writes specified Collection metadata, stages, and commits.
+        
+        @param git_name: str
+        @param git_mail: str
+        @param agent: str
+        @param cleaned_data: dict Form data (all fields required)
+        @param commit: boolean
+        @returns: exit,status (int,str)
+        """
+        if cleaned_data:
+            self.form_post(cleaned_data)
+        
+        self.write_json()
+        self.write_ead()
+        updated_files = [self.json_path, self.ead_path,]
+        
+        # if inheritable fields selected, propagate changes to child objects
+        inheritables = self.selected_inheritables(cleaned_data)
+        modified_ids,modified_files = self.update_inheritables(inheritables, cleaned_data)
+        if modified_files:
+            updated_files = updated_files + modified_files
+
+        if commit:
+            exit,status = commands.update(
+                git_name, git_mail,
+                self,
+                updated_files,
+                agent
+            )
+        else:
+            exit = 0
+            status = 'staged'
+        return exit,status
     
     @staticmethod
     def from_json(path_abs, identifier=None):
@@ -582,6 +694,20 @@ class Collection( object ):
         """
         module = self.identifier.fields_module()
         return modules.Module(module).labels_values(self)
+    
+    def form_prep(self):
+        """Apply formprep_{field} functions to prep data dict to pass into DDRForm object.
+        
+        @returns data: dict object as used by Django Form object.
+        """
+        return form_prep(self, self.identifier.fields_module())
+    
+    def form_post(self, cleaned_data):
+        """Apply formpost_{field} functions to process cleaned_data from DDRForm
+        
+        @param cleaned_data: dict
+        """
+        form_post(self, self.identifier.fields_module(), cleaned_data)
     
     def inheritable_fields( self ):
         """Returns list of Collection object's field names marked as inheritable.
@@ -792,6 +918,7 @@ class Collection( object ):
 
 
 
+
 ENTITY_FILE_KEYS = ['path_rel',
                     'role',
                     'sha1',
@@ -860,7 +987,9 @@ class Entity( object ):
         self._file_objects = []
     
     def __repr__(self):
-        return "<%s.%s '%s'>" % (self.__module__, self.__class__.__name__, self.id)
+        return "<%s.%s %s:%s>" % (
+            self.__module__, self.__class__.__name__, self.identifier.model, self.id
+        )
     
     @staticmethod
     def create(path_abs, identifier=None):
@@ -875,6 +1004,84 @@ class Entity( object ):
         obj = create_object(identifier)
         obj.files = []
         return obj
+    
+    @staticmethod
+    def new(identifier, git_name, git_mail, agent='cmdln'):
+        """Creates new Entity, writes to filesystem, does initial commit.
+        
+        @param identifier: Identifier
+        @param git_name: str
+        @param git_mail: str
+        @param agent: str
+        @returns: exit,status int,str
+        """
+        collection = identifier.parent().object()
+        if not collection:
+            raise Exception('Parent collection for %s does not exist.' % identifier)
+        entity = Entity.create(identifier.path_abs(), identifier)
+        fileio.write_text(
+            entity.dump_json(template=True),
+            config.TEMPLATE_EJSON
+        )
+        exit,status = commands.entity_create(
+            git_name, git_mail,
+            collection, entity.identifier,
+            [collection.json_path_rel, collection.ead_path_rel],
+            [config.TEMPLATE_EJSON, config.TEMPLATE_METS],
+            agent=agent
+        )
+        if exit:
+            raise Exception('Could not create new Entity: %s, %s' % (exit, status))
+        # load Entity object, inherit values from parent, write back to file
+        entity = Entity.from_identifier(identifier)
+        entity.inherit(collection)
+        entity.write_json()
+        updated_files = [entity.json_path]
+        exit,status = commands.entity_update(
+            git_name, git_mail,
+            collection, entity,
+            updated_files,
+            agent=agent
+        )
+        return exit,status
+    
+    def save(self, git_name, git_mail, agent, collection=None, cleaned_data={}, commit=False):
+        """Writes specified Entity metadata, stages, and commits.
+        
+        @param git_name: str
+        @param git_mail: str
+        @param agent: str
+        @param collection: Collection
+        @param cleaned_data: dict Form data (all fields required)
+        @param commit: boolean
+        @returns: exit,status (int,str)
+        """
+        if not collection:
+            collection = self.collection()
+        
+        if cleaned_data:
+            self.form_post(cleaned_data)
+        
+        self.write_json()
+        self.write_mets()
+        updated_files = [self.json_path, self.mets_path,]
+        
+        inheritables = self.selected_inheritables(cleaned_data)
+        modified_ids,modified_files = self.update_inheritables(inheritables, cleaned_data)
+        if modified_files:
+            updated_files = updated_files + modified_files
+
+        if commit:
+            exit,status = commands.entity_update(
+                git_name, git_mail,
+                collection, self,
+                updated_files,
+                agent
+            )
+        else:
+            exit = 0
+            status = 'staged'
+        return exit,status
     
     @staticmethod
     def from_json(path_abs, identifier=None):
@@ -912,8 +1119,8 @@ class Entity( object ):
 #        cidentifier = self.identifier.parent()
 #        return Collection.from_identifier(cidentifier)
    
-    def children( self, role=None, quick=None ):
-        self.load_file_objects()
+    def children( self, role=None, quick=None, force_read=False ):
+        self.load_file_objects(force_read=force_read)
         if role:
             files = [
                 f for f in self._file_objects
@@ -921,13 +1128,33 @@ class Entity( object ):
             ]
         else:
             files = [f for f in self._file_objects]
-        return sorted(files, key=lambda f: f.sort)
+        self.files = sorted(files, key=lambda f: f.sort)
+        return self.files
     
     def labels_values(self):
         """Apply display_{field} functions to prep object data for the UI.
         """
         module = self.identifier.fields_module()
         return modules.Module(module).labels_values(self)
+    
+    def form_prep(self):
+        """Apply formprep_{field} functions to prep data dict to pass into DDRForm object.
+        
+        @returns data: dict object as used by Django Form object.
+        """
+        data = form_prep(self, self.identifier.fields_module())
+        if not data.get('record_created', None):
+            data['record_created'] = datetime.now()
+        if not data.get('record_lastmod', None):
+            data['record_lastmod'] = datetime.now()
+        return data
+    
+    def form_post(self, cleaned_data):
+        """Apply formpost_{field} functions to process cleaned_data from DDRForm
+        
+        @param cleaned_data: dict
+        """
+        form_post(self, self.identifier.fields_module(), cleaned_data)
 
     def inheritable_fields( self ):
         module = self.identifier.fields_module()
@@ -1134,59 +1361,87 @@ class Entity( object ):
     def checksum_algorithms():
         return ['md5', 'sha1', 'sha256']
     
-    def checksums( self, algo ):
+    def checksums(self, algo, force_read=False):
         """Calculates hash checksums for the Entity's files.
         
         Gets hashes from FILE.json metadata if the file(s) are absent
         from the filesystem (i.e. git-annex file symlinks).
         Overrides DDR.models.Entity.checksums.
+        
+        @param algo: str
+        @param force_read: bool Traverse filesystem if true.
+        @returns: list of (checksum, filepath) tuples
         """
         checksums = []
         if algo not in self.checksum_algorithms():
             raise Error('BAD ALGORITHM CHOICE: {}'.format(algo))
         for f in self._file_paths():
             cs = None
-            fpath = os.path.join(self.files_path, f)
-            # git-annex files are present
-            if os.path.exists(fpath) and not os.path.islink(fpath):
-                cs = util.file_hash(fpath, algo)
-            # git-annex files NOT present - get checksum from entity._files
-            # WARNING: THIS MODULE SHOULD NOT KNOW ANYTHING ABOUT HIGHER-LEVEL CODE!
-            elif os.path.islink(fpath) and hasattr(self, '_files'):
-                for fdict in self._files:
-                    if os.path.basename(fdict['path_rel']) == os.path.basename(fpath):
-                        cs = fdict[algo]
+            ext = None
+            pathname = os.path.splitext(f)[0]
+            # from metadata file
+            json_path = os.path.join(self.files_path, f)
+            for field in json.loads(fileio.read_text(json_path)):
+                for k,v in field.iteritems():
+                    if k == algo:
+                        cs = v
+                    if k == 'basename_orig':
+                        ext = os.path.splitext(v)[-1]
+            fpath = pathname + ext
+            if force_read:
+                # from filesystem
+                # git-annex files are present
+                if os.path.exists(fpath):
+                    cs = util.file_hash(fpath, algo)
             if cs:
-                checksums.append( (cs, fpath) )
+                checksums.append( (cs, os.path.basename(fpath)) )
         return checksums
     
-    def _file_paths( self ):
-        """Returns relative paths to payload files.
-        TODO use util.find_meta_files()
+    def _file_paths(self, rel=False):
+        """Searches filesystem for childrens' metadata files, returns relative paths.
+        @param rel: bool Return relative paths
+        @returns: list
         """
-        paths = []
-        prefix_path = self.files_path
-        if prefix_path[-1] != '/':
-            prefix_path = '{}/'.format(prefix_path)
         if os.path.exists(self.files_path):
-            for f in os.listdir(self.files_path):
-                paths.append(f.replace(prefix_path, ''))
-        paths = sorted(paths, key=lambda f: util.natural_order_string(f))
-        return paths
+            prefix_path = 'THISWILLNEVERMATCHANYTHING'
+            if rel:
+                prefix_path = '{}/'.format(os.path.normpath(self.files_path))
+            return sorted(
+                [
+                    f.replace(prefix_path, '')
+                    for f in util.find_meta_files(self.files_path, recursive=False)
+                ],
+                key=lambda f: util.natural_order_string(f)
+            )
+        return []
     
-    def load_file_objects( self ):
+    def load_file_objects(self, force_read=False):
         """Replaces list of file info dicts with list of File objects
         
         TODO Don't call in loop - causes all file .JSONs to be loaded!
+        
+        @param force_read: bool Traverse filesystem if true.
+        @returns: None
         """
         self._file_objects = []
-        for f in self.files:
-            if f and f.get('path_rel',None):
-                basename = os.path.basename(f['path_rel'])
-                fid = os.path.splitext(basename)[0]
-                identifier = Identifier(id=fid, base_path=self.identifier.basepath)
-                file_ = File.from_identifier(identifier)
+        if force_read:
+            # filesystem
+            for json_path in self._file_paths():
+                file_ = File.from_identifier(
+                    Identifier(
+                        os.path.splitext(os.path.basename(json_path))[0],
+                        self.identifier.basepath
+                    )
+                )
                 self._file_objects.append(file_)
+        else:
+            for f in self.files:
+                if f and f.get('path_rel',None):
+                    basename = os.path.basename(f['path_rel'])
+                    fid = os.path.splitext(basename)[0]
+                    identifier = Identifier(id=fid, base_path=self.identifier.basepath)
+                    file_ = File.from_identifier(identifier)
+                    self._file_objects.append(file_)
         # keep track of how many times this gets loaded...
         self._file_objects_loaded = self._file_objects_loaded + 1
     
@@ -1246,10 +1501,12 @@ class Entity( object ):
         return ingest.addfile_logger(self)
     
     def add_file(self, src_path, role, data, git_name, git_mail, agent=''):
-        return ingest.add_file(self, src_path, role, data, git_name, git_mail, agent)
+        return ingest.add_local_file(self, src_path, role, data, git_name, git_mail, agent)
     
-    def add_access(self, ddrfile, git_name, git_mail, agent=''):
-        return ingest.add_access(self, ddrfile, git_name, git_mail, agent='')
+    def add_access(self, ddrfile, src_file, git_name, git_mail, agent=''):
+        return ingest.add_access(
+            self, ddrfile, src_file, git_name, git_mail, agent=''
+        )
     
     def add_file_commit(self, file_, repo, log, git_name, git_mail, agent):
         return ingest.add_file_commit(self, file_, repo, log, git_name, git_mail, agent)
@@ -1303,6 +1560,7 @@ FILE_KEYS = ['path_rel',
 class File( object ):
     id = None
     idparts = None
+    external = None
     collection_id = None
     parent_id = None
     entity_id = None
@@ -1348,17 +1606,24 @@ class File( object ):
         # only accept path_abs
         if kwargs and kwargs.get('path_abs',None):
             path_abs = kwargs['path_abs']
-        elif args and args[0]:
+        elif args and args[0] and isinstance(args[0], basestring):
             path_abs = args[0]  #     Use path_abs arg!!!
+        
+        i = None
+        for arg in args:
+            if isinstance(arg, Identifier):
+                i = arg
+        for key,arg in kwargs.iteritems():
+            if isinstance(arg, Identifier):
+                i = arg
+        self.identifier = i
+        
+        if self.identifier and not path_abs:
+            path_abs = self.identifier.path_abs()
         if not path_abs:
             # TODO accept path_rel plus base_path
             raise Exception("File must be instantiated with an absolute path!")
         path_abs = os.path.normpath(path_abs)
-        if kwargs and kwargs.get('identifier',None):
-            i = kwargs['identifier']
-        else:
-            i = Identifier(os.path.splitext(path_abs)[0])
-        self.identifier = i
         
         self.id = i.id
         self.idparts = i.parts.values()
@@ -1387,7 +1652,9 @@ class File( object ):
         self.basename = os.path.basename(self.path_abs)
 
     def __repr__(self):
-        return "<%s.%s '%s'>" % (self.__module__, self.__class__.__name__, self.id)
+        return "<%s.%s %s:%s>" % (
+            self.__module__, self.__class__.__name__, self.identifier.model, self.id
+        )
     
     @staticmethod
     def create(path_abs, identifier=None):
@@ -1401,6 +1668,81 @@ class File( object ):
             identifier = Identifier(path=path_abs)
         return create_object(identifier)
     
+    @staticmethod
+    def new(identifier, git_name, git_mail, agent='cmdln'):
+        """Creates new File (metadata only!), writes to filesystem, performs initial commit
+        
+        @param identifier: Identifier
+        @param git_name: str
+        @param git_mail: str
+        @param agent: str
+        @returns: exit,status int,str
+        """
+        parent = identifier.parent().object()
+        if not parent:
+            raise Exception('Parent for %s does not exist.' % identifier)
+        file_ = File.create(identifier.path_abs(), identifier)
+        file_.write_json()
+        
+        entity_file_edit(request, collection, file_, git_name, git_mail)
+
+        exit,status = commands.entity_create(
+            git_name, git_mail,
+            collection, entity.identifier,
+            [collection.json_path_rel, collection.ead_path_rel],
+            [config.TEMPLATE_EJSON, config.TEMPLATE_METS],
+            agent=agent
+        )
+        if exit:
+            raise Exception('Could not create new Entity: %s, %s' % (exit, status))
+        # load Entity object, inherit values from parent, write back to file
+        entity = Entity.from_identifier(identifier)
+        entity.inherit(collection)
+        entity.write_json()
+        updated_files = [entity.json_path]
+        exit,status = commands.entity_update(
+            git_name, git_mail,
+            collection, entity,
+            updated_files,
+            agent=agent
+        )
+        return exit,status
+    
+    def save(self, git_name, git_mail, agent, collection=None, parent=None, cleaned_data={}, commit=False):
+        """Writes File metadata, stages, and commits.
+        
+        @param git_name: str
+        @param git_mail: str
+        @param agent: str
+        @param collection: Collection
+        @param parent: Entity or Segment
+        @param cleaned_data: dict Form data (all fields required)
+        @param commit: boolean
+        @returns: exit,status (int,str)
+        """
+        if not collection:
+            collection = self.collection()
+        if not parent:
+            parent = self.parent()
+        
+        if cleaned_data:
+            self.form_post(cleaned_data)
+        
+        self.write_json()
+        updated_files = [self.json_path,]
+
+        if commit:
+            exit,status = commands.entity_update(
+                git_name, git_mail,
+                collection, parent,
+                updated_files,
+                agent
+            )
+        else:
+            exit = 0
+            status = 'staged'
+        return exit,status
+        
     # _lockfile
     # lock
     # unlock
@@ -1433,12 +1775,14 @@ class File( object ):
     
     @staticmethod
     def from_identifier(identifier):
-        """Instantiates a File object, loads data from FILE.json.
+        """Instantiates a File object, loads data from FILE.json or creates new object.
         
         @param identifier: Identifier
         @returns: File
         """
-        return File.from_json(identifier.path_abs('json'), identifier)
+        if os.path.exists(identifier.path_abs('json')):
+            return File.from_json(identifier.path_abs('json'), identifier)
+        return File.create(identifier.path_abs('json'), identifier)
     
     def parent( self ):
         i = Identifier(id=self.parent_id, base_path=self.identifier.basepath)
@@ -1452,6 +1796,20 @@ class File( object ):
         """
         module = self.identifier.fields_module()
         return modules.Module(module).labels_values(self)
+    
+    def form_prep(self):
+        """Apply formprep_{field} functions to prep data dict to pass into DDRForm object.
+        
+        @returns data: dict object as used by Django Form object.
+        """
+        return form_prep(self, self.identifier.fields_module())
+    
+    def form_post(self, cleaned_data):
+        """Apply formpost_{field} functions to process cleaned_data from DDRForm
+        
+        @param cleaned_data: dict
+        """
+        form_post(self, self.identifier.fields_module(), cleaned_data)
     
     def files_rel( self ):
         """Returns list of the file, its metadata JSON, and access file, relative to collection.
@@ -1711,3 +2069,36 @@ class File( object ):
             if l not in links:
                 links.append(l)
         return links
+
+    def exists(self):
+        """Indicates whether the exits or not; takes File.external into account.
+        
+        @returns: bool
+        """
+        FILE_EXISTS = {
+           # J   - JSON exists
+           # |E  - external == truthy
+           # ||F - file exists
+            '---': False,
+            'J--': False,
+           #'-E-'
+           #'--F'
+            'JE-': True,
+            'J-F': True,
+           #'-EF'
+            'JEF': True,
+        }
+        score = ''
+        if os.path.exists(self.identifier.path_abs('json')):
+            score += 'J'
+        else:
+            score += '-'
+        if self.external:
+            score += 'E'
+        else:
+            score += '-'
+        if self.path_abs and os.path.exists(self.path_abs):
+            score += 'F'
+        else:
+            score += '-'
+        return FILE_EXISTS[score]

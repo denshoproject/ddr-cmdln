@@ -8,102 +8,378 @@ import string
 from urlparse import urlparse
 
 
-# IDENTIFIERS are defined in ddr-defs
+
+class Definitions():
+    """Functions for parsing and extracting useful data from IDENTIFIERS
+    """
+
+    @staticmethod
+    def models(identifiers):
+        # Models in this Repository
+        models = [i['model'] for i in identifiers]
+        models.reverse()
+        return models
+    
+    @staticmethod
+    def modules(identifiers):                                                                         
+        return {key:None for key in Definitions.models(identifiers)}
+    
+    @staticmethod
+    def import_modules(identifiers, modules):
+        """Imports modules in IDENTIFIERS[N]['module'] and adds to MODULES
+        
+        @param identifiers: list
+        @param modules: dict
+        @returns: dict modules
+        """
+        models_modules = {
+            i['model']: i['module']
+            for i in identifiers
+            if i['module']
+        }
+        couldnt = []
+        for model,module in models_modules.iteritems():
+            try:
+                modules[model] = importlib.import_module(module)
+            except ImportError:
+                couldnt.append(module)
+        if couldnt:
+            raise Exception('Could not import module(s) %s' % couldnt)
+        return modules
+
+    @staticmethod
+    def model_classes(identifiers):
+        """map model names to DDR python classes
+        
+        >>> identifiers = [
+        ...     {'model': 'collection', 'class':'DDR.models.Collection'},
+        ...     {'model': 'entity',     'class':'DDR.models.Entity'},
+        ...     {'model': 'file-role',  'class':'DDR.models.Stub'},
+        ...     {'model': 'file',       'class':'DDR.models.File'},
+        ... ]
+        >>> model_classes(identifiers)
+        {
+            'collection': {'class': 'Collection', 'module': 'DDR.models'},
+            'entity':     {'class': 'Entity',     'module': 'DDR.models'},
+            'file-role':  {'class': 'Stub',       'module': 'DDR.models'},
+            'file':       {'class': 'File',       'module': 'DDR.models'}
+        }
+        """
+        return {
+            i['model']: {
+                'module': i['class'][0:i['class'].rindex('.')],
+                'class': i['class'][i['class'].rindex('.')+1:],
+            }
+            for i in identifiers
+        }
+
+    @staticmethod
+    def models_modules(modules):
+        """map model names to module files in ddr repo's repo_models
+        """
+        return {
+            model: {
+                'module': module.__name__,
+                'class': model,
+                'as': '%smodule' % model,
+            }
+            for model,module in modules.iteritems() if module
+        }
+
+    @staticmethod
+    def collection_models(identifiers):
+        """Models that are part of collection repositories.
+        
+        Repository and organizations are above the level of the collection
+        and are thus excluded.
+        """
+        return [i['model'] for i in identifiers if i['level'] >= 0]
+
+    @staticmethod
+    def containers(identifiers):
+        """Models that can contain other models.
+        """
+        containers = [
+            i['model']
+            for i in identifiers
+            if i['children'] or i['children_all']
+        ]
+        containers.reverse()
+        return containers
+
+    @staticmethod
+    def models_parents(identifiers):
+        """Pointers from models to their parent models
+        
+        >>> identifiers = [
+        ...     {'model': 'collection', 'parents': []},
+        ...     {'model': 'entity',     'parents': ['collection']},
+        ...     {'model': 'file',       'parents': ['entity']},
+        ... ]
+        >>> models_parents(identifiers)
+        {
+           'entity': ['collection'],
+           'file': ['entity'],
+        }
+        """
+        parents = {}
+        for i in identifiers:
+            if 'Stub' not in i['class']:
+                for parent in i['parents']:
+                    if not parents.get(i['model']):
+                        parents[i['model']] = []
+                    parents[i['model']].append(parent)
+        return parents
+
+    @staticmethod
+    def models_parents_all(identifiers):
+        """Pointers from models to their parent models
+        
+        >>> identifiers = [
+        ...     {'model': 'repository',   'parents_all': []},
+        ...     {'model': 'organization', 'parents_all': ['repository']},
+        ...     {'model': 'collection',   'parents_all': ['organization]},
+        ...     {'model': 'entity',       'parents_all': ['collection']},
+        ...     {'model': 'file-role',    'parents_all': ['entity']},
+        ...     {'model': 'file',         'parents_all': ['file-role']},
+        ... ]
+        >>> models_parents_all(identifiers)
+        {
+            'organization': ['repository'],
+            'collection': ['organization'],
+            'entity': ['collection'],
+            'file-role': ['entity'],
+            'file': ['file-role'],
+        }
+        """
+        parents = {}
+        for i in identifiers:
+            for parent in i['parents_all']:
+                if not parents.get(i['model']):
+                    parents[i['model']] = []
+                parents[i['model']].append(parent)
+        return parents
+
+    @staticmethod
+    def children(parents):
+        children = {}
+        for child,folks in parents.iteritems():
+            if folks:
+                for parent in folks:
+                    if not children.get(parent):
+                        children[parent] = []
+                    children[parent].append(child)
+        return children
+
+    @staticmethod
+    def endpoints(identifiers, fieldname):
+        """Nodes, leafs, endpoints. Things with no children or parents.
+        """
+        return [
+            i['model']
+            for i in identifiers
+            if i[fieldname] == []
+        ]
+
+    @staticmethod
+    def id_components(identifiers):
+        """Keywords that can legally appear in IDs
+        
+        TODO list should include 'ext'?
+        """
+        return [
+            i['component']['name']
+            for i in identifiers
+        ]
+
+    @staticmethod
+    def valid_components(identifiers):
+        """Components in VALID_COMPONENTS.keys() must appear in VALID_COMPONENTS[key] to be valid.
+        """
+        return {
+            i['component']['name']: i['component']['valid']
+            for i in identifiers
+            if i['component']['valid']
+        }
+
+    @staticmethod
+    def nextable_models(identifiers):
+        """Models whose components are sequential
+        """
+        return [
+            i['model']
+            for i in identifiers
+            if i['component']['type'] == int
+        ]
+
+    # ----------------------------------------------------------------------
+    # Regex patterns used to link raw IDs/URLs/paths to models
+    #
+    # Regex patterns used to match IDs, paths, and URLs and extract model and tokens
+    # Record format: (regex, memo, model)
+    # TODO are we using ID_PATTERNS memos?
+    #
+
+    @staticmethod
+    def id_patterns(identifiers):
+        # (regex, memo, model) NOTE: 'memo' is not used for anything yet
+        patterns = []
+        for i in identifiers:
+            for regex in i['patterns']['id']:
+                p = (re.compile(regex), '', i['model'])
+                patterns.append(p)
+        patterns.reverse()
+        return patterns
+
+    @staticmethod
+    def path_patterns(identifiers):
+        # TODO are we using PATH_PATTERNS memos?
+        # In the current path scheme, collection and entity ID components are repeated.
+        # Fields can't appear multiple times in regexes so redundant fields have numbers.
+        # (regex, memo, model) note: 'memo' is not used for anything yet
+        patterns = []
+        for i in identifiers:
+            for regex in i['patterns']['path']:
+                p = (re.compile(regex), '', i['model'])
+                patterns.append(p)
+        patterns.reverse()
+        return patterns
+
+    @staticmethod
+    def url_patterns(identifiers):
+        # TODO check
+        # (regex, memo, model) note: 'memo' is not used for anything yet
+        patterns = []
+        for i in identifiers:
+            for regex in i['patterns']['url']:
+                p = (re.compile(regex), '', i['model'])
+                patterns.append(p)
+        patterns.reverse()
+        return patterns
+
+    # ----------------------------------------------------------------------
+    # Templates used to generate IDs, paths, and URLs from model and tokens
+    #
+    # There may be multiple possible templates for a model.  This is to account
+    # for multiple levels due to things like segments.  When generating an
+    # ID/URL/PATH, templates will be tried in order until one works. Therefore,
+    # put templates with the MOST components EARLIEST in the list.
+    #
+
+    @staticmethod
+    def id_templates(identifiers):
+        """
+        {
+            'collection': [
+                '{repo}-{org}-{cid}',
+            ],
+            'entity': [
+                '{repo}-{org}-{cid}-{eid}',
+            ],
+            'file': [
+                '{repo}-{org}-{cid}-{eid}-{sid}-{role}-{sha1}',
+                '{repo}-{org}-{cid}-{eid}-{role}-{sha1}',
+            ],
+        }
+        """
+        templates = {}
+        for i in identifiers:
+            if not templates.get(i['model']):
+                templates[i['model']] = []
+            templates[i['model']] = [t for t in i['templates']['id']]
+        return templates
+
+    @staticmethod
+    def path_templates(identifiers):
+        """
+        {
+            'entity-rel': [
+                'files/{repo}-{org}-{cid}-{eid}',
+            ],
+            'entity-abs': [
+                '{basepath}/{repo}-{org}-{cid}/files/{repo}-{org}-{cid}-{eid}',
+            ],
+            'collection-abs': [
+                '{basepath}/{repo}-{org}-{cid}',
+            ],
+        }
+        """
+        templates = {}
+        for i in identifiers:
+            for k,v in i['templates']['path'].iteritems():
+                if v:
+                    key = '%s-%s' % (i['model'],k)
+                    templates[key] = v
+        return templates
+
+    @staticmethod
+    def url_templates(identifiers):
+        """
+        {
+            'editor': {
+                'file': [
+                    '/ui/{repo}-{org}-{cid}-{eid}-{sid}-{role}-{sha1}',
+                    '/ui/{repo}-{org}-{cid}-{eid}-{role}-{sha1}',
+                ],
+                'entity': [
+                    '/ui/{repo}-{org}-{cid}-{eid}',
+                ],
+                'collection': [
+                    '/ui/{repo}-{org}-{cid}',
+                ],
+            },
+            'public': {
+                'file': [
+                    '/{repo}/{org}/{cid}/{eid}/{sid}/{role}/{sha1}',
+                    '/{repo}/{org}/{cid}/{eid}/{role}/{sha1}',
+                ],
+                'entity': [
+                    '/{repo}/{org}/{cid}/{eid}',
+                ],
+                'collection': [
+                    '/{repo}/{org}/{cid}',
+                ],
+            }
+        }
+        """
+        templates = {}
+        for i in identifiers:
+            for k,v in i['templates']['url'].iteritems():
+                if not templates.get(k):
+                    templates[k] = {}
+                templates[k][i['model']] = [u for u in i['templates']['url'][k]]
+        return templates
+
+    @staticmethod
+    def additional_paths(identifiers):
+        """Additional file types that may be present in a repo
+        """
+        return {
+            i['model']: i['files']
+            for i in identifiers
+        }
+
+
 try:
     from repo_models.identifier import IDENTIFIERS
 except ImportError:
     raise Exception('Could not import Identifier definitions!')
 
-# Models in this Repository
-MODELS = [
-    i['model'] for i in IDENTIFIERS
-]
-MODELS.reverse()
-
-MODULES = { key:None for key in MODELS }
-try:
-    from repo_models import collection as collectionmodule
-    from repo_models import entity as entitymodule
-    from repo_models import files as filemodule
-    MODULES['collection'] = collectionmodule
-    MODULES['entity'] = entitymodule
-    MODULES['file'] = filemodule
-except ImportError:
-    raise Exception('Could not import repo_models modules!')
-
-# map model names to DDR python classes
-MODEL_CLASSES = {
-    i['model']: {
-        'module': i['class'][0:i['class'].rindex('.')],
-        'class': i['class'][i['class'].rindex('.')+1:],
-    }
-    for i in IDENTIFIERS
-}
-
-# map model names to module files in ddr repo's repo_models
-MODEL_REPO_MODELS = {
-    model: {
-        'module': module.__name__,
-        'class': model,
-        'as': '%smodule' % model,
-    }
-    for model,module in MODULES.iteritems() if module
-}
-
-
-# TODO UPDATE
-# Models that are part of collection repositories. Repository and organizations
-# are above the level of the collection and are thus excluded.
-COLLECTION_MODELS = [
-    'file',
-    'file-role',
-    'entity',
-    'collection',   # required
-]
-
-# Models that can contain other models.
-CONTAINERS = [
-    i['model']
-    for i in IDENTIFIERS
-    if i['children'] or i['children_all']
-]
-CONTAINERS.reverse()
-
-# Pointers from models to their parent models
-PARENTS = {
-    i['model']: i.get('parent')
-    for i in IDENTIFIERS
-    if 'Stub' not in i['class']
-}
-# including Stubs
-PARENTS_ALL = {
-    i['model']: i.get('parents_all')
-    for i in IDENTIFIERS
-}
-CHILDREN = {val:key for key,val in PARENTS.iteritems() if val}
-CHILDREN_ALL = {val:key for key,val in PARENTS_ALL.iteritems() if val}
-
-# Keywords that can legally appear in IDs
-# TODO list should include 'ext'?
-ID_COMPONENTS = [
-    i['component']['name']
-    for i in IDENTIFIERS
-]
-
-# Components in VALID_COMPONENTS.keys() must appear in VALID_COMPONENTS[key] to be valid.
-VALID_COMPONENTS = {
-    i['component']['name']: i['component']['valid']
-    for i in IDENTIFIERS
-    if i['component']['valid']
-}
-
-# Models whose components are sequential
-NEXTABLE_MODELS = [
-    i['model']
-    for i in IDENTIFIERS
-    if i['component']['type'] == int
-]
-
+MODELS = Definitions.models(IDENTIFIERS)
+MODULES = Definitions.import_modules(IDENTIFIERS, Definitions.modules(IDENTIFIERS))
+MODEL_CLASSES = Definitions.model_classes(IDENTIFIERS)
+MODEL_REPO_MODELS = Definitions.models_modules(MODULES)
+COLLECTION_MODELS = Definitions.collection_models(IDENTIFIERS)
+CONTAINERS = Definitions.containers(IDENTIFIERS)
+PARENTS = Definitions.models_parents(IDENTIFIERS)
+PARENTS_ALL = Definitions.models_parents_all(IDENTIFIERS)
+CHILDREN = Definitions.children(PARENTS)
+CHILDREN_ALL = Definitions.children(PARENTS_ALL)
+ROOTS = Definitions.endpoints(IDENTIFIERS, 'parents_all')
+NODES = Definitions.endpoints(IDENTIFIERS, 'children_all')
+ID_COMPONENTS = Definitions.id_components(IDENTIFIERS)
+VALID_COMPONENTS = Definitions.valid_components(IDENTIFIERS)
+NEXTABLE_MODELS = Definitions.nextable_models(IDENTIFIERS)
 # Bits of file paths that uniquely identify file types.
 # Suitable for use on command-line e.g. in git-annex-whereis.
 FILETYPE_MATCH_ANNEX = {
@@ -111,75 +387,43 @@ FILETYPE_MATCH_ANNEX = {
     'master': '*-master-*',
     'mezzanine': '*-mezzanine-*',
 }
-
-# ----------------------------------------------------------------------
-# TODO are we using ID_PATTERNS memos?
-# Regex patterns used to match IDs, paths, and URLs and extract model and tokens
-# Record format: (regex, memo, model)
-#
-
-# (regex, memo, model) NOTE: 'memo' is not used for anything yet
-ID_PATTERNS = []
-for i in IDENTIFIERS:
-    for regex in i['patterns']['id']:
-        p = (re.compile(regex), '', i['model'])
-        ID_PATTERNS.append(p)
-ID_PATTERNS.reverse()
-
-# TODO are we using PATH_PATTERNS memos?
-# In the current path scheme, collection and entity ID components are repeated.
-# Fields can't appear multiple times in regexes so redundant fields have numbers.
-# (regex, memo, model) NOTE: 'memo' is not used for anything yet
-PATH_PATTERNS = []
-for i in IDENTIFIERS:
-    for regex in i['patterns']['path']:
-        p = (re.compile(regex), '', i['model'])
-        PATH_PATTERNS.append(p)
-PATH_PATTERNS.reverse()
-
+ID_PATTERNS = Definitions.id_patterns(IDENTIFIERS)
+PATH_PATTERNS = Definitions.path_patterns(IDENTIFIERS)
 # TODO check
 # Simple path regexes suitable for use inside for-loops
 PATH_PATTERNS_LOOP = []
+URL_PATTERNS = Definitions.url_patterns(IDENTIFIERS)
+ID_TEMPLATES = Definitions.id_templates(IDENTIFIERS)
+PATH_TEMPLATES = Definitions.path_templates(IDENTIFIERS)
+URL_TEMPLATES = Definitions.url_templates(IDENTIFIERS)
+ADDITIONAL_PATHS = Definitions.additional_paths(IDENTIFIERS)
 
-# TODO check
-# (regex, memo, model) NOTE: 'memo' is not used for anything yet
-URL_PATTERNS = []
-for i in IDENTIFIERS:
-    for regex in i['patterns']['url']:
-        p = (re.compile(regex), '', i['model'])
-        URL_PATTERNS.append(p)
-URL_PATTERNS.reverse()
 
 # ----------------------------------------------------------------------
-# Templates used to generate IDs, paths, and URLs from model and tokens
-#
 
-ID_TEMPLATES = {
-    i['model']: i['templates']['id']
-    for i in IDENTIFIERS
-}
-
-PATH_TEMPLATES = {}
-for i in IDENTIFIERS:
-    for k,v in i['templates']['path'].iteritems():
-        if v:
-            key = '%s-%s' % (i['model'],k)
-            PATH_TEMPLATES[key] = v
-
-URL_TEMPLATES = {}
-for i in IDENTIFIERS:
-    for k,v in i['templates']['url'].iteritems():
-        if v:
-            if not URL_TEMPLATES.get(k):
-                URL_TEMPLATES[k] = {}
-            URL_TEMPLATES[k][i['model']] = v
-
-# Additional file types that may be present in a repo
-ADDITIONAL_PATHS = {
-    i['model']: i['files']
-    for i in IDENTIFIERS
-}
+def render_models_digraph(output_path):
+    """Generates DAG of model child->parent relationships
     
+    @param path: str Absolute path to output file
+    @returns: str path to output file
+    """
+    import graphviz
+    
+    filename,extension = os.path.splitext(output_path)
+    extension = extension.replace('.', '')
+    
+    g = graphviz.Digraph(format=extension)
+    
+    for model in MODELS:
+        g.node(model)
+    
+    for model,parents in PARENTS_ALL.iteritems():
+        if model and parents:
+            for parent in parents:
+                g.edge(model, parent)
+    
+    return g.render(filename)
+
 
 def identify_object(text, patterns):
     """Split ID, path, or URL into model and tokens and assign to Identifier
@@ -236,15 +480,21 @@ def set_idparts(i, groupdict, components=ID_COMPONENTS):
     if i.basepath:
         i.basepath = os.path.normpath(i.basepath)
     # list of object ID components
-    i.parts = OrderedDict([
+    id_components = [
         (key, groupdict[key])
         for key in components
         if groupdict.get(key)
-    ])
+    ]
+    i.parts = OrderedDict(id_components)
+    id_components.insert(0, ('model',i.model))
+    i.idparts = OrderedDict(id_components)
     # set object attributes with numbers as ints
     for key,val in i.parts.items():
         if val.isdigit():
             i.parts[key] = int(val)
+
+class IdentifierFormatException(Exception):
+    pass
 
 def format_id(i, model, templates=ID_TEMPLATES):
     """Format ID for the requested model using ID_TEMPLATES.
@@ -256,7 +506,13 @@ def format_id(i, model, templates=ID_TEMPLATES):
     @param templates: [optional] dict of str templates keyed to models
     @returns: str
     """
-    return templates[model].format(**i.parts)
+    for template in templates[model]:
+        # first one that works is the ID (probably)
+        try:
+            return template.format(**i.parts)
+        except KeyError:
+            pass
+    raise IdentifierFormatException('Could not format ID for %s' % i.parts)
 
 def format_path(i, model, path_type, templates=PATH_TEMPLATES):
     """Format absolute or relative path using PATH_TEMPLATES.
@@ -270,12 +526,15 @@ def format_path(i, model, path_type, templates=PATH_TEMPLATES):
     if path_type and (path_type == 'abs') and (not i.basepath):
         raise MissingBasepathException('%s basepath not set.'% i)
     key = '-'.join([model, path_type])
-    template = templates.get(key, None)
-    if template:
+    for template in templates[key]:
         kwargs = {key: val for key,val in i.parts.items()}
         kwargs['basepath'] = i.basepath
-        return template.format(**kwargs)
-    return None
+        # TODO put in try/except, first one that works is the path
+        try:
+            return template.format(**kwargs)
+        except KeyError:
+            pass
+    raise IdentifierFormatException('Could not format path for %s' % i.parts)
 
 def format_url(i, model, url_type, templates=URL_TEMPLATES):
     """Format URL using URL_TEMPLATES.
@@ -286,11 +545,13 @@ def format_url(i, model, url_type, templates=URL_TEMPLATES):
     @param templates: [optional] dict of str templates keyed to models
     @returns: str
     """
-    try:
-        template = templates[url_type][model]
-        return template.format(**i.parts)
-    except KeyError:
-        return None
+    for template in templates[url_type][model]:
+        # TODO put in try/except, first one that works is the URL
+        try:
+            return template.format(**i.parts)
+        except KeyError:
+            pass
+    raise IdentifierFormatException('Could not format URL for %s' % i.parts)
 
 def matches_pattern(text, patterns):
     """True if text matches one of patterns
@@ -399,7 +660,7 @@ def first_id(i, model):
     @returns: Identifier
     """
     parts = {k:v for k,v in i.parts.iteritems()}
-    next_component = _field_names(ID_TEMPLATES[model]).pop()
+    next_component = _field_names(ID_TEMPLATES[model][0]).pop()
     parts[next_component] = 1
     parts['model'] = model
     new = Identifier(parts=parts)
@@ -412,7 +673,7 @@ def max_id(model, identifiers):
     @param i: Identifier
     @returns: int
     """
-    component = _field_names(ID_TEMPLATES[model]).pop()
+    component = _field_names(ID_TEMPLATES[model][0]).pop()
     existing = [i.parts[component] for i in identifiers]
     existing.sort()
     return existing[-1]
@@ -483,6 +744,9 @@ class MalformedPathException(Exception):
 class MalformedURLException(Exception):
     pass
 
+class InvalidInputException(Exception):
+    pass
+
 KWARG_KEYS = [
     'id',
     'parts',
@@ -541,6 +805,8 @@ class Identifier(object):
         elif blargs['parts']: self._from_idparts(blargs['parts'], blargs['base_path'])
         elif blargs['path']: self._from_path(blargs['path'], blargs['base_path'])
         elif blargs['url']: self._from_url(blargs['url'], blargs['base_path'])
+        else:
+            raise InvalidInputException('Could not grok Identifier input: %s' % blargs)
 
     def _from_id(self, object_id, base_path=None):
         """Make Identifier from object ID.
@@ -585,11 +851,14 @@ class Identifier(object):
         self.method = 'parts'
         self.raw = idparts
         self.model = idparts['model']
-        self.parts = OrderedDict([
+        id_components = [
             (key, idparts[key])
             for key in ID_COMPONENTS
             if idparts.get(key)
-        ])
+        ]
+        self.parts = OrderedDict(id_components)
+        id_components.insert(0, ('model', self.model))
+        self.idparts = OrderedDict(id_components)
         self.id = format_id(self, self.model)
         if base_path and not self.basepath:
             self.basepath = base_path
@@ -739,39 +1008,61 @@ class Identifier(object):
         
         @param stubs: boolean Whether or not to include Stub objects.
         """
-        if stubs:
-            parent_model = PARENTS_ALL.get(self.model, None)
-        else:
-            parent_model = PARENTS.get(self.model, None)
-        if not parent_model:
-            return None
-        return format_id(self, parent_model)
+        parent = self.parent(stubs=stubs)
+        if parent:
+            return parent.id
+        return None
     
     def parent_path(self, stubs=False):
         """Absolute path to parent object
         
         @param stubs: boolean Whether or not to include Stub objects.
         """
-        if stubs:
-            parent_model = PARENTS_ALL.get(self.model, None)
-        else:
-            parent_model = PARENTS.get(self.model, None)
-        if parent_model:
-            path = format_path(self, parent_model, 'abs')
-            if path:
-                return os.path.normpath(path)
+        parent = self.parent(stubs=stubs)
+        if parent:
+            return parent.path_abs()
         return None
-    
+
+    def _parent_parts(self):
+        return {
+            k:v
+            for k,v in [
+                x for x in self.parts.items()
+            ][:-1]
+        }
+
+    def _parent_models(self, stubs=False):
+        if stubs:
+            return PARENTS_ALL.get(self.model, [])
+        return PARENTS.get(self.model, [])
+        
     def parent(self, stubs=False):
         """Parent of the Identifier
         
         @param stub: boolean An archival object not just a Stub
         """
-        pid = self.parent_id(stubs)
-        if pid:
-            return self.__class__(id=pid, base_path=self.basepath)
+        parent_parts = self._parent_parts()
+        for model in self._parent_models(stubs):
+            idparts = parent_parts
+            idparts['model'] = model
+            try:
+                return Identifier(idparts, base_path=self.basepath)
+            except IdentifierFormatException:
+                pass
         return None
-
+    
+    def lineage(self, stubs=False):
+        """Identifier's lineage, starting with the Identifier itself.
+        
+        @param stubs: boolean Whether or not to include Stub objects.
+        """
+        i = self
+        identifiers = [i]
+        while(i.parent(stubs=stubs)):
+            i = i.parent(stubs=stubs)
+            identifiers.append(i)
+        return identifiers
+    
     def child_models(self, stubs=False):
         if stubs:
             return CHILDREN_ALL.get(self.model, [])
@@ -794,18 +1085,6 @@ class Identifier(object):
             if key in ID_COMPONENTS:
                 child_parts[key] = val
         return self.__class__(child_parts, base_path=base_path)
-    
-    def lineage(self, stubs=False):
-        """Identifier's lineage, starting with the Identifier itself.
-        
-        @param stubs: boolean Whether or not to include Stub objects.
-        """
-        i = self
-        identifiers = [i]
-        while(i.parent(stubs=stubs)):
-            i = i.parent(stubs=stubs)
-            identifiers.append(i)
-        return identifiers
 
     def path_abs(self, append=None):
         """Return absolute path to object with optional file appended.
@@ -818,7 +1097,7 @@ class Identifier(object):
         path = format_path(self, self.model, 'abs')
         if append:
             filename = ADDITIONAL_PATHS.get(self.model,None).get(append,None)
-            if filename and self.model == 'file':
+            if filename and (self.model in NODES):
                 # For files, bits are appended to file ID using string formatter
                 dirname,basename = os.path.split(path)
                 filename = filename.format(id=self.id)

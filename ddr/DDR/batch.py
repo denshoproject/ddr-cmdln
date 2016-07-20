@@ -158,15 +158,18 @@ class Checker():
         passed = False
         headers,rowds = csvfile.make_rowds(fileio.read_csv(csv_path))
         for rowd in rowds:
-            rowd['identifier'] = identifier.Identifier(rowd['id'])
+            if rowd.get('id'):
+                rowd['identifier'] = identifier.Identifier(rowd['id'])
+            else:
+                rowd['identifier'] = None
         logging.info('%s rows' % len(rowds))
-        model = Checker._guess_model(rowds)
+        model,model_errs = Checker._guess_model(rowds)
         module = Checker._get_module(model)
         vocabs = Checker._get_vocabs(module)
         header_errs,rowds_errs = Checker._validate_csv_file(
             module, vocabs, headers, rowds
         )
-        if (not header_errs) and (not rowds_errs):
+        if (not model_errs) and (not header_errs) and (not rowds_errs):
             passed = True
             logging.info('ok')
         else:
@@ -175,6 +178,7 @@ class Checker():
             'passed': passed,
             'headers': headers,
             'rowds': rowds,
+            'model_errs': model_errs,
             'header_errs': header_errs,
             'rowds_errs': rowds_errs,
         }
@@ -239,20 +243,23 @@ class Checker():
         """
         logging.debug('Guessing model based on %s rows' % len(rowds))
         models = []
-        for rowd in rowds:
+        errors = []
+        for n,rowd in enumerate(rowds):
             if rowd.get('identifier'):
                 if rowd['identifier'].model not in models:
                     models.append(rowd['identifier'].model)
+            else:
+                errors.append('No Identifier for row %s!' % (n))
         if not models:
-            raise Exception('Cannot guess model type!')
+            errors.append('Cannot guess model type!')
         if len(models) > 1:
-            raise Exception('More than one model type in imput file!')
+            errors.append('More than one model type in imput file!')
         model = models[0]
         # TODO should not know model name
         if model == 'file-role':
             model = 'file'
         logging.debug('model: %s' % model)
-        return model
+        return model,errors
 
     @staticmethod
     def _get_module(model):
@@ -418,15 +425,6 @@ class Importer():
         return fidentifier.parent(stubs=is_stub)
 
     @staticmethod
-    def _file_is_new(fidentifier):
-        """Indicate whether file is new (ingest) or not (update)
-        
-        @param fidentifier: Identifier
-        @returns: boolean
-        """
-        return fidentifier.object_class() == models.Stub
-
-    @staticmethod
     def _write_entity_changelog(entity, git_name, git_mail, agent):
         msg = 'Updated entity file {}'
         messages = [
@@ -573,6 +571,93 @@ class Importer():
         return updated
 
     @staticmethod
+    def _fidentifiers(rowds, cidentifier):
+        """dict of File Identifiers by file ID."""
+        return {
+            rowd['id']: identifier.Identifier(
+                id=rowd['id'],
+                base_path=cidentifier.basepath
+            )
+            for rowd in rowds
+        }
+    
+    @staticmethod
+    def _fid_parents(fidentifiers):
+        """dict of File Identifier parents (entities) by file ID."""
+        return {
+            fi.id: Importer._fidentifier_parent(fi)
+            for fi in fidentifiers.itervalues()
+        }
+    
+    @staticmethod
+    def _eidentifiers(fid_parents):
+        """deduplicated list of Entity Identifiers."""
+        return list(
+            set([
+                e for e in fid_parents.itervalues()
+            ])
+        )
+    
+    @staticmethod
+    def _existing_bad_entities(eidentifiers):
+        """dict of Entity Identifiers by entity ID; list of bad entities.
+        
+        "Bad" entities are those for which no entity.json in filesystem.
+        @returns: (dict, list)
+        """
+        entities = {}
+        bad_entities = []
+        for eidentifier in eidentifiers:
+            if os.path.exists(eidentifier.path_abs()):
+                entities[eidentifier.id] = eidentifier.object()
+            elif eidentifier.id not in bad_entities:
+                bad_entities.append(eidentifier.id)
+        return entities,bad_entities
+    
+    @staticmethod
+    def _file_objects(fidentifiers):
+        """dict of File objects by file ID."""
+        # File objects will be used to determine if the Files "exist"
+        # e.g. whether they are local/normal or external/metadata-only
+        return {
+            # TODO don't hard-code object class!!!
+            fid: fi.object()
+            for fid,fi in fidentifiers.iteritems()
+        }
+    
+    @staticmethod
+    def _rowds_new_existing(rowds, files):
+        """separates rowds into new,existing lists
+        
+        This is more complicated than before because the "files" may actually be
+        Stubs, which don't have .jsons or .exists() methods.
+        """
+        new = []
+        existing = []
+        for n,rowd in enumerate(rowds):
+            # gather facts
+            has_id = rowd.get('id')
+            obj = files.get(rowd['id'], None)
+            obj_not_stub = not isinstance(obj, models.Stub)
+            if obj and obj_not_stub:
+                json_exists = obj.exists()
+            else:
+                json_exists = False
+            # decide
+            if has_id and obj and obj_not_stub and json_exists:
+                existing.append(rowd)
+            else:
+                new.append(rowd)
+        return new,existing
+
+    @staticmethod
+    def _rowd_is_external(rowd):
+        """indicates whether or not rowd represents an external file."""
+        if int(rowd.get('external', 0)):
+            return True
+        return False
+    
+    @staticmethod
     def import_files(csv_path, cidentifier, vocabs_path, git_name, git_mail, agent, log_path=None, dryrun=False):
         """Adds or updates files from a CSV file
         
@@ -591,89 +676,84 @@ class Importer():
         
         # TODO hard-coded model name...
         model = 'file'
-        
         csv_dir = os.path.dirname(csv_path)
-        logging.debug('csv_dir %s' % csv_dir)
-    
         # TODO this still knows too much about entities and files...
         entity_class = identifier.class_for_name(
             identifier.MODEL_CLASSES['entity']['module'],
             identifier.MODEL_CLASSES['entity']['class']
         )
+        repository = dvcs.repository(cidentifier.path_abs())
+        logging.debug('csv_dir %s' % csv_dir)
         logging.debug('entity_class %s' % entity_class)
+        logging.debug(repository)
         
         logging.info('Reading %s' % csv_path)
         headers,rowds = csvfile.make_rowds(fileio.read_csv(csv_path))
         logging.info('%s rows' % len(rowds))
         
-        # check for modified or uncommitted files in repo
-        repository = dvcs.repository(cidentifier.path_abs())
-        logging.debug(repository)
-    
-        fidentifiers = {
-            rowd['id']: identifier.Identifier(
-                id=rowd['id'],
-                base_path=cidentifier.basepath
-            )
-            for rowd in rowds
-        }
-        fidentifier_parents = {
-            fi.id: Importer._fidentifier_parent(fi)
-            for fi in fidentifiers.itervalues()
-        }
-        # eidentifiers, removing duplicates
-        eidentifiers = list(set([e for e in fidentifier_parents.itervalues()]))
-        entities = {}
-        bad_entities = []
-        for eidentifier in eidentifiers:
-            if os.path.exists(eidentifier.path_abs()):
-                entity = eidentifier.object()
-                entities[eidentifier.id] = entity
-            else:
-                if eidentifier.id not in bad_entities:
-                    bad_entities.append(eidentifier.id)
+        # various dicts and lists instantiated here so we don't do it
+        # multiple times later
+        fidentifiers = Importer._fidentifiers(rowds, cidentifier)
+        fid_parents = Importer._fid_parents(fidentifiers)
+        eidentifiers = Importer._eidentifiers(fid_parents)
+        entities,bad_entities = Importer._existing_bad_entities(eidentifiers)
+        files = Importer._file_objects(fidentifiers)
+        rowds_new,rowds_existing = Importer._rowds_new_existing(rowds, files)
         if bad_entities:
             for f in bad_entities:
                 logging.error('    %s missing' % f)
-            raise Exception('%s entities could not be loaded! - IMPORT CANCELLED!' % len(bad_entities))
-    
-        # separate into new and existing lists
-        rowds_new = []
-        rowds_existing = []
-        for n,rowd in enumerate(rowds):
-            if Importer._file_is_new(fidentifiers[rowd['id']]):
-                rowds_new.append(rowd)
-            else:
-                rowds_existing.append(rowd)
+            raise Exception(
+                '%s entities could not be loaded! - IMPORT CANCELLED!' % len(bad_entities)
+            )
         
         logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
         logging.info('Updating existing files')
-        start_updates = datetime.now()
+        git_files = Importer._update_existing_files(
+            rowds_existing,
+            fid_parents, entities, files, models, repository,
+            git_name, git_mail, agent,
+            dryrun
+        )
+        logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
+        logging.info('Adding new files')
+        git_files2 = Importer._add_new_files(
+            rowds_new,
+            fid_parents, entities, files,
+            git_name, git_mail, agent,
+            log_path, dryrun
+        )
+        logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
+        return git_files
+    
+    @staticmethod
+    def _update_existing_files(rowds, fid_parents, entities, files, models, repository, git_name, git_mail, agent, dryrun):
+        start = datetime.now()
+        elapsed_rounds = []
         git_files = []
         updated = []
-        elapsed_rounds_updates = []
         staged = []
         obj_metadata = None
-        for n,rowd in enumerate(rowds_existing):
-            logging.info('+ %s/%s - %s (%s)' % (n+1, len(rowds), rowd['id'], rowd['basename_orig']))
+        len_rowds = len(rowds)
+        for n,rowd in enumerate(rowds):
+            logging.info('+ %s/%s - %s (%s)' % (
+                n+1, len_rowds, rowd['id'], rowd['basename_orig']
+            ))
             start_round = datetime.now()
-            
-            fidentifier = fidentifiers[rowd['id']]
-            eidentifier = fidentifier_parents[fidentifier.id]
-            entity = entities[eidentifier.id]
-            file_ = fidentifier.object()
+
+            fid = rowd['id']
+            eid = fid_parents[fid].id
+            entity = entities[eid]
+            file_ = files[fid]
             modified = file_.load_csv(rowd)
             # Getting obj_metadata takes about 1sec each time
             # TODO caching works as long as all objects have same metadata...
             if not obj_metadata:
                 obj_metadata = models.object_metadata(
-                    fidentifier.fields_module(),
+                    file_.identifier.fields_module(),
                     repository.working_dir
                 )
             
-            if dryrun:
-                pass
-            elif modified:
+            if modified and not dryrun:
                 logging.debug('    writing %s' % file_.json_path)
                 file_.write_json(obj_metadata=obj_metadata)
                 # TODO better to write to collection changelog?
@@ -684,15 +764,13 @@ class Importer():
                 updated.append(file_)
             
             elapsed_round = datetime.now() - start_round
-            elapsed_rounds_updates.append(elapsed_round)
-            logging.debug('| %s (%s)' % (fidentifier, elapsed_round))
+            elapsed_rounds.append(elapsed_round)
+            logging.debug('| %s (%s)' % (file_.identifier, elapsed_round))
         
-        elapsed_updates = datetime.now() - start_updates
-        logging.debug('%s updated in %s' % (len(elapsed_rounds_updates), elapsed_updates))
+        elapsed = datetime.now() - start
+        logging.debug('%s updated in %s' % (len(elapsed_rounds), elapsed))
                 
-        if dryrun:
-            pass
-        elif git_files:
+        if git_files and not dryrun:
             logging.info('Staging %s modified files' % len(git_files))
             start_stage = datetime.now()
             dvcs.stage(repository, git_files)
@@ -706,52 +784,68 @@ class Importer():
             logging.debug('ok (%s)' % elapsed_stage)
             logging.debug('%s staged in %s' % (len(staged), elapsed_stage))
         
-        logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
-        logging.info('Adding new files')
-        start_adds = datetime.now()
-        elapsed_rounds_adds = []
-        logging.info('Checking source files')
-        for rowd in rowds_new:
-            rowd['src_path'] = os.path.join(csv_dir, rowd['basename_orig'])
-            logging.debug('| %s' % rowd['src_path'])
-            if not os.path.exists(rowd['src_path']):
-                raise Exception('Missing file: %s' % rowd['src_path'])
+        return git_files
+    
+    @staticmethod
+    def _add_new_files(rowds, fid_parents, entities, files, git_name, git_mail, agent, log_path, dryrun):
         if log_path:
             logging.info('addfile logging to %s' % log_path)
-        for n,rowd in enumerate(rowds_new):
-            logging.info('+ %s/%s - %s (%s)' % (n+1, len(rowds), rowd['id'], rowd['basename_orig']))
+        git_files = []
+        start = datetime.now()
+        elapsed_rounds = []
+        len_rowds = len(rowds)
+        for n,rowd in enumerate(rowds):
+            logging.info('+ %s/%s - %s (%s)' % (n+1, len_rowds, rowd['id'], rowd['basename_orig']))
             start_round = datetime.now()
             
-            fidentifier = fidentifiers[rowd['id']]
-            eidentifier = fidentifier_parents[fidentifier.id]
-            entity = entities[eidentifier.id]
+            fid = rowd['id']
+            eid = fid_parents[fid].id
+            file_ = files[fid]
+            entity = entities[eid]
             logging.debug('| %s' % (entity))
-    
-            if dryrun:
-                pass
-            elif Importer._file_is_new(fidentifier):
-                # ingest
-                # TODO make sure this updates entity.files
-                file_,repo2,log2 = ingest.add_file(
+            
+            # external files (no binary except maybe access file)
+            if Importer._rowd_is_external(rowd) and not dryrun:
+                file_,repo2,log2 = ingest.add_external_file(
                     entity,
-                    rowd['src_path'],
-                    fidentifier.parts['role'],
                     rowd,
                     git_name, git_mail, agent,
                     log_path=log_path,
                     show_staged=False
                 )
+                if rowd.get('access_path'):
+                    file_,repo3,log3,status = ingest.add_access(
+                        entity, file_,
+                        rowd['access_path'],
+                        git_name, git_mail, agent,
+                        log_path=log_path,
+                        show_staged=False
+                    )
+                git_files.append(file_)
+            
+            # normal files
+            elif not dryrun:
+                # ingest
+                # TODO make sure this updates entity.files
+                file_,repo2,log2 = ingest.add_local_file(
+                    entity,
+                    rowd['basename_orig'],
+                    file_.identifier.parts['role'],
+                    rowd,
+                    git_name, git_mail, agent,
+                    log_path=log_path,
+                    show_staged=False
+                )
+                git_files.append(file_)
             
             elapsed_round = datetime.now() - start_round
-            elapsed_rounds_adds.append(elapsed_round)
+            elapsed_rounds.append(elapsed_round)
             logging.debug('| %s (%s)' % (file_, elapsed_round))
         
-        elapsed_adds = datetime.now() - start_adds
-        logging.debug('%s added in %s' % (len(elapsed_rounds_adds), elapsed_adds))
-        logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
-        
+        elapsed = datetime.now() - start
+        logging.debug('%s added in %s' % (len(elapsed_rounds), elapsed))
         return git_files
-
+    
     @staticmethod
     def register_entity_ids(csv_path, cidentifier, idservice_client, dryrun=True):
         """

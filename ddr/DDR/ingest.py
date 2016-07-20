@@ -308,8 +308,11 @@ def stage_files(entity, git_files, annex_files, new_files, log, show_staged=True
             log.crash('Add file aborted, see log file for details: %s' % log.logpath)
     return repo
 
-def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_path=None, show_staged=True):
-    """Add file to entity
+def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='', log_path=None, show_staged=True):
+    """Add a "normal" file to entity
+    
+    "Normal" files are those in which a binary file is added to the repository
+    as part of the ingest process.
     
     This method breaks out of OOP and manipulates entity.json directly.
     Thus it needs to lock to prevent other edits while it does its thing.
@@ -365,11 +368,11 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
     
     dest_path = destination_path(src_path, entity.files_path, fidentifier)
     tmp_path = temporary_path(src_path, config.MEDIA_BASE, fidentifier)
+    tmp_dir = os.path.dirname(tmp_path)
     tmp_path_renamed = temporary_path_renamed(tmp_path, dest_path)
     access_dest_path = access_path(file_class, tmp_path_renamed)
     dest_dir = os.path.dirname(dest_path)
-    tmp_dir = os.path.dirname(tmp_path)
-    
+         
     log.ok('Checking files/dirs')
     check_dir('| tmp_dir', tmp_dir, log, mkdir=True, perm=os.W_OK)
     check_dir('| dest_dir', dest_dir, log, mkdir=True, perm=os.W_OK)
@@ -428,8 +431,10 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
     
     log.ok('Moving files to dest_dir')
     new_files = [
-        (tmp_path_renamed, file_.path_abs),
         (tmp_file_json, file_.json_path),
+    ]
+    new_files = new_files + [
+        (tmp_path_renamed, file_.path_abs),
     ]
     if tmp_access_path and os.path.exists(tmp_access_path):
         new_files.append(
@@ -470,7 +475,97 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
     # IMPORTANT: changelog is not staged!
     return file_,repo,log
 
-def add_access( entity, ddrfile, git_name, git_mail, agent='', log_path=None, show_staged=True ):
+def add_external_file(entity, data, git_name, git_mail, agent='', log_path=None, show_staged=True):
+    """Add external-binary (i.e. metadata-only) file to entity
+    
+    "External" files are those in which no binary file is ingested, only metadata.
+    This metadata will include SHA1 and other hashes that are normally collected
+    from the file to be ingested.
+
+    This method breaks out of OOP and manipulates entity.json directly.
+    Thus it needs to lock to prevent other edits while it does its thing.
+    Writes a log to ${entity}/addfile.log, formatted in pseudo-TAP.
+    This log is returned along with a File object.
+    
+    IMPORTANT: Files are only staged! Be sure to commit!
+    
+    @param entity: Entity object
+    @param data: dict
+    @param git_name: Username of git committer.
+    @param git_mail: Email of git committer.
+    @param agent: str (optional) Name of software making the change.
+    @param log_path: str (optional) Absolute path to addfile log
+    @param show_staged: boolean Log list of staged files
+    @return File,repo,log
+    """
+    f = None
+    repo = None
+    if log_path:
+        log = addfile_logger(log_path=log_path)
+    else:
+        log = addfile_logger(identifier=entity.identifier)
+    
+    log.ok('------------------------------------------------------------------------')
+    log.ok('DDR.models.Entity.add_file: START')
+    log.ok('entity: %s' % entity.id)
+    log.ok('data: %s' % data)
+    
+    if not (data.get('external') and data['external']):
+        log.ok('Regular file (not external)')
+        raise Exception('Not an external (metadata-only) file: %s' % file_)
+    
+    log.ok('Identifier')
+    # note: we can't make this until we have the sha1
+    idparts = entity.identifier.idparts
+    idparts['model'] = 'file'
+    idparts['role'] = data['role']
+    idparts['sha1'] = data['sha1'][:10]
+    log.ok('| idparts %s' % idparts)
+    fidentifier = identifier.Identifier(idparts, entity.identifier.basepath)
+    log.ok('| identifier %s' % fidentifier)
+    
+    log.ok('File object')
+    file_ = fidentifier.object()
+    # add extension to path_abs
+    basename_ext = os.path.splitext(data['basename_orig'])[1]
+    path_abs_ext = os.path.splitext(file_.path_abs)[1]
+    if basename_ext and not path_abs_ext:
+        file_.path_abs = file_.path_abs + basename_ext
+        log.ok('| basename_ext %s' % basename_ext)
+    for field in data:
+        setattr(file_, field, data[field])
+    
+    # WE ARE NOW MAKING CHANGES TO THE REPO ------------------------
+    
+    log.ok('Writing file metadata')
+    file_.write_json()
+    
+    log.ok('Attaching file to entity')
+    #entity.load_file_objects(force_read=True)
+    entity.children(force_read=True)
+    log.ok('BLAT file_ %s' % file_)
+    log.ok('BLAT entity.files %s' % entity.files)
+    #if file_ in entity.files:
+    #    log.ok('| done')
+    #else:
+    #    log.crash('Could not add file to entity.files!')
+    
+    log.ok('Writing entity metadata')
+    entity.write_json()
+    
+    log.ok('Staging files')
+    git_files = [
+        entity.json_path_rel,
+        file_.json_path_rel
+    ]
+    annex_files = []
+    repo = stage_files(entity, git_files, annex_files, git_files, log, show_staged=show_staged)
+    
+    # IMPORTANT: Files are only staged! Be sure to commit!
+    # IMPORTANT: changelog is not staged!
+    return file_,repo,log
+
+def add_access( entity, ddrfile, src_path, git_name, git_mail, agent='', log_path=None, show_staged=True ):
     """Generate new access file for entity
     
     This method breaks out of OOP and manipulates entity.json directly.
@@ -480,7 +575,9 @@ def add_access( entity, ddrfile, git_name, git_mail, agent='', log_path=None, sh
     
     TODO Refactor this function! It is waaay too long!
     
+    @param entity: Entity object
     @param ddrfile: File
+    @param src_path: str Absolute path to the access file (ddrfile.path_abs)
     @param git_name: Username of git committer.
     @param git_mail: Email of git committer.
     @param agent: str (optional) Name of software making the change.
@@ -494,8 +591,6 @@ def add_access( entity, ddrfile, git_name, git_mail, agent='', log_path=None, sh
         log = addfile_logger(log_path=log_path)
     else:
         log = addfile_logger(identifier=entity.identifier)
-    
-    src_path = ddrfile.path_abs
     
     log.ok('------------------------------------------------------------------------')
     log.ok('DDR.models.Entity.add_access: START')
