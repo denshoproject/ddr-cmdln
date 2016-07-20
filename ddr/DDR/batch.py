@@ -158,15 +158,18 @@ class Checker():
         passed = False
         headers,rowds = csvfile.make_rowds(fileio.read_csv(csv_path))
         for rowd in rowds:
-            rowd['identifier'] = identifier.Identifier(rowd['id'])
+            if rowd.get('id'):
+                rowd['identifier'] = identifier.Identifier(rowd['id'])
+            else:
+                rowd['identifier'] = None
         logging.info('%s rows' % len(rowds))
-        model = Checker._guess_model(rowds)
+        model,model_errs = Checker._guess_model(rowds)
         module = Checker._get_module(model)
         vocabs = Checker._get_vocabs(module)
         header_errs,rowds_errs = Checker._validate_csv_file(
             module, vocabs, headers, rowds
         )
-        if (not header_errs) and (not rowds_errs):
+        if (not model_errs) and (not header_errs) and (not rowds_errs):
             passed = True
             logging.info('ok')
         else:
@@ -175,6 +178,7 @@ class Checker():
             'passed': passed,
             'headers': headers,
             'rowds': rowds,
+            'model_errs': model_errs,
             'header_errs': header_errs,
             'rowds_errs': rowds_errs,
         }
@@ -239,20 +243,23 @@ class Checker():
         """
         logging.debug('Guessing model based on %s rows' % len(rowds))
         models = []
-        for rowd in rowds:
+        errors = []
+        for n,rowd in enumerate(rowds):
             if rowd.get('identifier'):
                 if rowd['identifier'].model not in models:
                     models.append(rowd['identifier'].model)
+            else:
+                errors.append('No Identifier for row %s!' % (n))
         if not models:
-            raise Exception('Cannot guess model type!')
+            errors.append('Cannot guess model type!')
         if len(models) > 1:
-            raise Exception('More than one model type in imput file!')
+            errors.append('More than one model type in imput file!')
         model = models[0]
         # TODO should not know model name
         if model == 'file-role':
             model = 'file'
         logging.debug('model: %s' % model)
-        return model
+        return model,errors
 
     @staticmethod
     def _get_module(model):
