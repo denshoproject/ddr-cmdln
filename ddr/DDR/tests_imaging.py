@@ -1,56 +1,89 @@
 import os
-import urllib
 
 from nose.tools import assert_raises
+import requests
 
 import imaging
 
 
-TEST_IMG_URL = 'https://web.archive.org/web/20011221151014im_/http://densho.org/images/logo.jpg'
-TEST_IMG_PATH = '/tmp/ddr-test-imaging.jpg'
-
-
-identify_out = {
-    'JPEG': '/tmp/file.jpg JPEG 800x573 800x573+0+0 8-bit DirectClass 63.2KB 0.000u 0:00.000',
-    'TIFF': '/tmp/file.tif[0] TIFF 5632x8615 5632x8615+0+0 8-bit DirectClass 147.4MB 0.000u 0:00.000\n/tmp/file.tif[1] TIFF 625x957 625x957+0+0 8-bit DirectClass 147.4MB 0.000u 0:00.000',
-    'PDF': '/tmp/file.pdf[0] PDF 397x598 397x598+0+0 16-bit Bilevel DirectClass 30KB 0.100u 0:00.080\n/tmp/file.pdf[1] PDF 397x598 397x598+0+0 16-bit Bilevel DirectClass 30KB 0.090u 0:00.080\n/tmp/file.pdf[2] PDF 397x598 397x598+0+0 16-bit Bilevel DirectClass 30KB 0.090u 0:00.080',
-    'DOCX': "identify.im6: no decode delegate for this image format `/tmp/file.docx' @ error/constitute.c/ReadImage/544.",
+TEST_FILES = {
+    'jpg': {
+        'url': 'http://ddr.densho.org/download/media/ddr-densho-2/ddr-densho-2-33-mezzanine-16fe864756-a.jpg',
+        'path': '/tmp/ddr-cmdln_test-imaging.jpg',
+        'identify': '',
+    },
+    'tif': {
+        'url': 'http://ddr.densho.org/download/media/ddr-densho-2/ddr-densho-2-33-mezzanine-16fe864756.tif',
+        'path': '/tmp/ddr-cmdln_test-imaging.tif',
+        'identify': '',
+    },
+    'pdf': {
+        'url': 'http://ddr.densho.org/download/media/ddr-hmwf-1/ddr-hmwf-1-577-mezzanine-c714496444.pdf',
+        'path': '/tmp/ddr-cmdln_test-imaging.pdf',
+        'identify': '',
+    },
+#    'doc': {
+#        'url': '',
+#        'path': '/tmp/ddr-cmdln_test-imaging.docx',
+#        'identify': '',
+#    },
 }
 
+# CloudFlare blocks if you don't use a browser user agent
+REQUEST_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0"
+
+def _download_test_images():
+    for fmt,data in TEST_FILES.iteritems():
+        if not os.path.exists(data['path']):
+            print(data['url'])
+            headers = {'user-agent': REQUEST_USER_AGENT}
+            r = requests.get(data['url'], headers=headers, stream=True)
+            with open(data['path'], 'wb') as fd:
+                for chunk in r.iter_content():
+                    fd.write(chunk)
+            print(data['path'])
+        
 def test_analyze_magick():
-    
-    jpeg = imaging.analyze_magick(identify_out['JPEG'])
-    tiff = imaging.analyze_magick(identify_out['TIFF'])
-    pdf = imaging.analyze_magick(identify_out['PDF'])
-    docx = imaging.analyze_magick(identify_out['DOCX'])
-    assert jpeg['path'] == '/tmp/file.jpg'
+    _download_test_images()
+    jpeg = imaging.analyze(TEST_FILES['jpg']['path'])
+    tiff = imaging.analyze(TEST_FILES['tif']['path'])
+    pdf  = imaging.analyze(TEST_FILES['pdf']['path'])
+    #docx = imaging.analyze(TEST_FILES['doc']['path'])
+    print(jpeg)
+    print(tiff)
+    print(pdf)
+    assert jpeg['path'] == TEST_FILES['jpg']['path']
     assert jpeg['frames'] == 1
     assert jpeg['format'] == 'JPEG'
     assert jpeg['image'] == True
-    assert tiff['path'] == '/tmp/file.tif'
-    assert tiff['frames'] == 2
+    assert tiff['path'] == TEST_FILES['tif']['path']
+    assert tiff['frames'] == 1
     assert tiff['format'] == 'TIFF'
     assert tiff['image'] == True
-    assert pdf['path'] == '/tmp/file.pdf'
-    assert pdf['frames'] == 3
-    assert pdf['format'] == 'PDF'
+    assert pdf['path'] == TEST_FILES['pdf']['path']
+    assert pdf['frames'] == 2
+    assert pdf['format'] == 'PBM'
     assert pdf['image'] == True
-    assert docx['path'] == None
-    assert docx['frames'] == 1
-    assert docx['format'] == None
-    assert docx['image'] == False
+    #assert docx['path'] == None
+    #assert docx['frames'] == 1
+    #assert docx['format'] == None
+    #assert docx['image'] == False
 
 def test_analyze():
-    if not os.path.exists(TEST_IMG_PATH):
-        urllib.urlretrieve(TEST_IMG_URL, TEST_IMG_PATH)
+    _download_test_images()
     path0 = '/tmp/missingfile.jpg'
-    path1 = TEST_IMG_PATH
+    path1 = TEST_FILES['jpg']['path']
     assert_raises(Exception, imaging.analyze, path0)
     assert os.path.exists(path1)
     out1 = imaging.analyze(path1)
     expected1 = {
-        'path': '/tmp/ddr-test-imaging.jpg',
-        'frames': 1, 'can_thumbnail': None, 'image': True, 'format': 'JPEG'
+        'std_err': '',
+        'std_out': '/tmp/ddr-cmdln_test-imaging.jpg JPEG 1024x588 1024x588+0+0 8-bit Gray 256c 124KB 0.000u 0:00.000',
+        'format': 'JPEG',
+        'image': True,
+        'can_thumbnail': None,
+        'frames': 1,
+        'path': '/tmp/ddr-cmdln_test-imaging.jpg'
     }
     assert out1 == expected1
 
@@ -64,18 +97,9 @@ def test_geometry_is_ok():
     for s in geometry['bad']:
         assert imaging.geometry_is_ok(s) == False
 
-def test_make_convert_cmd():
-    cmd = imaging.make_convert_cmd(
-        src='/tmp/file.tif',
-        dest='/tmp/file-thumb.jpg',
-        geometry='100x100'
-    )
-    assert cmd == "convert /tmp/file.tif -resize '100x100' /tmp/file-thumb.jpg"
-
 def test_thumbnail():
-    if not os.path.exists(TEST_IMG_PATH):
-        urllib.urlretrieve(TEST_IMG_URL, TEST_IMG_PATH)
-    src = TEST_IMG_PATH
+    _download_test_images()
+    src = TEST_FILES['jpg']['path']
     dest = '/tmp/ddr-test-imaging-thumb.jpg'
     geometry = '100x100'
     assert os.path.exists(src)
@@ -83,9 +107,8 @@ def test_thumbnail():
     assert os.path.exists(dest)
 
 def test_extract_xmp():
-    if not os.path.exists(TEST_IMG_PATH):
-        urllib.urlretrieve(TEST_IMG_URL, TEST_IMG_PATH)
-    out0 = imaging.extract_xmp(TEST_IMG_PATH)
+    _download_test_images()
+    out0 = imaging.extract_xmp(TEST_FILES['jpg']['path'])
     expected0 = '<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Exempi + XMP Core 5.1.2"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about=""/></rdf:RDF></x:xmpmeta>'
     print(out0)
     assert out0 == expected0
