@@ -1120,7 +1120,7 @@ class Entity( object ):
 #        return Collection.from_identifier(cidentifier)
    
     def children( self, role=None, quick=None, force_read=False ):
-        self.load_file_objects(force_read=force_read)
+        self.load_file_objects(Identifier, File, force_read=force_read)
         if role:
             files = [
                 f for f in self._file_objects
@@ -1415,7 +1415,7 @@ class Entity( object ):
             )
         return []
     
-    def load_file_objects(self, force_read=False):
+    def load_file_objects(self, identifier_class, object_class, force_read=False):
         """Replaces list of file info dicts with list of File objects
         
         TODO Don't call in loop - causes all file .JSONs to be loaded!
@@ -1427,8 +1427,8 @@ class Entity( object ):
         if force_read:
             # filesystem
             for json_path in self._file_paths():
-                file_ = File.from_identifier(
-                    Identifier(
+                file_ = object_class.from_identifier(
+                    identifier_class(
                         os.path.splitext(os.path.basename(json_path))[0],
                         self.identifier.basepath
                     )
@@ -1439,8 +1439,12 @@ class Entity( object ):
                 if f and f.get('path_rel',None):
                     basename = os.path.basename(f['path_rel'])
                     fid = os.path.splitext(basename)[0]
-                    identifier = Identifier(id=fid, base_path=self.identifier.basepath)
-                    file_ = File.from_identifier(identifier)
+                    file_ = object_class.from_identifier(
+                        identifier_class(
+                            id=fid,
+                            base_path=self.identifier.basepath
+                        )
+                    )
                     self._file_objects.append(file_)
         # keep track of how many times this gets loaded...
         self._file_objects_loaded = self._file_objects_loaded + 1
@@ -1471,7 +1475,7 @@ class Entity( object ):
                 new_files.append(f)
         self.files = new_files
         # reload objects
-        self.load_file_objects()
+        self.load_file_objects(Identifier, File)
     
     def file( self, role, sha1, newfile=None ):
         """Given a SHA1 hash, get the corresponding file dict.
@@ -1481,7 +1485,7 @@ class Entity( object ):
         @param newfile (optional) If present, updates existing file or appends new one.
         @returns 'added', 'updated', File, or None
         """
-        self.load_file_objects()
+        self.load_file_objects(Identifier, File)
         # update existing file or append
         if sha1 and newfile:
             for f in self.files:
