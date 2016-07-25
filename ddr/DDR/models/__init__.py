@@ -1242,7 +1242,9 @@ class Entity( object ):
                     for key in ENTITY_FILE_KEYS:
                         fd[key] = getattr(f, key)
                 files.append(fd)
-        data.append( {'files':files} )
+        #data.append( {'signature_file': ''} )
+        #data.append( {'children': self._children_meta()} )
+        #data.append( {'file_groups': self._file_groups()} )
         return format_json(data)
 
     def write_json(self, obj_metadata={}):
@@ -1435,6 +1437,10 @@ class Entity( object ):
                 )
                 self._file_objects.append(file_)
         else:
+            if hasattr(self, 'file_groups') and not hasattr(self, 'files'):
+                self.files = []
+                for fg in self._file_groups():
+                    self.files = self.files + fg['files']
             for f in self.files:
                 if f and f.get('path_rel',None):
                     basename = os.path.basename(f['path_rel'])
@@ -1470,12 +1476,95 @@ class Entity( object ):
         """
         # regenerate files list
         new_files = []
-        for f in self.files:
-            if f not in new_files:
-                new_files.append(f)
+        if hasattr(self, 'files') and self.files:
+            for f in self.files:
+                if f not in new_files:
+                    new_files.append(f)
+        elif hasattr(self, 'file_groups') and self.file_groups:
+            for fg in self.file_groups:
+                for f in fg['files']:
+                    if f not in new_files:
+                        new_files.append(f)
         self.files = new_files
         # reload objects
         self.load_file_objects(Identifier, File)
+    
+    def _children_meta(self):
+        """
+        children = [
+            {
+                "id": "ddr-densho-500-85-1",
+                "order": 1,
+                "public": "1",
+                "title": "Gordon Hirabayashi Interview II Segment 1"
+            },
+            {
+                "id": "ddr-densho-500-85-2",
+                "order": 2,
+                "public": "1",
+                "title": "Gordon Hirabayashi Interview II Segment 2"
+            },
+            ...
+        ]
+        """
+        children = []
+        for child in self.children():
+            if isinstance(child, File):
+                children.append({
+                    "id": child.id,
+                    "order": child.sort,
+                    "public": child.public,
+                    "title": child.label,
+                })
+            elif isinstance(child, Entity):
+                children.append({
+                    "id": child.id,
+                    "order": child.sort,
+                    "public": child.public,
+                    "title": child.title,
+                })
+        return children
+    
+    def _file_groups(self):
+        """
+        file_groups = [
+            {
+                "role": "transcript",
+                "files": [
+                    {
+                        "md5": "7c17eb2b0e838c8d7e2324ba5dd462d6",
+                        "path_rel": "ddr-densho-23-1-transcript-adb451ffec.htm",
+                        "public": "1",
+                        "sha1": "adb451ffece389d175c57f55caec6abcd688ca0f",
+                        "sha256": "0f4c964f1c8db557d17a6c9d2732cfa5b80805079ee01cc89173e379e144c19f",
+                        "order": 1
+                    },
+                    ...
+                ]
+            },
+        ]
+        """
+        fgroups = {}
+        for f in self._file_objects:
+            if not fgroups.get(f.role):
+                fgroups[f.role] = []
+        for f in self._file_objects:
+            fgroups[f.role].append(f)
+        file_groups = []
+        for role,files in fgroups.iteritems():
+            file_meta = [
+                {
+                    'order': f.sort,
+                    'path_rel': f.path_rel,
+                    'md5': f.md5,
+                    'sha1': f.sha1,
+                    'sha256': f.sha256,
+                    'public': f.public,
+                }
+                for f in files
+            ]
+            file_groups.append( {'role':role, 'files':file_meta} )
+        return file_groups
     
     def file( self, role, sha1, newfile=None ):
         """Given a SHA1 hash, get the corresponding file dict.
