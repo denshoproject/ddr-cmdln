@@ -47,7 +47,7 @@ from DDR.control import CollectionControlFile, EntityControlFile
 from DDR import docstore
 from DDR import dvcs
 from DDR import fileio
-from DDR.identifier import Identifier, MODULES
+from DDR.identifier import Identifier, MODULES, VALID_COMPONENTS
 from DDR import imaging
 from DDR import ingest
 from DDR import inheritance
@@ -917,7 +917,78 @@ class Collection( object ):
     def repo_conflicted( self ): return dvcs.conflicted(self.repo_status(), self.repo_states())
 
 
+# file_groups = [
+#   {
+#     "role": "transcript",
+#     "files": [
+#       {
+#         "md5": "7c17eb2b0e838c8d7e2324ba5dd462d6",
+#         "path_rel": "ddr-densho-23-1-transcript-adb451ffec.htm",
+#         "public": "1",
+#         "sha1": "adb451ffece389d175c57f55caec6abcd688ca0f",
+#         "sha256": "0f4c964f1c8db557d17a6c9d2732cfa5b8080507...",
+#         "order": 1
+#       },
+#     ]
+#   },
+# ]
 
+def filegroups_to_files(file_groups):
+    """Converts file_groups structure to list of files.
+    
+    Works with either metadata (dict) or File objects.
+    
+    @param file_groups: list of dicts
+    @return: list of File objects
+    """
+    files = []
+    for fg in file_groups:
+        files = files + fg['files']
+    return files
+
+def files_to_filegroups(files, to_dict=False):
+    """Converts list of files to file_groups structure.
+    
+    Works with either metadata (dict) or File objects.
+    
+    @param files: list
+    @returns: list of dicts
+    """
+    def get_role(f):
+        if isinstance(f, File):
+            return getattr(f, 'role')
+        elif isinstance(f, dict) and f.get('role'):
+            return f.get('role')
+        elif isinstance(f, dict) and f.get('path_rel'):
+            fid = os.path.splitext(f['path_rel'])[0]
+            fi = Identifier(fid)
+            return fi.idparts['role']
+        return None
+    # intermediate format
+    fgroups = {}
+    for f in files:
+        print('    %s' % f)
+        role = get_role(f)
+        print('    %s' % role)
+        if not fgroups.get(role):
+            fgroups[role] = []
+    for f in files:
+        role = get_role(f)
+        if role:
+            if to_dict:
+                fgroups[role].append(file_to_filemeta(f))
+            else:
+                fgroups[role].append(f)
+    # final format
+    file_groups = [
+        {
+            'role': role,
+            'files': fgroups[role],
+        }
+        for role in VALID_COMPONENTS['role']
+        if fgroups.get(role)
+    ]
+    return file_groups
 
 ENTITY_FILE_KEYS = ['path_rel',
                     'role',
@@ -925,6 +996,27 @@ ENTITY_FILE_KEYS = ['path_rel',
                     'sha256',
                     'md5',
                     'public',]
+
+def file_to_filemeta(f):
+    """Given a File object, return the file dict used in entity.json
+    
+    @param f: File object
+    @returns: dict
+    """
+    fd = {}
+    if isinstance(f, dict):
+        for key in ENTITY_FILE_KEYS:
+            val = None
+            if hasattr(f, key):
+                val = getattr(f, key, None)
+            elif f.get(key,None):
+                val = f[key]
+            if val != None:
+                fd[key] = val
+    elif isinstance(f, File):
+        for key in ENTITY_FILE_KEYS:
+            fd[key] = getattr(f, key)
+    return fd
 
 class Entity( object ):
     root = None
