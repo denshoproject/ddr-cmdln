@@ -1216,6 +1216,13 @@ class Entity( object ):
 #        return Collection.from_identifier(cidentifier)
    
     def children( self, role=None, quick=None, force_read=False ):
+        """Return list of Entity's children; regenerate list if specified.
+        
+        @param role: str Restrict list to specified role
+        @param quick: bool Not used
+        @param force_read: bool Scan entity dir for file jsons
+        @returns: list of File objects, sorted
+        """
         self.load_file_objects(Identifier, File, force_read=force_read)
         if role:
             files = [
@@ -1508,7 +1515,7 @@ class Entity( object ):
         return []
     
     def load_file_objects(self, identifier_class, object_class, force_read=False):
-        """Replaces list of file info dicts with list of File objects
+        """Regenerates list of file info dicts with list of File objects
         
         TODO Don't call in loop - causes all file .JSONs to be loaded!
         
