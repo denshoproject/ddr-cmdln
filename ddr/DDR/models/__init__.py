@@ -990,12 +990,16 @@ def files_to_filegroups(files, to_dict=False):
     ]
     return file_groups
 
-ENTITY_FILE_KEYS = ['path_rel',
-                    'role',
-                    'sha1',
-                    'sha256',
-                    'md5',
-                    'public',]
+ENTITY_FILE_KEYS = [
+    'id',
+    'path_rel',
+    'label',
+    #'record_created',
+    #'mimetype',
+    'size',
+    'public',
+    'sort',
+]
 
 def file_to_filemeta(f):
     """Given a File object, return the file dict used in entity.json
