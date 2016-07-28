@@ -417,15 +417,15 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='', l
         log.not_ok('no access file')
     
     log.ok('Attaching file to entity')
-    entity.files.append(file_)
-    if file_ in entity.files:
+    entity._file_objects.append(file_)
+    if file_ in entity._file_objects:
         log.ok('| done')
     else:
         log.crash('Could not add file to entity.files!')
     
     log.ok('Writing object metadata')
     tmp_file_json = write_object_metadata(file_, tmp_dir, log)
-    tmp_entity_json = write_object_metadata(entity, tmp_dir, log)
+    # write entity.json after adding binaries and updating file.json
     
     # WE ARE NOW MAKING CHANGES TO THE REPO ------------------------
     
@@ -447,17 +447,9 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='', l
     else:
         log.ok('| all files moved')
     
-    # entity metadata will only be copied if everything else was moved
-    log.ok('Moving entity.json to dest_dir')
-    existing_files = [
-        (tmp_entity_json, entity.json_path)
-    ]
-    mvold_fails = move_files(existing_files, log)
-    if mvold_fails:
-        log.not_ok('Failed to update metadata in destination repo')
-        move_existing_files_back(existing_files, mvold_fails, log)
-    else:
-        log.ok('| all files moved')
+    # entity metadata will only be written if everything else was moved
+    log.ok('Writing entity.json')
+    entity.write_json()
     
     log.ok('Staging files')
     git_files = [
