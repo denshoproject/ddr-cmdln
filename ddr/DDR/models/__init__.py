@@ -1515,10 +1515,12 @@ class Entity( object ):
         if force_read:
             # filesystem
             for json_path in self._file_paths():
+                fid = os.path.splitext(os.path.basename(json_path))[0]
+                basepath = self.identifier.basepath
                 file_ = object_class.from_identifier(
                     identifier_class(
-                        os.path.splitext(os.path.basename(json_path))[0],
-                        self.identifier.basepath
+                        id=fid,
+                        base_path=basepath
                     )
                 )
                 self._file_objects.append(file_)
