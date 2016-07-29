@@ -117,7 +117,7 @@ def test_Collection__init__():
     assert c.lock_path == os.path.join(path_abs, 'lock')
     assert c.control_path == os.path.join(path_abs, 'control')
     assert c.changelog_path == os.path.join(path_abs, 'changelog')
-    assert c.path_rel == None
+    assert (c.path_rel == None) or (c.path_rel == '')
     assert c.gitignore_path_rel == '.gitignore'
     assert c.annex_path_rel == '.git/annex'
     assert c.files_path_rel == 'files'
@@ -184,6 +184,98 @@ def test_Collection_locking():
 # TODO Collection.repo_diverged
 # TODO Collection.repo_conflicted
 
+
+# dict of file info dicts so we can test against the following data structures
+FILEMETA_DATA = {
+    'ddr-densho-23-1-master-adb451ffec': {
+        "md5": "7c17eb2b0e838c8d7e2324ba5dd462d6",
+        "path_rel": "ddr-densho-23-1-master-adb451ffec.tif",
+        "public": "1",
+        "sha1": "adb451ffece389d175c57f55caec6abcd688ca0f",
+        "sha256": "0f4c964f1c8db557d17a6c9d2732cfa5b80805079ee01cc89173e379e144c19f",
+        "order": 1
+    },
+    'ddr-densho-23-1-mezzanine-adb451ffec': {
+        "md5": "7c17eb2b0e838c8d7e2324ba5dd462d6",
+        "path_rel": "ddr-densho-23-1-mezzanine-adb451ffec.htm",
+        "public": "1",
+        "sha1": "adb451ffece389d175c57f55caec6abcd688ca0f",
+        "sha256": "0f4c964f1c8db557d17a6c9d2732cfa5b80805079ee01cc89173e379e144c19f",
+        "order": 1
+    },
+    'ddr-testing-141-1-master-96c048001e': {
+        'md5': "67267fa285abd746db72a8b5782c7aa8",
+        'path_rel': "ddr-testing-141-1-master-96c048001e.pdf",
+        'public': "1",
+        'role': "master",
+        'sha1': "96c048001e06bd1146d964ea16616d55344a514b",
+        'sha256': "77d8d47a3316d88e2c759638f22df45c3b9b1e21a20de50fb0706df3777364d6"
+    },
+    'ddr-testing-141-1-master-c774ed4657': {
+        'md5': "1cfa88f0105b90030d677400a59982e4",
+        'path_rel': "ddr-testing-141-1-master-c774ed4657.jpg",
+        'public': "1",
+        'role': "master",
+        'sha1': "c774ed4657b88eb7aea3269ebb9dd63f5807e7df",
+        'sha256': "75414667f22a71c20f6822c933ce44d5cf3adaf3db26d7dad617a34f8a44da03"
+    },
+}
+# dict of file objects so we can test against the following data structures
+FILEGROUPS_DATA = {
+    fid: identifier.Identifier(id=fid, base_path=MEDIA_BASE).object()
+    for fid in [
+        'ddr-densho-23-1-master-adb451ffec',
+        'ddr-densho-23-1-mezzanine-adb451ffec',
+        'ddr-testing-141-1-master-96c048001e',
+        'ddr-testing-141-1-master-c774ed4657',
+    ]
+}
+
+FILEGROUPS_META = [
+    {
+        "role": "master",
+        "files": [FILEMETA_DATA['ddr-densho-23-1-master-adb451ffec']]
+    },
+    {
+        "role": "mezzanine",
+        "files": [FILEMETA_DATA['ddr-densho-23-1-mezzanine-adb451ffec']]
+    },
+]
+FILES_META = [
+    FILEMETA_DATA['ddr-densho-23-1-master-adb451ffec'],
+    FILEMETA_DATA['ddr-densho-23-1-mezzanine-adb451ffec'],
+]
+FILEGROUPS_OBJECTS = [
+    {
+        "role": "master",
+        "files": [FILEGROUPS_DATA['ddr-densho-23-1-master-adb451ffec']]
+    },
+    {
+        "role": "mezzanine",
+        "files": [FILEGROUPS_DATA['ddr-densho-23-1-mezzanine-adb451ffec']]
+    },
+]
+FILES_OBJECTS = [
+    FILEGROUPS_DATA['ddr-densho-23-1-master-adb451ffec'],
+    FILEGROUPS_DATA['ddr-densho-23-1-mezzanine-adb451ffec'],
+]
+
+def test_filegroups_to_files():
+    out0 = models.filegroups_to_files(FILEGROUPS_META)
+    out1 = models.filegroups_to_files(FILEGROUPS_OBJECTS)
+    assert out0 == FILES_META
+    assert out1 == FILES_OBJECTS
+
+def test_files_to_filegroups():
+    out0 = models.files_to_filegroups(FILES_META)
+    print('FILES_META\n%s' % FILES_META)
+    print('FILEGROUPS_META\n%s' % FILEGROUPS_META)
+    print('out0\n%s' % out0)
+    assert out0 == FILEGROUPS_META
+    out1 = models.files_to_filegroups(FILES_OBJECTS)
+    print('FILEGROUPS_OBJECTS\n%s' % FILEGROUPS_OBJECTS)
+    print('out1\n%s' % out1)
+    assert out1 == FILEGROUPS_OBJECTS
 
 def test_Entity__init__():
     collection_id = 'ddr-testing-123'
