@@ -365,6 +365,9 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='', l
     fidentifier = entity.identifier.child('file', idparts, entity.identifier.basepath)
     log.ok('| identifier %s' % fidentifier)
     file_class = fidentifier.object_class()
+    # remove 'id' from forms/CSV data so it doesn't overwrite file_.id later
+    if data.get('id'):
+        data.pop('id')
     
     dest_path = destination_path(src_path, entity.files_path, fidentifier)
     tmp_path = temporary_path(src_path, config.MEDIA_BASE, fidentifier)
