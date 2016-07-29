@@ -969,9 +969,7 @@ def files_to_filegroups(files, to_dict=False):
     # intermediate format
     fgroups = {}
     for f in files:
-        print('    %s' % f)
         role = get_role(f)
-        print('    %s' % role)
         if not fgroups.get(role):
             fgroups[role] = []
     for f in files:
