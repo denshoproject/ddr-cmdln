@@ -47,7 +47,7 @@ from DDR.control import CollectionControlFile, EntityControlFile
 from DDR import docstore
 from DDR import dvcs
 from DDR import fileio
-from DDR.identifier import Identifier, MODULES
+from DDR.identifier import Identifier, MODULES, VALID_COMPONENTS
 from DDR import imaging
 from DDR import ingest
 from DDR import inheritance
@@ -776,10 +776,12 @@ class Collection( object ):
         return format_json(data)
     
     def write_json(self, obj_metadata={}):
-        """Write JSON file to disk.
+        """Write Collection JSON file to disk.
         
         @param obj_metadata: dict Cached results of object_metadata.
         """
+        if not os.path.exists(self.identifier.path_abs()):
+            os.makedirs(self.identifier.path_abs())
         fileio.write_text(
             self.dump_json(doc_metadata=True, obj_metadata=obj_metadata),
             self.json_path
@@ -917,14 +919,108 @@ class Collection( object ):
     def repo_conflicted( self ): return dvcs.conflicted(self.repo_status(), self.repo_states())
 
 
+# file_groups = [
+#   {
+#     "role": "transcript",
+#     "files": [
+#       {
+#         "md5": "7c17eb2b0e838c8d7e2324ba5dd462d6",
+#         "path_rel": "ddr-densho-23-1-transcript-adb451ffec.htm",
+#         "public": "1",
+#         "sha1": "adb451ffece389d175c57f55caec6abcd688ca0f",
+#         "sha256": "0f4c964f1c8db557d17a6c9d2732cfa5b8080507...",
+#         "order": 1
+#       },
+#     ]
+#   },
+# ]
 
+def filegroups_to_files(file_groups):
+    """Converts file_groups structure to list of files.
+    
+    Works with either metadata (dict) or File objects.
+    
+    @param file_groups: list of dicts
+    @return: list of File objects
+    """
+    files = []
+    for fg in file_groups:
+        files = files + fg['files']
+    return files
 
-ENTITY_FILE_KEYS = ['path_rel',
-                    'role',
-                    'sha1',
-                    'sha256',
-                    'md5',
-                    'public',]
+def files_to_filegroups(files, to_dict=False):
+    """Converts list of files to file_groups structure.
+    
+    Works with either metadata (dict) or File objects.
+    
+    @param files: list
+    @returns: list of dicts
+    """
+    def get_role(f):
+        if isinstance(f, File):
+            return getattr(f, 'role')
+        elif isinstance(f, dict) and f.get('role'):
+            return f.get('role')
+        elif isinstance(f, dict) and f.get('path_rel'):
+            fid = os.path.splitext(f['path_rel'])[0]
+            fi = Identifier(fid)
+            return fi.idparts['role']
+        return None
+    # intermediate format
+    fgroups = {}
+    for f in files:
+        role = get_role(f)
+        if not fgroups.get(role):
+            fgroups[role] = []
+    for f in files:
+        role = get_role(f)
+        if role:
+            if to_dict:
+                fgroups[role].append(file_to_filemeta(f))
+            else:
+                fgroups[role].append(f)
+    # final format
+    file_groups = [
+        {
+            'role': role,
+            'files': fgroups[role],
+        }
+        for role in VALID_COMPONENTS['role']
+        if fgroups.get(role)
+    ]
+    return file_groups
+
+ENTITY_FILE_KEYS = [
+    'id',
+    'path_rel',
+    'label',
+    #'record_created',
+    #'mimetype',
+    'size',
+    'public',
+    'sort',
+]
+
+def file_to_filemeta(f):
+    """Given a File object, return the file dict used in entity.json
+    
+    @param f: File object
+    @returns: dict
+    """
+    fd = {}
+    if isinstance(f, dict):
+        for key in ENTITY_FILE_KEYS:
+            val = None
+            if hasattr(f, key):
+                val = getattr(f, key, None)
+            elif f.get(key,None):
+                val = f[key]
+            if val != None:
+                fd[key] = val
+    elif isinstance(f, File):
+        for key in ENTITY_FILE_KEYS:
+            fd[key] = getattr(f, key)
+    return fd
 
 class Entity( object ):
     root = None
@@ -1120,6 +1216,13 @@ class Entity( object ):
 #        return Collection.from_identifier(cidentifier)
    
     def children( self, role=None, quick=None, force_read=False ):
+        """Return list of Entity's children; regenerate list if specified.
+        
+        @param role: str Restrict list to specified role
+        @param quick: bool Not used
+        @param force_read: bool Scan entity dir for file jsons
+        @returns: list of File objects, sorted
+        """
         self.load_file_objects(Identifier, File, force_read=force_read)
         if role:
             files = [
@@ -1193,8 +1296,17 @@ class Entity( object ):
         @param json_text: JSON-formatted text
         """
         module = self.identifier.fields_module()
-        load_json(self, module, json_text)
+        json_data = load_json(self, module, json_text)
         # special cases
+        # files or file_groups -> self.files
+        self.files = []
+        for fielddict in json_data:
+            for fieldname,data in fielddict.iteritems():
+                if (fieldname == 'file_groups') and data:
+                    self.files = filegroups_to_files(data)
+                elif (fieldname == 'files') and data:
+                    self.files = data
+        # timestamps
         def parsedt(txt):
             d = datetime.now()
             try:
@@ -1225,31 +1337,20 @@ class Entity( object ):
             data.insert(0, obj_metadata)
         elif doc_metadata:
             data.insert(0, object_metadata(module, self.parent_path))
-        files = []
-        if not template:
-            for f in self.files:
-                fd = {}
-                if isinstance(f, dict):
-                    for key in ENTITY_FILE_KEYS:
-                        val = None
-                        if hasattr(f, key):
-                            val = getattr(f, key, None)
-                        elif f.get(key,None):
-                            val = f[key]
-                        if val != None:
-                            fd[key] = val
-                elif isinstance(f, File):
-                    for key in ENTITY_FILE_KEYS:
-                        fd[key] = getattr(f, key)
-                files.append(fd)
-        data.append( {'files':files} )
+        
+        data.append({
+            'file_groups': files_to_filegroups(self._file_objects, to_dict=1)
+        })
+        
         return format_json(data)
 
     def write_json(self, obj_metadata={}):
-        """Write JSON file to disk.
+        """Write Entity JSON file to disk.
         
         @param obj_metadata: dict Cached results of object_metadata.
         """
+        if not os.path.exists(self.identifier.path_abs()):
+            os.makedirs(self.identifier.path_abs())
         fileio.write_text(
             self.dump_json(doc_metadata=True, obj_metadata=obj_metadata),
             self.json_path
@@ -1416,7 +1517,7 @@ class Entity( object ):
         return []
     
     def load_file_objects(self, identifier_class, object_class, force_read=False):
-        """Replaces list of file info dicts with list of File objects
+        """Regenerates list of file info dicts with list of File objects
         
         TODO Don't call in loop - causes all file .JSONs to be loaded!
         
@@ -1427,10 +1528,12 @@ class Entity( object ):
         if force_read:
             # filesystem
             for json_path in self._file_paths():
+                fid = os.path.splitext(os.path.basename(json_path))[0]
+                basepath = self.identifier.basepath
                 file_ = object_class.from_identifier(
                     identifier_class(
-                        os.path.splitext(os.path.basename(json_path))[0],
-                        self.identifier.basepath
+                        id=fid,
+                        base_path=basepath
                     )
                 )
                 self._file_objects.append(file_)
@@ -1477,6 +1580,42 @@ class Entity( object ):
         # reload objects
         self.load_file_objects(Identifier, File)
     
+    def _children_meta(self):
+        """
+        children = [
+            {
+                "id": "ddr-densho-500-85-1",
+                "order": 1,
+                "public": "1",
+                "title": "Gordon Hirabayashi Interview II Segment 1"
+            },
+            {
+                "id": "ddr-densho-500-85-2",
+                "order": 2,
+                "public": "1",
+                "title": "Gordon Hirabayashi Interview II Segment 2"
+            },
+            ...
+        ]
+        """
+        children = []
+        for child in self.children():
+            if isinstance(child, File):
+                children.append({
+                    "id": child.id,
+                    "order": child.sort,
+                    "public": child.public,
+                    "title": child.label,
+                })
+            elif isinstance(child, Entity):
+                children.append({
+                    "id": child.id,
+                    "order": child.sort,
+                    "public": child.public,
+                    "title": child.title,
+                })
+        return children
+        
     def file( self, role, sha1, newfile=None ):
         """Given a SHA1 hash, get the corresponding file dict.
         
@@ -1886,10 +2025,13 @@ class File( object ):
         return format_json(data)
 
     def write_json(self, obj_metadata={}):
-        """Write JSON file to disk.
+        """Write File JSON file to disk.
         
         @param obj_metadata: dict Cached results of object_metadata.
         """
+        dirname = os.path.dirname(self.identifier.path_abs())
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
         fileio.write_text(
             self.dump_json(doc_metadata=True, obj_metadata=obj_metadata),
             self.json_path
