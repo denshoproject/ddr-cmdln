@@ -776,10 +776,12 @@ class Collection( object ):
         return format_json(data)
     
     def write_json(self, obj_metadata={}):
-        """Write JSON file to disk.
+        """Write Collection JSON file to disk.
         
         @param obj_metadata: dict Cached results of object_metadata.
         """
+        if not os.path.exists(self.identifier.path_abs()):
+            os.makedirs(self.identifier.path_abs())
         fileio.write_text(
             self.dump_json(doc_metadata=True, obj_metadata=obj_metadata),
             self.json_path
@@ -1345,10 +1347,12 @@ class Entity( object ):
         return format_json(data)
 
     def write_json(self, obj_metadata={}):
-        """Write JSON file to disk.
+        """Write Entity JSON file to disk.
         
         @param obj_metadata: dict Cached results of object_metadata.
         """
+        if not os.path.exists(self.identifier.path_abs()):
+            os.makedirs(self.identifier.path_abs())
         fileio.write_text(
             self.dump_json(doc_metadata=True, obj_metadata=obj_metadata),
             self.json_path
@@ -2023,10 +2027,13 @@ class File( object ):
         return format_json(data)
 
     def write_json(self, obj_metadata={}):
-        """Write JSON file to disk.
+        """Write File JSON file to disk.
         
         @param obj_metadata: dict Cached results of object_metadata.
         """
+        dirname = os.path.dirname(self.identifier.path_abs())
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
         fileio.write_text(
             self.dump_json(doc_metadata=True, obj_metadata=obj_metadata),
             self.json_path
