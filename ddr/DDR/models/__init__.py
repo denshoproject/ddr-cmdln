@@ -23,6 +23,12 @@ to the user.
 Also we won't have to reload the flippin' .json file multiple times
 for things like cmp_model_definition_fields.
 
+TODO indicate in repo_models.MODEL whether to put in .source.
+Not as simple as just throwing everything into .source.
+Some fields (record_created) are auto-generated.
+Others (id) must be first-level attributes of Objects.
+Others (status, public) are used in code to do things like inheritance,
+yet must be editable in the editor UI.
 
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 """
