@@ -3,7 +3,15 @@ import os
 import re
 
 
-def find_meta_files( basedir, recursive=False, model=None, files_first=False, force_read=False, testing=False ):
+# TODO these should be in ddr-defs/repo_models/identifier.py
+META_FILENAME_REGEX = {
+    'collection': re.compile('collection.json'),
+    'entity': re.compile('entity.json'),
+    # FILE.json  *-{eid}-{role}-{sha1}.json
+    'file': re.compile('-([\d]+)-([\w]+)-([\w\d]+).json'),
+}
+
+def find_meta_files(basedir, recursive=False, model=None, files_first=False, force_read=False, testing=False):
     """Lists absolute paths to .json files in basedir; saves copy if requested.
     
     Skips/excludes .git directories.
@@ -17,57 +25,70 @@ def find_meta_files( basedir, recursive=False, model=None, files_first=False, fo
     @param testing: boolean Allow 'tmp' in paths.
     @returns: list of paths
     """
-    def model_exclude(m, p):
-        # TODO pass in list of regexes to exclude instead of hard-coding
-        exclude = 0
-        if m:
-            if (m == 'collection') and not ('collection.json' in p):
-                exclude = 1
-            elif (m == 'entity') and not ('entity.json' in p):
-                exclude = 1
-            elif (m == 'file') and not (('master' in p.lower()) or ('mezz' in p.lower())):
-                exclude = 1
-        return exclude
     CACHE_FILENAME = '.metadata_files'
     CACHE_PATH = os.path.join(basedir, CACHE_FILENAME)
+    EXCLUDES = ['.git', '*~']
+    if not testing:
+        EXCLUDES.append('tmp')
     paths = []
     if os.path.exists(CACHE_PATH) and not force_read:
         with open(CACHE_PATH, 'r') as f:
             paths = [line.strip() for line in f.readlines() if '#' not in line]
     else:
-        excludes = ['.git', '*~']
-        if not testing:
-            excludes.append('tmp')
         if recursive:
-            for root, dirs, files in os.walk(basedir):
-                # don't go down into .git directory
-                if '.git' in dirs:
-                    dirs.remove('.git')
-                for f in files:
-                    if f.endswith('.json'):
-                        path = os.path.join(root, f)
-                        exclude = [1 for x in excludes if x in path]
-                        modexclude = model_exclude(model, path)
-                        if not (exclude or modexclude):
-                            paths.append(path)
+            paths = _search_recursive(basedir, model, EXCLUDES)
         else:
-            for f in os.listdir(basedir):
-                if f.endswith('.json'):
-                    path = os.path.join(basedir, f)
-                    exclude = [1 for x in excludes if x in path]
-                    if not exclude:
-                        paths.append(path)
+            paths = _search_directory(basedir, EXCLUDES)
     # files_first is useful for docstore.index
     if files_first:
-        collections = []
-        entities = []
-        files = []
-        for f in paths:
-            if f.endswith('collection.json'): collections.append(f)
-            elif f.endswith('entity.json'): entities.append(f)
-            elif f.endswith('.json'): files.append(f)
-        paths = files + entities + collections
+        return [path for path in paths if path_matches_model(path, 'file')] \
+            + [path for path in paths if path_matches_model(path, 'entity')] \
+            + [path for path in paths if path_matches_model(path, 'collection')]
     return paths
+
+def _search_recursive(basedir, model, excludes):
+    """Recursively search directory.
+    """
+    paths = []
+    for root, dirs, files in os.walk(basedir):
+        # don't go down into .git directory
+        if '.git' in dirs:
+            dirs.remove('.git')
+        for f in files:
+            if f.endswith('.json'):
+                path = os.path.join(root, f)
+                if (not _excluded(path, excludes)) and path_matches_model(path, model):
+                    paths.append(path)
+    return paths
+
+def _search_directory(basedir, excludes):
+    """Search only the specified directory.
+    """
+    paths = []
+    for f in os.listdir(basedir):
+        if f.endswith('.json'):
+            path = os.path.join(basedir, f)
+            if (not _excluded(path, excludes)):
+                paths.append(path)
+    return paths
+
+def _excluded(path, excludes):
+    """True if path contains one excluded strings
+    """
+    for x in excludes:
+        if x in path:
+            return True
+    return False
+
+def path_matches_model(path, model):
+    """True if matches specified model or model is blank
+    """
+    if model:
+        if re.search(META_FILENAME_REGEX[model], path):
+            return True
+        else:
+            return False
+    return True
 
 def natural_sort( l ):
     """Sort the given list in the way that humans expect.
