@@ -536,10 +536,7 @@ def add_external_file(entity, data, git_name, git_mail, agent='', log_path=None,
     file_.write_json()
     
     log.ok('Attaching file to entity')
-    #entity.load_file_objects(force_read=True)
-    entity.children(force_read=True)
-    log.ok('BLAT file_ %s' % file_)
-    log.ok('BLAT entity.files %s' % entity.files)
+    entity.load_file_objects(force_read=True)
     #if file_ in entity.files:
     #    log.ok('| done')
     #else:
