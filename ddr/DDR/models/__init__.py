@@ -664,6 +664,9 @@ class Collection( object ):
                             # make a miniature JSON doc out of just title line
                             e.title = json.loads('{%s}' % line)['title']
                             entities.append(e)
+                            # stop once we hit 'title' so we don't waste time
+                            # and have entity.children as separate ghost entities
+                            break
             else:
                 entity = Entity.from_identifier(Identifier(path=path))
                 for lv in entity.labels_values():
