@@ -69,6 +69,7 @@ import sys
 import envoy
 import git
 
+from DDR import config
 from DDR import identifier
 from DDR import models
 from DDR import util
