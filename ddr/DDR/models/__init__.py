@@ -670,6 +670,9 @@ class Collection( object ):
                             # make a miniature JSON doc out of just title line
                             e.title = json.loads('{%s}' % line)['title']
                             entities.append(e)
+                            # stop once we hit 'title' so we don't waste time
+                            # and have entity.children as separate ghost entities
+                            break
             else:
                 entity = Entity.from_identifier(Identifier(path=path))
                 for lv in entity.labels_values():
@@ -925,20 +928,31 @@ class Collection( object ):
     def repo_conflicted( self ): return dvcs.conflicted(self.repo_status(), self.repo_states())
 
 
-# file_groups = [
+
+# "children": [
+#   {
+#     "id": "ddr-densho-500-85-1",
+#     "title": "Gordon Hirabayashi Interview II Segment 1"
+#     "public": "1",
+#     "order": 1
+#   }
+# ],
+# "file_groups": [
 #   {
 #     "role": "transcript",
 #     "files": [
 #       {
-#         "md5": "7c17eb2b0e838c8d7e2324ba5dd462d6",
+#         "id": "ddr-densho-23-1-transcript-adb451ffec",
 #         "path_rel": "ddr-densho-23-1-transcript-adb451ffec.htm",
+#         "label": "Transcript of interview",
+#         "record_created": "2016-07-29T18:00:00",
+#         "mimetype": "applications/text",
+#         "size": "12345",
 #         "public": "1",
-#         "sha1": "adb451ffece389d175c57f55caec6abcd688ca0f",
-#         "sha256": "0f4c964f1c8db557d17a6c9d2732cfa5b8080507...",
-#         "order": 1
-#       },
+#         "sort": "1"
+#       }
 #     ]
-#   },
+#   }
 # ]
 
 def filegroups_to_files(file_groups):
@@ -996,6 +1010,13 @@ def files_to_filegroups(files, to_dict=False):
     ]
     return file_groups
 
+ENTITY_ENTITY_KEYS = [
+    'id',
+    'title',
+    'public',
+    'sort',
+]
+
 ENTITY_FILE_KEYS = [
     'id',
     'path_rel',
@@ -1006,6 +1027,27 @@ ENTITY_FILE_KEYS = [
     'public',
     'sort',
 ]
+
+def entity_to_childrenmeta(o):
+    """Given an Entity object, return the dict used in entity.json
+    
+    @param o: Entity object
+    @returns: dict
+    """
+    data = {}
+    if isinstance(o, dict):
+        for key in ENTITY_ENTITY_KEYS:
+            val = None
+            if hasattr(o, key):
+                val = getattr(o, key, None)
+            elif o.get(key,None):
+                val = o[key]
+            if val != None:
+                data[key] = val
+    elif isinstance(o, Entity):
+        for key in ENTITY_ENTITY_KEYS:
+            data[key] = getattr(o, key, None)
+    return data
 
 def file_to_filemeta(f):
     """Given a File object, return the file dict used in entity.json
@@ -1049,6 +1091,7 @@ class Entity( object ):
     control_path_rel = None
     mets_path_rel = None
     files_path_rel = None
+    _children_objects = 0
     _file_objects = 0
     _file_objects_loaded = 0
     
@@ -1086,6 +1129,7 @@ class Entity( object ):
         self.mets_path_rel = i.path_rel('mets')
         self.files_path_rel = i.path_rel('files')
         
+        self._children_objects = []
         self._file_objects = []
     
     def __repr__(self):
@@ -1229,6 +1273,7 @@ class Entity( object ):
         @param force_read: bool Scan entity dir for file jsons
         @returns: list of File objects, sorted
         """
+        self.load_children_objects(Identifier, Entity, force_read=force_read)
         self.load_file_objects(Identifier, File, force_read=force_read)
         if role:
             files = [
@@ -1237,8 +1282,8 @@ class Entity( object ):
             ]
         else:
             files = [f for f in self._file_objects]
-        self.files = sorted(files, key=lambda f: f.sort)
-        return self.files
+        self.files = sorted(files, key=lambda f: int(f.sort))
+        return self._children_objects + self.files
     
     def labels_values(self):
         """Apply display_{field} functions to prep object data for the UI.
@@ -1344,6 +1389,9 @@ class Entity( object ):
         elif doc_metadata:
             data.insert(0, object_metadata(module, self.parent_path))
         
+        data.append({
+            'children': [entity_to_childrenmeta(o) for o in self._children_objects]
+        })
         data.append({
             'file_groups': files_to_filegroups(self._file_objects, to_dict=1)
         })
@@ -1504,6 +1552,24 @@ class Entity( object ):
                 checksums.append( (cs, os.path.basename(fpath)) )
         return checksums
     
+    def _children_paths(self, rel=False):
+        """Searches filesystem for (entity) childrens' metadata files, returns relative paths.
+        @param rel: bool Return relative paths
+        @returns: list
+        """
+        if os.path.exists(self.files_path):
+            prefix_path = 'THISWILLNEVERMATCHANYTHING'
+            if rel:
+                prefix_path = '{}/'.format(os.path.normpath(self.files_path))
+            return sorted(
+                [
+                    f.replace(prefix_path, '')
+                    for f in util.find_meta_files(self.files_path, recursive=True)
+                ],
+                key=lambda f: util.natural_order_string(f)
+            )
+        return []
+    
     def _file_paths(self, rel=False):
         """Searches filesystem for childrens' metadata files, returns relative paths.
         @param rel: bool Return relative paths
@@ -1521,6 +1587,26 @@ class Entity( object ):
                 key=lambda f: util.natural_order_string(f)
             )
         return []
+    
+    def load_children_objects(self, identifier_class, object_class, force_read=False):
+        """Regenerates list of file info dicts with list of File objects
+        
+        TODO Don't call in loop - causes all file .JSONs to be loaded!
+        
+        @param force_read: bool Traverse filesystem if true.
+        @returns: None
+        """
+        if force_read or (not hasattr(self, '_children_objects')):
+            self._children_objects = [
+                object_class.from_identifier(
+                    identifier_class(
+                        path=os.path.dirname(json_path)
+                    )
+                )
+                for json_path in self._children_paths()
+                if util.path_matches_model(json_path, self.identifier.model)
+            ]
+        return self._children_objects
     
     def load_file_objects(self, identifier_class, object_class, force_read=False):
         """Regenerates list of file info dicts with list of File objects
@@ -1591,13 +1677,13 @@ class Entity( object ):
         children = [
             {
                 "id": "ddr-densho-500-85-1",
-                "order": 1,
+                "sort": 1,
                 "public": "1",
                 "title": "Gordon Hirabayashi Interview II Segment 1"
             },
             {
                 "id": "ddr-densho-500-85-2",
-                "order": 2,
+                "sort": 2,
                 "public": "1",
                 "title": "Gordon Hirabayashi Interview II Segment 2"
             },
