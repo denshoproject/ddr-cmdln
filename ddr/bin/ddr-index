@@ -55,8 +55,14 @@ Maintenance tasks:
     # Remove organization metadata:
     $ ddr-index org -H localhost:9200 -i documents --remove /var/www/media/ddr/REPO-ORG/organization.json
     
-    # Delete exisitng index
+    # Delete existing index
     $ ddr-index remove -H localhost:9200 -i documents
+    
+    # See if document exists
+    $ ddr-index exists -H localhost:9200 -i documents collection ddr-testing-123
+    
+    # Get document
+    $ ddr-index get -H localhost:9200 -i documents collection ddr-testing-123
 
 Note: You can set environment variables got HOSTS and INDEX.:
 
@@ -164,7 +170,7 @@ def main():
         help=subparser_help)
     
 #    post_descr,post_epilog = split_docstring(docstore.post)
-#    get_descr,get_epilog = split_docstring(docstore.get)
+    get_descr,get_epilog = split_docstring(docstore.get)
     init_descr,init_epilog = split_docstring(docstore.index)
     create_descr,create_epilog = split_docstring(docstore.index)
     remove_descr,remove_epilog = split_docstring(docstore.index)
@@ -179,7 +185,7 @@ def main():
     delete_descr,delete_epilog = split_docstring(docstore.delete)
     
 #    post_parser = subparsers.add_parser('post', description=post_descr, epilog=post_epilog, formatter_class=formatter,)
-#    get_parser = subparsers.add_parser('get', description=get_descr, epilog=get_epilog, formatter_class=formatter,)
+    get_parser = subparsers.add_parser('get', description=get_descr, epilog=get_epilog, formatter_class=formatter,)
     init_parser = subparsers.add_parser('init', description=init_descr, epilog=init_epilog, formatter_class=formatter,)
     create_parser = subparsers.add_parser('create', description=create_descr, epilog=create_epilog, formatter_class=formatter,)
     remove_parser = subparsers.add_parser('remove', description=remove_descr, epilog=remove_epilog, formatter_class=formatter,)
@@ -194,7 +200,7 @@ def main():
     delete_parser = subparsers.add_parser('delete', description=delete_descr, epilog=delete_epilog, formatter_class=formatter,)
     
 #    post_parser.set_defaults(func=docstore.post)
-#    get_parser.set_defaults(func=docstore.get)
+    get_parser.set_defaults(func=docstore.get)
     init_parser.set_defaults(func=docstore.init_index)
     create_parser.set_defaults(func=docstore.create_index)
     remove_parser.set_defaults(func=docstore.delete_index)
@@ -214,12 +220,12 @@ def main():
 #    post_parser.add_argument('-i', '--index', required=True, help='index.')
 #    post_parser.add_argument('-p', '--path', required=True, help='Absolute path to JSON file.')
     
-#    get_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
-#    get_parser.add_argument('-l', '--log', help='Log file..')
-#    get_parser.add_argument('-H', '--host', required=True, help='Hostname and port (HOST:PORT).')
-#    get_parser.add_argument('-i', '--index', required=True, help='index.')
-#    get_parser.add_argument('-m', '--model', required=True, help='model.')
-#    get_parser.add_argument('-I', '--id', required=True, help='ID.')
+    get_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    get_parser.add_argument('-l', '--log', help='Log file..')
+    get_parser.add_argument('-H', '--host', help='Hostname and port (HOST:PORT).', **hostsarg)
+    get_parser.add_argument('-i', '--index', help='index.', **indexarg)
+    get_parser.add_argument('model', help='model.')
+    get_parser.add_argument('id', help='Document ID.')
     
     init_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
     init_parser.add_argument('-l', '--log', help='Log file..')
@@ -315,7 +321,7 @@ def main():
         print(msg)
     elif args.cmd == 'get':
         msg = docstore.get(hosts, args.index, args.model, args.id)
-        print(msg)
+        print(format_json(msg, sort_keys=False))
     elif args.cmd == 'init':
         statuses = docstore.init_index(hosts, args.index, args.path)
         for key,val in statuses.iteritems():
