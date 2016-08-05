@@ -69,4 +69,7 @@ IDSERVICE_NEXT_OBJECT_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/next/{mo
 IDSERVICE_CHECKIDS_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/check/'
 IDSERVICE_REGISTERIDS_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/create/'
 
+DOCSTORE_HOST = config.get('public','docstore_host')
+DOCSTORE_INDEX = config.get('public','docstore_index')
+
 VOCAB_TERMS_URL = config.get('local', 'vocab_terms_url')

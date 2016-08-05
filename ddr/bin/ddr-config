@@ -69,6 +69,17 @@ def main():
     print('WORKBENCH_URL               %s' % config.WORKBENCH_URL)
     print('WORKBENCH_USERINFO          %s' % config.WORKBENCH_USERINFO)
 
+    print('IDSERVICE_API_BASE          %s' % config.IDSERVICE_API_BASE)
+    print('IDSERVICE_LOGIN_URL         %s' % config.IDSERVICE_LOGIN_URL)
+    print('IDSERVICE_LOGOUT_URL        %s' % config.IDSERVICE_LOGOUT_URL)
+    print('IDSERVICE_USERINFO_URL      %s' % config.IDSERVICE_USERINFO_URL)
+    print('IDSERVICE_NEXT_OBJECT_URL   %s' % config.IDSERVICE_NEXT_OBJECT_URL)
+    print('IDSERVICE_CHECKIDS_URL      %s' % config.IDSERVICE_CHECKIDS_URL)
+    print('IDSERVICE_REGISTERIDS_URL   %s' % config.IDSERVICE_REGISTERIDS_URL)
+
+    print('DOCSTORE_HOST               %s' % config.DOCSTORE_HOST)
+    print('DOCSTORE_INDEX              %s' % config.DOCSTORE_INDEX)
+
     print('VOCAB_TERMS_URL             %s' % config.VOCAB_TERMS_URL)
 
     print('REPO_MODELS_PATH            %s' % config.REPO_MODELS_PATH)
