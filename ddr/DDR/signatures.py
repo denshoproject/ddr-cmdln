@@ -25,7 +25,8 @@ EXAMPLE
 from DDR import signatures
 paths = signatures.metadata_paths('/var/www/media/ddr/ddr-testing-333')
 identifiers = signatures.load_identifiers(paths, '/var/www/media/ddr')
-sigs = signatures.choose_signatures(identifiers, 'entity', 'file')
+signatures.choose_signatures(identifiers)
+signatures.print_identifiers(identifiers)
 
 """
 
@@ -45,9 +46,8 @@ def metadata_paths(collection_path):
 
 
 JSON_FIELDS = {
-    'public': 1,
     'sort': 1,
-    'signature_file': '',
+    'signature': '',
 }
 
 ROLE_NUMBERS = {
@@ -57,28 +57,37 @@ ROLE_NUMBERS = {
 }
 
 class SigIdentifier(identifier.Identifier):
-    public = 0
     sort = 999999
-    signature_file = None
+    signature = None
     sort_key = None
     
     def __init__(self, *args, **kwargs):
-        # Load Identifier, read .json and add public/sort/signature to self
+        # Load Identifier, read .json and add sort/signature to self
         # These are used for sorting
         super(SigIdentifier, self).__init__(*args, **kwargs)
         
         # read from .json file
         data = self._read_fields(self.path_abs('json'))
         for key,val in data.iteritems():
-            self.key = val
+            if val:
+                setattr(self, key, val)
         
         # prep sorting key
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+        # TODO signature don't consider file unless has access_rel
+        # ENTITIES ARE STILL SORTING BY ID ! ! !
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
         sort_key = self.parts
         if self.model == 'file':
             sort_key['role'] = ROLE_NUMBERS[self.parts['role']]
             sha1 = sort_key.pop('sha1')
             sort_key['sort'] = self.sort
             sort_key['sha1'] = sha1
+        elif self.model == 'entity':
+            eid = sort_key.pop('eid')
+            sort_key['sort'] = self.sort
+            sort_key['eid'] = eid
+            
         self.sort_key = sort_key.values()
     
     def _read_fields(self, path):
@@ -96,7 +105,10 @@ class SigIdentifier(identifier.Identifier):
         return data
     
     def __repr__(self):
-        return "<%s.%s %s:%s>" % (self.__module__, self.__class__.__name__, self.model, self.id)
+        return '<%s.%s %s:%s sort=%s,sig=%s>' % (
+            self.__module__, self.__class__.__name__, self.model, self.id,
+            self.sort, self.signature
+        )
     
     def __lt__(self, other):
         """Enables Pythonic sorting"""
@@ -125,17 +137,63 @@ def load_identifiers(paths, basepath):
         identifiers[model] = sorted(ids)
     return identifiers
 
-def choose_signatures(identifiers, parent_model, child_model='file'):
+def models_parent_child():
+    """List pairs of parent-child models, bottom-up
+    
+    @returns: list [(parent,child), ...]
+    """
+    repo_models = identifier.MODEL_REPO_MODELS.keys()
+    pairs = []
+    for i in identifier.IDENTIFIERS:
+        pmodel = i['model']
+        if pmodel in repo_models:
+            for cmodel in i['children']:
+                pairs.append((pmodel,cmodel))
+    pairs.reverse()
+    return pairs
+
+def choose_signatures(identifiers):
     # - FOR EACH NON-FILE,
     # - ENUMERATE FILES LIST FROM LAST (FIRST TIME, THIS IS 0)
     # - IF FILE IS CHILD OF ANCESTOR, SEE IF PUBLISHABLE
     # - IF CHILD OF ANCESTOR AND PUBLISHABLE, ASSIGN FILE_ID TO SIG ID, SET LAST TO n
-    sigs = {}
-    last = 0
-    for pi in identifiers[parent_model]:
-        for n,ci in enumerate(identifiers[child_model][last:]):
-            if pi.id in ci.id:
-                sigs[pi.id] = ci.id
-                last = n + last
-                break
-    return sigs
+    model_pairs = models_parent_child()
+    for parent_model,child_model in model_pairs:
+        last = 0
+        for pi in identifiers.get(parent_model, []):
+            # loop through list of children, starting with the last
+            for n,ci in enumerate(identifiers.get(child_model, [])[last:]):
+                if pi.id in ci.id:
+                    pi.signature = ci
+                    last = n + last
+                    break
+    # At this point, collection.signature and possibly some entity.signature,
+    # will not be Files.
+    # Go back through and replace these with files
+    parent_models = identifier.CHILDREN.keys()
+    # don't waste time looping on files
+    for model in parent_models:
+        for i in identifiers[model]:
+            if i.signature:
+                if i.signature.model is not 'file':
+
+
+def ultimate_sig(identifier):
+    if identifier.signature and (identifier.signature.model == 'file'):
+        return identifier.signature
+    return ultimate_sig(identifier.signature)
+    
+
+
+MODELS_DOWN = [
+    'collection',
+    'entity',
+    'segment',
+    'file',
+]
+
+def print_identifiers(identifiers, models=MODELS_DOWN):
+    for model in models:
+        if model in identifiers.keys():
+            for oid in identifiers[model]:
+                print oid
