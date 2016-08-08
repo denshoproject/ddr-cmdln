@@ -474,6 +474,7 @@ class Collection( object ):
     ead_path_rel = None
     files_path_rel = None
     
+    signature_id = ''
     git_url = None
     _status = ''
     _astatus = ''
@@ -1094,6 +1095,7 @@ class Entity( object ):
     _children_objects = 0
     _file_objects = 0
     _file_objects_loaded = 0
+    signature_id = ''
     
     def __init__( self, path_abs, id=None, identifier=None ):
         path_abs = os.path.normpath(path_abs)
@@ -1799,6 +1801,7 @@ class File( object ):
     collection_id = None
     parent_id = None
     entity_id = None
+    signature_id = ''
     path_abs = None
     path = None
     collection_path = None

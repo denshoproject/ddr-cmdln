@@ -22,11 +22,12 @@ TODO update file __lt__ function to assign number to roles so that mezz comes be
 
 EXAMPLE
 
+collection_path = '/var/www/media/ddr/ddr-testing-333'
+basepath = '/var/www/media/ddr'
 from DDR import signatures
-paths = signatures.metadata_paths('/var/www/media/ddr/ddr-testing-333')
-identifiers = signatures.load_identifiers(paths, '/var/www/media/ddr')
-signatures.choose_signatures(identifiers)
-signatures.print_identifiers(identifiers)
+from DDR import util
+paths = util.find_meta_files(collection_path, recursive=True, files_first=True, force_read=True)
+identifiers = signatures.signatures(paths, basepath)
 
 """
 
@@ -39,27 +40,44 @@ from DDR import models
 from DDR import util
 
 
-# - MAKE LIST OF ALL THE METADATA FILE
-
-def metadata_paths(collection_path):
-    return util.find_meta_files(collection_path, recursive=True, files_first=True, force_read=True)
-
-
 JSON_FIELDS = {
     'sort': 1,
-    'signature': '',
+    'signature_id': '',
 }
 
+# TODO derive this from repo_models/identifiers.py!
 ROLE_NUMBERS = {
     'mezzanine': 0,
     'master': 1,
     'transcript': 2,
 }
+    
+# TODO derive this from repo_models/identifiers.py!
+MODELS_DOWN = [
+    'collection',
+    'entity',
+    'segment',
+    'file',
+]
 
 class SigIdentifier(identifier.Identifier):
+    """Subclass of Identifier used for finding/assigning object signature files
+    """
     sort = 999999
-    signature = None
+    signature = None    # immediate signature, next in chain
+    signature_id = None # ID of ultimate signature (should be a file)
     sort_key = None
+    
+    def __repr__(self):
+        return '<%s.%s %s:%s sort=%s,sid=%s>' % (
+            self.__module__, self.__class__.__name__,
+            self.model, self.id,
+            self.sort, self.signature_id
+        )
+    
+    def __lt__(self, other):
+        """Enables Pythonic sorting"""
+        return self.sort_key < other.sort_key
     
     def __init__(self, *args, **kwargs):
         # Load Identifier, read .json and add sort/signature to self
@@ -73,17 +91,15 @@ class SigIdentifier(identifier.Identifier):
                 setattr(self, key, val)
         
         # prep sorting key
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-        # TODO signature don't consider file unless has access_rel
-        # ENTITIES ARE STILL SORTING BY ID ! ! !
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
         sort_key = self.parts
         if self.model == 'file':
+            # insert file sort before sha1
             sort_key['role'] = ROLE_NUMBERS[self.parts['role']]
             sha1 = sort_key.pop('sha1')
             sort_key['sort'] = self.sort
             sort_key['sha1'] = sha1
         elif self.model == 'entity':
+            # insert entity sort before eid
             eid = sort_key.pop('eid')
             sort_key['sort'] = self.sort
             sort_key['eid'] = eid
@@ -104,17 +120,18 @@ class SigIdentifier(identifier.Identifier):
                         data[key] = d[key]
         return data
     
-    def __repr__(self):
-        return '<%s.%s %s:%s sort=%s,sig=%s>' % (
-            self.__module__, self.__class__.__name__, self.model, self.id,
-            self.sort, self.signature
-        )
-    
-    def __lt__(self, other):
-        """Enables Pythonic sorting"""
-        return self.sort_key < other.sort_key
+    def _signature_id(self):
+        """Follow chain of object signatures to end, return last object.id
+        """
+        if not self.signature:
+            return self.id
+        return self.signature._signature_id()
 
-def load_identifiers(paths, basepath):
+
+def _metadata_paths(collection_path):
+    return util.find_meta_files(collection_path, recursive=True, files_first=True, force_read=True)
+
+def _load_identifiers(paths, basepath):
     """Loads and sorts list
     """
     identifiers_unsorted = {}
@@ -137,7 +154,7 @@ def load_identifiers(paths, basepath):
         identifiers[model] = sorted(ids)
     return identifiers
 
-def models_parent_child():
+def _models_parent_child():
     """List pairs of parent-child models, bottom-up
     
     @returns: list [(parent,child), ...]
@@ -152,47 +169,43 @@ def models_parent_child():
     pairs.reverse()
     return pairs
 
-def choose_signatures(identifiers):
+def _choose_signatures(identifiers):
     # - FOR EACH NON-FILE,
     # - ENUMERATE FILES LIST FROM LAST (FIRST TIME, THIS IS 0)
     # - IF FILE IS CHILD OF ANCESTOR, SEE IF PUBLISHABLE
     # - IF CHILD OF ANCESTOR AND PUBLISHABLE, ASSIGN FILE_ID TO SIG ID, SET LAST TO n
-    model_pairs = models_parent_child()
+    model_pairs = _models_parent_child()
     for parent_model,child_model in model_pairs:
         last = 0
         for pi in identifiers.get(parent_model, []):
-            # loop through list of children, starting with the last
-            for n,ci in enumerate(identifiers.get(child_model, [])[last:]):
+            ## loop through list of children, starting with the last
+            #for n,ci in enumerate(identifiers.get(child_model, [])[last:]):
+            for n,ci in enumerate(identifiers.get(child_model, [])):
                 if pi.id in ci.id:
                     pi.signature = ci
                     last = n + last
                     break
-    # At this point, collection.signature and possibly some entity.signature,
+    # 
+                # At this point, collection.signature and possibly some entity.signature,
     # will not be Files.
     # Go back through and replace these with files
     parent_models = identifier.CHILDREN.keys()
     # don't waste time looping on files
     for model in parent_models:
         for i in identifiers[model]:
-            if i.signature:
-                if i.signature.model is not 'file':
+            i.signature_id = i._signature_id()
+    return identifiers
 
-
-def ultimate_sig(identifier):
-    if identifier.signature and (identifier.signature.model == 'file'):
-        return identifier.signature
-    return ultimate_sig(identifier.signature)
+def signatures(paths, base_path):
+    """Chooses signatures for objects in list of paths
     
+    @param paths: list
+    @base_path: str
+    @returns: list of SigIdentifier objects
+    """
+    return _choose_signatures(_load_identifiers(paths, base_path))
 
-
-MODELS_DOWN = [
-    'collection',
-    'entity',
-    'segment',
-    'file',
-]
-
-def print_identifiers(identifiers, models=MODELS_DOWN):
+def _print_identifiers(identifiers, models=MODELS_DOWN):
     for model in models:
         if model in identifiers.keys():
             for oid in identifiers[model]:
