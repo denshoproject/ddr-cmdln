@@ -175,7 +175,7 @@ def _choose_signatures(identifiers):
     parent_models = identifier.CHILDREN.keys()
     # don't waste time looping on files
     for model in parent_models:
-        for i in identifiers[model]:
+        for i in identifiers.get(model, []):
             i.signature_id = i._signature_id()
     return identifiers
 
