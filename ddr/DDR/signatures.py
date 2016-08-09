@@ -14,7 +14,10 @@ identifiers = signatures.signatures(paths, basepath)
 
 """
 
+from datetime import datetime
 import json
+import logging
+logger = logging.getLogger(__name__)
 import os
 
 from DDR import config
@@ -117,7 +120,9 @@ def _metadata_paths(collection_path):
 def _load_identifiers(paths, basepath):
     """Loads and sorts list
     """
+    logging.debug('Loading identifiers')
     identifiers_unsorted = {}
+    logging.debug('%s paths [%s,...]' % (len(paths), paths[0]))
     for path in paths:
         if util.path_matches_model(path, 'file'):
             # this works on file paths but not on entities/collections
@@ -132,6 +137,7 @@ def _load_identifiers(paths, basepath):
         identifiers_unsorted[i.model].append(i)
         
     # - SORT THE LISTS
+    logging.debug('sorting')
     identifiers = {}
     for model,ids in identifiers_unsorted.iteritems():
         identifiers[model] = sorted(ids)
@@ -157,8 +163,10 @@ def _choose_signatures(identifiers):
     # - ENUMERATE FILES LIST FROM LAST (FIRST TIME, THIS IS 0)
     # - IF FILE IS CHILD OF ANCESTOR, SEE IF PUBLISHABLE
     # - IF CHILD OF ANCESTOR AND PUBLISHABLE, ASSIGN FILE_ID TO SIG ID, SET LAST TO n
+    logging.debug('Choosing signatures')
     model_pairs = _models_parent_child()
     for parent_model,child_model in model_pairs:
+        logging.debug('%s (%s children)' % (parent_model, len(identifiers.get(parent_model, []))))
         last = 0
         for pi in identifiers.get(parent_model, []):
             ## loop through list of children, starting with the last
@@ -169,14 +177,16 @@ def _choose_signatures(identifiers):
                     last = n + last
                     break
     # 
-                # At this point, collection.signature and possibly some entity.signature,
+    # At this point, collection.signature and possibly some entity.signature,
     # will not be Files.
     # Go back through and replace these with files
+    logging.debug('Replacing signature objects with ids')
     parent_models = identifier.CHILDREN.keys()
     # don't waste time looping on files
     for model in parent_models:
         for i in identifiers.get(model, []):
             i.signature_id = i._signature_id()
+    logging.debug('Done')
     return identifiers
 
 def signatures(paths, base_path):
@@ -191,6 +201,8 @@ def signatures(paths, base_path):
 def assign_signatures(collection):
     """Read collection .json files, assign signatures, write files
     """
+    start = datetime.now()
+    logging.debug('Collecting identifiers')
     identifiers = signatures(
         util.find_meta_files(
             collection.identifier.path_abs(),
@@ -198,16 +210,21 @@ def assign_signatures(collection):
         ),
         collection.identifier.basepath
     )
+    logging.debug('Writing changes')
     updated = []
     for model,oidentifiers in identifiers.iteritems():
-        for oi in oidentifiers:
+        for n,oi in enumerate(oidentifiers):
+            logging.debug('%s/%s %s' % (n+1, len(oidentifiers), oi.id))
             o = oi.object()
             if o.signature_id != oi.signature_id:
                 updated.append(o.id)
             o.signature_id = oi.signature_id
             o.write_json()
+    finish = datetime.now()
+    elapsed = finish - start
+    logging.debug('DONE (%s elapsed)' % elapsed)
+    logging.debug('NOTE: METADATA FILES ARE NOT COMMITTED!')
     return updated
-    
 
 def _print_identifiers(identifiers, models=MODELS_DOWN):
     for model in models:
