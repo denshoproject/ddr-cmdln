@@ -727,10 +727,17 @@ def post( hosts, index, document, public_fields=[], additional_fields={}, privat
         for k,v in field.iteritems():
             if k == 'id':
                 document_id = v
+            elif k == 'path_rel':
+                # old-skool file.jsons with no 'id' field
+                fid = os.path.basename(os.path.splitext(v)[0])
+                document_id = fid
     try:
         identifier = Identifier(document_id)
     except InvalidInputException:
-        return {'status':4, 'response':'Could not get document Identifier.'}
+        return {
+            'status':4,
+            'response':'Could not get Identifier for "%s".' % document_id
+        }
     
     # die if document is public=False or status=incomplete
     if (not _is_publishable(document)) and (not private_ok):
