@@ -1,24 +1,7 @@
 """
-TODO signature chooser
-- make list of all the metadata file
-- sort the list
-- for each non-file,
-- enumerate files list from LAST (first time, this is 0)
-- if file is child of ancestor, see if publishable
-- if child of ancestor and publishable, assign file_id to sig id, set LAST to n
+signatures - functions for choosing signatures of entity and collection objects
 
-could probably short-circuit this by keeping track of the index in files list at which last sig found.  start there on next entity
-
-l = 'abcdefghijklmnopqrstuvqxyz'
-last = 0
-for n,x in enumerate(l[last:]):
-    print n+last,x
-
-last = 5
-for n,x in enumerate(l[last:]):
-    print n+last,x
-
-TODO update file __lt__ function to assign number to roles so that mezz comes before master
+Entity and Collection objects have a "signature_id" field.
 
 EXAMPLE
 
@@ -204,6 +187,27 @@ def signatures(paths, base_path):
     @returns: list of SigIdentifier objects
     """
     return _choose_signatures(_load_identifiers(paths, base_path))
+
+def assign_signatures(collection):
+    """Read collection .json files, assign signatures, write files
+    """
+    identifiers = signatures(
+        util.find_meta_files(
+            collection.identifier.path_abs(),
+            recursive=True, files_first=True, force_read=True
+        ),
+        collection.identifier.basepath
+    )
+    updated = []
+    for model,oidentifiers in identifiers.iteritems():
+        for oi in oidentifiers:
+            o = oi.object()
+            if o.signature_id != oi.signature_id:
+                updated.append(o.id)
+            o.signature_id = oi.signature_id
+            o.write_json()
+    return updated
+    
 
 def _print_identifiers(identifiers, models=MODELS_DOWN):
     for model in models:
