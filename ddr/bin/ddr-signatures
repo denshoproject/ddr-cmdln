@@ -1,0 +1,41 @@
+#!/usr/bin/env python
+
+#
+# ddr-signatures
+#
+
+description = """Picks signature files for each object in a collection and, updates metadata files."""
+
+epilog = """
+---"""
+
+
+import argparse
+import logging
+import sys
+
+from DDR import config
+from DDR import identifier
+from DDR import signatures
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    stream=sys.stdout,
+)
+
+def main():
+    parser = argparse.ArgumentParser(
+        description=description,
+        epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument('collection', help='Absolute path to Collection.')
+    args = parser.parse_args()
+
+    updated = signatures.assign_signatures(
+        identifier.Identifier(args.collection).object()
+    )
+
+if __name__ == '__main__':
+    main()
