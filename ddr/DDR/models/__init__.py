@@ -682,6 +682,15 @@ class Collection( object ):
                 entities.append(entity)
         return entities
     
+    def signature_abs(self):
+        """Absolute path to signature image file, if signature_id present.
+        """
+        if self.signature_id:
+            oi = Identifier(self.signature_id, self.identifier.basepath)
+            if oi and oi.model == 'file':
+                return File.from_identifier(oi).access_abs
+        return None
+    
     def identifiers(self, model=None, force_read=False):
         """Lists Identifiers for all or subset of Collection's descendents.
         
@@ -1286,6 +1295,15 @@ class Entity( object ):
             files = [f for f in self._file_objects]
         self.files = sorted(files, key=lambda f: int(f.sort))
         return self._children_objects + self.files
+    
+    def signature_abs(self):
+        """Absolute path to signature image file, if signature_id present.
+        """
+        if self.signature_id:
+            oi = Identifier(self.signature_id, self.identifier.basepath)
+            if oi and oi.model == 'file':
+                return File.from_identifier(oi).access_abs
+        return None
     
     def labels_values(self):
         """Apply display_{field} functions to prep object data for the UI.
