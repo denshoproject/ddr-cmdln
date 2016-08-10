@@ -166,17 +166,25 @@ def _choose_signatures(identifiers):
     logging.debug('Choosing signatures')
     model_pairs = _models_parent_child()
     for parent_model,child_model in model_pairs:
-        logging.debug('%s (%s children)' % (parent_model, len(identifiers.get(parent_model, []))))
-        last = 0
+        logging.debug(
+            '%s (%s children)' % (parent_model, len(identifiers.get(parent_model, []))
+        ))
         for pi in identifiers.get(parent_model, []):
-            ## loop through list of children, starting with the last
-            #for n,ci in enumerate(identifiers.get(child_model, [])[last:]):
-            for n,ci in enumerate(identifiers.get(child_model, [])):
-                if pi.id in ci.id:
-                    pi.signature = ci
-                    last = n + last
-                    break
-    # 
+            if pi.signature_id:
+                # Parent already has a signature. Look through children until we
+                # find the SigIdentifier matching the ID.
+                for ci in identifiers.get(child_model, []):
+                    if ci.id == pi.signature_id:
+                        pi.signature = ci
+                        break
+            else:
+                # Loop list of children until we find SigIdentifier ID that
+                # contains parent ID.  Because of the way these are sorted,
+                # this ID will be the first child ID.
+                for ci in identifiers.get(child_model, []):
+                    if pi.id in ci.id:
+                        pi.signature = ci
+                        break
     # At this point, collection.signature and possibly some entity.signature,
     # will not be Files.
     # Go back through and replace these with files
