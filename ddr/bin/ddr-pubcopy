@@ -39,6 +39,7 @@ import sys
 
 import envoy
 
+from DDR import config
 from DDR import identifier
 
 
