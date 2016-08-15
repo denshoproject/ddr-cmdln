@@ -474,6 +474,7 @@ class Collection( object ):
     ead_path_rel = None
     files_path_rel = None
     
+    signature_id = ''
     git_url = None
     _status = ''
     _astatus = ''
@@ -680,6 +681,15 @@ class Collection( object ):
                         entity.title = lv['value']
                 entities.append(entity)
         return entities
+    
+    def signature_abs(self):
+        """Absolute path to signature image file, if signature_id present.
+        """
+        if self.signature_id:
+            oi = Identifier(self.signature_id, self.identifier.basepath)
+            if oi and oi.model == 'file':
+                return File.from_identifier(oi).access_abs
+        return None
     
     def identifiers(self, model=None, force_read=False):
         """Lists Identifiers for all or subset of Collection's descendents.
@@ -1094,6 +1104,7 @@ class Entity( object ):
     _children_objects = 0
     _file_objects = 0
     _file_objects_loaded = 0
+    signature_id = ''
     
     def __init__( self, path_abs, id=None, identifier=None ):
         path_abs = os.path.normpath(path_abs)
@@ -1284,6 +1295,15 @@ class Entity( object ):
             files = [f for f in self._file_objects]
         self.files = sorted(files, key=lambda f: int(f.sort))
         return self._children_objects + self.files
+    
+    def signature_abs(self):
+        """Absolute path to signature image file, if signature_id present.
+        """
+        if self.signature_id:
+            oi = Identifier(self.signature_id, self.identifier.basepath)
+            if oi and oi.model == 'file':
+                return File.from_identifier(oi).access_abs
+        return None
     
     def labels_values(self):
         """Apply display_{field} functions to prep object data for the UI.
@@ -1799,6 +1819,7 @@ class File( object ):
     collection_id = None
     parent_id = None
     entity_id = None
+    signature_id = ''
     path_abs = None
     path = None
     collection_path = None

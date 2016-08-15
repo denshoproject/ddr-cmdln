@@ -727,10 +727,17 @@ def post( hosts, index, document, public_fields=[], additional_fields={}, privat
         for k,v in field.iteritems():
             if k == 'id':
                 document_id = v
+            elif k == 'path_rel':
+                # old-skool file.jsons with no 'id' field
+                fid = os.path.basename(os.path.splitext(v)[0])
+                document_id = fid
     try:
         identifier = Identifier(document_id)
     except InvalidInputException:
-        return {'status':4, 'response':'Could not get document Identifier.'}
+        return {
+            'status':4,
+            'response':'Could not get Identifier for "%s".' % document_id
+        }
     
     # die if document is public=False or status=incomplete
     if (not _is_publishable(document)) and (not private_ok):
@@ -815,8 +822,8 @@ def get( hosts, index, model, document_id, fields=None ):
 
 REPOSITORY_LIST_FIELDS = ['id', 'title', 'description', 'url',]
 ORGANIZATION_LIST_FIELDS = ['id', 'title', 'description', 'url',]
-COLLECTION_LIST_FIELDS = ['id', 'title', 'description', 'signature_file',]
-ENTITY_LIST_FIELDS = ['id', 'title', 'description', 'signature_file',]
+COLLECTION_LIST_FIELDS = ['id', 'title', 'description',]
+ENTITY_LIST_FIELDS = ['id', 'title', 'description',]
 FILE_LIST_FIELDS = ['id', 'basename_orig', 'label', 'access_rel','sort',]
 
 REPOSITORY_LIST_SORT = [
@@ -1149,57 +1156,6 @@ def _has_access_file( identifier ):
         return True
     return False
 
-def _store_signature_file( signatures, identifier, master_substitute ):
-    """Store signature file for collection,entity if it is "earlier" than current one.
-    
-    IMPORTANT: remember to change 'zzzzzz' back to 'master'
-    """
-    if _has_access_file(identifier):
-        # replace 'master' with something so mezzanine wins in sort
-        thumbfile_mezzfirst = identifier.id.replace('master', master_substitute)
-        # # nifty little bit of code that extracts the sort field from file.json
-        # import re
-        # sort = ''
-        # with open(path, 'r') as f:
-        #     for line in f.readlines():
-        #         if '"sort":' in line:
-        #             sort = re.findall('\d+', line)[0]
-        
-        # if this entity_id is "earlier" than the existing one, add it
-        def _store( signatures, object_id, file_id ):
-            if signatures.get(object_id,None):
-                filenames = [signatures[object_id], file_id]
-                first = util.natural_sort(filenames)[0]
-                if file_id == first:
-                    signatures[object_id] = file_id
-            else:
-                signatures[object_id] = file_id
-        
-        _store(signatures, identifier.collection_id(), thumbfile_mezzfirst)
-        _store(signatures, identifier.parent_id(), thumbfile_mezzfirst)
-
-def _choose_signatures( paths ):
-    """Iterate through paths, storing signature_url for each collection, entity.
-    paths listed files first, then entities, then collections
-    
-    @param paths
-    @returns: dict signature_files
-    """
-    SIGNATURE_MASTER_SUBSTITUTE = 'zzzzzz'
-    signature_files = {}
-    for path in paths:
-        identifier = Identifier(path=path)
-        if identifier.model == 'file':
-            # decide whether to store this as a collection/entity signature
-            _store_signature_file(signature_files, identifier, SIGNATURE_MASTER_SUBSTITUTE)
-        else:
-            # signature_urls will be waiting for collections,entities below
-            pass
-    # restore substituted roles
-    for key,value in signature_files.iteritems():
-        signature_files[key] = value.replace(SIGNATURE_MASTER_SUBSTITUTE, 'master')
-    return signature_files
-
 def load_document_json( json_path, model, object_id ):
     """Load object from JSON and add some essential fields.
     """
@@ -1214,10 +1170,7 @@ def index( hosts, index, path, recursive=False, public=True ):
     
     After receiving a list of metadata files, index() iterates through the list several times.  The first pass weeds out paths to objects that can not be published (e.g. object or its parent is unpublished).
     
-    The second pass goes through the files and assigns a signature file to each entity or collection ID.
-    There is some logic that tries to pick the first file of the first entity to be the collection signature, and so on.  Mezzanine files are preferred over master files.
-    
-    In the final pass, a list of public/publishable fields is chosen based on the model.  Additional fields not in the model (e.g. parent ID, parent organization/collection/entity ID, the signature file) are packaged.  Then everything is sent off to post().
+    In the final pass, a list of public/publishable fields is chosen based on the model.  Additional fields not in the model (e.g. parent ID, parent organization/collection/entity ID) are packaged.  Then everything is sent off to post().
 
     @param hosts: list of dicts containing host information.
     @param index: Name of the target index.
@@ -1245,15 +1198,6 @@ def index( hosts, index, path, recursive=False, public=True ):
     # Determine if paths are publishable or not
     successful_paths,bad_paths = _publishable_or_not(paths, parents)
     
-    # iterate through paths, storing signature_url for each collection, entity
-    # paths listed files first, then entities, then collections
-    signature_files = _choose_signatures(successful_paths)
-    print('Signature files')
-    keys = signature_files.keys()
-    keys.sort()
-    for key in keys:
-        print(key, signature_files[key])
-    
     successful = 0
     for path in successful_paths:
         identifier = Identifier(path=path)
@@ -1267,8 +1211,6 @@ def index( hosts, index, path, recursive=False, public=True ):
         if identifier.model == 'collection': additional_fields['organization_id'] = parent_id
         if identifier.model == 'entity': additional_fields['collection_id'] = parent_id
         if identifier.model == 'file': additional_fields['entity_id'] = parent_id
-        if identifier.model in ['collection', 'entity']:
-            additional_fields['signature_file'] = signature_files.get(identifier.id, '')
         
         # HERE WE GO!
         document = load_document_json(path, identifier.model, identifier.id)
