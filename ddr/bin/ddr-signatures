@@ -31,11 +31,37 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument('collection', help='Absolute path to Collection.')
+    parser.add_argument('-W', '--nowrite', help='Do not write changes.')
+    parser.add_argument('-C', '--nocommit', help='Do not commit changes.')
+    parser.add_argument('-u', '--user', help='(required for commit) User name')
+    parser.add_argument('-m', '--mail', help='(required for commit) User email')
     args = parser.parse_args()
 
-    updated = signatures.assign_signatures(
-        identifier.Identifier(args.collection).object()
-    )
+    logging.debug('Loading collection')
+    collection = identifier.Identifier(args.collection).object()
+    logging.debug(collection)
+    
+    updates = signatures.find_updates(collection)
+
+    if args.nowrite:
+        logging.debug('Not writing changes')
+        files_written = []
+    else:
+        files_written = signatures.write_updates(updates)
+
+    if args.nocommit:
+        logging.debug('Not committing changes')
+    elif files_written:
+        if (not args.user) or (not args.mail):
+            logging.debug('You must specify a user and email address! >:-0')
+            sys.exit(1)
+        status,msg = signatures.commit_updates(
+            collection,
+            files_written,
+            args.user, args.mail, agent='ddr-signature'
+        )
+    logging.debug('DONE')
+
 
 if __name__ == '__main__':
     main()

@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 import os
 
 from DDR import config
+from DDR import commands
 from DDR import identifier
 from DDR import models
 from DDR import util
@@ -122,7 +123,7 @@ def _load_identifiers(paths, basepath):
     """
     logging.debug('Loading identifiers')
     identifiers_unsorted = {}
-    logging.debug('%s paths [%s,...]' % (len(paths), paths[0]))
+    logging.debug('| %s paths [%s,...]' % (len(paths), paths[0]))
     for path in paths:
         if util.path_matches_model(path, 'file'):
             # this works on file paths but not on entities/collections
@@ -137,7 +138,7 @@ def _load_identifiers(paths, basepath):
         identifiers_unsorted[i.model].append(i)
         
     # - SORT THE LISTS
-    logging.debug('sorting')
+    logging.debug('| sorting')
     identifiers = {}
     for model,ids in identifiers_unsorted.iteritems():
         identifiers[model] = sorted(ids)
@@ -167,7 +168,7 @@ def _choose_signatures(identifiers):
     model_pairs = _models_parent_child()
     for parent_model,child_model in model_pairs:
         logging.debug(
-            '%s (%s children)' % (parent_model, len(identifiers.get(parent_model, []))
+            '| %s (%s children)' % (parent_model, len(identifiers.get(parent_model, []))
         ))
         for pi in identifiers.get(parent_model, []):
             if pi.signature_id:
@@ -194,7 +195,7 @@ def _choose_signatures(identifiers):
     for model in parent_models:
         for i in identifiers.get(model, []):
             i.signature_id = i._signature_id()
-    logging.debug('Done')
+    logging.debug('ok')
     return identifiers
 
 def signatures(paths, base_path):
@@ -206,8 +207,11 @@ def signatures(paths, base_path):
     """
     return _choose_signatures(_load_identifiers(paths, base_path))
 
-def assign_signatures(collection):
+def find_updates(collection):
     """Read collection .json files, assign signatures, write files
+    
+    @param collection: Collection
+    @returns: list of objects (Collections, Entities, Files, etc)
     """
     start = datetime.now()
     logging.debug('Collecting identifiers')
@@ -218,21 +222,60 @@ def assign_signatures(collection):
         ),
         collection.identifier.basepath
     )
-    logging.debug('Writing changes')
-    updated = []
+    updates = []
     for model,oidentifiers in identifiers.iteritems():
         for n,oi in enumerate(oidentifiers):
-            logging.debug('%s/%s %s' % (n+1, len(oidentifiers), oi.id))
             o = oi.object()
+            orig_value = o.signature_id
+            # normalize
+            if o.signature_id == None: o.signature_id = ''
+            if oi.signature_id == None: oi.signature_id = ''
+            # only write file if changed
+            status = ''
             if o.signature_id != oi.signature_id:
-                updated.append(o.id)
-            o.signature_id = oi.signature_id
-            o.write_json()
+                status = 'updated (%s -> %s)' % (o.signature_id, oi.signature_id)
+                o.signature_id = oi.signature_id
+                updates.append(o)
+            logging.debug('| %s/%s %s %s' % (n+1, len(oidentifiers), oi.id, status))
     finish = datetime.now()
     elapsed = finish - start
-    logging.debug('DONE (%s elapsed)' % elapsed)
-    logging.debug('NOTE: METADATA FILES ARE NOT COMMITTED!')
-    return updated
+    logging.debug('ok (%s elapsed)' % elapsed)
+    return updates
+
+def write_updates(updates):
+    """Write metadata of updated objects to disk.
+    
+    @param updates: list of objects (Collections, Entities, Files, etc)
+    @returns: list of updated files (relative paths)
+    """
+    start = datetime.now()
+    logging.debug('Writing changes')
+    written = []
+    for n,o in enumerate(updates):
+        o.write_json()
+        written.append(o.identifier.path_abs('json'))
+        logging.debug('| %s/%s %s' % (n+1, len(updates), o.id))
+    finish = datetime.now()
+    elapsed = finish - start
+    logging.debug('ok (%s elapsed)' % elapsed)
+    logging.debug('NOTE: METADATA FILES ARE NOT YET COMMITTED!')
+    return written
+
+def commit_updates(collection, files_written, git_name, git_mail, agent):
+    """Commit written files to git repository.
+    
+    @param files_written: list
+    @returns: (int,str) status,message (from commands.update)
+    """
+    if files_written:
+        logger.debug('Committing changes')
+        return commands.update(
+            git_name, git_mail,
+            collection,
+            files_written,
+            agent
+        )
+    return 0,'no files to write'
 
 def _print_identifiers(identifiers, models=MODELS_DOWN):
     for model in models:
