@@ -19,6 +19,7 @@ def normalize_string(text):
     text = text.replace('\n', '\\n')
     return text
 
+
 # csvload_* --- import-from-csv functions ------------------------------
 #
 # These functions take data from a CSV field and convert it to Python
@@ -99,6 +100,45 @@ def load_labelledlist(text):
                 data.append(x.strip())
     return data
 
+LISTOFDICTS_SEPARATORS = [':', '|', ';']
+LISTOFDICTS_SPLIT1X = [':']
+
+def load_listofdicts(text, separators=LISTOFDICTS_SEPARATORS, split1x=LISTOFDICTS_SPLIT1X):
+    """
+    >>> text0 = 'url:http://abc.org/|label:Label 1'
+    >>> load_listofdicts(text0)
+    [
+        {'label': 'Label 1', 'url': 'http://abc.org/'}
+    ]
+    >>> text1 = 'url:http://abc.org/|label:Label 1; url:http://def.org/|label:Label 2'
+    >>> load_listofdicts(text1)
+    [
+        {'label': 'Label 1', 'url': 'http://abc.org/'},
+        {'label': 'Label 2', 'url': 'http://def.org/'}
+    ]
+    
+    @param text: str
+    @param separators: list of separators, from inside out
+    @param split1x: list of separators on which to only split once
+    @returns: list of dicts
+    """
+    def setsplitnum(separator, split1x):
+        if separator in split1x:
+            return 1
+        return -1
+    splitnum1 = setsplitnum(separators[-1], split1x)
+    splitnum2 = setsplitnum(separators[-2], split1x)
+    splitnum3 = setsplitnum(separators[-3], split1x)
+    # parse it up
+    dicts = []
+    for line in text.strip().split(separators[-1], splitnum1):
+        d = {}
+        for item in line.strip().split(separators[-2], splitnum2):
+            key,val = item.strip().split(separators[-3], splitnum3)
+            d[key] = val
+        dicts.append(d)
+    return dicts
+
 def load_rolepeople(text):
     """
     >>> data0 = ''
@@ -127,7 +167,8 @@ def load_rolepeople(text):
             c = {'namepart': name.strip(), 'role': role.strip(),}
             data.append(c)
     return data
-    
+
+
 # csvdump_* --- export-to-csv functions ------------------------------
 #
 # These functions take Python data from the corresponding Entity field
@@ -204,6 +245,16 @@ def dump_labelledlist(data):
     """
     return u'; '.join(data)
 
+def dump_listofdicts(data, separators=LISTOFDICTS_SEPARATORS):
+    """Dumps list-of-dicts data to str
+    """
+    lines = []
+    for datum in data:
+        items = [separators[0].join(keyval) for keyval in datum.iteritems()]
+        line = separators[1].join(items)
+        lines.append(line)
+    return separators[2].join(lines)
+
 def dump_rolepeople(data):
     """
     >>> data0 = ''
@@ -234,3 +285,9 @@ def dump_rolepeople(data):
                 items.append('%s:%s' % (d['namepart'],d['role']))
         text = '; '.join(items)
     return text
+
+
+# csvvalidate_* --------------------------------------------------------
+#
+# These functions examine data in a CSV field and return True if valid.
+#
