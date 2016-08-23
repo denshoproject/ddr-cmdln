@@ -75,13 +75,14 @@ def post_listofdicts(data, keys, separators=[';', ':']):
     [{'label': 'Label 1', 'url': 'http://...'}, {'label': 'Label 2', 'url': 'http://...'}]
     """
     a = []
-    for n in data.split(separators[0]):
-        values = n.strip().split(separators[1], 1) # only split on first colon
-        d = {
-            keys[n]: value.strip()
-            for n,value in enumerate(values)
-        }
-        a.append(d)
+    if data:
+        for n in data.split(separators[0]):
+            values = n.strip().split(separators[1], 1) # only split on first colon
+            d = {
+                keys[n]: value.strip()
+                for n,value in enumerate(values)
+            }
+            a.append(d)
     return a
 
 #def post_rolepeople(data):
