@@ -8,6 +8,7 @@
 # future.
 
 from datetime import datetime
+import re
 
 def normalize_string(text):
     if not text:
@@ -84,6 +85,169 @@ def list_to_text(data, separator=LIST_SEPARATOR_SPACE):
     @returns: str
     """
     return separator.join(data)
+
+
+# dict -----------------------------------------------------------------
+#
+# Much DDR data is structured as lists of dicts, one dict per record.
+# These functions are intended for recognizing text strings from these records.
+# 
+# text_bracketid = 'ABC [123]'
+# text_nolabels  = 'ABC:123'
+# text_labels    = 'term:ABC|id:123'
+# data = {'term':'ABC', 'id':'123'}
+#
+
+def _detect_text_labels(text, separators=[':','|']):
+    # both separators
+    sepsfound = [s for s in separators if s in text]
+    if len(sepsfound) == len(separators):
+        return True
+    return False
+
+def textlabels_to_dict(text, keys, separators=[':','|']):
+    """
+    @param text: str
+    @param keys: list
+    @param separators: list
+    @returns: dict
+    """
+    if not text:
+        return {}
+    data = {}
+    for item in text.split(separators[1]):
+        if item:
+            key,val = item.split(separators[0])
+            data[key] = val
+    return data
+
+def dict_to_textlabels(data, keys, separators):
+    return separators[1].join([
+        separators[0].join([
+            key, data[key]
+        ])
+        for key in keys
+    ])
+
+# text_nolabels  = 'ABC:123'
+# data = {'term':'ABC', 'id':123}
+
+def _detect_text_nolabels(text, separators=[':','|']):
+    # Only first separator present
+    if (separators[0] in text) and not (separators[1] in text):
+        return True
+    return False
+
+def textnolabels_to_dict(text, keys, separator=':'):
+    """
+    @param text: str
+    @param keys: list
+    @param separator: str
+    @returns: dict
+    """
+    if not text:
+        return {}
+    if not separator in text:
+        raise Exception('Text does not contain "%s": "%s"' % (separator, text))
+    values = text.split(separator)
+    if not len(values) == len(keys):
+        raise Exception('Text contains more than %s values: "%s".' % (len(keys), text))
+    data = {
+        key: values[n]
+        for n,key in enumerate(keys)
+    }
+    return data
+
+def dict_to_textnolabels(data, keys, separator):
+    return separator.join(
+        [data[key] for key in keys]
+    )
+
+# text_bracketid = 'ABC [123]'
+# data = {'term':'ABC', 'id':123}
+
+TEXT_BRACKETID_TEMPLATE = '{term} [{id}]'
+TEXT_BRACKETID_REGEX = re.compile(r'([\w\d _-]+) \[(\d+)\]')
+
+def _detect_text_bracketid(text):
+    m = re.search(TEXT_BRACKETID_REGEX, text)
+    if m and (len(m.groups()) == 2) and m.groups()[1].isdigit():
+        return m
+    return False
+
+def textbracketid_to_dict(text, keys=['term', 'id'], pattern=TEXT_BRACKETID_REGEX, match=None):
+    """
+    @param text: str
+    @param keys: list
+    @param pattern: re.RegexObject
+    @param match: re.MatchObject
+    @returns: dict
+    """
+    if not text:
+        return {}
+    if match:
+        m = match
+    elif pattern:
+        m = re.search(pattern, text)
+    if m:
+        if m.groups() and (len(m.groups()) == len(keys)):
+            return {
+                key: m.groups()[n]
+                for n,key in enumerate(keys)
+            }
+    return {}
+
+def dict_to_textbracketid(data, keys):
+    if isinstance(data, basestring):
+        return data
+    if len(keys) != 2:
+        raise Exception('Cannot format "Topic [ID]" data: too many keys. "%s"' % data)
+    if not 'id' in data.keys():
+        raise Exception('No "id" field in data: "%s".' % data)
+    d = {'id': data.pop('id')}
+    d['term'] = data.values()[0]
+    return TEXT_BRACKETID_TEMPLATE.format(**d)
+
+def text_to_dict(text, keys):
+    """
+    @param text: str Normalized text
+    @param keys: list
+    @returns: dict
+    """
+    if not text:
+        return {}
+    if _detect_text_labels(text):
+        data = textlabels_to_dict(text, keys, separators=[':','|'])
+    elif _detect_text_nolabels(text):
+        data = textnolabels_to_dict(text, keys, separator=':')
+    m = is_bracketid = _detect_text_bracketid(text)
+    if m:
+        data = textbracketid_to_dict(text)
+    # strip strings, force int values to int
+    d = {}
+    for key,val in data.iteritems():
+        if val.isdigit():
+            d[key] = int(val)
+        elif isinstance(val, basestring):
+            d[key] = val.strip()
+    return d
+
+def dict_to_text(data, keys, style='labels', nolabelsep=':', labelseps=[':','|']):
+    """Renders single dict record to text in specified style.
+    
+    @param data: dict
+    @param keys: list Dictionary keys in order they should be printed.
+    @param style: str 'labels', 'nolabels', 'bracketid'
+    @param nolabelsep: str
+    @param labelseps: list
+    @returns: str
+    """
+    if style == 'bracketid':
+        return dict_to_textbracketid(data, keys)
+    elif style == 'nolabels':
+        return dict_to_textnolabels(data, keys, nolabelsep)
+    elif style == 'labels':
+        return dict_to_textlabels(data, keys, labelseps)
 
 
 # kvlist ---------------------------------------------------------------
