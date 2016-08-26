@@ -13,7 +13,7 @@ import re
 def normalize_string(text):
     if not text:
         return u''
-    return unicode(text).replace('\r\n', '\n').replace('\r', '\n').replace('\n', '\\n').strip()
+    return unicode(text).replace('\r\n', '\n').replace('\r', '\n').strip()
 
 
 # datetime -------------------------------------------------------------
@@ -117,7 +117,7 @@ def textlabels_to_dict(text, keys, separators=[':','|']):
     data = {}
     for item in text.split(separators[1]):
         if item:
-            key,val = item.split(separators[0])
+            key,val = item.split(separators[0], 1)
             data[key] = val
     return data
 
@@ -216,13 +216,14 @@ def text_to_dict(text, keys):
     """
     if not text:
         return {}
-    if _detect_text_labels(text):
+    if _detect_text_labels(text, separators=[':','|']):
         data = textlabels_to_dict(text, keys, separators=[':','|'])
     elif _detect_text_nolabels(text):
         data = textnolabels_to_dict(text, keys, separator=':')
-    m = is_bracketid = _detect_text_bracketid(text)
-    if m:
-        data = textbracketid_to_dict(text)
+    else:
+        m = is_bracketid = _detect_text_bracketid(text)
+        if m:
+            data = textbracketid_to_dict(text)
     # strip strings, force int values to int
     d = {}
     for key,val in data.iteritems():
@@ -391,6 +392,18 @@ def rolepeople_to_text(data):
 # ]
 # 
 
+def text_to_dicts(text, terms, separator=';'):
+    text = normalize_string(text)
+    if not text:
+        return []
+    dicts = []
+    for line in text.split(separator):
+        line = line.strip()
+        d = text_to_dict(line, terms)
+        if d:
+            dicts.append(d)
+    return dicts
+    
 def _setsplitnum(separator, split1x):
     if separator in split1x:
         return 1
@@ -402,7 +415,7 @@ LISTOFDICTS_SPLIT1X = [':']
 def text_to_listofdicts(text, separators=LISTOFDICTS_SEPARATORS, split1x=LISTOFDICTS_SPLIT1X):
     text = normalize_string(text)
     if not text:
-        return {}
+        return []
     splitnum1 = _setsplitnum(separators[-1], split1x)
     splitnum2 = _setsplitnum(separators[-2], split1x)
     splitnum3 = _setsplitnum(separators[-3], split1x)
