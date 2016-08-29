@@ -547,7 +547,7 @@ def listofdicts_to_textnolabels(data, keys, separators=TEXTNOLABELS_LISTOFDICTS_
         # dict (see data2)
         elif isinstance(n, dict):
             # just the values, no keys
-            values = [n[key] for key in keys]
+            values = [unicode(n[key]) for key in keys]
             item = separator.join(values)
             items.append(item)
     
