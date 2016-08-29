@@ -455,7 +455,8 @@ def listofdicts_to_text(data, terms=[], separators=LISTOFDICTS_SEPARATORS):
             ]
         line = separators[1].join(items)
         lines.append(line)
-    return separators[2].join(lines)
+    separators2 = '%s\n' % separators[2]
+    return separators2.join(lines)
 
 
 # textnolabels <> listofdicts ------------------------------------------
