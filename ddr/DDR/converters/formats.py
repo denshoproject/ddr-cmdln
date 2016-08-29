@@ -439,13 +439,20 @@ def text_to_listofdicts(text, separators=LISTOFDICTS_SEPARATORS, split1x=LISTOFD
             dicts.append(d)
     return dicts
 
-def listofdicts_to_text(data, separators=LISTOFDICTS_SEPARATORS):
+def listofdicts_to_text(data, terms=[], separators=LISTOFDICTS_SEPARATORS):
     lines = []
     for datum in data:
-        items = [
-            separators[0].join(keyval)
-            for keyval in datum.iteritems()
-        ]
+        if terms:
+            items = [
+                separators[0].join([key, datum.get(key,'')])
+                for key in terms
+                if datum.get(key)
+            ]
+        else:
+            items = [
+                separators[0].join(keyval)
+                for keyval in datum.iteritems()
+            ]
         line = separators[1].join(items)
         lines.append(line)
     return separators[2].join(lines)
