@@ -410,6 +410,10 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='', l
     # form data
     for field in data:
         setattr(file_, field, data[field])
+    # Batch import CSV files often have the ID of the file-role or entity
+    # instead of the file. Add file ID again to make sure the field has
+    # the correct value.
+    file_.id = fidentifier.id
     
     log.ok('Attaching access file')
     if tmp_access_path and os.path.exists(tmp_access_path):
@@ -529,6 +533,10 @@ def add_external_file(entity, data, git_name, git_mail, agent='', log_path=None,
         log.ok('| basename_ext %s' % basename_ext)
     for field in data:
         setattr(file_, field, data[field])
+    # Batch import CSV files often have the ID of the file-role or entity
+    # instead of the file. Add file ID again to make sure the field has
+    # the correct value.
+    file_.id = fidentifier.id
     
     # WE ARE NOW MAKING CHANGES TO THE REPO ------------------------
     
