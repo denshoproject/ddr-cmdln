@@ -371,6 +371,10 @@ def add_file(entity, src_path, role, data, git_name, git_mail, agent='', log_pat
     tmp_dir = os.path.dirname(tmp_path)
     
     log.ok('Checking files/dirs')
+    if os.path.exists(dest_path):
+        log.crash("Can't add '%s'. Already exists: '%s'!" % (
+            os.path.basename(src_path), fidentifier.id
+        ))
     check_dir('| tmp_dir', tmp_dir, log, mkdir=True, perm=os.W_OK)
     check_dir('| dest_dir', dest_dir, log, mkdir=True, perm=os.W_OK)
     
