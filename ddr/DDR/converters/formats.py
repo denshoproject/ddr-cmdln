@@ -440,6 +440,10 @@ def text_to_listofdicts(text, separators=LISTOFDICTS_SEPARATORS, split1x=LISTOFD
     return dicts
 
 def listofdicts_to_text(data, terms=[], separators=LISTOFDICTS_SEPARATORS):
+    if not data:
+        return ''
+    if isinstance(data, basestring):
+        data = text_to_listofdicts(data)
     lines = []
     for datum in data:
         if terms:
