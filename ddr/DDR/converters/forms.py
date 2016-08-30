@@ -1,3 +1,6 @@
+from . import formats
+
+
 # formprep_* --- Form pre-processing functions.--------------------------
 #
 # These functions take Python data from the corresponding Collection field
@@ -10,8 +13,8 @@
 #def prep_kvlist(data):
 #def prep_labelledlist(data):
 
-def prep_listofdicts(data, keys, separator=':'):
-    return formats.listofdicts_to_textnolabels(data, keys, separator)
+def prep_listofdicts(data, keys):
+    return formats.listofdicts_to_textnolabels(data, keys)
 
 #def prep_rolepeople(data):
 
@@ -28,8 +31,8 @@ def prep_listofdicts(data, keys, separator=':'):
 #def post_kvlist(data):
 #def post_labelledlist(data):
 
-def post_listofdicts(data, keys, separators=[';', ':']):
-    return formats.textnolabels_to_listofdicts(data, keys, separators)
+def post_listofdicts(data, keys):
+    return formats.textnolabels_to_listofdicts(data, keys)
 
 #def post_rolepeople(data):
 # 
