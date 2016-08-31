@@ -10,10 +10,21 @@
 from datetime import datetime
 import re
 
+from jinja2 import Template
+
+
 def normalize_string(text):
     if not text:
         return u''
     return unicode(text).replace('\r\n', '\n').replace('\r', '\n').strip()
+
+def render(template, data):
+    """Render a Jinja2 template.
+    
+    @param template: str Jinja2-formatted template
+    @param data: dict
+    """
+    return Template(template).render(data=data)
 
 
 # datetime -------------------------------------------------------------
