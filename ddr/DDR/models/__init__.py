@@ -363,6 +363,29 @@ def prep_csv(obj, module, headers=[]):
         values.append(value)
     return values
 
+def csvload_rowd(module, rowd):
+    """Apply module's csvload_* methods to rowd data
+    """
+    # In repo_models.object.FIELDS, individual fields can be marked
+    # so they are ignored (e.g. not included) when importing.
+    # TODO make field_directives ONCE at start of rowds loop
+    field_directives = {
+        f['name']: f['csv']['import']
+        for f in module.module.FIELDS
+    }
+    data = {}
+    for field,value in rowd.iteritems():
+        ignored = 'ignore' in field_directives[field]
+        if not ignored:
+            value = module.function(
+                'csvload_%s' % field,
+                rowd[field]
+            )
+            # TODO optimize, normalize only once
+            value = util.normalize_text(value)
+            data[field] = value
+    return data
+
 def load_csv(obj, module, rowd):
     """Populates object from a row in a CSV file.
     
@@ -377,16 +400,14 @@ def load_csv(obj, module, rowd):
         f['name']: f['csv']['import']
         for f in module.module.FIELDS
     }
+    # apply module's csvload_* methods to rowd data
+    rowd = csvload_rowd(module, rowd)
     obj.modified = []
     for field,value in rowd.iteritems():
         ignored = 'ignore' in field_directives[field]
         if not ignored:
             oldvalue = getattr(obj, field, '')
-            value = module.function(
-                'csvload_%s' % field,
-                rowd[field]
-            )
-            value = util.normalize_text(value)
+            value = rowd[field]
             if value != oldvalue:
                 obj.modified.append(field)
             setattr(obj, field, value)

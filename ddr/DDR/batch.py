@@ -571,6 +571,10 @@ class Importer():
         return updated
 
     @staticmethod
+    def _csv_load(module, rowds):
+        return [models.csvload_rowd(module, rowd) for rowd in rowds]
+
+    @staticmethod
     def _fidentifiers(rowds, cidentifier):
         """dict of File Identifiers by file ID."""
         return {
@@ -690,6 +694,9 @@ class Importer():
         logging.info('Reading %s' % csv_path)
         headers,rowds = csvfile.make_rowds(fileio.read_csv(csv_path))
         logging.info('%s rows' % len(rowds))
+        logging.info('csv_load rowds')
+        module = Checker._get_module(model)
+        rowds = Importer._csv_load(module, rowds)
         
         # various dicts and lists instantiated here so we don't do it
         # multiple times later
