@@ -7,6 +7,7 @@
 # used, and hopefully to make it easier to merge or prune them in the
 # future.
 
+import copy
 from datetime import datetime
 import re
 
@@ -215,8 +216,9 @@ def dict_to_textbracketid(data, keys):
         raise Exception('Cannot format "Topic [ID]" data: too many keys. "%s"' % data)
     if not 'id' in data.keys():
         raise Exception('No "id" field in data: "%s".' % data)
-    d = {'id': data.pop('id')}
-    d['term'] = data.values()[0]
+    data_ = copy.deepcopy(data)
+    d = {'id': data_.pop('id')}
+    d['term'] = data_.values()[0]
     return TEXT_BRACKETID_TEMPLATE.format(**d)
 
 def text_to_dict(text, keys):
