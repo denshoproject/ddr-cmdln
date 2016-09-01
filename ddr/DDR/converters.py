@@ -29,6 +29,28 @@ def render(template, data):
     """
     return Template(template).render(data=data)
 
+def coerce_type(text):
+    """Ensure that text is converted to type (int,datetime)
+    """
+    if isinstance(text, basestring):
+        if text.isdigit():
+            return int(text)
+        try:
+            return text_to_datetime(text)
+        except ValueError:
+            pass
+        return unicode(text.strip())
+    return text
+
+def coerce_text(data):
+    """Ensure types (ints,datetimes) are converted to text
+    """
+    if isinstance(data, int):
+        return unicode(data)
+    elif isinstance(data, datetime):
+        return datetime_to_text(data)
+    return data
+
 
 # datetime -------------------------------------------------------------
 #
@@ -130,13 +152,13 @@ def textlabels_to_dict(text, keys, separators=[':','|']):
     for item in text.split(separators[1]):
         if item:
             key,val = item.split(separators[0], 1)
-            data[key] = val
+            data[key] = coerce_type(val)
     return data
 
 def dict_to_textlabels(data, keys, separators):
     return separators[1].join([
         separators[0].join([
-            key, data[key]
+            key, coerce_text(data[key])
         ])
         for key in keys
     ])
@@ -165,15 +187,15 @@ def textnolabels_to_dict(text, keys, separator=':'):
     if not len(values) == len(keys):
         raise Exception('Text contains more than %s values: "%s".' % (len(keys), text))
     data = {
-        key: values[n]
+        key: coerce_type(values[n])
         for n,key in enumerate(keys)
     }
     return data
 
 def dict_to_textnolabels(data, keys, separator):
-    return separator.join(
-        [data[key] for key in keys]
-    )
+    return separator.join([
+        coerce_text(data[key]) for key in keys
+    ])
 
 # text_bracketid = 'ABC [123]'
 # data = {'term':'ABC', 'id':123}
@@ -204,7 +226,7 @@ def textbracketid_to_dict(text, keys=['term', 'id'], pattern=TEXT_BRACKETID_REGE
     if m:
         if m.groups() and (len(m.groups()) == len(keys)):
             return {
-                key: m.groups()[n]
+                key: coerce_type(m.groups()[n])
                 for n,key in enumerate(keys)
             }
     return {}
@@ -240,10 +262,7 @@ def text_to_dict(text, keys):
     # strip strings, force int values to int
     d = {}
     for key,val in data.iteritems():
-        if val.isdigit():
-            d[key] = int(val)
-        elif isinstance(val, basestring):
-            d[key] = val.strip()
+        d[key] = coerce_type(val)
     return d
 
 def dict_to_text(data, keys, style='labels', nolabelsep=':', labelseps=[':','|']):
@@ -284,7 +303,9 @@ def text_to_kvlist(text):
             if not ':' in item:
                 raise Exception('Malformed data: %s' % text)
             key,val = item.strip().split(':')
-            data.append({key.strip(): val.strip()})
+            data.append({
+                key.strip(): coerce_type(val)
+            })
     return data
 
 def kvlist_to_text(data):
@@ -321,7 +342,9 @@ def text_to_labelledlist(text):
         x = x.strip()
         if x:
             if ':' in x:
-                data.append(x.strip().split(':')[0])
+                # NOTE: we're keeping the KEY, discarding the VALUE
+                key,val = x.strip().split(':')
+                data.append(coerce_type(key))
             else:
                 data.append(x.strip())
     return data
@@ -446,7 +469,7 @@ def text_to_listofdicts(text, separators=LISTOFDICTS_SEPARATORS, split1x=LISTOFD
             i = item.strip()
             if i:
                 key,val = i.split(separators[-3], splitnum3)
-                d[key] = val
+                d[key] = coerce_type(val)
         # don't append empty dicts
         if d:
             dicts.append(d)
