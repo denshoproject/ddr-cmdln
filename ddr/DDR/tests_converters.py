@@ -2,7 +2,6 @@
 """
 
 from datetime import datetime
-import re
 
 import converters
 
@@ -50,7 +49,7 @@ TEXT_DICT_TEXT_BRACKETID = 'ABC [123]'
 TEXT_DICT_KEYS = ['term', 'id']
 TEXT_DICT_SEPARATORS = ':|'
 TEXT_DICT_SEPARATOR = ':'
-TEXT_DICT_DATA = {'term': 'ABC', 'id': '123'}
+TEXT_DICT_DATA = {'term': u'ABC', 'id': 123}
 
 def test_textlabels_to_dict():
     assert converters.textlabels_to_dict('', []) == {}
@@ -73,17 +72,17 @@ def test_textbracketid_to_dict():
 def test_dict_to_textbracketid():
     assert converters.dict_to_textbracketid(TEXT_DICT_DATA, TEXT_DICT_KEYS) == TEXT_DICT_TEXT_BRACKETID
 
-#def test_text_to_dict():
-#    assert converters.text_to_dict('', []) == {}
-#    print('converters.text_to_dict %s' % converters.text_to_dict(TEXT_DICT_TEXT_LABELS, TEXT_DICT_KEYS))
-#    print('TEXT_DICT_DATA %s' % TEXT_DICT_DATA)
-#    assert converters.text_to_dict(TEXT_DICT_TEXT_LABELS, TEXT_DICT_KEYS) == TEXT_DICT_DATA
-#    assert converters.text_to_dict(TEXT_DICT_TEXT_NOLABELS, TEXT_DICT_KEYS) == TEXT_DICT_DATA
-#    assert converters.text_to_dict(TEXT_DICT_TEXT_BRACKETID, TEXT_DICT_KEYS) == TEXT_DICT_DATA
-# 
-#def test_dict_to_text():
-#    assert converters.dict_to_text({}, []) == ''
-#    assert converters.dict_to_text(TEXT_DICT_DATA, TEXT_DICT_KEYS, TEXT_DICT_SEPARATORS) == TEXT_DICT_TEXT_LABELS
+def test_text_to_dict():
+    assert converters.text_to_dict('', []) == {}
+    assert converters.text_to_dict(TEXT_DICT_TEXT_LABELS, TEXT_DICT_KEYS) == TEXT_DICT_DATA
+    assert converters.text_to_dict(TEXT_DICT_TEXT_NOLABELS, TEXT_DICT_KEYS) == TEXT_DICT_DATA
+    assert converters.text_to_dict(TEXT_DICT_TEXT_BRACKETID, TEXT_DICT_KEYS) == TEXT_DICT_DATA
+
+def test_dict_to_text():
+    assert converters.dict_to_text({}, []) == ''
+    assert converters.dict_to_text(TEXT_DICT_DATA, TEXT_DICT_KEYS, style='labels') == TEXT_DICT_TEXT_LABELS
+    assert converters.dict_to_text(TEXT_DICT_DATA, TEXT_DICT_KEYS, style='nolabels') == TEXT_DICT_TEXT_NOLABELS
+    assert converters.dict_to_text(TEXT_DICT_DATA, TEXT_DICT_KEYS, style='bracketid') == TEXT_DICT_TEXT_BRACKETID
 
 TEXTKVLIST_TEXT = 'name1:author; name2:photog'
 TEXTKVLIST_DATA = [
@@ -99,8 +98,32 @@ def test_kvlist_to_text():
     assert converters.kvlist_to_text([]) == ''
     assert converters.kvlist_to_text(TEXTKVLIST_DATA) == TEXTKVLIST_TEXT
 
-#def test_text_to_labelledlist():
-#def test_labelledlist_to_text():
+TEXTLABELLEDLIST_TEXT0 = 'eng'
+TEXTLABELLEDLIST_DATA0 = [u'eng']
+TEXTLABELLEDLIST_DOUT0 = 'eng'
+TEXTLABELLEDLIST_TEXT1 = 'eng; jpn'
+TEXTLABELLEDLIST_DATA1 = [u'eng', u'jpn']
+TEXTLABELLEDLIST_DOUT1 = 'eng; jpn'
+TEXTLABELLEDLIST_TEXT2 = 'eng:English'
+TEXTLABELLEDLIST_DATA2 = [u'eng']
+TEXTLABELLEDLIST_DOUT2 = 'eng'
+TEXTLABELLEDLIST_TEXT3 = 'eng:English; jpn:Japanese'
+TEXTLABELLEDLIST_DATA3 = [u'eng', u'jpn']
+TEXTLABELLEDLIST_DOUT3 = 'eng; jpn'
+
+def test_text_to_labelledlist():
+    assert converters.text_to_labelledlist('') == []
+    assert converters.text_to_labelledlist(TEXTLABELLEDLIST_TEXT0) == TEXTLABELLEDLIST_DATA0
+    assert converters.text_to_labelledlist(TEXTLABELLEDLIST_TEXT1) == TEXTLABELLEDLIST_DATA1
+    assert converters.text_to_labelledlist(TEXTLABELLEDLIST_TEXT2) == TEXTLABELLEDLIST_DATA2
+    assert converters.text_to_labelledlist(TEXTLABELLEDLIST_TEXT3) == TEXTLABELLEDLIST_DATA3
+
+def test_labelledlist_to_text():
+    assert converters.labelledlist_to_text([]) == ''
+    assert converters.labelledlist_to_text(TEXTLABELLEDLIST_DATA0) == TEXTLABELLEDLIST_DOUT0
+    assert converters.labelledlist_to_text(TEXTLABELLEDLIST_DATA1) == TEXTLABELLEDLIST_DOUT1
+    assert converters.labelledlist_to_text(TEXTLABELLEDLIST_DATA2) == TEXTLABELLEDLIST_DOUT2
+    assert converters.labelledlist_to_text(TEXTLABELLEDLIST_DATA3) == TEXTLABELLEDLIST_DOUT3
 
 TEXTROLEPEOPLE_NAME_TEXT = "Watanabe, Joe"
 TEXTROLEPEOPLE_NAME_DATA = [
@@ -158,8 +181,6 @@ def test_text_to_listofdicts():
     assert converters.text_to_listofdicts('', []) == []
     assert converters.text_to_listofdicts(LISTOFDICTS_TEXT0) == LISTOFDICTS_DATA0
     assert converters.text_to_listofdicts(LISTOFDICTS_TEXT1) == LISTOFDICTS_DATA1
-    # TODO years should be ints?
-    print(converters.text_to_listofdicts(LISTOFDICTS_TEXT2))
     assert converters.text_to_listofdicts(LISTOFDICTS_TEXT2) == LISTOFDICTS_DATA2
 
 def test_listofdicts_to_text():
