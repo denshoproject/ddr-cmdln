@@ -183,7 +183,7 @@ def textnolabels_to_dict(text, keys, separator=':'):
         return {}
     if not separator in text:
         raise Exception('Text does not contain "%s": "%s"' % (separator, text))
-    values = text.split(separator)
+    values = text.split(separator, 1)
     if not len(values) == len(keys):
         raise Exception('Text contains more than %s values: "%s".' % (len(keys), text))
     data = {
