@@ -51,6 +51,10 @@ TEXT_DICT_SEPARATORS = ':|'
 TEXT_DICT_SEPARATOR = ':'
 TEXT_DICT_DATA = {'term': u'ABC', 'id': '123'}
 
+TEXT_DICT_KEYS_DATE = ['term', 'startdate']
+TEXT_DICT_TEXT_NOLABELS_DATE = 'ABC:1970-01-01 00:00:00'
+TEXT_DICT_DATA_DATE = {'term': u'ABC', 'startdate': '1970-01-01 00:00:00'}
+
 def test_textlabels_to_dict():
     assert converters.textlabels_to_dict('', []) == {}
     assert converters.textlabels_to_dict(TEXT_DICT_TEXT_LABELS, TEXT_DICT_KEYS) == TEXT_DICT_DATA
@@ -61,6 +65,7 @@ def test_dict_to_textlabels():
 def test_textnolabels_to_dict():
     assert converters.textnolabels_to_dict('', []) == {}
     assert converters.textnolabels_to_dict(TEXT_DICT_TEXT_NOLABELS, TEXT_DICT_KEYS) == TEXT_DICT_DATA
+    assert converters.textnolabels_to_dict(TEXT_DICT_TEXT_NOLABELS_DATE, TEXT_DICT_KEYS_DATE) == TEXT_DICT_DATA_DATE
     
 def test_dict_to_textnolabels():
     assert converters.dict_to_textnolabels(TEXT_DICT_DATA, TEXT_DICT_KEYS, TEXT_DICT_SEPARATOR) == TEXT_DICT_TEXT_NOLABELS
