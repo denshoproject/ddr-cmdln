@@ -152,13 +152,13 @@ def textlabels_to_dict(text, keys, separators=[':','|']):
     for item in text.split(separators[1]):
         if item:
             key,val = item.split(separators[0], 1)
-            data[key] = coerce_type(val)
+            data[key] = val
     return data
 
 def dict_to_textlabels(data, keys, separators):
     return separators[1].join([
         separators[0].join([
-            key, coerce_text(data[key])
+            key, data[key]
         ])
         for key in keys
     ])
@@ -187,14 +187,14 @@ def textnolabels_to_dict(text, keys, separator=':'):
     if not len(values) == len(keys):
         raise Exception('Text contains more than %s values: "%s".' % (len(keys), text))
     data = {
-        key: coerce_type(values[n])
+        key: values[n]
         for n,key in enumerate(keys)
     }
     return data
 
 def dict_to_textnolabels(data, keys, separator):
     return separator.join([
-        coerce_text(data[key]) for key in keys
+        data[key] for key in keys
     ])
 
 # text_bracketid = 'ABC [123]'
@@ -226,7 +226,7 @@ def textbracketid_to_dict(text, keys=['term', 'id'], pattern=TEXT_BRACKETID_REGE
     if m:
         if m.groups() and (len(m.groups()) == len(keys)):
             return {
-                key: coerce_type(m.groups()[n])
+                key: m.groups()[n]
                 for n,key in enumerate(keys)
             }
     return {}
@@ -262,7 +262,10 @@ def text_to_dict(text, keys):
     # strip strings, force int values to int
     d = {}
     for key,val in data.iteritems():
-        d[key] = coerce_type(val)
+        if isinstance(val, basestring):
+            d[key] = val.strip()
+        else:
+            d[key] = val
     return d
 
 def dict_to_text(data, keys, style='labels', nolabelsep=':', labelseps=[':','|']):
@@ -304,7 +307,7 @@ def text_to_kvlist(text):
                 raise Exception('Malformed data: %s' % text)
             key,val = item.strip().split(':')
             data.append({
-                key.strip(): coerce_type(val)
+                key.strip(): val.strip()
             })
     return data
 
@@ -344,7 +347,7 @@ def text_to_labelledlist(text):
             if ':' in x:
                 # NOTE: we're keeping the KEY, discarding the VALUE
                 key,val = x.strip().split(':')
-                data.append(coerce_type(key))
+                data.append(key)
             else:
                 data.append(x.strip())
     return data
@@ -469,7 +472,7 @@ def text_to_listofdicts(text, separators=LISTOFDICTS_SEPARATORS, split1x=LISTOFD
             i = item.strip()
             if i:
                 key,val = i.split(separators[-3], splitnum3)
-                d[key] = coerce_type(val)
+                d[key] = val
         # don't append empty dicts
         if d:
             dicts.append(d)

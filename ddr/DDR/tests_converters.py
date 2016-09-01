@@ -49,7 +49,7 @@ TEXT_DICT_TEXT_BRACKETID = 'ABC [123]'
 TEXT_DICT_KEYS = ['term', 'id']
 TEXT_DICT_SEPARATORS = ':|'
 TEXT_DICT_SEPARATOR = ':'
-TEXT_DICT_DATA = {'term': u'ABC', 'id': 123}
+TEXT_DICT_DATA = {'term': u'ABC', 'id': '123'}
 
 def test_textlabels_to_dict():
     assert converters.textlabels_to_dict('', []) == {}
@@ -166,9 +166,9 @@ LISTOFDICTS_DATA1 = [
 LISTOFDICTS_TERMS2 = ['label', 'start', 'end']
 LISTOFDICTS_TEXT2 = 'label:Pre WWII|end:1941;\nlabel:WWII|start:1941|end:1944;\nlabel:Post WWII|start:1944'
 LISTOFDICTS_DATA2 = [
-    {u'end': 1941, u'label': u'Pre WWII'},
-    {u'start': 1941, u'end': 1944, u'label': u'WWII'},
-    {u'start': 1944, u'label': u'Post WWII'}
+    {u'end': '1941', u'label': u'Pre WWII'},
+    {u'start': '1941', u'end': '1944', u'label': u'WWII'},
+    {u'start': '1944', u'label': u'Post WWII'}
 ]
 
 def test_text_to_dicts():
