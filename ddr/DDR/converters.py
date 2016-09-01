@@ -60,7 +60,7 @@ def datetime_to_text(data, fmt=DATETIME_FORMAT):
     @returns: str
     """
     if data:
-        return datetime.strftime(data, datetime_format)
+        return datetime.strftime(data, fmt)
     return None
 
 
@@ -459,7 +459,7 @@ def listofdicts_to_text(data, terms=[], separators=LISTOFDICTS_SEPARATORS):
     for datum in data:
         if terms:
             items = [
-                separators[0].join([key, datum.get(key,'')])
+                separators[0].join([key, unicode(datum.get(key,''))])
                 for key in terms
                 if datum.get(key)
             ]
