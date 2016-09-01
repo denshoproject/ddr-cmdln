@@ -50,7 +50,6 @@ setup(
     ],
     packages = [
         'DDR',
-        'DDR.converters'
     ],
     include_package_data = True,
     package_dir = {
