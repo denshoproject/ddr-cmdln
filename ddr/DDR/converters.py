@@ -13,6 +13,8 @@ import re
 
 from jinja2 import Template
 
+from DDR import config
+
 
 def normalize_string(text):
     if not text:
@@ -35,9 +37,7 @@ def render(template, data):
 # data = datetime.datetime(1970, 1, 1, 0, 0)
 # 
 
-DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S'
-
-def text_to_datetime(text, fmt=DATETIME_FORMAT):
+def text_to_datetime(text, fmt=config.DATETIME_FORMAT):
     """Load datatime from text in specified format.
     
     TODO timezone!
@@ -52,7 +52,7 @@ def text_to_datetime(text, fmt=DATETIME_FORMAT):
         return datetime.strptime(text, fmt)
     return ''
 
-def datetime_to_text(data, fmt=DATETIME_FORMAT):
+def datetime_to_text(data, fmt=config.DATETIME_FORMAT):
     """Dump datetime to text suitable for a CSV field.
     
     TODO timezone!
