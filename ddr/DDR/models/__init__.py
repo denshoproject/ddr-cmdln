@@ -1124,6 +1124,9 @@ class Entity( object ):
     control_path_rel = None
     mets_path_rel = None
     files_path_rel = None
+    children_meta = []
+    files_dict = {}
+    file_groups = []
     _children_objects = 0
     _file_objects = 0
     _file_objects_loaded = 0
@@ -1396,7 +1399,17 @@ class Entity( object ):
         self.files = []
         for fielddict in json_data:
             for fieldname,data in fielddict.iteritems():
-                if (fieldname == 'file_groups') and data:
+                if (fieldname == 'children') and data:
+                    self.children_meta = data
+                elif (fieldname == 'file_groups') and data:
+                    self.files_dict = {
+                        d['role']: d['files']
+                        for d in data
+                    }
+                    self.file_groups = [
+                        {'role': role, 'files': self.files_dict.get(role, [])}
+                        for role in VALID_COMPONENTS['role']
+                    ]
                     self.files = filegroups_to_files(data)
                 elif (fieldname == 'files') and data:
                     self.files = data
