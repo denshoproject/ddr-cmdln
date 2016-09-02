@@ -212,6 +212,23 @@ class Definitions():
             if i['component']['type'] == int
         ]
 
+    @staticmethod
+    def filename_regexes(identifiers):
+        """List of regexes for matching metadata filenames
+        
+        META_FILENAME_REGEX = {
+            'collection': re.compile('collection.json'),
+            'entity': re.compile('entity.json'),
+            'segment': re.compile('entity.json'),
+            'file': re.compile('-([\d]+)-([\w]+)-([\w\d]+).json'),
+        }
+        """
+        return {
+            i['model']: re.compile(i.get('filename_regex'))
+            for i in identifiers
+            if i.get('filename_regex')
+        }
+
     # ----------------------------------------------------------------------
     # Regex patterns used to link raw IDs/URLs/paths to models
     #
@@ -382,11 +399,13 @@ VALID_COMPONENTS = Definitions.valid_components(IDENTIFIERS)
 NEXTABLE_MODELS = Definitions.nextable_models(IDENTIFIERS)
 # Bits of file paths that uniquely identify file types.
 # Suitable for use on command-line e.g. in git-annex-whereis.
+# TODO these should be in ddr-defs/repo_models/identifier.py
 FILETYPE_MATCH_ANNEX = {
     'access': '*-a.jpg',
     'master': '*-master-*',
     'mezzanine': '*-mezzanine-*',
 }
+META_FILENAME_REGEX = Definitions.filename_regexes(IDENTIFIERS)
 ID_PATTERNS = Definitions.id_patterns(IDENTIFIERS)
 PATH_PATTERNS = Definitions.path_patterns(IDENTIFIERS)
 # TODO check

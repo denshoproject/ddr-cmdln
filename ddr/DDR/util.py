@@ -2,14 +2,9 @@ import hashlib
 import os
 import re
 
+from DDR import config
+from DDR import identifier
 
-# TODO these should be in ddr-defs/repo_models/identifier.py
-META_FILENAME_REGEX = {
-    'collection': re.compile('collection.json'),
-    'entity': re.compile('entity.json'),
-    # FILE.json  *-{eid}-{role}-{sha1}.json
-    'file': re.compile('-([\d]+)-([\w]+)-([\w\d]+).json'),
-}
 
 def find_meta_files(basedir, recursive=False, model=None, files_first=False, force_read=False, testing=False):
     """Lists absolute paths to .json files in basedir; saves copy if requested.
@@ -84,7 +79,7 @@ def path_matches_model(path, model):
     """True if matches specified model or model is blank
     """
     if model:
-        if re.search(META_FILENAME_REGEX[model], path):
+        if re.search(identifier.META_FILENAME_REGEX[model], path):
             return True
         else:
             return False

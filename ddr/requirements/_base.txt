@@ -17,3 +17,4 @@ pytz==2014.4              # MIT       python-tz (2012c-1)              python-tz
 requests==2.9.0           # Apache    python-requests (0.12.1-1)       python-requests (2.3.0-1)      y
 unicodecsv==0.9.4         # BSD? MIT? python-unicodecsv (0.9.0-1)      python-unicodecsv (0.9.4-1)    ?
 graphviz                  # MIT                                                                       y
+Jinja2==2.8               # BSD                                                                       y

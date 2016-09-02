@@ -37,6 +37,8 @@ from datetime import datetime
 import json
 import logging
 logger = logging.getLogger(__name__)
+import mimetypes
+mimetypes.init()
 import os
 import re
 from StringIO import StringIO
@@ -361,6 +363,29 @@ def prep_csv(obj, module, headers=[]):
         values.append(value)
     return values
 
+def csvload_rowd(module, rowd):
+    """Apply module's csvload_* methods to rowd data
+    """
+    # In repo_models.object.FIELDS, individual fields can be marked
+    # so they are ignored (e.g. not included) when importing.
+    # TODO make field_directives ONCE at start of rowds loop
+    field_directives = {
+        f['name']: f['csv']['import']
+        for f in module.module.FIELDS
+    }
+    data = {}
+    for field,value in rowd.iteritems():
+        ignored = 'ignore' in field_directives[field]
+        if not ignored:
+            value = module.function(
+                'csvload_%s' % field,
+                rowd[field]
+            )
+            # TODO optimize, normalize only once
+            value = util.normalize_text(value)
+            data[field] = value
+    return data
+
 def load_csv(obj, module, rowd):
     """Populates object from a row in a CSV file.
     
@@ -375,16 +400,14 @@ def load_csv(obj, module, rowd):
         f['name']: f['csv']['import']
         for f in module.module.FIELDS
     }
+    # apply module's csvload_* methods to rowd data
+    rowd = csvload_rowd(module, rowd)
     obj.modified = []
     for field,value in rowd.iteritems():
         ignored = 'ignore' in field_directives[field]
         if not ignored:
             oldvalue = getattr(obj, field, '')
-            value = module.function(
-                'csvload_%s' % field,
-                rowd[field]
-            )
-            value = util.normalize_text(value)
+            value = rowd[field]
             if value != oldvalue:
                 obj.modified.append(field)
             setattr(obj, field, value)
@@ -1834,6 +1857,7 @@ class File( object ):
     ext = None
     basename = None
     basename_orig = ''
+    mimetype = None
     size = None
     role = None
     sha256 = None
@@ -2128,6 +2152,8 @@ class File( object ):
         @returns: JSON-formatted text
         """
         module = self.identifier.fields_module()
+        if self.basename and not self.mimetype:
+            self.mimetype = self.get_mimetype(force=True)
         data = prep_json(self, module)
         if obj_metadata:
             data.insert(0, obj_metadata)
@@ -2206,6 +2232,8 @@ class File( object ):
         if 'id' not in headers:
             headers.insert(0, 'id')
         module = modules.Module(self.identifier.fields_module())
+        if self.basename and not self.mimetype:
+            self.mimetype = self.get_mimetype(force=True)
         return prep_csv(self, module, headers=headers)
     
     @staticmethod
@@ -2361,3 +2389,20 @@ class File( object ):
         else:
             score += '-'
         return FILE_EXISTS[score]
+    
+    def get_mimetype(self, force=False):
+        """Gets mimetype based on File.basename_orig.
+        
+        @param force: bool
+        @return: str mimetype
+        """
+        if self.mimetype and not force:
+            return self.mimetype
+        # join type and encoding (if available) into str
+        if self.basename_orig:
+            self.mimetype = '; '.join([
+                part
+                for part in mimetypes.guess_type(self.basename_orig)
+                if part
+            ])
+        return self.mimetype
