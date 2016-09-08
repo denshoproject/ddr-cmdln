@@ -139,7 +139,11 @@ PATH_PATTERNS.reverse()
 
 # TODO check
 # Simple path regexes suitable for use inside for-loops
-PATH_PATTERNS_LOOP = []
+PATH_PATTERNS_LOOP = [
+    (r'(?P<repo>[\w]+)-(?P<org>[\w]+)-(?P<cid>[\d]+)-(?P<eid>[\d]+)-(?P<role>[\w]+)-(?P<sha1>[\w\d]+).json$', '' 'file-json'),
+    (r'entity.json$', '' 'entity-json'),
+    (r'collection.json$', '' 'collection-json'),
+]
 
 # TODO check
 # (regex, memo, model) NOTE: 'memo' is not used for anything yet
