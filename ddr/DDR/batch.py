@@ -642,13 +642,15 @@ class Importer():
             # gather facts
             has_id = rowd.get('id')
             obj = files.get(rowd['id'], None)
-            obj_not_stub = not isinstance(obj, models.Stub)
-            if obj and obj_not_stub:
+            obj_is_node = False
+            if obj and (obj.identifier.model in identifier.NODES):
+                obj_is_node = True
+            if obj and obj_is_node:
                 json_exists = obj.exists()
             else:
                 json_exists = False
             # decide
-            if has_id and obj and obj_not_stub and json_exists:
+            if has_id and obj and obj_is_node and json_exists:
                 existing.append(rowd)
             else:
                 new.append(rowd)
