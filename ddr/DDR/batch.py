@@ -836,6 +836,15 @@ class Importer():
             elif not dryrun:
                 # ingest
                 # TODO make sure this updates entity.files
+                
+                # TODO refactor this?
+                # Add role if file.ID doesn't have it
+                # This will happen with e.g. transcript files when file_id is
+                # actually the Entity/Segment ID and contains no role,
+                # and when sha1 field is blank.
+                if rowd.get('role') and not file_.identifier.parts.get('role'):
+                    file_.identifier.parts['role'] = rowd['role']
+                
                 file_,repo2,log2 = ingest.add_local_file(
                     entity,
                     rowd['basename_orig'],
