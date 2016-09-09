@@ -220,7 +220,7 @@ def is_publishable( json_path ):
         completed = False
         for field in data:
             if ((u'public' in field.keys()) or ('public' in field.keys())):
-                if int(field['public']):
+                if field.get('public') and int(field['public']):
                     public = True
             if ((u'status' in field.keys()) or ('status' in field.keys())):
                 if field['status'] == 'completed':

@@ -96,7 +96,7 @@ def update_file(json_path, field_name, new_value):
         if fname == field_name:
             field[fname] = new_value
     
-    fileio.write_text(formmat_json(data), json_path)
+    fileio.write_text(format_json(data), json_path)
 
 
 
