@@ -806,17 +806,25 @@ class Importer():
         for n,rowd in enumerate(rowds):
             logging.info('+ %s/%s - %s (%s)' % (n+1, len_rowds, rowd['id'], rowd['basename_orig']))
             start_round = datetime.now()
-            
+
             fid = rowd['id']
-            eid = fid_parents[fid].id
+            parent_id = fid_parents[fid].id
             file_ = files[fid]
-            entity = entities[eid]
-            logging.debug('| %s' % (entity))
+            parent = entities[parent_id]
+            # If the actual file ID is not specified in the rowd
+            # (ex: SHA1 not yet known),
+            # the ID in the CSV will be the ID of the *parent* object.
+            # In this case, file_ and parent vars will likely be wrong.
+            # TODO refactor up the chain somewhere.
+            if file_.identifier.model not in identifier.NODES:
+                parent = file_
+            
+            logging.debug('| parent %s' % (parent))
             
             # external files (no binary except maybe access file)
             if Importer._rowd_is_external(rowd) and not dryrun:
                 file_,repo2,log2 = ingest.add_external_file(
-                    entity,
+                    parent,
                     rowd,
                     git_name, git_mail, agent,
                     log_path=log_path,
@@ -824,7 +832,7 @@ class Importer():
                 )
                 if rowd.get('access_path'):
                     file_,repo3,log3,status = ingest.add_access(
-                        entity, file_,
+                        parent, file_,
                         rowd['access_path'],
                         git_name, git_mail, agent,
                         log_path=log_path,
@@ -844,9 +852,9 @@ class Importer():
                 # and when sha1 field is blank.
                 if rowd.get('role') and not file_.identifier.parts.get('role'):
                     file_.identifier.parts['role'] = rowd['role']
-                
+                    
                 file_,repo2,log2 = ingest.add_local_file(
-                    entity,
+                    parent,
                     rowd['basename_orig'],
                     file_.identifier.parts['role'],
                     rowd,
@@ -858,7 +866,9 @@ class Importer():
             
             elapsed_round = datetime.now() - start_round
             elapsed_rounds.append(elapsed_round)
-            logging.debug('| %s (%s)' % (file_, elapsed_round))
+            logging.debug('|   file %s' % (file_))
+            logging.debug('| %s' % (elapsed_round))
+                  
         
         elapsed = datetime.now() - start
         logging.debug('%s added in %s' % (len(elapsed_rounds), elapsed))
