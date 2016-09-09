@@ -408,9 +408,6 @@ FILETYPE_MATCH_ANNEX = {
 META_FILENAME_REGEX = Definitions.filename_regexes(IDENTIFIERS)
 ID_PATTERNS = Definitions.id_patterns(IDENTIFIERS)
 PATH_PATTERNS = Definitions.path_patterns(IDENTIFIERS)
-# TODO check
-# Simple path regexes suitable for use inside for-loops
-PATH_PATTERNS_LOOP = []
 URL_PATTERNS = Definitions.url_patterns(IDENTIFIERS)
 ID_TEMPLATES = Definitions.id_templates(IDENTIFIERS)
 PATH_TEMPLATES = Definitions.path_templates(IDENTIFIERS)

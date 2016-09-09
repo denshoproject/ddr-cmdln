@@ -193,19 +193,14 @@ def list_json_files(dirname):
     paths.sort()
     return paths
 
-MODEL_JSON_REGEX = {}
-for pattern in identifier.PATH_PATTERNS_LOOP:
-    key = pattern[-1]
-    MODEL_JSON_REGEX[key] = re.compile(pattern[0])
-
 def is_collection_json(path):
-    return re.search(MODEL_JSON_REGEX['collection-json'], path)
+    return re.search(identifier.META_FILENAME_REGEX['collection'], path)
 
 def is_entity_json(path):
-    return re.search(MODEL_JSON_REGEX['entity-json'], path)
+    return re.search(identifier.META_FILENAME_REGEX['entity'], path)
 
 def is_file_json(path):
-    return re.search(MODEL_JSON_REGEX['file-json'], path)
+    return re.search(identifier.META_FILENAME_REGEX['file'], path)
 
 def is_publishable( json_path ):
     """Indicates whether the Collection or Entity is public and complete.
