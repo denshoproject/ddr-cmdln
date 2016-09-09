@@ -180,41 +180,32 @@ def main():
         sys.exit(0)
     
     if   args.command == 'entity':
-        try:
-            imported = batch.Importer.import_entities(
-                csv_path,
-                ci,
-                vocabs_path,
-                args.user, args.mail,
-                AGENT,
-                args.dryrun
-            )
-        except Exception as err:
-            log_error(err, args.debug)
+        imported = batch.Importer.import_entities(
+            csv_path,
+            ci,
+            vocabs_path,
+            args.user, args.mail,
+            AGENT,
+            args.dryrun
+        )
     
     elif args.command == 'file':
-        try:
-            imported = batch.Importer.import_files(
-                csv_path,
-                ci,
-                vocabs_path,
-                args.user, args.mail,
-                AGENT,
-                args.log,
-                args.dryrun
-            )
-        except Exception as err:
-            log_error(err, args.debug)
+        imported = batch.Importer.import_files(
+            csv_path,
+            ci,
+            vocabs_path,
+            args.user, args.mail,
+            AGENT,
+            args.log,
+            args.dryrun
+        )
     
     elif args.command == 'register':
         idservice_client = idservice_api_login(args)
-        try:
-            batch.Importer.register_entity_ids(
-                csv_path, ci, idservice_client, args.dryrun
-            )
-            logging.info('IF YOU SEE THIS IT WORKED')
-        except Exception as err:
-            log_error(err, args.debug)
+        batch.Importer.register_entity_ids(
+            csv_path, ci, idservice_client, args.dryrun
+        )
+        logging.info('IF YOU SEE THIS IT WORKED')
     
     finish = datetime.now()
     elapsed = finish - start
