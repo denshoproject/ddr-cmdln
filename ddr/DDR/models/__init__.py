@@ -247,8 +247,11 @@ def load_json(document, module, json_text):
         for f in json_data:
             if hasattr(f, 'keys') and (f.keys()[0] == mf['name']):
                 fieldname = f.keys()[0]
-                # TODO run jsonload_* functions on field data if present
-                field_data = f.values()[0]
+                # run jsonload_* functions on field data if present
+                field_data = modules.Module(module).function(
+                    'jsonload_%s' % fieldname,
+                    f.values()[0]
+                )
                 setattr(document, fieldname, field_data)
     # Fill in missing fields with default values from module.FIELDS.
     # Note: should not replace fields that are just empty.
@@ -292,9 +295,11 @@ def dump_json(obj, module, template=False,
             # write default values
             field_data = mf['form']['initial']
         elif hasattr(obj, mf['name']):
-            # TODO run jsondump_* functions on field data if present
-            # write object's values
-            field_data = getattr(obj, mf['name'])
+            # run jsondump_* functions on field data if present
+            field_data = modules.Module(module).function(
+                'jsondump_%s' % fieldname,
+                getattr(obj, fieldname)
+            )
             # special cases
             if field_data:
                 # JSON requires dates to be represented as strings
