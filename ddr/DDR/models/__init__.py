@@ -184,13 +184,13 @@ def form_prep(document, module):
     data = {}
     for f in module.FIELDS:
         if hasattr(document, f['name']) and f.get('form',None):
-            key = f['name']
+            fieldname = f['name']
             # run formprep_* functions on field data if present
-            value = modules.Module(module).function(
-                'formprep_%s' % key,
+            field_data = modules.Module(module).function(
+                'formprep_%s' % fieldname,
                 getattr(document, f['name'])
             )
-            data[key] = value
+            data[fieldname] = field_data
     return data
     
 def form_post(document, module, cleaned_data):
@@ -219,10 +219,11 @@ def form_post(document, module, cleaned_data):
         document.record_lastmod = datetime.now()
 
 def load_json(document, module, json_text):
-    """Populates object from JSON-formatted text.
+    """Populates object from JSON-formatted text; applies jsonload_{field} functions.
     
     Goes through module.FIELDS turning data in the JSON file into
     object attributes.
+    TODO content fields really should into OBJECT.data OrderedDict or subobject.
     
     @param document: Collection/Entity/File object.
     @param module: collection/entity/file module from 'ddr' repo.
@@ -245,7 +246,13 @@ def load_json(document, module, json_text):
     for mf in module.FIELDS:
         for f in json_data:
             if hasattr(f, 'keys') and (f.keys()[0] == mf['name']):
-                setattr(document, f.keys()[0], f.values()[0])
+                fieldname = f.keys()[0]
+                # run jsonload_* functions on field data if present
+                field_data = modules.Module(module).function(
+                    'jsonload_%s' % fieldname,
+                    f.values()[0]
+                )
+                setattr(document, fieldname, field_data)
     # Fill in missing fields with default values from module.FIELDS.
     # Note: should not replace fields that are just empty.
     for mf in module.FIELDS:
@@ -253,7 +260,7 @@ def load_json(document, module, json_text):
             setattr(document, mf['name'], mf.get('default',None))
     return json_data
 
-def prep_json(obj, module, template=False,
+def dump_json(obj, module, template=False,
               template_passthru=['id', 'record_created', 'record_lastmod'],
               exceptions=[]):
     """Arranges object data in list-of-dicts format before serialization.
@@ -282,22 +289,19 @@ def prep_json(obj, module, template=False,
     data = []
     for mf in module.FIELDS:
         item = {}
-        key = mf['name']
-        val = ''
-        if template and (key not in template_passthru) and hasattr(mf,'form'):
+        fieldname = mf['name']
+        field_data = ''
+        if template and (fieldname not in template_passthru) and hasattr(mf,'form'):
             # write default values
-            val = mf['form']['initial']
+            field_data = mf['form']['initial']
         elif hasattr(obj, mf['name']):
-            # write object's values
-            val = getattr(obj, mf['name'])
-            # special cases
-            if val:
-                # JSON requires dates to be represented as strings
-                if hasattr(val, 'fromtimestamp') and hasattr(val, 'strftime'):
-                    val = val.strftime(config.DATETIME_FORMAT)
-            # end special cases
-        item[key] = val
-        if key not in exceptions:
+            # run jsondump_* functions on field data if present
+            field_data = modules.Module(module).function(
+                'jsondump_%s' % fieldname,
+                getattr(obj, fieldname)
+            )
+        item[fieldname] = field_data
+        if fieldname not in exceptions:
             data.append(item)
     return data
 
@@ -346,20 +350,20 @@ def prep_csv(obj, module, headers=[]):
         # TODO field_directives go here!
     # seealso DDR.modules.Module.function
     values = []
-    for field_name in field_names:
+    for fieldname in field_names:
         value = ''
         # insert file_id as first column
-        if (module.module.MODEL == 'file') and (field_name == 'file_id'):
-            val = obj.id
-        elif hasattr(obj, field_name):
+        if (module.module.MODEL == 'file') and (fieldname == 'file_id'):
+            field_data = obj.id
+        elif hasattr(obj, fieldname):
             # run csvdump_* functions on field data if present
-            val = module.function(
-                'csvdump_%s' % field_name,
-                getattr(obj, field_name)
+            field_data = module.function(
+                'csvdump_%s' % fieldname,
+                getattr(obj, fieldname)
             )
-            if val == None:
-                val = ''
-        value = util.normalize_text(val)
+            if field_data == None:
+                field_data = ''
+        value = util.normalize_text(field_data)
         values.append(value)
     return values
 
@@ -374,16 +378,16 @@ def csvload_rowd(module, rowd):
         for f in module.module.FIELDS
     }
     data = {}
-    for field,value in rowd.iteritems():
-        ignored = 'ignore' in field_directives[field]
+    for fieldname,value in rowd.iteritems():
+        ignored = 'ignore' in field_directives[fieldname]
         if not ignored:
-            value = module.function(
-                'csvload_%s' % field,
-                rowd[field]
+            # run csvload_* functions on field data if present
+            field_data = module.function(
+                'csvload_%s' % fieldname,
+                rowd[fieldname]
             )
             # TODO optimize, normalize only once
-            value = util.normalize_text(value)
-            data[field] = value
+            data[fieldname] = util.normalize_text(field_data)
     return data
 
 def load_csv(obj, module, rowd):
@@ -791,15 +795,6 @@ class Collection( object ):
         """
         module = self.identifier.fields_module()
         load_json(self, module, json_text)
-        # special cases
-        if hasattr(self, 'record_created') and self.record_created:
-            self.record_created = datetime.strptime(self.record_created, config.DATETIME_FORMAT)
-        else:
-            self.record_created = datetime.now()
-        if hasattr(self, 'record_lastmod') and self.record_lastmod:
-            self.record_lastmod = datetime.strptime(self.record_lastmod, config.DATETIME_FORMAT)
-        else:
-            self.record_lastmod = datetime.now()
     
     def dump_json(self, template=False, doc_metadata=False, obj_metadata={}):
         """Dump Collection data to JSON-formatted text.
@@ -810,7 +805,7 @@ class Collection( object ):
         @returns: JSON-formatted text
         """
         module = self.identifier.fields_module()
-        data = prep_json(self, module, template=template)
+        data = dump_json(self, module, template=template)
         if obj_metadata:
             data.insert(0, obj_metadata)
         elif doc_metadata:
@@ -873,15 +868,15 @@ class Collection( object ):
         tree = etree.fromstring(self.ead().xml)
         module = self.identifier.fields_module()
         for f in module.FIELDS:
-            key = f['name']
-            value = ''
+            fieldname = f['name']
+            field_data = ''
             if hasattr(self, f['name']):
-                value = getattr(self, key)
+                field_data = getattr(self, fieldname)
                 # run ead_* functions on field data if present
                 tree = modules.Module(module).xml_function(
-                    'ead_%s' % key,
+                    'ead_%s' % fieldname,
                     tree, NAMESPACES, f,
-                    value
+                    field_data
                 )
         xml_pretty = etree.tostring(tree, pretty_print=True)
         return xml_pretty
@@ -1413,19 +1408,6 @@ class Entity( object ):
                     self.files = filegroups_to_files(data)
                 elif (fieldname == 'files') and data:
                     self.files = data
-        # timestamps
-        def parsedt(txt):
-            d = datetime.now()
-            try:
-                d = datetime.strptime(txt, config.DATETIME_FORMAT)
-            except:
-                try:
-                    d = datetime.strptime(txt, config.TIME_FORMAT)
-                except:
-                    pass
-            return d
-        if hasattr(self, 'record_created') and self.record_created: self.record_created = parsedt(self.record_created)
-        if hasattr(self, 'record_lastmod') and self.record_lastmod: self.record_lastmod = parsedt(self.record_lastmod)
         self.rm_file_duplicates()
 
     def dump_json(self, template=False, doc_metadata=False, obj_metadata={}):
@@ -1437,7 +1419,7 @@ class Entity( object ):
         @returns: JSON-formatted text
         """
         module = self.identifier.fields_module()
-        data = prep_json(self, module,
+        data = dump_json(self, module,
                          exceptions=['files', 'filemeta'],
                          template=template,)
         if obj_metadata:
@@ -1550,15 +1532,15 @@ class Entity( object ):
         tree = etree.parse(StringIO(self.mets().xml))
         module = self.identifier.fields_module()
         for f in module.FIELDS:
-            key = f['name']
-            value = ''
+            fieldname = f['name']
+            field_data = ''
             if hasattr(self, f['name']):
-                value = getattr(self, f['name'])
+                field_data = getattr(self, f['name'])
                 # run mets_* functions on field data if present
                 tree = modules.Module(module).xml_function(
-                    'mets_%s' % key,
+                    'mets_%s' % fieldname,
                     tree, NAMESPACES, f,
-                    value
+                    field_data
                 )
         xml_pretty = etree.tostring(tree, pretty_print=True)
         return xml_pretty
@@ -2167,7 +2149,7 @@ class File( object ):
         module = self.identifier.fields_module()
         if self.basename and not self.mimetype:
             self.mimetype = self.get_mimetype(force=True)
-        data = prep_json(self, module)
+        data = dump_json(self, module)
         if obj_metadata:
             data.insert(0, obj_metadata)
         elif doc_metadata:
