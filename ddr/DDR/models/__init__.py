@@ -257,7 +257,7 @@ def load_json(document, module, json_text):
             setattr(document, mf['name'], mf.get('default',None))
     return json_data
 
-def prep_json(obj, module, template=False,
+def dump_json(obj, module, template=False,
               template_passthru=['id', 'record_created', 'record_lastmod'],
               exceptions=[]):
     """Arranges object data in list-of-dicts format before serialization.
@@ -816,7 +816,7 @@ class Collection( object ):
         @returns: JSON-formatted text
         """
         module = self.identifier.fields_module()
-        data = prep_json(self, module, template=template)
+        data = dump_json(self, module, template=template)
         if obj_metadata:
             data.insert(0, obj_metadata)
         elif doc_metadata:
@@ -1443,7 +1443,7 @@ class Entity( object ):
         @returns: JSON-formatted text
         """
         module = self.identifier.fields_module()
-        data = prep_json(self, module,
+        data = dump_json(self, module,
                          exceptions=['files', 'filemeta'],
                          template=template,)
         if obj_metadata:
@@ -2173,7 +2173,7 @@ class File( object ):
         module = self.identifier.fields_module()
         if self.basename and not self.mimetype:
             self.mimetype = self.get_mimetype(force=True)
-        data = prep_json(self, module)
+        data = dump_json(self, module)
         if obj_metadata:
             data.insert(0, obj_metadata)
         elif doc_metadata:
