@@ -300,13 +300,6 @@ def dump_json(obj, module, template=False,
                 'jsondump_%s' % fieldname,
                 getattr(obj, fieldname)
             )
-            # special cases
-            if field_data:
-                # JSON requires dates to be represented as strings
-                if hasattr(field_data, 'fromtimestamp') and hasattr(field_data, 'strftime'):
-                    logger.debug('datetime: %s %s' % (module, fieldname))
-                    field_data = field_data.strftime(config.DATETIME_FORMAT)
-            # end special cases
         item[fieldname] = field_data
         if fieldname not in exceptions:
             data.append(item)
@@ -802,15 +795,6 @@ class Collection( object ):
         """
         module = self.identifier.fields_module()
         load_json(self, module, json_text)
-        # special cases
-        if hasattr(self, 'record_created') and self.record_created:
-            self.record_created = datetime.strptime(self.record_created, config.DATETIME_FORMAT)
-        else:
-            self.record_created = datetime.now()
-        if hasattr(self, 'record_lastmod') and self.record_lastmod:
-            self.record_lastmod = datetime.strptime(self.record_lastmod, config.DATETIME_FORMAT)
-        else:
-            self.record_lastmod = datetime.now()
     
     def dump_json(self, template=False, doc_metadata=False, obj_metadata={}):
         """Dump Collection data to JSON-formatted text.
@@ -1424,19 +1408,6 @@ class Entity( object ):
                     self.files = filegroups_to_files(data)
                 elif (fieldname == 'files') and data:
                     self.files = data
-        # timestamps
-        def parsedt(txt):
-            d = datetime.now()
-            try:
-                d = datetime.strptime(txt, config.DATETIME_FORMAT)
-            except:
-                try:
-                    d = datetime.strptime(txt, config.TIME_FORMAT)
-                except:
-                    pass
-            return d
-        if hasattr(self, 'record_created') and self.record_created: self.record_created = parsedt(self.record_created)
-        if hasattr(self, 'record_lastmod') and self.record_lastmod: self.record_lastmod = parsedt(self.record_lastmod)
         self.rm_file_duplicates()
 
     def dump_json(self, template=False, doc_metadata=False, obj_metadata={}):
