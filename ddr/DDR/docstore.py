@@ -993,11 +993,10 @@ def _file_parent_ids(identifier):
     @param identifier: Identifier
     @returns: parent_ids
     """
-    if identifier.model == 'file':
-        return [identifier.collection_id(), identifier.parent_id()]
-    elif identifier.model == 'entity':
-        return [identifier.collection_id()]
-    return []
+    return [
+        identifier.parent_id(),
+        identifier.collection_id(),
+    ]
 
 def _publishable_or_not( paths, parents ):
     """Determines which paths represent publishable paths and which do not.
@@ -1094,9 +1093,10 @@ def index( hosts, index, path, recursive=False, public=True ):
             document_pub_fields = publicfields[identifier.model]
         
         additional_fields = {'parent_id': parent_id}
-        if identifier.model == 'collection': additional_fields['organization_id'] = parent_id
-        if identifier.model == 'entity': additional_fields['collection_id'] = parent_id
-        if identifier.model == 'file': additional_fields['entity_id'] = parent_id
+        ## TODO no hard-coded models!
+        #if identifier.model == 'collection': additional_fields['organization_id'] = parent_id
+        #if identifier.model == 'entity': additional_fields['collection_id'] = parent_id
+        #if identifier.model == 'file': additional_fields['entity_id'] = parent_id
         
         # HERE WE GO!
         document = load_document_json(path, identifier.model, identifier.id)
