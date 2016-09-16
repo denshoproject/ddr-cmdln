@@ -1084,7 +1084,8 @@ def index( hosts, index, path, recursive=False, public=True ):
     successful_paths,bad_paths = _publishable_or_not(paths, parents)
     
     successful = 0
-    for path in successful_paths:
+    num = len(successful_paths)
+    for n,path in enumerate(successful_paths):
         identifier = Identifier(path=path)
         parent_id = identifier.parent_id()
         
@@ -1106,6 +1107,7 @@ def index( hosts, index, path, recursive=False, public=True ):
             existing = None
         result = post(hosts, index, document, document_pub_fields, additional_fields)
         # success: created, or version number incremented
+        status = 'ERROR - unspecified'
         if result.get('_id', None):
             if existing:
                 existing_version = existing.get('version', None)
@@ -1118,8 +1120,10 @@ def index( hosts, index, path, recursive=False, public=True ):
                 result_version = result.get('_version', None)
             if result['created'] or (existing_version and (result_version > existing_version)):
                 successful += 1
+            status = ''
         else:
             bad_paths.append((path, result['status'], result['response']))
-            #print(status_code)
+            status = '   %s %s' % (result['status'], result['response'])
+        print('%s | %s/%s %s%s' % (datetime.now(), n, num, identifier.id, status))
     logger.debug('INDEXING COMPLETED')
     return {'total':len(paths), 'successful':successful, 'bad':bad_paths}
