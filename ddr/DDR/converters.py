@@ -256,9 +256,11 @@ def text_to_dict(text, keys):
     elif _detect_text_nolabels(text):
         data = textnolabels_to_dict(text, keys, separator=':')
     else:
-        m = is_bracketid = _detect_text_bracketid(text)
+        m = _detect_text_bracketid(text)
         if m:
             data = textbracketid_to_dict(text)
+        else:
+            assert False
     # strip strings, force int values to int
     d = {}
     for key,val in data.iteritems():
