@@ -306,6 +306,10 @@ def main():
     
     if args.debug:
         print(args)
+
+    if hasattr(args, 'path') and args.path and not os.path.exists(args.path):
+        print('ERROR: Path does not exist: %s' % args.path)
+        sys.exit(1)
     
     hosts = make_hosts( args.host )
     
