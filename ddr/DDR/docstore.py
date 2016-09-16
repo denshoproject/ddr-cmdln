@@ -554,119 +554,6 @@ def _clean_controlled_vocab( data ):
         cleaned.append(y)
     return cleaned
 
-def _clean_creators( data ):
-    """Normalizes contents of 'creators' field.
-    
-    There are lots of weird variations on this field.
-    We want all of them to end up as simple lists of strings.
-    
-    >>> _clean_creators([u'Ninomiya, L.A.'])
-    [u'Ninomiya, L.A.']
-    >>> _clean_creators([u'Mitsuoka, Norio: photographer'])
-    [u'Mitsuoka, Norio: photographer']
-    >>> _clean_creators([{u'namepart': u'Boyle, Rob:editor', u'role': u'author'}, {u'namepart':
-    u'Cross, Brian:editor', u'role': u'author'}])
-    [u'Boyle, Rob:editor', u'Cross, Brian:editor']
-    >>> _clean_creators([{u'namepart': u'"YMCA:publisher"', u'role': u'author'}])
-    [u'"YMCA:publisher"']
-    >>> _clean_creators([{u'namepart': u'Heart Mountain YMCA', u'role': u'author'}])
-    [u'Heart Mountain YMCA']
-    >>> _clean_creators([{u'namepart': u'', u'role': u'author'}])
-    []
-    
-    @param data: contents of data field
-    @returns: list of normalized names
-    """
-    # turn strings into lists
-    if isinstance(data, basestring):
-        if data == '[]':
-            data = []
-        elif data == '':
-            data = []
-        elif ';' in data:
-            # ex: "Preliminary Hearing Board"; "YMCA";
-            data = [x.strip() for x in data.strip().split(';')]
-        elif '\r\n' in data:
-            data = [x.strip() for x in data.strip().split('\r\n')]
-        elif '\n' in data:
-            data = [x.strip() for x in data.strip().split('\n')]
-        else:
-            # ex: Greenwood, Jonny:composer
-            # ex: Snead, John
-            data = [data]
-    # Get just the name. Don't add a role if none selected.
-    names = []
-    for element in data:
-        name = None
-        # make everything into a string
-        if isinstance(element, basestring):
-            name = element
-        elif isinstance(element, dict):
-            # only keep the 'namepart' of a dict
-            if element.get('namepart', None) and element['namepart']:
-                name = element['namepart']
-        if name:
-            names.append(name)
-    return names
-
-def _clean_facility( data ):
-    """Extract ID from facility text; force ID numbers to strings.
-    
-    >>> f0 = 'Tule Lake [10]'
-    >>> f1 = '10'
-    >>> f2 = 10
-    >>> _clean_facility(f0)
-    ['10']
-    >>> _clean_facility(f1)
-    ['10']
-    >>> _clean_facility(f2)
-    ['10']
-    
-    @param data: contents of data field
-    @returns: list of field ID strings
-    """
-    return _clean_controlled_vocab(data)
-
-def _clean_parent( data ):
-    """Normalizes contents of 'creators' field.
-    
-    In the mappings this is an object but the UI saves it as a string.
-    
-    >>> p0 = 'ddr-testing-123'
-    >>> p1 = {'href':'', 'uuid':'', 'label':'ddr-testing-123'}
-    >>> _clean_parent(p0)
-    {'href': '', 'uuid': '', 'label': 'ddr-testing-123'}
-    >>> _clean_parent(p1)
-    {'href': '', 'uuid': '', 'label': 'ddr-testing-123'}
-    
-    @param data: contents of data field
-    @returns: dict
-    """
-    if isinstance(data, basestring):
-        data = {'href':'', 'uuid':'', 'label':data}
-    return data
-
-def _clean_topics( data ):
-    """Extract topics IDs from textual topics.
-
-    >>> _clean_topics('Topics [123]')
-    ['123']
-    >>> _clean_topics(['Topics [123]'])
-    ['123']
-    >>> _clean_topics(['123'])
-    ['123']
-    >>> _clean_topics([123])
-    ['123']
-    >>> _clean_topics('123')
-    ['123']
-    >>> _clean_topics(123)
-    ['123']
-    
-    @param data: contents of data field
-    @returns: list of ID strings
-    """
-    return _clean_controlled_vocab(data)
-
 def _clean_dict( data ):
     """Remove null or empty fields; ElasticSearch chokes on them.
     
@@ -691,11 +578,6 @@ def _clean_payload( data ):
         data = data[1:]
         # remove empty fields
         for field in data:
-            for key in field.keys():
-                if key == 'creators': field[key] = _clean_creators(field[key])
-                if key == 'facility': field[key] = _clean_facility(field[key])
-                if key == 'parent':   field[key] = _clean_parent(field[key])
-                if key == 'topics':   field[key] = _clean_topics(field[key])
             # rm null or empty fields
             _clean_dict(field)
 
