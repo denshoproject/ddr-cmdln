@@ -275,14 +275,20 @@ def _make_mappings( mappings ):
     @param mappings: data structure from loading mappings.json
     @return: List of mappings dicts.
     """
-    ID_PROPERTIES = {'type':'string', 'index':'not_analyzed', 'store':True}
+    # for each model, insert each field's elasticsearch properties
+    # into model's properties mapping
     for mapping in mappings['documents']:
         model = mapping.keys()[0]
-        module = MODULES[model]
-        for field in module.FIELDS:
-            fname = field['name']
-            mapping[model]['properties'][fname] = field['elasticsearch']['properties']
-        # mappings for parent_id, etc
+        module = MODULES.get(model)
+        if not module:
+            continue
+        mapping[model]['properties'] = {
+            field['name']: field['elasticsearch']['properties']
+            for field in module.FIELDS
+        }
+    # add mappings for ID fields (parent_id, collection_id, etc)
+    ID_PROPERTIES = {'type':'string', 'index':'not_analyzed', 'store':True}
+    for mapping in mappings:
         if model == 'collection':
             mapping[model]['properties']['parent_id'] = ID_PROPERTIES
         elif model == 'entity':
@@ -292,9 +298,7 @@ def _make_mappings( mappings ):
             mapping[model]['properties']['parent_id'] = ID_PROPERTIES
             mapping[model]['properties']['collection_id'] = ID_PROPERTIES
             mapping[model]['properties']['entity_id'] = ID_PROPERTIES
-        return mappings
-    return []
-
+    return mappings
 
 def mappings_path(path):
     return os.path.join(path, 'docstore/mappings.json')
