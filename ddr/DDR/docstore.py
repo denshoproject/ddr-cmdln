@@ -1100,7 +1100,7 @@ def index( hosts, index, path, recursive=False, public=True ):
         #if identifier.model == 'file': additional_fields['entity_id'] = parent_id
         
         # HERE WE GO!
-        document = load_document_json(path, identifier.model, identifier.id)
+        document = json.loads(identifier.object().dump_json())
         try:
             existing = get(hosts, index, identifier.model, identifier.id, fields=[])
         except:

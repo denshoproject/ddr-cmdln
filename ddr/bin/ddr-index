@@ -84,6 +84,7 @@ import git
 from DDR.config import DEBUG, LOG_FILE, LOG_LEVEL
 from DDR import format_json
 from DDR import docstore
+from DDR import identifier
 from DDR import models
 
 LOGGING_FORMAT = '%(asctime)s %(levelname)s %(message)s'
@@ -319,8 +320,9 @@ def main():
     # call selected function
     exit = 0
     if args.cmd == 'post':
-        with open(args.path, 'r') as f:
-            document = json.loads(f.read())
+        document = json.loads(
+            identifier.Identifier(args.path).object().dump_json()
+        )
         msg = docstore.post(hosts, args.index, document)
         print(msg)
     elif args.cmd == 'get':
