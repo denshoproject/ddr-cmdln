@@ -218,6 +218,20 @@ def form_post(document, module, cleaned_data):
     if hasattr(document, 'record_lastmod'):
         document.record_lastmod = datetime.now()
 
+def load_json_lite(json_path, model, object_id):
+    """Simply reads JSON file and adds object_id if it's a file
+    
+    @param json_path: str
+    @param model: str
+    @param object_id: str
+    @returns: list of dicts
+    """
+    with open(json_path, 'r') as f:
+        document = json.loads(f.read())
+    if model == 'file':
+        document.append( {'id':object_id} )
+    return document
+
 def load_json(document, module, json_text):
     """Populates object from JSON-formatted text; applies jsonload_{field} functions.
     
@@ -828,7 +842,7 @@ class Collection( object ):
         # NOTE: this is same basic code as docstore.index
         return docstore.post(
             hosts, index,
-            docstore.load_document_json(self.json_path, self.identifier.model, self.id),
+            load_json_lite(self.json_path, self.identifier.model, self.id),
             docstore.public_fields().get(self.identifier.model, []),
             {
                 'parent_id': self.identifier.parent_id(),
@@ -1452,7 +1466,7 @@ class Entity( object ):
         # NOTE: this is same basic code as docstore.index
         return docstore.post(
             hosts, index,
-            docstore.load_document_json(self.json_path, self.identifier.model, self.id),
+            load_json_lite(self.json_path, self.identifier.model, self.id),
             docstore.public_fields().get(self.identifier.model, []),
             {
                 'parent_id': self.parent_id,
@@ -2175,7 +2189,7 @@ class File( object ):
         # NOTE: this is same basic code as docstore.index
         return docstore.post(
             hosts, index,
-            docstore.load_document_json(self.json_path, self.identifier.model, self.id),
+            load_json_lite(self.json_path, self.identifier.model, self.id),
             docstore.public_fields().get(self.identifier.model, []),
             {
                 'parent_id': self.parent_id,

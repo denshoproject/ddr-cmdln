@@ -1041,15 +1041,6 @@ def _has_access_file( identifier ):
         return True
     return False
 
-def load_document_json( json_path, model, object_id ):
-    """Load object from JSON and add some essential fields.
-    """
-    with open(json_path, 'r') as f:
-        document = json.loads(f.read())
-    if model == 'file':
-        document.append( {'id':object_id} )
-    return document
-
 def index( hosts, index, path, recursive=False, public=True ):
     """(Re)index with data from the specified directory.
     
