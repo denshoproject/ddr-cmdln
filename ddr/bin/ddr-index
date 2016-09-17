@@ -169,7 +169,7 @@ def main():
         description=subparser_description,
         help=subparser_help)
     
-#    post_descr,post_epilog = split_docstring(docstore.post)
+    post_descr,post_epilog = split_docstring(docstore.post)
     get_descr,get_epilog = split_docstring(docstore.get)
     init_descr,init_epilog = split_docstring(docstore.index)
     create_descr,create_epilog = split_docstring(docstore.index)
@@ -184,7 +184,7 @@ def main():
     org_descr,org_epilog = split_docstring(docstore.org)
     delete_descr,delete_epilog = split_docstring(docstore.delete)
     
-#    post_parser = subparsers.add_parser('post', description=post_descr, epilog=post_epilog, formatter_class=formatter,)
+    post_parser = subparsers.add_parser('post', description=post_descr, epilog=post_epilog, formatter_class=formatter,)
     get_parser = subparsers.add_parser('get', description=get_descr, epilog=get_epilog, formatter_class=formatter,)
     init_parser = subparsers.add_parser('init', description=init_descr, epilog=init_epilog, formatter_class=formatter,)
     create_parser = subparsers.add_parser('create', description=create_descr, epilog=create_epilog, formatter_class=formatter,)
@@ -199,7 +199,7 @@ def main():
     org_parser = subparsers.add_parser('org', description=org_descr, epilog=org_epilog, formatter_class=formatter,)
     delete_parser = subparsers.add_parser('delete', description=delete_descr, epilog=delete_epilog, formatter_class=formatter,)
     
-#    post_parser.set_defaults(func=docstore.post)
+    post_parser.set_defaults(func=docstore.post)
     get_parser.set_defaults(func=docstore.get)
     init_parser.set_defaults(func=docstore.init_index)
     create_parser.set_defaults(func=docstore.create_index)
@@ -214,11 +214,11 @@ def main():
     org_parser.set_defaults(func=docstore.org)
     delete_parser.set_defaults(func=docstore.delete)
     
-#    post_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
-#    post_parser.add_argument('-l', '--log', help='Log file..')
-#    post_parser.add_argument('-H', '--host', required=True, help='Hostname and port (HOST:PORT).')
-#    post_parser.add_argument('-i', '--index', required=True, help='index.')
-#    post_parser.add_argument('-p', '--path', required=True, help='Absolute path to JSON file.')
+    post_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    post_parser.add_argument('-l', '--log', help='Log file..')
+    post_parser.add_argument('-H', '--host', help='Hostname and port (HOST:PORT).', **hostsarg)
+    post_parser.add_argument('-i', '--index', help='index.', **indexarg)
+    post_parser.add_argument('path', help='Absolute path to JSON file.')
     
     get_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
     get_parser.add_argument('-l', '--log', help='Log file..')
