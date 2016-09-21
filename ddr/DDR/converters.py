@@ -21,6 +21,17 @@ def normalize_string(text):
         return u''
     return unicode(text).replace('\r\n', '\n').replace('\r', '\n').strip()
 
+def strip_list(data):
+    """Remove empty list items (ex: ['not empty, '']
+   
+    @param data: list
+    @returns: list
+    """
+    return [
+        item for item in data
+        if item and (not item == 0)
+    ]
+
 def render(template, data):
     """Render a Jinja2 template.
     
