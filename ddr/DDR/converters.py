@@ -9,6 +9,8 @@
 
 import copy
 from datetime import datetime
+import logging
+logger = logging.getLogger(__name__)
 import re
 
 from jinja2 import Template
@@ -255,7 +257,10 @@ def dict_to_textbracketid(data, keys):
     return TEXT_BRACKETID_TEMPLATE.format(**d)
 
 def text_to_dict(text, keys):
-    """
+    """Convert various text formats to dict
+    
+    If text cannot be converted it will be assigned to keys[0] in a dict
+    
     @param text: str Normalized text
     @param keys: list
     @returns: dict
@@ -271,7 +276,8 @@ def text_to_dict(text, keys):
         if m:
             data = textbracketid_to_dict(text)
         else:
-            assert False
+            data = {}
+            data[keys[0]] = text
     # strip strings, force int values to int
     d = {}
     for key,val in data.iteritems():
