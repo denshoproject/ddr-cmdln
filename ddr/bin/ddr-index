@@ -29,6 +29,9 @@ Example of setting up a new index:
     # Add/update organization info:
     $ ddr-index org -H localhost:9200 -i documents /var/www/media/ddr/REPO-ORG/organization.json
     
+    # Choose signatures for non-node objects
+    ddr-signatures -u USERNAME -m USERMAIL /var/www/media/ddr/ddr-testing-123
+    
     # Index a collection for ddr-local
     $ ddr-index index -H localhost:9200 -i documents --recursive /var/www/media/ddr/ddr-testing-123
     
