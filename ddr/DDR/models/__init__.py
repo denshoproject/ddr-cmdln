@@ -1057,6 +1057,7 @@ ENTITY_ENTITY_KEYS = [
     'title',
     'public',
     'sort',
+    'signature_id',
 ]
 
 ENTITY_FILE_KEYS = [
