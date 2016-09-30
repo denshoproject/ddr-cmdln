@@ -1408,7 +1408,7 @@ class Entity( object ):
         self.files = []
         for fielddict in json_data:
             for fieldname,data in fielddict.iteritems():
-                if (fieldname == 'children') and data:
+                if (fieldname in ['children', 'children_meta']) and data:
                     self.children_meta = data
                 elif (fieldname == 'file_groups') and data:
                     self.files_dict = {
@@ -1442,12 +1442,11 @@ class Entity( object ):
             data.insert(0, object_metadata(module, self.parent_path))
         
         data.append({
-            'children': [entity_to_childrenmeta(o) for o in self._children_objects]
+            'children': [entity_to_childrenmeta(o) for o in self.children_meta]
         })
         data.append({
             'file_groups': files_to_filegroups(self._file_objects, to_dict=1)
         })
-        
         return format_json(data)
 
     def write_json(self, obj_metadata={}):
@@ -1657,6 +1656,10 @@ class Entity( object ):
                 )
                 for json_path in self._children_paths()
                 if util.path_matches_model(json_path, self.identifier.model)
+            ]
+            self.children_meta = [
+                entity_to_childrenmeta(o)
+                for o in self._children_objects
             ]
         return self._children_objects
     
