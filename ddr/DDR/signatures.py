@@ -282,3 +282,65 @@ def _print_identifiers(identifiers, models=MODELS_DOWN):
         if model in identifiers.keys():
             for oid in identifiers[model]:
                 print oid
+
+
+def choose(collection_path):
+    """Given dict of id->signature_id, map to nodes
+    
+    Outside function is responsible for reading object JSON files
+    and extracting value of signature_id
+    
+    @param collection_path: str
+    @returns: list of parent Identifiers
+    """
+    nodes = []
+    parents = []
+    for path in util.find_meta_files(
+        collection_path, recursive=True, force_read=True
+    ):
+        i = SigIdentifier(path=path)
+        if i.model in identifier.NODES:
+            nodes.append(i)
+        else:
+            parents.append(i)
+    
+    nodes.sort()
+    parents.sort()
+
+    # for each node, and for each parent
+    # signature is the first parent ID that is in the node ID
+    # NOTE: Most collections have more nodes than parents,
+    # so go node:parent to keep number of iterations down
+    for pi in parents:
+        for ni in nodes:
+            if '%s-' % pi.id in str(ni.id):
+                pi.signature_id = ni.id
+                break
+    
+    return parents
+
+def find_updates(identifiers):
+    """Read collection .json files, assign signatures, write files
+    
+    @param identifiers: list of parent Identifiers, with .signature_id attrs
+    @returns: list of objects (Collections, Entities, etc)
+    """
+    start = datetime.now()
+    updates = []
+    for n,i in enumerate(identifiers):
+        o = i.object()
+        # normalize
+        if not o.signature_id: o.signature_id = ''
+        if not i.signature_id: i.signature_id = ''
+        # only write file if changed
+        orig_value = o.signature_id
+        status = ''
+        if o.signature_id != i.signature_id:
+            status = 'updated (%s -> %s)' % (o.signature_id, i.signature_id)
+            o.signature_id = i.signature_id
+            updates.append(o)
+        logging.debug('| %s/%s %s %s' % (n+1, len(identifiers), i.id, status))
+    finish = datetime.now()
+    elapsed = finish - start
+    logging.debug('ok (%s elapsed)' % elapsed)
+    return updates

@@ -37,11 +37,13 @@ def main():
     parser.add_argument('-m', '--mail', help='(required for commit) User email')
     args = parser.parse_args()
 
+    logging.debug('-----------------------------------------------')
     logging.debug('Loading collection')
     collection = identifier.Identifier(args.collection).object()
     logging.debug(collection)
-    
-    updates = signatures.find_updates(collection)
+
+    parents = signatures.choose(args.collection)
+    updates = signatures.find_updates(parents)
 
     if args.nowrite:
         logging.debug('Not writing changes')
