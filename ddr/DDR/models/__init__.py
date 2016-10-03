@@ -266,6 +266,8 @@ def load_json(document, module, json_text):
                     'jsonload_%s' % fieldname,
                     f.values()[0]
                 )
+                if isinstance(field_data, basestring):
+                    field_data = field_data.strip()
                 setattr(document, fieldname, field_data)
     # Fill in missing fields with default values from module.FIELDS.
     # Note: should not replace fields that are just empty.
