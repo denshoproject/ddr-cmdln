@@ -75,6 +75,7 @@ setup(
         'bin/ddr-info',
         'bin/ddr-massupdate',
         'bin/ddr-pubcopy',
+        'bin/ddr-report',
         'bin/ddr-update',
         'bin/ddrdensho255fix',
     ],

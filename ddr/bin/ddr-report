@@ -1,0 +1,188 @@
+#!/usr/bin/env python
+
+#
+# ddr-report
+#
+
+description = """"""
+
+epilog = """
+---"""
+
+
+import argparse
+from datetime import datetime
+import logging
+import os
+import shutil
+import sys
+
+from DDR import format_json
+from DDR import config
+from DDR import commands
+from DDR import dvcs
+from DDR import identifier
+from DDR import util
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    stream=sys.stdout,
+)
+
+TMP_DIR='/tmp/ddr-report'
+
+# Is there any way to export the type of info that Tom wants for
+# the meeting? "Breakdown by object types (photos, docs,
+# newspapers, etc.)." Like could we get numbers for different
+# types of object genres and object formats from Workbench?
+
+REPORT_FIELDS = {
+    
+    'entity': [
+        'status',
+        'public',
+        'permissions',
+        'rights',
+        'language',
+        'genre',
+        'format',
+    ],
+    
+    'file': [
+        'public',
+        'permissions',
+        'rights',
+        'size',
+        'file_format',
+        'mimetype',
+    ],
+
+}
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description=description,
+        epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument('collection_id', help='Collection ID.')
+    parser.add_argument('-u', '--user', help='(required for commit) User name')
+    parser.add_argument('-m', '--mail', help='(required for commit) User email')
+    parser.add_argument('-e', '--existing', help='Use existing clones if present.')
+    parser.add_argument('-j', '--json', help='Absolute path to JSON output file.')
+    args = parser.parse_args()
+
+    if not os.path.exists(TMP_DIR):
+        os.makedirs(TMP_DIR)
+    
+    if not (args.user and args.mail):
+        logging.error('You must specify a user and email address! >:-0')
+        sys.exit(1)
+
+    start = datetime.now()
+    
+    logging.info('------------------------------------------------------------------------')
+    ci = identifier.Identifier(args.collection_id, TMP_DIR)
+    collection_path = os.path.join(TMP_DIR, ci.id)
+    logging.info('ci %s' % ci)
+    logging.debug('ci.path_abs %s' % ci.path_abs())
+    logging.debug('collection_path %s' % collection_path)
+    
+    if os.path.exists(ci.path_abs()) and not args.existing:
+        logging.debug('Removing existing clone: %s' % ci.path_abs())
+        shutil.rmtree(ci.path_abs())
+    
+    if not os.path.exists(ci.path_abs()):
+        logging.info('Cloning to %s' % collection_path)
+        status,message = commands.clone(args.user, args.user, ci, collection_path)
+        if status == 0:
+            logging.info('ok')
+        else:
+            logging.error('Clone exited with non-zero status')
+            logging.error('status %s' % status)
+            logging.error('message %s' % message)
+            sys.exit(1)
+
+    #repo = dvcs.repository(collection_path)
+    #latest_commit = dvcs.latest_commit(collection_path)
+    #annex_status = dvcs.annex_status(repo)
+    #logging.info('repo %s' % repo)
+    #logging.debug('latest_commit %s' % latest_commit)
+    #logging.debug('annex_status %s' % annex_status)
+    
+    logging.info('Gathering metadata files under %s' % collection_path)
+    paths = util.find_meta_files(collection_path, recursive=True, force_read=True, testing=True)
+    logging.debug('%s paths' % len(paths))
+    
+    logging.info('Making identifiers')
+    identifiers = [identifier.Identifier(path) for path in paths]
+    identifiers.sort()
+    logging.debug('ok')
+    
+    logging.info('Counting models')
+    num_models = {}
+    for i in identifiers:
+        if not num_models.get(i.model):
+            num_models[i.model] = 0
+        num_models[i.model] += 1
+    logging.debug(num_models)
+
+    logging.info('Gather report data')
+    data = {}
+    num = len(identifiers)
+    for n,i in enumerate(identifiers):
+        logging.info('%s/%s %s' % (n, num, i.id))
+        o = i.object()
+        
+        if o.identifier.model == 'entity':
+            if not data.get('entity'):
+                data['entity'] = {}
+            for field in ['genre', 'format']:
+                if not data['entity'].get(field):
+                    data['entity'][field] = {}
+            
+            if not data['entity']['genre'].get(o.genre):
+                data['entity']['genre'][o.genre] = []
+            data['entity']['genre'][o.genre].append(o.identifier.id)
+            
+            if not data['entity']['format'].get(o.format):
+                data['entity']['format'][o.format] = []
+            data['entity']['format'][o.format].append(o.identifier.id)
+
+        elif o.identifier.model == 'file':
+            if not data.get('file'):
+                data['file'] = {}
+            for field in ['size', 'format']:
+                if not data['file'].get(field):
+                    data['file'][field] = {}
+            
+            # size
+            if o.size:
+                if isinstance(o.size, basestring) and o.size.isdigit():
+                    size = int(o.size)
+                elif o.size:
+                    size = o.size
+            data['file']['size'][o.identifier.id] = size
+            
+            # basename_orig
+            fmt = None
+            if o.basename_orig:
+                fmt = os.path.splitext(o.basename_orig)[-1]
+            if fmt:
+                if not data['file']['format'].get(fmt):
+                    data['file']['format'][fmt] = []
+                data['file']['format'][fmt].append(o.identifier.id)
+            
+    if args.json:
+        logging.info('Writing to %s' % args.json)
+        with open(args.json, 'w') as f:
+            f.write(format_json(data))
+
+    elapsed = datetime.now() - start
+    logging.info('DONE (%s elapsed)' % (elapsed))
+
+
+if __name__ == '__main__':
+    main()
