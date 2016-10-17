@@ -981,145 +981,172 @@ def annex_file_targets(repo, relative=False ):
     return paths
 
 
-# cgit -----------------------------------------------------------------
-
-def cgit_collection_title(repo, session, timeout=5):
-    """Gets collection title from CGit
+class Cgit():
+    url = None
     
-    Requests plain blob of collection.json, reads 'title' field.
-    PROBLEM: requires knowledge of repository internals.
+    def __init__(self, cgit_url=config.CGIT_URL):
+        self.url = cgit_url
     
-    @param repo: str Repository name
-    @param session: requests.Session
-    @param timeout: int
-    @returns: str Repository collection title
-    """
-    title = '---'
-    URL_TEMPLATE = '%s/cgit.cgi/%s/plain/collection.json'
-    url = URL_TEMPLATE % (config.CGIT_URL, repo)
-    logging.debug(url)
-    try:
-        r = session.get(url, timeout=timeout)
-        logging.debug(str(r.status_code))
-    except requests.ConnectionError:
-        r = None
-        title = '[ConnectionError]'
-    data = None
-    if r and r.status_code == 200:
+    def collection_title(self, repo, session, timeout=5):
+        """Gets collection title from CGit
+        
+        Requests plain blob of collection.json, reads 'title' field.
+        PROBLEM: requires knowledge of repository internals.
+        
+        @param repo: str Repository name
+        @param session: requests.Session
+        @param timeout: int
+        @returns: str Repository collection title
+        """
+        title = '---'
+        URL_TEMPLATE = '%s/cgit.cgi/%s/plain/collection.json'
+        url = URL_TEMPLATE % (self.url, repo)
+        logging.debug(url)
         try:
-            data = json.loads(r.text)
-        except ValueError:
-            title = '[no data]'
-    if data:
-        for field in data:
-            if field and field.get('title', None) and field['title']:
-                title = field['title']
-    logging.debug('%s: "%s"' % (repo,title))
-    return title
+            r = session.get(url, timeout=timeout)
+            logging.debug(str(r.status_code))
+        except requests.ConnectionError:
+            r = None
+            title = '[ConnectionError]'
+        data = None
+        if r and r.status_code == 200:
+            try:
+                data = json.loads(r.text)
+            except ValueError:
+                title = '[no data]'
+        if data:
+            for field in data:
+                if field and field.get('title', None) and field['title']:
+                    title = field['title']
+        logging.debug('%s: "%s"' % (repo,title))
+        return title
 
 
-# gitolite -------------------------------------------------------------
-
-def _gitolite_info_authorized(gitolite_out):
-    """Parse Gitolite server response, indicate whether user is authorized
+class Gitolite():
+    """Access information about Gitolite server
     
-    http://gitolite.com/gitolite/user.html#info
-    "The only command that is always available to every user is the info command
-    (run ssh git@host info -h for help), which tells you what version of gitolite
-    and git are on the server, and what repositories you have access to. The list
-    of repos is very useful if you have doubts about the spelling of some new repo
-    that you know was setup."
-    Sample output:
-        hello gjost, this is git@mits running gitolite3 v3.2-19-gb9bbb78 on git 1.7.2.5
+    >>> gitolite = dvcs.Gitolite.initialize(config.GITOLITE)
+    >>> gitolite.connected
+    True
+    >>> gitolite.authorized
+    True
+    >>> gitolite.orgs()
+    ['ddr-densho', 'ddr-testing']
+    >>> gitolite.repos()
+    ['ddr-densho-1', 'ddr-densho-2', 'ddr-densho-3']
+    >>> gitolite.collection_titles(USERNAME, PASSWORD)
+    [('ddr-test-1', 'A Collection'), ('ddr-test-2', 'Another Collection')]
+    """
+    server = None
+    info = None
+    connected = None
+    authorized = None
+    
+    @staticmethod
+    def initialize(server, timeout=60):
+        """
+        @param server: USERNAME@DOMAIN
+        @param timeout: int Maximum seconds to wait for reponse
+        @return: raw Gitolite output from SSH
+        """
+        gitolite = Gitolite()
+        gitolite.server = server
+        cmd = 'ssh {} info'.format(gitolite.server)
+        logging.debug('        {}'.format(cmd))
+        r = envoy.run(cmd, timeout=int(timeout))
+        logging.debug('        {}'.format(r.status_code))
+        status = r.status_code
+        if r.status_code == 0:
+            gitolite.connected = True
+            gitolite.info = r.std_out
+            gitolite.authorized = gitolite._authorized()
+        else:
+            gitolite.connected = False
+        return gitolite
+    
+    def _authorized(self):
+        """Parse Gitolite server response, indicate whether user is authorized
         
-         R W C  ddr-densho-[0-9]+
-         R W C  ddr-densho-[0-9]+-[0-9]+
-         R W C  ddr-dev-[0-9]+
-        ...
-    
-    @param gitolite_out: raw Gitolite output from SSH
-    @returns: boolean
-    """
-    lines = gitolite_out.split('\n')
-    if lines and len(lines) and ('this is git' in lines[0]) and ('running gitolite' in lines[0]):
-        logging.debug('        OK ')
-        return True
-    logging.debug('        NO CONNECTION')
-    return False
-
-def gitolite_connect_ok(server):
-    """See if we can connect to gitolite server.
-    
-    We should do some lightweight operation, just enough to make sure we can connect.
-    But we can't ping.
+        http://gitolite.com/gitolite/user.html#info
+        "The only command that is always available to every user is the info command
+        (run ssh git@host info -h for help), which tells you what version of gitolite
+        and git are on the server, and what repositories you have access to. The list
+        of repos is very useful if you have doubts about the spelling of some new repo
+        that you know was setup."
+        Sample output:
+            hello gjost, this is git@mits running gitolite3 v3.2-19-gb9bbb78 on git 1.7.2.5
+            
+             R W C  ddr-densho-[0-9]+
+             R W C  ddr-densho-[0-9]+-[0-9]+
+             R W C  ddr-dev-[0-9]+
+            ...
         
-    @param server: USERNAME@DOMAIN
-    @return: True or False
-    """
-    logging.debug('    DDR.commands.gitolite_connect_ok()')
-    return _gitolite_info_authorized(gitolite_info(server))
+        @returns: boolean
+        """
+        lines = self.info.split('\n')
+        if lines and len(lines) and ('this is git' in lines[0]) and ('running gitolite' in lines[0]):
+            logging.debug('        OK ')
+            return True
+        logging.debug('        NO CONNECTION')
+        return False
+    
+    def orgs(self):
+        """Returns list of orgs to which user has access
+        
+        @returns: list of organization IDs
+        """
+        repos_orgs = []
+        for line in self.info.split('\n'):
+            if 'R W C' in line:
+                parts = line.replace('R W C', '').strip().split('-')
+                repo_org = '-'.join([parts[0], parts[1]])
+                if repo_org not in repos_orgs:
+                    repos_orgs.append(repo_org)
+        return repos_orgs
+    
+    def repos(self):
+        """Returns list of repos to which user has access
+        
+        @param gitolite_out: raw output of gitolite_info()
+        @returns: list of repo names
+        """
+        repos = []
+        for line in self.info.split('\n'):
+            if ('R W' in line) and not ('R W C' in line):
+                repo = line.strip().split('\t')[1]
+                if repo not in repos:
+                    repos.append(repo)
+        return repos
 
-def gitolite_orgs( gitolite_out ):
-    """Returns list of orgs to which user has access
-    
-    @param gitolite_out: raw output of gitolite_info()
-    @returns: list of organization IDs
-    """
-    repos_orgs = []
-    for line in gitolite_out.split('\n'):
-        if 'R W C' in line:
-            parts = line.replace('R W C', '').strip().split('-')
-            repo_org = '-'.join([parts[0], parts[1]])
-            if repo_org not in repos_orgs:
-                repos_orgs.append(repo_org)
-    return repos_orgs
+    def collections(self, org_id=''):
+        """List collections, optionally filtering by organization ID
+        
+        @param something: str
+        @returns: list
+        """
+        if org_id:
+            return [
+                repo
+                for repo in self.repos()
+                if org_id in repo
+            ]
+        return self.repos()
 
-def gitolite_repos( gitolite_out ):
-    """Returns list of repos to which user has access
-    
-    @param gitolite_out: raw output of gitolite_info()
-    @returns: list of repo names
-    """
-    repos = []
-    for line in gitolite_out.split('\n'):
-        if ('R W' in line) and not ('R W C' in line):
-            repo = line.strip().split('\t')[1]
-            if repo not in repos:
-                repos.append(repo)
-    return repos
-
-def gitolite_info(server, timeout=60):
-    """
-    @param server: USERNAME@DOMAIN
-    @param timeout: int Maximum seconds to wait for reponse
-    @return: raw Gitolite output from SSH
-    """
-    cmd = 'ssh {} info'.format(server)
-    logging.debug('        {}'.format(cmd))
-    r = envoy.run(cmd, timeout=int(timeout))
-    logging.debug('        {}'.format(r.status_code))
-    status = r.status_code
-    if r.status_code != 0:
-        raise Exception('Bad reply from Gitolite server: %s' % r.std_err)
-    return r.std_out
-
-def gitolite_collection_titles(repos, username=None, password=None, timeout=5):
-    """Returns IDs:titles dict for all collections to which user has access.
-    
-    >>> gitolite_out = dvcs.gitolite_info(SERVER)
-    >>> repos = dvcs.gitolite_repos(gitolite_out)
-    >>> collections = dvcs.cgit_collection_titles(repos, USERNAME, PASSWORD)
-    
-    TODO Page through the Cgit index pages (fewer HTTP requests)?
-    TODO Set REPO/.git/description to collection title, read via Gitolite?
-    
-    @param repos: list of repo names
-    @param username: str [optional] Cgit server HTTP Auth username
-    @param password: str [optional] Cgit server HTTP Auth password
-    @param timeout: int Timeout for getting individual collection info
-    @returns: list of (repo,title) tuples
-    """
-    session = requests.Session()
-    session.auth = (username,password)
-    collections = [(repo,cgit_collection_title(repo,session,timeout)) for repo in repos]
-    return collections
+    def collection_titles(self, username, password, timeout=5):
+        """Returns IDs:titles dict for all collections to which user has access.
+        
+        TODO Page through the Cgit index pages (fewer HTTP requests)?
+        TODO Set REPO/.git/description to collection title, read via Gitolite?
+        
+        @param username: str [optional] Cgit server HTTP Auth username
+        @param password: str [optional] Cgit server HTTP Auth password
+        @param timeout: int Timeout for getting individual collection info
+        @returns: list of (repo,title) tuples
+        """
+        session = requests.Session()
+        session.auth = (username,password)
+        collections = [
+            (repo,Cgit().collection_title(repo,session,timeout))
+            for repo in self.repos()
+        ]
+        return collections

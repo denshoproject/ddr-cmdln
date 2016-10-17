@@ -293,19 +293,22 @@ GITOLITE_ORGS_EXPECTED = ['ddr-densho', 'ddr-testing']
 GITOLITE_REPOS_EXPECTED = ['ddr-densho', 'ddr-densho-1', 'ddr-testing', 'ddr-testing-101']
 
 def test_gitolite_info_authorized():
-    assert dvcs._gitolite_info_authorized(GITOLITE_INFO_OK) == True
-    assert dvcs._gitolite_info_authorized('') == False
-
-# TODO gitolite_connect_ok
+    g = dvcs.Gitolite()
+    g.info = GITOLITE_INFO_OK
+    assert g.authorized == True
+    g.info = ''
+    assert g.authorized == False
 
 def test_gitolite_orgs():
-    assert dvcs.gitolite_orgs(GITOLITE_INFO_OK) == GITOLITE_ORGS_EXPECTED
+    g = dvcs.Gitolite()
+    g.info = GITOLITE_INFO_OK
+    assert g.orgs() == GITOLITE_ORGS_EXPECTED
 
 def test_gitolite_repos():
-    out = dvcs.gitolite_repos(GITOLITE_INFO_OK)
-    assert dvcs.gitolite_repos(GITOLITE_INFO_OK) == GITOLITE_REPOS_EXPECTED
-    
-# TODO gitolite_info
+    g = dvcs.Gitolite()
+    g.info = GITOLITE_INFO_OK
+    assert g.repos() == GITOLITE_REPOS_EXPECTED
+
 
 GIT_DIFF_MODIFIED = """collection.json
 files/ddr-densho-10-1/entity.json

@@ -26,9 +26,10 @@ def requires_network(f):
     """
     @wraps(f)
     def wrapper(*args, **kwargs):
-        if not dvcs.gitolite_connect_ok(config.GITOLITE):
-            logging.error('Cannot connect to git server {}'.format(config.GITOLITE))
-            return 1,'cannot connect to git server {}'.format(config.GITOLITE)
+        gitolite = dvcs.Gitolite.initialize(config.GITOLITE)
+        if not gitolite.connected:
+            logging.error('Cannot connect to git server {}'.format(gitolite.server))
+            return 1,'cannot connect to git server {}'.format(gitolite.server)
         return f(*args, **kwargs)
     return wrapper
 
@@ -221,6 +222,9 @@ def create(user_name, user_mail, identifier, templates, agent=''):
     @param agent: (optional) Name of software making the change.
     @return: message ('ok' if successful)
     """
+    gitolite = dvcs.Gitolite.initialize(config.GITOLITE)
+    if identifier.id in gitolite.collections():
+        raise Exception("'%s' already exists -- clone instead." % identifier.id)
     git_url = '{}:{}.git'.format(config.GITOLITE, identifier.id)
     repo = git.Repo.clone_from(git_url, identifier.path_abs())
     logging.debug('    git clone {}'.format(git_url))
