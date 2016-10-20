@@ -1,4 +1,5 @@
 from datetime import datetime
+from exceptions import Exception
 import os
 import shutil
 import sys
@@ -11,6 +12,10 @@ from DDR import fileio
 from DDR import identifier
 from DDR import imaging
 from DDR import util
+
+
+class FileExistsException(Exception):
+    pass
 
 
 class AddFileLogger():
@@ -40,10 +45,10 @@ class AddFileLogger():
                 log = f.read()
         return log
 
-    def crash(self, msg):
+    def crash(self, msg, exception=Exception):
         """Write to addfile log and raise an exception."""
         self.not_ok(msg)
-        raise Exception(msg)
+        raise exception(msg)
 
 def _log_path(identifier, base_dir=config.LOG_DIR):
     """Generates path to collection addfiles.log.
@@ -86,10 +91,10 @@ def check_dir(label, path, log, mkdir=False, perm=os.W_OK):
     if mkdir and not os.path.exists(path):
         os.makedirs(path)
     if not os.path.exists(path):
-        log.crash('%s does not exist' % label)
+        log.crash('%s does not exist: %s' % (label, path))
         return False
     if not os.access(path, perm):
-        log.crash('%s not has permission %s' % (label, perm))
+        log.crash('%s not has %s permission: %s' % (label, perm, path))
         return False
     return True
 
@@ -378,9 +383,12 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='', l
          
     log.ok('Checking files/dirs')
     if os.path.exists(dest_path):
-        log.crash("Can't add '%s'. Already exists: '%s'!" % (
-            os.path.basename(src_path), fidentifier.id
-        ))
+        log.crash(
+            "Can't add '%s'. Already exists: '%s'!" % (
+                os.path.basename(src_path), fidentifier.id
+            ),
+            FileExistsException
+        )
     check_dir('| tmp_dir', tmp_dir, log, mkdir=True, perm=os.W_OK)
     check_dir('| dest_dir', dest_dir, log, mkdir=True, perm=os.W_OK)
     
