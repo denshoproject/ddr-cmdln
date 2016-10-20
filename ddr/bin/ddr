@@ -95,7 +95,6 @@ Example:
     parser_ccre.add_argument('-u', '--user',       required=True, help='User name')
     parser_ccre.add_argument('-m', '--mail',       required=True, help='User e-mail address')
     parser_ccre.add_argument('-c', '--collection', required=True, help='Absolute file path to the collection')
-    parser_ccre.add_argument('-t', '--templates',  required=True, help='List of metadata template files (absolute paths)')
     
     # clone
     clon_descr,clon_epilog = split_docstring(clone)
@@ -315,8 +314,7 @@ Example:
         exit = 0
         print(msg)
     elif args.cmd == 'create':
-        templates = args.templates.strip().split(',')
-        exit,msg = create(args.user, args.mail, cidentifier, templates, agent=AGENT)
+        exit,msg = Collection.new(cidentifier, args.user, args.mail, agent=AGENT)
     elif args.cmd == 'update':
         files = args.files.strip().split(',')
         exit,msg = update(args.user, args.mail, collection, files, agent=AGENT)
