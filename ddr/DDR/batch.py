@@ -800,6 +800,7 @@ class Importer():
         if log_path:
             logging.info('addfile logging to %s' % log_path)
         git_files = []
+        failures = []
         start = datetime.now()
         elapsed_rounds = []
         len_rowds = len(rowds)
@@ -852,27 +853,35 @@ class Importer():
                 # and when sha1 field is blank.
                 if rowd.get('role') and not file_.identifier.parts.get('role'):
                     file_.identifier.parts['role'] = rowd['role']
-                    
-                file_,repo2,log2 = ingest.add_local_file(
-                    parent,
-                    rowd['basename_orig'],
-                    file_.identifier.parts['role'],
-                    rowd,
-                    git_name, git_mail, agent,
-                    log_path=log_path,
-                    show_staged=False
-                )
-                git_files.append(file_)
+
+                try:
+                    file_,repo2,log2 = ingest.add_local_file(
+                        parent,
+                        rowd['basename_orig'],
+                        file_.identifier.parts['role'],
+                        rowd,
+                        git_name, git_mail, agent,
+                        log_path=log_path,
+                        show_staged=False
+                    )
+                    git_files.append(file_)
+                except ingest.FileExistsException as e:
+                    logging.error('ERROR: %s' % e)
+                    failures.append(e)
             
             elapsed_round = datetime.now() - start_round
             elapsed_rounds.append(elapsed_round)
             logging.debug('|   file %s' % (file_))
             logging.debug('| %s' % (elapsed_round))
                   
-        
         elapsed = datetime.now() - start
         logging.debug('%s added in %s' % (len(elapsed_rounds), elapsed))
-        return git_files
+        if failures:
+            logging.error('************************************************************************')
+            for e in failures:
+                logging.error(e)
+            logging.error('************************************************************************')
+        return git_files,failures
     
     @staticmethod
     def register_entity_ids(csv_path, cidentifier, idservice_client, dryrun=True):
