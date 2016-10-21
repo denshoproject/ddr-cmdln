@@ -664,7 +664,7 @@ class Importer():
         return False
     
     @staticmethod
-    def import_files(csv_path, cidentifier, vocabs_path, git_name, git_mail, agent, log_path=None, dryrun=False):
+    def import_files(csv_path, cidentifier, vocabs_path, git_name, git_mail, agent, row_start=0, row_end=9999999, log_path=None, dryrun=False):
         """Adds or updates files from a CSV file
         
         TODO how to handle excluded fields like XMP???
@@ -694,7 +694,7 @@ class Importer():
         logging.debug(repository)
         
         logging.info('Reading %s' % csv_path)
-        headers,rowds = csvfile.make_rowds(fileio.read_csv(csv_path))
+        headers,rowds = csvfile.make_rowds(fileio.read_csv(csv_path), row_start, row_end)
         logging.info('%s rows' % len(rowds))
         logging.info('csv_load rowds')
         module = Checker._get_module(model)

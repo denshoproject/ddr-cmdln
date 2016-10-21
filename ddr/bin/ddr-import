@@ -112,6 +112,7 @@ def main():
     parser.add_argument('-i', '--idservice', help='URL of ID service, if different from configs.')
     parser.add_argument('-N', '--nocheck', action='store_true', help='Do not run checking/validation (large collections may take time).')
     parser.add_argument('-d', '--dryrun', action='store_true', help="Simulated run-through; don't modify files.")
+    parser.add_argument('-F', '--fromto', help="Only import specified rows. Use Python list syntax e.g. '523:711' or ':200' or '100:'.")
     parser.add_argument('-R', '--remove', action='store_true', help="Remove untracked files (use with 'cleanup').")
     parser.add_argument('-D', '--debug', action='store_true', help='Print error tracebacks.')
     parser.add_argument('-u', '--user', help='Git user name (required if importing)')
@@ -190,14 +191,25 @@ def main():
         )
     
     elif args.command == 'file':
+        row_start = 0
+        row_end = 9999999
+        if args.fromto:
+            rowstart,rowend = args.fromto.split(':')
+            if rowstart:
+                row_start = int(rowstart)
+            if rowend:
+                row_end = int(rowend)
         imported = batch.Importer.import_files(
-            csv_path,
-            ci,
-            vocabs_path,
-            args.user, args.mail,
-            AGENT,
-            args.log,
-            args.dryrun
+            csv_path=csv_path,
+            cidentifier=ci,
+            vocabs_path=vocabs_path,
+            git_name=args.user,
+            git_mail=args.mail,
+            agent=AGENT,
+            log_path=args.log,
+            dryrun=args.dryrun,
+            row_start=row_start,
+            row_end=row_end,
         )
     
     elif args.command == 'register':
