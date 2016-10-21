@@ -17,6 +17,9 @@ from DDR import util
 class FileExistsException(Exception):
     pass
 
+class FileMissingException(Exception):
+    pass
+
 
 class AddFileLogger():
     logpath = None
@@ -91,7 +94,10 @@ def check_dir(label, path, log, mkdir=False, perm=os.W_OK):
     if mkdir and not os.path.exists(path):
         os.makedirs(path)
     if not os.path.exists(path):
-        log.crash('%s does not exist: %s' % (label, path))
+        log.crash(
+            '%s does not exist: %s' % (label, path),
+            FileMissingException
+        )
         return False
     if not os.access(path, perm):
         log.crash('%s not has %s permission: %s' % (label, perm, path))

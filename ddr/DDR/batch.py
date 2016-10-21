@@ -868,6 +868,9 @@ class Importer():
                 except ingest.FileExistsException as e:
                     logging.error('ERROR: %s' % e)
                     failures.append(e)
+                except ingest.FileMissingException as e:
+                    logging.error('ERROR: %s' % e)
+                    failures.append(e)
             
             elapsed_round = datetime.now() - start_round
             elapsed_rounds.append(elapsed_round)
