@@ -326,6 +326,16 @@ def put_mappings( hosts, index, mappings_path ):
         statuses.append( {'model':model, 'status':status} )
     return statuses
 
+def get_mappings(hosts, index):
+    """Gets mappings from ES.
+    
+    @param hosts: list of dicts containing host information.
+    @param index: Name of the target index.
+    @returns: str JSON
+    """
+    es = _get_connection(hosts)
+    return es.indices.get_mapping(index)
+
 def facets_path(path):
     return os.path.join(path, 'vocab')
 

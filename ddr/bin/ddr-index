@@ -118,7 +118,7 @@ def make_hosts( text ):
         hosts.append( {'host':h, 'port':p} )
     return hosts
     
-def host_status(hosts, index=None):
+def host_status(hosts, index=None, mappings=False):
     """Gets host and index status and prints.
     
     @param hosts: dict
@@ -149,6 +149,11 @@ def host_status(hosts, index=None):
     }
     this_index['name'] = index
     print(format_json(this_index))
+
+    # mappings
+    if mappings:
+        print('Mappings')
+        print(docstore.get_mappings(hosts, index))
 
 
 def main():
@@ -285,6 +290,7 @@ def main():
     status_parser.add_argument('-l', '--log', help='Log file..')
     status_parser.add_argument('-H', '--host', help='Hostname and port (HOST:PORT).', **hostsarg)
     status_parser.add_argument('-i', '--index', help='index.', **indexarg)
+    status_parser.add_argument('-m', '--mappings', action='store_true', help='Include index mappings.')
    
     repo_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
     repo_parser.add_argument('-l', '--log', help='Log file..')
@@ -375,7 +381,7 @@ def main():
         msg = docstore.exists(hosts, args.index, args.model, args.id)
         print(msg)
     elif args.cmd == 'status':
-        msg = host_status(hosts, args.index)
+        msg = host_status(hosts, args.index, args.mappings)
         print(msg)
     elif args.cmd == 'repo':
         msg = docstore.repo(hosts, args.index, args.path)
