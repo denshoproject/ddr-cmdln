@@ -216,7 +216,7 @@ def form_post(document, module, cleaned_data):
             setattr(document, fieldname, field_data)
     # update record_lastmod
     if hasattr(document, 'record_lastmod'):
-        document.record_lastmod = datetime.now()
+        document.record_lastmod = datetime.now(config.TZ)
 
 def load_json_lite(json_path, model, object_id):
     """Simply reads JSON file and adds object_id if it's a file
@@ -1356,9 +1356,9 @@ class Entity( object ):
         """
         data = form_prep(self, self.identifier.fields_module())
         if not data.get('record_created', None):
-            data['record_created'] = datetime.now()
+            data['record_created'] = datetime.now(config.TZ)
         if not data.get('record_lastmod', None):
-            data['record_lastmod'] = datetime.now()
+            data['record_lastmod'] = datetime.now(config.TZ)
         return data
     
     def form_post(self, cleaned_data):
@@ -1485,7 +1485,7 @@ class Entity( object ):
         modified = load_csv(self, module, rowd)
         ## special cases
         #def parsedt(txt):
-        #    d = datetime.now()
+        #    d = datetime.now(config.TZ)
         #    try:
         #        d = datetime.strptime(txt, config.DATETIME_FORMAT)
         #    except:
@@ -1495,9 +1495,9 @@ class Entity( object ):
         #            pass
         #    return d
         if not hasattr(self, 'record_created'):
-            self.record_created = datetime.now()
+            self.record_created = datetime.now(config.TZ)
         if modified and hasattr(self, 'record_lastmod'):
-            self.record_lastmod = datetime.now()
+            self.record_lastmod = datetime.now(config.TZ)
         self.rm_file_duplicates()
         return modified
 

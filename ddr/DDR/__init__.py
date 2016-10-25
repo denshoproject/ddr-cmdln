@@ -41,7 +41,7 @@ class Timer( object ):
     steps = []
     
     def mark( self, msg ):
-        now = datetime.now()
+        now = datetime.now(config.TZ)
         index = len(self.steps)
         if index:
             delta = now - self.steps[-1]['datetime']

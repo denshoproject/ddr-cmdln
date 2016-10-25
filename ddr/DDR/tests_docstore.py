@@ -4,6 +4,7 @@ import json
 from nose.tools import assert_raises
 from nose.plugins.attrib import attr
 
+import config
 import docstore
 import identifier
 
@@ -35,7 +36,7 @@ def test_make_index_name():
 # delete_index
 @attr('elasticsearch')
 def test_index():
-    index = 'test%s' % datetime.now().strftime('%Y%m%d%H%M%S')
+    index = 'test%s' % datetime.now(config.TZ).strftime('%Y%m%d%H%M%S')
     es = docstore._get_connection(HOSTS)
     exists_initial = docstore.index_exists(HOSTS, index)
     created = docstore.create_index(HOSTS, index)

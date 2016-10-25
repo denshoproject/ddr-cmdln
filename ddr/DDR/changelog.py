@@ -116,7 +116,7 @@ def make_entry(messages, user, mail, timestamp=None):
     @returns string
     """
     if not timestamp:
-        timestamp = datetime.now()
+        timestamp = datetime.now(config.TZ)
     stamp = '%s -- %s <%s>' % (timestamp.strftime('%Y-%m-%d %H:%M:%S'), user, mail)
     lines = [stamp] + ['* %s' % m for m in messages]
     return '\n'.join(lines)
@@ -147,7 +147,7 @@ def write_changelog_entry(path, messages, user, email, timestamp=None):
     [lines.append('* {}'.format(m)) for m in messages]
     changes = '\n'.join(lines)
     if not timestamp:
-        timestamp = datetime.now()
+        timestamp = datetime.now(config.TZ)
     # render
     entry = template.format(
         changes=changes,

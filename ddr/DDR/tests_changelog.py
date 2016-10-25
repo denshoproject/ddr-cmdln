@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 
+import config
 import changelog
 
 
@@ -55,7 +56,7 @@ def test_load_template():
     assert changelog.load_template(changelog.CHANGELOG_TEMPLATE) == expected
 
 def test_write_changelog_entry():
-    path = '/tmp/changelog-%s' % datetime.now().strftime('%Y%m%d-%H%M%S')
+    path = '/tmp/changelog-%s' % datetime.now(config.TZ).strftime('%Y%m%d-%H%M%S')
     user = 'gjost'
     mail = 'gjost@densho.org'
     messages = ['testing', 'testing', '123']

@@ -1125,6 +1125,6 @@ def index( hosts, index, path, recursive=False, public=True ):
         else:
             bad_paths.append((path, result['status'], result['response']))
             status = '   %s %s' % (result['status'], result['response'])
-        print('%s | %s/%s %s%s' % (datetime.now(), n, num, identifier.id, status))
+        print('%s | %s/%s %s%s' % (datetime.now(config.TZ), n, num, identifier.id, status))
     logger.debug('INDEXING COMPLETED')
     return {'total':len(paths), 'successful':successful, 'bad':bad_paths}

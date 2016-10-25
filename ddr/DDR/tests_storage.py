@@ -163,7 +163,7 @@ def test_status():
     exists_writable = '/tmp'
     exists_notwritable = '/etc'
     exists_notlistable = '/root'
-    nonexistent = os.path.join('tmp', datetime.now().strftime('%Y%m%d%H%m%s'))
+    nonexistent = os.path.join('tmp', datetime.now(config.TZ).strftime('%Y%m%d%H%m%s'))
     assert storage.status(exists_writable) == 'ok'
     assert storage.status(exists_notwritable) == 'unknown'
     assert storage.status(exists_notlistable) == 'unmounted'
