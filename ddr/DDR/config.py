@@ -2,6 +2,9 @@ import ConfigParser
 import os
 import sys
 
+import pytz
+
+
 CONFIG_FILES = [
     '/etc/ddr/ddr.cfg',       '/etc/ddr/local.cfg',
     '/etc/ddr/ddrlocal.cfg',  '/etc/ddr/ddrlocal-local.cfg',
@@ -36,6 +39,11 @@ LOG_DIR = config.get('local', 'log_dir')
 LOG_FILE = config.get('local','log_file')
 LOG_LEVEL = config.get('local', 'log_level')
 
+try:
+    DEFAULT_TIMEZONE = config.get('cmdln','default_timezone')
+except:
+    DEFAULT_TIMEZONE = 'America/Los_Angeles'
+TZ = pytz.timezone(DEFAULT_TIMEZONE)
 TIME_FORMAT = config.get('cmdln','time_format')
 DATETIME_FORMAT = config.get('cmdln','datetime_format')
 
