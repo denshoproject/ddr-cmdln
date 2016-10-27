@@ -44,8 +44,12 @@ try:
 except:
     DEFAULT_TIMEZONE = 'America/Los_Angeles'
 TZ = pytz.timezone(DEFAULT_TIMEZONE)
-TIME_FORMAT = config.get('cmdln','time_format')
 DATETIME_FORMAT = config.get('cmdln','datetime_format')
+DATE_FORMAT = config.get('cmdln','date_format')
+TIME_FORMAT = config.get('cmdln','time_format')
+PRETTY_DATETIME_FORMAT = config.get('cmdln','pretty_datetime_format')
+PRETTY_DATE_FORMAT = config.get('cmdln','pretty_date_format')
+PRETTY_TIME_FORMAT = config.get('cmdln','pretty_time_format')
 
 ACCESS_FILE_APPEND = config.get('cmdln','access_file_append')
 ACCESS_FILE_EXTENSION = config.get('cmdln','access_file_extension')
