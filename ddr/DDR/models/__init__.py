@@ -52,6 +52,7 @@ from DDR import changelog
 from DDR import commands
 from DDR import config
 from DDR.control import CollectionControlFile, EntityControlFile
+from DDR import converters
 from DDR import docstore
 from DDR import dvcs
 from DDR import fileio
@@ -1487,10 +1488,10 @@ class Entity( object ):
         #def parsedt(txt):
         #    d = datetime.now(config.TZ)
         #    try:
-        #        d = datetime.strptime(txt, config.DATETIME_FORMAT)
+        #        d = converters.text_to_datetime(txt)
         #    except:
         #        try:
-        #            d = datetime.strptime(txt, config.TIME_FORMAT)
+        #            d = converters.text_to_datetime(txt)
         #        except:
         #            pass
         #    return d

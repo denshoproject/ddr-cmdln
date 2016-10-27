@@ -98,6 +98,7 @@ import urlparse
 
 from dateutil import parser
 
+from DDR import converters
 from DDR import format_json
 from DDR import fileio
 
@@ -516,7 +517,7 @@ class Term( object ):
                     val.append(t.id)
             elif (key in ['created', 'modified']):
                 if val:
-                    val = datetime.strftime(val, TIMESTAMP_FORMAT)
+                    val = converters.text_to_datetime(val)
                 else:
                     val = None
             data[key] = val
@@ -530,7 +531,7 @@ class Term( object ):
             val = getattr(self, key)
             if (key in ['created', 'modified']):
                 if val:
-                    val = datetime.strftime(val, TIMESTAMP_FORMAT)
+                    val = converters.text_to_datetime(val)
                 else:
                     val = ''
             elif (key == 'encyc_urls'):
