@@ -73,7 +73,7 @@ def coerce_text(data):
 # data = datetime.datetime(1970, 1, 1, 0, 0)
 # 
 
-def text_to_datetime(text, fmt=config.TIMESTAMP_FORMAT):
+def text_to_datetime(text, fmt=config.DATETIME_FORMAT):
     """Load datatime from text in specified format.
     
     TODO timezone!
@@ -88,7 +88,7 @@ def text_to_datetime(text, fmt=config.TIMESTAMP_FORMAT):
         return parser.parse(text)
     return ''
 
-def datetime_to_text(data, fmt=config.TIMESTAMP_FORMAT):
+def datetime_to_text(data, fmt=config.DATETIME_FORMAT):
     """Dump datetime to text suitable for a CSV field.
     
     TODO timezone!
