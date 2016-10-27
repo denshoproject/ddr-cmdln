@@ -46,6 +46,7 @@ except:
 TZ = pytz.timezone(DEFAULT_TIMEZONE)
 TIME_FORMAT = config.get('cmdln','time_format')
 DATETIME_FORMAT = config.get('cmdln','datetime_format')
+TIMESTAMP_FORMAT = config.get('cmdln','timestamp_format')
 
 ACCESS_FILE_APPEND = config.get('cmdln','access_file_append')
 ACCESS_FILE_EXTENSION = config.get('cmdln','access_file_extension')
