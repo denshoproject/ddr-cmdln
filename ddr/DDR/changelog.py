@@ -4,6 +4,7 @@ import os
 
 from dateutil import parser
 
+from DDR import converters
 
 
 SAMPLE_OLD_CHANGELOG = """* Added entity file files/ddr-testing-160-1-master-c703e5ece1-a.jpg
@@ -116,8 +117,8 @@ def make_entry(messages, user, mail, timestamp=None):
     @returns string
     """
     if not timestamp:
-        timestamp = datetime.now(config.TZ)
-    stamp = '%s -- %s <%s>' % (timestamp.strftime('%Y-%m-%d %H:%M:%S'), user, mail)
+        timestamp = datetime.now(converters.config.TZ)
+    stamp = '%s -- %s <%s>' % (converters.datetime_to_text(timestamp), user, mail)
     lines = [stamp] + ['* %s' % m for m in messages]
     return '\n'.join(lines)
 
@@ -147,13 +148,13 @@ def write_changelog_entry(path, messages, user, email, timestamp=None):
     [lines.append('* {}'.format(m)) for m in messages]
     changes = '\n'.join(lines)
     if not timestamp:
-        timestamp = datetime.now(config.TZ)
+        timestamp = datetime.now(converters.config.TZ)
     # render
     entry = template.format(
         changes=changes,
         user=user,
         email=email,
-        date=timestamp.strftime(date_format)
+        date=converters.datetime_to_text(timestamp, converters.config.PRETTY_DATETIME_FORMAT)
         )
     try:
         preexisting = os.path.getsize(path)
