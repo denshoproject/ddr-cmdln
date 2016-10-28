@@ -281,6 +281,9 @@ def load_json(document, module, json_text):
 
 def apply_timezone(document, module):
     """Set time zone for datetime fields if not present in datetime fields
+    
+    If document matches certain criteria, override the timezone with a
+    specified alternate timezone.
     """
     # add timezone to any datetime fields missing it
     for mf in module.FIELDS:
@@ -288,9 +291,13 @@ def apply_timezone(document, module):
             fieldname = mf['name']
             dt = getattr(document, fieldname)
             if dt and (not dt.tzinfo):
-                timezone = config.TZ
-                dt = timezone.localize(dt)
-                setattr(document, fieldname, dt)
+                # Use default timezone unless...
+                # TODO replace this stoopid hard-coded code!
+                if document.identifier.idparts['org'] in config.ALT_TIMEZONES.keys():
+                    timezone = config.ALT_TIMEZONES[document.identifier.idparts['org']]
+                else:
+                    timezone = config.TZ
+                setattr(document, fieldname, timezone.localize(dt))
 
 def dump_json(obj, module, template=False,
               template_passthru=['id', 'record_created', 'record_lastmod'],
