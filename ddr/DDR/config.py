@@ -25,6 +25,19 @@ def read_configs(paths):
         raise NoConfigError('No config file!')
     return config
 
+def _parse_alt_timezones(text):
+    """Parses contents of [cmdln]alt_timezones
+    Format: ORG:TIMEZONENAME;ORG:TIMEZONENAME
+    Example: hmwf:America/Boise;janm:America/Los_Angeles
+    NOTE: TIMEZONENAMEs must be valid IANA timezones.
+    """
+    data = {}
+    for item in [item for item in text.strip().split(';') if item]:
+        key,val = item.strip().split(':')
+        if key not in data.keys():
+            data[key] = pytz.timezone(val)
+    return data
+
 
 config = read_configs(CONFIG_FILES)
 
@@ -44,9 +57,7 @@ try:
 except:
     DEFAULT_TIMEZONE = 'America/Los_Angeles'
 TZ = pytz.timezone(DEFAULT_TIMEZONE)
-ALT_TIMEZONES = {
-    'hmwf': pytz.timezone('America/Boise'),
-}
+ALT_TIMEZONES = _parse_alt_timezones(config.get('cmdln','alt_timezones'))
 DATETIME_FORMAT = config.get('cmdln','datetime_format')
 DATE_FORMAT = config.get('cmdln','date_format')
 TIME_FORMAT = config.get('cmdln','time_format')
