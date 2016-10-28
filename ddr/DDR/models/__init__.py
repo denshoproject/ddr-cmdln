@@ -292,10 +292,10 @@ def apply_timezone(document, module):
             dt = getattr(document, fieldname)
             if dt and (not dt.tzinfo):
                 # Use default timezone unless...
-                timezone = config.ALT_TIMEZONES.get(
-                    document.identifier.idparts['org'],
-                    config.TZ
-                )
+                if document.identifier.idparts['org'] in config.ALT_TIMEZONES.keys():
+                    timezone = config.ALT_TIMEZONES[document.identifier.idparts['org']]
+                else:
+                    timezone = config.TZ
                 setattr(document, fieldname, timezone.localize(dt))
 
 def dump_json(obj, module, template=False,
