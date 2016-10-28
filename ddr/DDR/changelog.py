@@ -4,6 +4,7 @@ import os
 
 from dateutil import parser
 
+from DDR import config
 from DDR import converters
 
 
@@ -39,7 +40,7 @@ def read_old_entry(txt):
     lines = txt.strip().split('\n')
     stamp = lines.pop().replace('-- ', '').split('  ')
     user,mail = stamp[0].replace('>', '').split(' <')
-    timestamp = parser.parse(stamp[1])
+    timestamp = parse_timestamp(stamp[1], mail)
     messages = [l.replace('* ','') for l in lines]
     entry = {'timestamp':timestamp,
              'user':user,
@@ -78,13 +79,26 @@ def read_new_entry(txt):
     lines = txt.strip().split('\n')
     stamp = lines[0].strip().split(' -- ')
     user,mail = stamp[1].replace('>', '').split(' <')
-    timestamp = parser.parse(stamp[0])
+    timestamp = parse_timestamp(stamp[0], mail)
     messages = [l.replace('* ','') for l in lines[1:]]
     entry = {'timestamp':timestamp,
              'user':user,
              'mail':mail,
              'messages':messages,}
     return entry
+
+def parse_timestamp(text, mail):
+    # TODO add timezone if absent
+    dt = parser.parse(text)
+    if dt and (not dt.tzinfo):
+        domain = mail.strip().split('@')[-1]
+        # Use default timezone unless...
+        if domain in config.ALT_TIMEZONES.keys():
+            timezone = config.ALT_TIMEZONES[domain]
+        else:
+            timezone = config.TZ
+        dt = timezone.localize(dt)
+    return dt
 
 def read_entries(log):
     entries = []
