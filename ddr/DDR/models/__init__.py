@@ -275,7 +275,22 @@ def load_json(document, module, json_text):
     for mf in module.FIELDS:
         if not hasattr(document, mf['name']):
             setattr(document, mf['name'], mf.get('default',None))
+    # Add timeszone to fields if not present
+    apply_timezone(document, module)
     return json_data
+
+def apply_timezone(document, module):
+    """Set time zone for datetime fields if not present in datetime fields
+    """
+    # add timezone to any datetime fields missing it
+    for mf in module.FIELDS:
+        if mf['model_type'] == datetime:
+            fieldname = mf['name']
+            dt = getattr(document, fieldname)
+            if dt and (not dt.tzinfo):
+                timezone = config.TZ
+                dt = timezone.localize(dt)
+                setattr(document, fieldname, dt)
 
 def dump_json(obj, module, template=False,
               template_passthru=['id', 'record_created', 'record_lastmod'],
