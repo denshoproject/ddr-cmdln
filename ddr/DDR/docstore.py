@@ -45,6 +45,7 @@ import os
 from elasticsearch import Elasticsearch, TransportError
 
 from DDR import config
+from DDR import converters
 from DDR.identifier import Identifier, MODULES, InvalidInputException
 from DDR import util
 
@@ -591,6 +592,26 @@ def _clean_payload( data ):
             # rm null or empty fields
             _clean_dict(field)
 
+def format_datetimes(data):
+    """force datetimes into ES mapping format
+    # TODO refactor this once we get it working
+    """
+    DATETIME_FIELDS = [
+        'record_created',
+        'record_lastmod',
+    ]
+    for field,value in data.iteritems():
+        if field in DATETIME_FIELDS:
+            dt = converters.text_to_datetime(value)
+            # Use default timezone unless...
+            if data['org'] in config.ALT_TIMEZONES.keys():
+                timezone = config.ALT_TIMEZONES[data['org']]
+            else:
+                timezone = config.TZ
+            if not dt.tzinfo:
+                timezone.localize(dt)
+            data[field] = converters.datetime_to_text(dt, config.ELASTICSEARCH_DATETIME_FORMAT)
+
 def post( hosts, index, document, public_fields=[], additional_fields={}, private_ok=False ):
     """Add a new document to an index or update an existing one.
     
@@ -668,6 +689,9 @@ def post( hosts, index, document, public_fields=[], additional_fields={}, privat
     for key,val in additional_fields.iteritems():
         data[key] = val
     logger.debug('identifier.id %s' % identifier.id)
+
+    # format datetimes for ES
+    format_datetimes(data)
     
     if identifier.id:
         es = _get_connection(hosts)

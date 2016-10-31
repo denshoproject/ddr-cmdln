@@ -64,7 +64,16 @@ TIME_FORMAT = config.get('cmdln','time_format')
 PRETTY_DATETIME_FORMAT = config.get('cmdln','pretty_datetime_format')
 PRETTY_DATE_FORMAT = config.get('cmdln','pretty_date_format')
 PRETTY_TIME_FORMAT = config.get('cmdln','pretty_time_format')
-ELASTICSEARCH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss"
+# Format used in Elasticsearch mapping.json
+# Elasticsearch uses the Joda-Time formatting:
+# http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html
+#ELASTICSEARCH_DATETIME_MAPPING = "yyyy-MM-dd'T'HH:mm:ssZ"
+ELASTICSEARCH_DATETIME_MAPPING = "yyyy-MM-dd'T'HH:mm:ss"
+# Format used when posting documents to Elasticsearch
+# As of 2016-10-31 our ES mappings don't have timezone
+# We can't reindex so ES datetimes must be timezone-naive for now.
+#ELASTICSEARCH_DATETIME_FORMAT  = "%Y-%m-%dT%H:%M:%S%z"
+ELASTICSEARCH_DATETIME_FORMAT  = "%Y-%m-%dT%H:%M:%S"
 
 ACCESS_FILE_APPEND = config.get('cmdln','access_file_append')
 ACCESS_FILE_EXTENSION = config.get('cmdln','access_file_extension')
