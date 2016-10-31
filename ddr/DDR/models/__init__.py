@@ -453,6 +453,8 @@ def load_csv(obj, module, rowd):
             if value != oldvalue:
                 obj.modified.append(field)
             setattr(obj, field, value)
+    # Add timezone to fields if not present
+    apply_timezone(obj, module.module)
     return obj.modified
 
 def from_csv(identifier, rowd):
