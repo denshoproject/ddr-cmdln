@@ -213,7 +213,7 @@ def find_updates(collection):
     @param collection: Collection
     @returns: list of objects (Collections, Entities, Files, etc)
     """
-    start = datetime.now()
+    start = datetime.now(config.TZ)
     logging.debug('Collecting identifiers')
     identifiers = signatures(
         util.find_meta_files(
@@ -237,7 +237,7 @@ def find_updates(collection):
                 o.signature_id = oi.signature_id
                 updates.append(o)
             logging.debug('| %s/%s %s %s' % (n+1, len(oidentifiers), oi.id, status))
-    finish = datetime.now()
+    finish = datetime.now(config.TZ)
     elapsed = finish - start
     logging.debug('ok (%s elapsed)' % elapsed)
     return updates
@@ -248,14 +248,14 @@ def write_updates(updates):
     @param updates: list of objects (Collections, Entities, Files, etc)
     @returns: list of updated files (relative paths)
     """
-    start = datetime.now()
+    start = datetime.now(config.TZ)
     logging.debug('Writing changes')
     written = []
     for n,o in enumerate(updates):
         o.write_json()
         written.append(o.identifier.path_abs('json'))
         logging.debug('| %s/%s %s' % (n+1, len(updates), o.id))
-    finish = datetime.now()
+    finish = datetime.now(config.TZ)
     elapsed = finish - start
     logging.debug('ok (%s elapsed)' % elapsed)
     logging.debug('NOTE: METADATA FILES ARE NOT YET COMMITTED!')
@@ -325,7 +325,7 @@ def find_updates(identifiers):
     @param identifiers: list of parent Identifiers, with .signature_id attrs
     @returns: list of objects (Collections, Entities, etc)
     """
-    start = datetime.now()
+    start = datetime.now(config.TZ)
     updates = []
     for n,i in enumerate(identifiers):
         o = i.object()
@@ -340,7 +340,7 @@ def find_updates(identifiers):
             o.signature_id = i.signature_id
             updates.append(o)
         logging.debug('| %s/%s %s %s' % (n+1, len(identifiers), i.id, status))
-    finish = datetime.now()
+    finish = datetime.now(config.TZ)
     elapsed = finish - start
     logging.debug('ok (%s elapsed)' % elapsed)
     return updates

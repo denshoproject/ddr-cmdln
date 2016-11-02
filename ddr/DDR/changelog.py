@@ -4,6 +4,8 @@ import os
 
 from dateutil import parser
 
+from DDR import config
+from DDR import converters
 
 
 SAMPLE_OLD_CHANGELOG = """* Added entity file files/ddr-testing-160-1-master-c703e5ece1-a.jpg
@@ -38,7 +40,7 @@ def read_old_entry(txt):
     lines = txt.strip().split('\n')
     stamp = lines.pop().replace('-- ', '').split('  ')
     user,mail = stamp[0].replace('>', '').split(' <')
-    timestamp = parser.parse(stamp[1])
+    timestamp = parse_timestamp(stamp[1], mail)
     messages = [l.replace('* ','') for l in lines]
     entry = {'timestamp':timestamp,
              'user':user,
@@ -77,13 +79,26 @@ def read_new_entry(txt):
     lines = txt.strip().split('\n')
     stamp = lines[0].strip().split(' -- ')
     user,mail = stamp[1].replace('>', '').split(' <')
-    timestamp = parser.parse(stamp[0])
+    timestamp = parse_timestamp(stamp[0], mail)
     messages = [l.replace('* ','') for l in lines[1:]]
     entry = {'timestamp':timestamp,
              'user':user,
              'mail':mail,
              'messages':messages,}
     return entry
+
+def parse_timestamp(text, mail):
+    # TODO add timezone if absent
+    dt = parser.parse(text)
+    if dt and (not dt.tzinfo):
+        domain = mail.strip().split('@')[-1]
+        # Use default timezone unless...
+        if domain in config.ALT_TIMEZONES.keys():
+            timezone = config.ALT_TIMEZONES[domain]
+        else:
+            timezone = config.TZ
+        dt = timezone.localize(dt)
+    return dt
 
 def read_entries(log):
     entries = []
@@ -116,8 +131,8 @@ def make_entry(messages, user, mail, timestamp=None):
     @returns string
     """
     if not timestamp:
-        timestamp = datetime.now()
-    stamp = '%s -- %s <%s>' % (timestamp.strftime('%Y-%m-%d %H:%M:%S'), user, mail)
+        timestamp = datetime.now(converters.config.TZ)
+    stamp = '%s -- %s <%s>' % (converters.datetime_to_text(timestamp), user, mail)
     lines = [stamp] + ['* %s' % m for m in messages]
     return '\n'.join(lines)
 
@@ -147,13 +162,13 @@ def write_changelog_entry(path, messages, user, email, timestamp=None):
     [lines.append('* {}'.format(m)) for m in messages]
     changes = '\n'.join(lines)
     if not timestamp:
-        timestamp = datetime.now()
+        timestamp = datetime.now(converters.config.TZ)
     # render
     entry = template.format(
         changes=changes,
         user=user,
         email=email,
-        date=timestamp.strftime(date_format)
+        date=converters.datetime_to_text(timestamp, converters.config.PRETTY_DATETIME_FORMAT)
         )
     try:
         preexisting = os.path.getsize(path)

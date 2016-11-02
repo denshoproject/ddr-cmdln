@@ -504,7 +504,7 @@ class Importer():
         
         logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
         logging.info('Importing')
-        start_updates = datetime.now()
+        start_updates = datetime.now(config.TZ)
         git_files = []
         updated = []
         elapsed_rounds = []
@@ -514,7 +514,7 @@ class Importer():
             logging.info('Dry run - no modifications')
         for n,rowd in enumerate(rowds):
             logging.info('%s/%s - %s' % (n+1, len(rowds), rowd['id']))
-            start_round = datetime.now()
+            start_round = datetime.now(config.TZ)
             
             eidentifier = identifier.Identifier(id=rowd['id'], base_path=cidentifier.basepath)
             # if there is an existing object it will be loaded
@@ -546,7 +546,7 @@ class Importer():
                 git_files.append(entity.changelog_path_rel)
                 updated.append(entity)
             
-            elapsed_round = datetime.now() - start_round
+            elapsed_round = datetime.now(config.TZ) - start_round
             elapsed_rounds.append(elapsed_round)
             logging.debug('| %s (%s)' % (eidentifier, elapsed_round))
     
@@ -554,17 +554,17 @@ class Importer():
             logging.info('Dry run - no modifications')
         elif updated:
             logging.info('Staging %s modified files' % len(git_files))
-            start_stage = datetime.now()
+            start_stage = datetime.now(config.TZ)
             dvcs.stage(repository, git_files)
             for path in util.natural_sort(dvcs.list_staged(repository)):
                 if path in git_files:
                     logging.debug('+ %s' % path)
                 else:
                     logging.debug('| %s' % path)
-            elapsed_stage = datetime.now() - start_stage
+            elapsed_stage = datetime.now(config.TZ) - start_stage
             logging.debug('ok (%s)' % elapsed_stage)
         
-        elapsed_updates = datetime.now() - start_updates
+        elapsed_updates = datetime.now(config.TZ) - start_updates
         logging.debug('%s updated in %s' % (len(elapsed_rounds), elapsed_updates))
         logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
         
@@ -736,7 +736,7 @@ class Importer():
     
     @staticmethod
     def _update_existing_files(rowds, fid_parents, entities, files, models, repository, git_name, git_mail, agent, dryrun):
-        start = datetime.now()
+        start = datetime.now(config.TZ)
         elapsed_rounds = []
         git_files = []
         updated = []
@@ -747,7 +747,7 @@ class Importer():
             logging.info('+ %s/%s - %s (%s)' % (
                 n+1, len_rowds, rowd['id'], rowd['basename_orig']
             ))
-            start_round = datetime.now()
+            start_round = datetime.now(config.TZ)
 
             fid = rowd['id']
             eid = fid_parents[fid].id
@@ -772,16 +772,16 @@ class Importer():
                 git_files.append(entity.changelog_path_rel)
                 updated.append(file_)
             
-            elapsed_round = datetime.now() - start_round
+            elapsed_round = datetime.now(config.TZ) - start_round
             elapsed_rounds.append(elapsed_round)
             logging.debug('| %s (%s)' % (file_.identifier, elapsed_round))
         
-        elapsed = datetime.now() - start
+        elapsed = datetime.now(config.TZ) - start
         logging.debug('%s updated in %s' % (len(elapsed_rounds), elapsed))
                 
         if git_files and not dryrun:
             logging.info('Staging %s modified files' % len(git_files))
-            start_stage = datetime.now()
+            start_stage = datetime.now(config.TZ)
             dvcs.stage(repository, git_files)
             staged = util.natural_sort(dvcs.list_staged(repository))
             for path in staged:
@@ -789,7 +789,7 @@ class Importer():
                     logging.debug('+ %s' % path)
                 else:
                     logging.debug('| %s' % path)
-            elapsed_stage = datetime.now() - start_stage
+            elapsed_stage = datetime.now(config.TZ) - start_stage
             logging.debug('ok (%s)' % elapsed_stage)
             logging.debug('%s staged in %s' % (len(staged), elapsed_stage))
         
@@ -801,12 +801,12 @@ class Importer():
             logging.info('addfile logging to %s' % log_path)
         git_files = []
         failures = []
-        start = datetime.now()
+        start = datetime.now(config.TZ)
         elapsed_rounds = []
         len_rowds = len(rowds)
         for n,rowd in enumerate(rowds):
             logging.info('+ %s/%s - %s (%s)' % (n+1, len_rowds, rowd['id'], rowd['basename_orig']))
-            start_round = datetime.now()
+            start_round = datetime.now(config.TZ)
 
             fid = rowd['id']
             parent_id = fid_parents[fid].id
@@ -872,12 +872,12 @@ class Importer():
                     logging.error('ERROR: %s' % e)
                     failures.append(e)
             
-            elapsed_round = datetime.now() - start_round
+            elapsed_round = datetime.now(config.TZ) - start_round
             elapsed_rounds.append(elapsed_round)
             logging.debug('|   file %s' % (file_))
             logging.debug('| %s' % (elapsed_round))
                   
-        elapsed = datetime.now() - start
+        elapsed = datetime.now(config.TZ) - start
         logging.debug('%s added in %s' % (len(elapsed_rounds), elapsed))
         if failures:
             logging.error('************************************************************************')

@@ -34,7 +34,7 @@ class AddFileLogger():
         @param msg: Text message.
         @returns log: A text file.
         """
-        entry = '[{}] {} - {}\n'.format(datetime.now().isoformat('T'), ok, msg)
+        entry = '[{}] {} - {}\n'.format(datetime.now(config.TZ).isoformat('T'), ok, msg)
         with open(self.logpath, 'a') as f:
             f.write(entry)
     

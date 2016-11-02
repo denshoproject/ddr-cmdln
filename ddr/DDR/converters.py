@@ -13,6 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 import re
 
+from dateutil import parser
 from jinja2 import Template
 
 from DDR import config
@@ -84,7 +85,7 @@ def text_to_datetime(text, fmt=config.DATETIME_FORMAT):
     """
     text = normalize_string(text)
     if text:
-        return datetime.strptime(text, fmt)
+        return parser.parse(text)
     return ''
 
 def datetime_to_text(data, fmt=config.DATETIME_FORMAT):
@@ -95,9 +96,11 @@ def datetime_to_text(data, fmt=config.DATETIME_FORMAT):
     @param data: datetime
     @returns: str
     """
-    if data:
-        return datetime.strftime(data, fmt)
-    return None
+    if not data:
+        return None
+    if not isinstance(data, datetime):
+        raise Exception('Cannot strformat "%s": not a datetime.' % data)
+    return datetime.strftime(data, fmt)
 
 
 # list ----------------------------------------------------------------

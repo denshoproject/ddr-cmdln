@@ -6,6 +6,7 @@ import shutil
 from nose.tools import assert_raises
 import git
 
+import config
 import dvcs
 
 
@@ -37,7 +38,7 @@ def test_repository():
     # git_set_configs
     # annex_set_configs
     # repository
-    path = '/tmp/test_dvcs.repository-%s' % datetime.now().strftime('%Y%m%d-%H%M%S')
+    path = '/tmp/test_dvcs.repository-%s' % datetime.now(config.TZ).strftime('%Y%m%d-%H%M%S')
     user = 'gjost'
     mail = 'gjost@densho.org'
     repo = git.Repo.init(path)

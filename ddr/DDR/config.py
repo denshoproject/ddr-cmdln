@@ -2,6 +2,9 @@ import ConfigParser
 import os
 import sys
 
+import pytz
+
+
 CONFIG_FILES = [
     '/etc/ddr/ddr.cfg',       '/etc/ddr/local.cfg',
     '/etc/ddr/ddrlocal.cfg',  '/etc/ddr/ddrlocal-local.cfg',
@@ -22,6 +25,19 @@ def read_configs(paths):
         raise NoConfigError('No config file!')
     return config
 
+def _parse_alt_timezones(text):
+    """Parses contents of [cmdln]alt_timezones
+    Format: ORG:TIMEZONENAME;ORG:TIMEZONENAME
+    Example: hmwf:America/Boise;janm:America/Los_Angeles
+    NOTE: TIMEZONENAMEs must be valid IANA timezones.
+    """
+    data = {}
+    for item in [item for item in text.strip().split(';') if item]:
+        key,val = item.strip().split(':')
+        if key not in data.keys():
+            data[key] = pytz.timezone(val)
+    return data
+
 
 config = read_configs(CONFIG_FILES)
 
@@ -36,8 +52,28 @@ LOG_DIR = config.get('local', 'log_dir')
 LOG_FILE = config.get('local','log_file')
 LOG_LEVEL = config.get('local', 'log_level')
 
-TIME_FORMAT = config.get('cmdln','time_format')
+try:
+    DEFAULT_TIMEZONE = config.get('cmdln','default_timezone')
+except:
+    DEFAULT_TIMEZONE = 'America/Los_Angeles'
+TZ = pytz.timezone(DEFAULT_TIMEZONE)
+ALT_TIMEZONES = _parse_alt_timezones(config.get('cmdln','alt_timezones'))
 DATETIME_FORMAT = config.get('cmdln','datetime_format')
+DATE_FORMAT = config.get('cmdln','date_format')
+TIME_FORMAT = config.get('cmdln','time_format')
+PRETTY_DATETIME_FORMAT = config.get('cmdln','pretty_datetime_format')
+PRETTY_DATE_FORMAT = config.get('cmdln','pretty_date_format')
+PRETTY_TIME_FORMAT = config.get('cmdln','pretty_time_format')
+# Format used in Elasticsearch mapping.json
+# Elasticsearch uses the Joda-Time formatting:
+# http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html
+#ELASTICSEARCH_DATETIME_MAPPING = "yyyy-MM-dd'T'HH:mm:ssZ"
+ELASTICSEARCH_DATETIME_MAPPING = "yyyy-MM-dd'T'HH:mm:ss"
+# Format used when posting documents to Elasticsearch
+# As of 2016-10-31 our ES mappings don't have timezone
+# We can't reindex so ES datetimes must be timezone-naive for now.
+#ELASTICSEARCH_DATETIME_FORMAT  = "%Y-%m-%dT%H:%M:%S%z"
+ELASTICSEARCH_DATETIME_FORMAT  = "%Y-%m-%dT%H:%M:%S"
 
 ACCESS_FILE_APPEND = config.get('cmdln','access_file_append')
 ACCESS_FILE_EXTENSION = config.get('cmdln','access_file_extension')

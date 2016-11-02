@@ -52,6 +52,7 @@ from DDR import changelog
 from DDR import commands
 from DDR import config
 from DDR.control import CollectionControlFile, EntityControlFile
+from DDR import converters
 from DDR import docstore
 from DDR import dvcs
 from DDR import fileio
@@ -216,7 +217,7 @@ def form_post(document, module, cleaned_data):
             setattr(document, fieldname, field_data)
     # update record_lastmod
     if hasattr(document, 'record_lastmod'):
-        document.record_lastmod = datetime.now()
+        document.record_lastmod = datetime.now(config.TZ)
 
 def load_json_lite(json_path, model, object_id):
     """Simply reads JSON file and adds object_id if it's a file
@@ -274,7 +275,28 @@ def load_json(document, module, json_text):
     for mf in module.FIELDS:
         if not hasattr(document, mf['name']):
             setattr(document, mf['name'], mf.get('default',None))
+    # Add timeszone to fields if not present
+    apply_timezone(document, module)
     return json_data
+
+def apply_timezone(document, module):
+    """Set time zone for datetime fields if not present in datetime fields
+    
+    If document matches certain criteria, override the timezone with a
+    specified alternate timezone.
+    """
+    # add timezone to any datetime fields missing it
+    for mf in module.FIELDS:
+        if mf['model_type'] == datetime:
+            fieldname = mf['name']
+            dt = getattr(document, fieldname)
+            if dt and (not dt.tzinfo):
+                # Use default timezone unless...
+                if document.identifier.idparts['org'] in config.ALT_TIMEZONES.keys():
+                    timezone = config.ALT_TIMEZONES[document.identifier.idparts['org']]
+                else:
+                    timezone = config.TZ
+                setattr(document, fieldname, timezone.localize(dt))
 
 def dump_json(obj, module, template=False,
               template_passthru=['id', 'record_created', 'record_lastmod'],
@@ -431,6 +453,8 @@ def load_csv(obj, module, rowd):
             if value != oldvalue:
                 obj.modified.append(field)
             setattr(obj, field, value)
+    # Add timezone to fields if not present
+    apply_timezone(obj, module.module)
     return obj.modified
 
 def from_csv(identifier, rowd):
@@ -1356,9 +1380,9 @@ class Entity( object ):
         """
         data = form_prep(self, self.identifier.fields_module())
         if not data.get('record_created', None):
-            data['record_created'] = datetime.now()
+            data['record_created'] = datetime.now(config.TZ)
         if not data.get('record_lastmod', None):
-            data['record_lastmod'] = datetime.now()
+            data['record_lastmod'] = datetime.now(config.TZ)
         return data
     
     def form_post(self, cleaned_data):
@@ -1485,19 +1509,19 @@ class Entity( object ):
         modified = load_csv(self, module, rowd)
         ## special cases
         #def parsedt(txt):
-        #    d = datetime.now()
+        #    d = datetime.now(config.TZ)
         #    try:
-        #        d = datetime.strptime(txt, config.DATETIME_FORMAT)
+        #        d = converters.text_to_datetime(txt)
         #    except:
         #        try:
-        #            d = datetime.strptime(txt, config.TIME_FORMAT)
+        #            d = converters.text_to_datetime(txt)
         #        except:
         #            pass
         #    return d
         if not hasattr(self, 'record_created'):
-            self.record_created = datetime.now()
+            self.record_created = datetime.now(config.TZ)
         if modified and hasattr(self, 'record_lastmod'):
-            self.record_lastmod = datetime.now()
+            self.record_lastmod = datetime.now(config.TZ)
         self.rm_file_duplicates()
         return modified
 
