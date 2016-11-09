@@ -240,6 +240,59 @@ def delete_index( hosts, index ):
         return status
     return '{"status":500, "message":"Index does not exist"}'
 
+def reindex(hosts, source, dest):
+    """Copy documents from one index to another.
+    
+    @param hosts: list of dicts containing host information.
+    @param source: str Name of source index.
+    @param dest: str Name of destination index.
+    @returns: number successful,list of paths that didn't work out
+    """
+    logger.debug('reindex(%s, %s, %s)' % (hosts, source, dest))
+    
+    es = _get_connection(hosts)
+    
+    if index_exists(hosts, source):
+        logger.info('Source index exists: %s' % source)
+    else:
+        return '{"status":500, "message":"Source index does not exist"}'
+    
+    if index_exists(hosts, dest):
+        logger.info('Destination index exists: %s' % dest)
+    else:
+        return '{"status":500, "message":"Destination index does not exist"}'
+    
+    version = es.info()['version']['number']
+    logger.debug('Elasticsearch version %s' % version)
+
+    if version >= '2.3':
+        logger.debug('new API')
+        body = {
+            "source": {"index": source},
+            "dest": {"index": dest}
+        }
+        results = es.reindex(
+            body=json.dumps(body),
+            refresh=None,
+            requests_per_second=0,
+            timeout='1m',
+            wait_for_active_shards=1,
+            wait_for_completion=False,
+        )
+    else:
+        logger.debug('pre-2.3 legacy API')
+        from elasticsearch import helpers
+        results = helpers.reindex(
+            es, source, dest,
+            #query=None,
+            #target_client=None,
+            #chunk_size=500,
+            #scroll=5m,
+            #scan_kwargs={},
+            #bulk_kwargs={}
+        )
+    return results
+
 
 # Each item in this list is a mapping dict in the format ElasticSearch requires.
 # Mappings for each type have to be uploaded individually (I think).

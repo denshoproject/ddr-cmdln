@@ -7,7 +7,7 @@
 
 beautifulsoup4==4.3.2     # MIT       python-beautifulsoup (3.2.1-1)   python-beautifulsoup (3.2.1-1) y
 python-dateutil==2.2      # BSD       python-dateutil (1.5+dfsg-0.1)   python-dateutil (1.5+dfsg-1)   y
-elasticsearch==1.2.0      # Apache    n/a                              n/a                            y
+elasticsearch==1.6.0      # Apache    n/a                              n/a                            y
 envoy==0.0.3              # MIT       n/a                              n/a                            y
 GitPython==0.3.2.RC1      # BSD       python-git (0.3.2~RC1-1)         python-git (0.3.2~RC1-3)       NO
 psutil==2.2.1             # BSD                                                                       y

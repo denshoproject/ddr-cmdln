@@ -61,6 +61,9 @@ Maintenance tasks:
     # Delete existing index
     $ ddr-index remove -H localhost:9200 -i documents
     
+    # Reindex
+    $ ddr-index reindex -H localhost:9200 source dest
+    
     # See if document exists
     $ ddr-index exists -H localhost:9200 -i documents collection ddr-testing-123
     
@@ -184,6 +187,7 @@ def main():
     create_descr,create_epilog = split_docstring(docstore.index)
     remove_descr,remove_epilog = split_docstring(docstore.index)
     index_descr,index_epilog = split_docstring(docstore.index)
+    reindex_descr,reindex_epilog = split_docstring(docstore.reindex)
     alias_descr,alias_epilog = split_docstring(docstore.set_alias)
     mappings_descr,mappings_epilog = split_docstring(docstore.put_mappings)
     facets_descr,facets_epilog = split_docstring(docstore.put_facets)
@@ -199,6 +203,7 @@ def main():
     create_parser = subparsers.add_parser('create', description=create_descr, epilog=create_epilog, formatter_class=formatter,)
     remove_parser = subparsers.add_parser('remove', description=remove_descr, epilog=remove_epilog, formatter_class=formatter,)
     index_parser = subparsers.add_parser('index', description=index_descr, epilog=index_epilog, formatter_class=formatter,)
+    reindex_parser = subparsers.add_parser('reindex', description=reindex_descr, epilog=reindex_epilog, formatter_class=formatter,)
     alias_parser = subparsers.add_parser('alias', description=alias_descr, epilog=alias_epilog, formatter_class=formatter,)
     mappings_parser = subparsers.add_parser('mappings', description=mappings_descr, epilog=mappings_epilog, formatter_class=formatter,)
     facets_parser = subparsers.add_parser('facets', description=facets_descr, epilog=facets_epilog, formatter_class=formatter,)
@@ -214,6 +219,7 @@ def main():
     create_parser.set_defaults(func=docstore.create_index)
     remove_parser.set_defaults(func=docstore.delete_index)
     index_parser.set_defaults(func=docstore.index)
+    reindex_parser.set_defaults(func=docstore.reindex)
     alias_parser.set_defaults(func=docstore.set_alias)
     mappings_parser.set_defaults(func=docstore.put_mappings)
     facets_parser.set_defaults(func=docstore.put_facets)
@@ -259,6 +265,12 @@ def main():
     index_parser.add_argument('-r', '--recursive', action='store_true', help='Recurse into subdirectories.')
     index_parser.add_argument('-P', '--public', action='store_true', help='For publication (fields not marked public will be omitted.')
     index_parser.add_argument('path', help='Absolute path to directory containing metadata file(s).')
+    
+    reindex_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    reindex_parser.add_argument('-l', '--log', help='Log file..')
+    reindex_parser.add_argument('-H', '--host', help='Hostname and port (HOST:PORT).', **hostsarg)
+    reindex_parser.add_argument('source', help='Source index.')
+    reindex_parser.add_argument('dest', help='Destination index.')
     
     alias_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
     alias_parser.add_argument('-l', '--log', help='Log file..')
@@ -364,6 +376,9 @@ def main():
         print('Successful:      %s' % results['successful'])
         print('Errors:          %s' % len(results['bad']))
         print('Time elapsed:    %s' % elapsed)
+    elif args.cmd == 'reindex':
+        results = docstore.reindex(hosts, args.source, args.dest)
+        print(results)
     elif args.cmd == 'alias':
         msg = docstore.set_alias(
             hosts, args.alias, args.index, remove=args.remove, create=False
