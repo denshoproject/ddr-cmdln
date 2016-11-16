@@ -355,7 +355,7 @@ def fetch(collection):
 
 @command
 @local_only
-def update(user_name, user_mail, collection, updated_files, agent=''):
+def update(user_name, user_mail, collection, updated_files, agent='', commit=False):
     """Command-line function for commiting changes to the specified file.
     
     NOTE: Does not push to the workbench server.
@@ -364,6 +364,7 @@ def update(user_name, user_mail, collection, updated_files, agent=''):
     @param collection: Collection
     @param updated_files: List of relative paths to updated file(s).
     @param agent: (optional) Name of software making the change.
+    @param commit: (optional) Commit files after staging them.
     @return: message ('ok' if successful)
     """
     repo = dvcs.repository(collection.path, user_name, user_mail)
@@ -389,8 +390,9 @@ def update(user_name, user_mail, collection, updated_files, agent=''):
     else:
         logging.error('    COULD NOT UPDATE changelog')
     
-    # add files and commit
-    repo = commit_files(repo, commit_message, updated_files, [])
+    if commit:
+        # add files and commit
+        repo = commit_files(repo, commit_message, updated_files, [])
     return 0,'ok'
 
 
@@ -648,7 +650,7 @@ def file_destroy(user_name, user_mail, collection, entity, rm_files, updated_fil
 
 @command
 @local_only
-def entity_update(user_name, user_mail, collection, entity, updated_files, agent=''):
+def entity_update(user_name, user_mail, collection, entity, updated_files, agent='', commit=True):
     """Command-line function for committing changes to the specified entity file.
     
     NOTE: Does not push to the workbench server.
@@ -661,6 +663,7 @@ def entity_update(user_name, user_mail, collection, entity, updated_files, agent
     @param entity: Entity
     @param updated_files: List of paths to updated file(s), relative to entitys.
     @param agent: (optional) Name of software making the change.
+    @param commit: (optional) Commit files after staging them.
     @return: message ('ok' if successful)
     """
     repo = dvcs.repository(collection.path, user_name, user_mail)
@@ -687,8 +690,9 @@ def entity_update(user_name, user_mail, collection, entity, updated_files, agent
                           entity_changelog_messages,
                           user=user_name, email=user_mail)
     git_files.append(entity.changelog_path_rel)
-    # add files and commit
-    repo = commit_files(repo, commit_message, git_files, [])
+    if commit:
+        # add files and commit
+        repo = commit_files(repo, commit_message, git_files, [])
     return 0,'ok'
 
 

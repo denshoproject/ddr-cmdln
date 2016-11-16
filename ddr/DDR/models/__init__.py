@@ -667,16 +667,13 @@ class Collection( object ):
         if modified_files:
             updated_files = updated_files + modified_files
 
-        if commit:
-            exit,status = commands.update(
-                git_name, git_mail,
-                self,
-                updated_files,
-                agent
-            )
-        else:
-            exit = 0
-            status = 'staged'
+        exit,status = commands.update(
+            git_name, git_mail,
+            self,
+            updated_files,
+            agent,
+            commit
+        )
         return exit,status
     
     @staticmethod
@@ -1276,30 +1273,35 @@ class Entity( object ):
         @returns: exit,status (int,str)
         """
         if not collection:
-            collection = self.collection()
+            collection = self.identifier.collection().object()
+        parent = self.identifier.parent().object()
         
         if cleaned_data:
             self.form_post(cleaned_data)
         
+        self.children(force_read=True)
         self.write_json()
         self.write_mets()
         updated_files = [self.json_path, self.mets_path,]
+        
+        if parent and isinstance(parent, Entity):
+            # update parent .children and .file_groups
+            parent.children(force_read=True)
+            parent.write_json()
+            updated_files.append(parent.json_path)
         
         inheritables = self.selected_inheritables(cleaned_data)
         modified_ids,modified_files = self.update_inheritables(inheritables, cleaned_data)
         if modified_files:
             updated_files = updated_files + modified_files
 
-        if commit:
-            exit,status = commands.entity_update(
-                git_name, git_mail,
-                collection, self,
-                updated_files,
-                agent
-            )
-        else:
-            exit = 0
-            status = 'staged'
+        exit,status = commands.entity_update(
+            git_name, git_mail,
+            collection, self,
+            updated_files,
+            agent,
+            commit
+        )
         return exit,status
     
     @staticmethod
@@ -2040,26 +2042,29 @@ class File( object ):
         @returns: exit,status (int,str)
         """
         if not collection:
-            collection = self.collection()
+            collection = self.identifier.collection().object()
         if not parent:
-            parent = self.parent()
+            parent = self.identifier.parent().object()
         
         if cleaned_data:
             self.form_post(cleaned_data)
         
         self.write_json()
         updated_files = [self.json_path,]
-
-        if commit:
-            exit,status = commands.entity_update(
-                git_name, git_mail,
-                collection, parent,
-                updated_files,
-                agent
-            )
-        else:
-            exit = 0
-            status = 'staged'
+        
+        if parent and isinstance(parent, Entity):
+            # update parent .children and .file_groups
+            parent.children(force_read=True)
+            parent.write_json()
+            updated_files.append(parent.json_path)
+        
+        exit,status = commands.entity_update(
+            git_name, git_mail,
+            collection, parent,
+            updated_files,
+            agent,
+            commit
+        )
         return exit,status
         
     # _lockfile
