@@ -644,7 +644,7 @@ class Collection( object ):
         )
         return exit,status
     
-    def save(self, git_name, git_mail, agent, cleaned_data={}, commit=False):
+    def save(self, git_name, git_mail, agent, cleaned_data={}, commit=True):
         """Writes specified Collection metadata, stages, and commits.
         
         Returns exit code, status message, and list of updated files.  Files list
@@ -1266,7 +1266,7 @@ class Entity( object ):
         )
         return exit,status
     
-    def save(self, git_name, git_mail, agent, collection=None, cleaned_data={}, commit=False):
+    def save(self, git_name, git_mail, agent, collection=None, cleaned_data={}, commit=True):
         """Writes specified Entity metadata, stages, and commits.
         
         Updates .children and .file_groups if parent is another Entity.
@@ -2043,7 +2043,7 @@ class File( object ):
         )
         return exit,status
     
-    def save(self, git_name, git_mail, agent, collection=None, parent=None, cleaned_data={}, commit=False):
+    def save(self, git_name, git_mail, agent, collection=None, parent=None, cleaned_data={}, commit=True):
         """Writes File metadata, stages, and commits.
         
         Updates .children and .file_groups if parent is (almost certainly) an Entity.
