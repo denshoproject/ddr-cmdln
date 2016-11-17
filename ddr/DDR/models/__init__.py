@@ -647,12 +647,17 @@ class Collection( object ):
     def save(self, git_name, git_mail, agent, cleaned_data={}, commit=False):
         """Writes specified Collection metadata, stages, and commits.
         
+        Returns exit code, status message, and list of updated files.  Files list
+        is for use by e.g. batch operations that want to commit all modified files
+        in one operation rather than piecemeal.  This is included in Collection
+        to be consistent with the other objects' methods.
+        
         @param git_name: str
         @param git_mail: str
         @param agent: str
         @param cleaned_data: dict Form data (all fields required)
         @param commit: boolean
-        @returns: exit,status (int,str)
+        @returns: exit,status,updated_files (int,str,list)
         """
         if cleaned_data:
             self.form_post(cleaned_data)
@@ -674,7 +679,7 @@ class Collection( object ):
             agent,
             commit
         )
-        return exit,status
+        return exit,status,updated_files
     
     @staticmethod
     def from_json(path_abs, identifier=None):
@@ -1264,13 +1269,18 @@ class Entity( object ):
     def save(self, git_name, git_mail, agent, collection=None, cleaned_data={}, commit=False):
         """Writes specified Entity metadata, stages, and commits.
         
+        Updates .children and .file_groups if parent is another Entity.
+        Returns exit code, status message, and list of updated files.  Files list
+        is for use by e.g. batch operations that want to commit all modified files
+        in one operation rather than piecemeal.
+        
         @param git_name: str
         @param git_mail: str
         @param agent: str
         @param collection: Collection
         @param cleaned_data: dict Form data (all fields required)
         @param commit: boolean
-        @returns: exit,status (int,str)
+        @returns: exit,status,updated_files (int,str,list)
         """
         if not collection:
             collection = self.identifier.collection().object()
@@ -1282,7 +1292,11 @@ class Entity( object ):
         self.children(force_read=True)
         self.write_json()
         self.write_mets()
-        updated_files = [self.json_path, self.mets_path,]
+        updated_files = [
+            self.json_path,
+            self.mets_path,
+            self.changelog_path,
+        ]
         
         if parent and isinstance(parent, Entity):
             # update parent .children and .file_groups
@@ -1302,7 +1316,7 @@ class Entity( object ):
             agent,
             commit
         )
-        return exit,status
+        return exit,status,updated_files
     
     @staticmethod
     def from_json(path_abs, identifier=None):
@@ -2032,6 +2046,11 @@ class File( object ):
     def save(self, git_name, git_mail, agent, collection=None, parent=None, cleaned_data={}, commit=False):
         """Writes File metadata, stages, and commits.
         
+        Updates .children and .file_groups if parent is (almost certainly) an Entity.
+        Returns exit code, status message, and list of updated files.  Files list
+        is for use by e.g. batch operations that want to commit all modified files
+        in one operation rather than piecemeal.
+        
         @param git_name: str
         @param git_mail: str
         @param agent: str
@@ -2039,7 +2058,7 @@ class File( object ):
         @param parent: Entity or Segment
         @param cleaned_data: dict Form data (all fields required)
         @param commit: boolean
-        @returns: exit,status (int,str)
+        @returns: exit,status,updated_files (int,str,list)
         """
         if not collection:
             collection = self.identifier.collection().object()
@@ -2050,7 +2069,9 @@ class File( object ):
             self.form_post(cleaned_data)
         
         self.write_json()
-        updated_files = [self.json_path,]
+        updated_files = [
+            self.json_path,
+        ]
         
         if parent and isinstance(parent, Entity):
             # update parent .children and .file_groups
@@ -2065,7 +2086,7 @@ class File( object ):
             agent,
             commit
         )
-        return exit,status
+        return exit,status,updated_files
         
     # _lockfile
     # lock
