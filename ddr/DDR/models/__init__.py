@@ -784,7 +784,7 @@ class Collection( object ):
         return modules.Module(module).labels_values(self)
     
     def form_prep(self):
-        """Apply formprep_{field} functions to prep data dict to pass into DDRForm object.
+        """Apply formprep_{field} functions in Collection module to prep data dict to pass into DDRForm object.
         
         @returns data: dict object as used by Django Form object.
         """
@@ -1390,16 +1390,11 @@ class Entity( object ):
         return modules.Module(module).labels_values(self)
     
     def form_prep(self):
-        """Apply formprep_{field} functions to prep data dict to pass into DDRForm object.
+        """Apply formprep_{field} functions in Entity module to prep data dict to pass into DDRForm object.
         
         @returns data: dict object as used by Django Form object.
         """
-        data = form_prep(self, self.identifier.fields_module())
-        if not data.get('record_created', None):
-            data['record_created'] = datetime.now(config.TZ)
-        if not data.get('record_lastmod', None):
-            data['record_lastmod'] = datetime.now(config.TZ)
-        return data
+        return form_prep(self, self.identifier.fields_module())
     
     def form_post(self, cleaned_data):
         """Apply formpost_{field} functions to process cleaned_data from DDRForm
@@ -2143,7 +2138,7 @@ class File( object ):
         return modules.Module(module).labels_values(self)
     
     def form_prep(self):
-        """Apply formprep_{field} functions to prep data dict to pass into DDRForm object.
+        """Apply formprep_{field} functions in File module to prep data dict to pass into DDRForm object.
         
         @returns data: dict object as used by Django Form object.
         """
