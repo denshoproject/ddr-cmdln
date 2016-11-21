@@ -537,13 +537,16 @@ class Importer():
                 if not os.path.exists(entity.path_abs):
                     os.makedirs(entity.path_abs)
                 logging.debug('    writing %s' % entity.json_path)
-                entity.write_json(obj_metadata=obj_metadata)
-                # TODO better to write to collection changelog?
-                # TODO write all additions to changelog at one time
-                Importer._write_entity_changelog(entity, git_name, git_mail, agent)
+                
+                exit,status,updated_files = entity.save(
+                    git_name, git_mail, agent,
+                    collection=cidentifier.object(),
+                    #cleaned_data=rowd,
+                    commit=False
+                )
+                
                 # stage
-                git_files.append(entity.json_path_rel)
-                git_files.append(entity.changelog_path_rel)
+                git_files.append(updated_files)
                 updated.append(entity)
             
             elapsed_round = datetime.now(config.TZ) - start_round
@@ -723,6 +726,7 @@ class Importer():
             git_name, git_mail, agent,
             dryrun
         )
+        
         logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
         logging.info('Adding new files')
         git_files2 = Importer._add_new_files(
@@ -732,6 +736,7 @@ class Importer():
             log_path, dryrun
         )
         logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
+        
         return git_files
     
     @staticmethod
@@ -764,12 +769,15 @@ class Importer():
             
             if modified and not dryrun:
                 logging.debug('    writing %s' % file_.json_path)
-                file_.write_json(obj_metadata=obj_metadata)
-                # TODO better to write to collection changelog?
-                Importer._write_entity_changelog(entity, git_name, git_mail, agent)
+
+                exit,status,updated_files = file_.save(
+                    git_name, git_mail, agent,
+                    cleaned_data=obj_metadata,
+                    commit=False
+                )
+                
                 # stage
-                git_files.append(file_.json_path_rel)
-                git_files.append(entity.changelog_path_rel)
+                git_files.append(updated_files)
                 updated.append(file_)
             
             elapsed_round = datetime.now(config.TZ) - start_round
