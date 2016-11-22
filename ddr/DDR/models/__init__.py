@@ -644,15 +644,20 @@ class Collection( object ):
         )
         return exit,status
     
-    def save(self, git_name, git_mail, agent, cleaned_data={}, commit=False):
+    def save(self, git_name, git_mail, agent, cleaned_data={}, commit=True):
         """Writes specified Collection metadata, stages, and commits.
+        
+        Returns exit code, status message, and list of updated files.  Files list
+        is for use by e.g. batch operations that want to commit all modified files
+        in one operation rather than piecemeal.  This is included in Collection
+        to be consistent with the other objects' methods.
         
         @param git_name: str
         @param git_mail: str
         @param agent: str
         @param cleaned_data: dict Form data (all fields required)
         @param commit: boolean
-        @returns: exit,status (int,str)
+        @returns: exit,status,updated_files (int,str,list)
         """
         if cleaned_data:
             self.form_post(cleaned_data)
@@ -667,17 +672,14 @@ class Collection( object ):
         if modified_files:
             updated_files = updated_files + modified_files
 
-        if commit:
-            exit,status = commands.update(
-                git_name, git_mail,
-                self,
-                updated_files,
-                agent
-            )
-        else:
-            exit = 0
-            status = 'staged'
-        return exit,status
+        exit,status = commands.update(
+            git_name, git_mail,
+            self,
+            updated_files,
+            agent,
+            commit
+        )
+        return exit,status,updated_files
     
     @staticmethod
     def from_json(path_abs, identifier=None):
@@ -782,7 +784,7 @@ class Collection( object ):
         return modules.Module(module).labels_values(self)
     
     def form_prep(self):
-        """Apply formprep_{field} functions to prep data dict to pass into DDRForm object.
+        """Apply formprep_{field} functions in Collection module to prep data dict to pass into DDRForm object.
         
         @returns data: dict object as used by Django Form object.
         """
@@ -1264,8 +1266,13 @@ class Entity( object ):
         )
         return exit,status
     
-    def save(self, git_name, git_mail, agent, collection=None, cleaned_data={}, commit=False):
+    def save(self, git_name, git_mail, agent, collection=None, cleaned_data={}, commit=True):
         """Writes specified Entity metadata, stages, and commits.
+        
+        Updates .children and .file_groups if parent is another Entity.
+        Returns exit code, status message, and list of updated files.  Files list
+        is for use by e.g. batch operations that want to commit all modified files
+        in one operation rather than piecemeal.
         
         @param git_name: str
         @param git_mail: str
@@ -1273,34 +1280,43 @@ class Entity( object ):
         @param collection: Collection
         @param cleaned_data: dict Form data (all fields required)
         @param commit: boolean
-        @returns: exit,status (int,str)
+        @returns: exit,status,updated_files (int,str,list)
         """
         if not collection:
-            collection = self.collection()
+            collection = self.identifier.collection().object()
+        parent = self.identifier.parent().object()
         
         if cleaned_data:
             self.form_post(cleaned_data)
         
+        self.children(force_read=True)
         self.write_json()
         self.write_mets()
-        updated_files = [self.json_path, self.mets_path,]
+        updated_files = [
+            self.json_path,
+            self.mets_path,
+            self.changelog_path,
+        ]
+        
+        if parent and isinstance(parent, Entity):
+            # update parent .children and .file_groups
+            parent.children(force_read=True)
+            parent.write_json()
+            updated_files.append(parent.json_path)
         
         inheritables = self.selected_inheritables(cleaned_data)
         modified_ids,modified_files = self.update_inheritables(inheritables, cleaned_data)
         if modified_files:
             updated_files = updated_files + modified_files
 
-        if commit:
-            exit,status = commands.entity_update(
-                git_name, git_mail,
-                collection, self,
-                updated_files,
-                agent
-            )
-        else:
-            exit = 0
-            status = 'staged'
-        return exit,status
+        exit,status = commands.entity_update(
+            git_name, git_mail,
+            collection, self,
+            updated_files,
+            agent,
+            commit
+        )
+        return exit,status,updated_files
     
     @staticmethod
     def from_json(path_abs, identifier=None):
@@ -1374,16 +1390,11 @@ class Entity( object ):
         return modules.Module(module).labels_values(self)
     
     def form_prep(self):
-        """Apply formprep_{field} functions to prep data dict to pass into DDRForm object.
+        """Apply formprep_{field} functions in Entity module to prep data dict to pass into DDRForm object.
         
         @returns data: dict object as used by Django Form object.
         """
-        data = form_prep(self, self.identifier.fields_module())
-        if not data.get('record_created', None):
-            data['record_created'] = datetime.now(config.TZ)
-        if not data.get('record_lastmod', None):
-            data['record_lastmod'] = datetime.now(config.TZ)
-        return data
+        return form_prep(self, self.identifier.fields_module())
     
     def form_post(self, cleaned_data):
         """Apply formpost_{field} functions to process cleaned_data from DDRForm
@@ -2027,8 +2038,13 @@ class File( object ):
         )
         return exit,status
     
-    def save(self, git_name, git_mail, agent, collection=None, parent=None, cleaned_data={}, commit=False):
+    def save(self, git_name, git_mail, agent, collection=None, parent=None, cleaned_data={}, commit=True):
         """Writes File metadata, stages, and commits.
+        
+        Updates .children and .file_groups if parent is (almost certainly) an Entity.
+        Returns exit code, status message, and list of updated files.  Files list
+        is for use by e.g. batch operations that want to commit all modified files
+        in one operation rather than piecemeal.
         
         @param git_name: str
         @param git_mail: str
@@ -2037,30 +2053,35 @@ class File( object ):
         @param parent: Entity or Segment
         @param cleaned_data: dict Form data (all fields required)
         @param commit: boolean
-        @returns: exit,status (int,str)
+        @returns: exit,status,updated_files (int,str,list)
         """
         if not collection:
-            collection = self.collection()
+            collection = self.identifier.collection().object()
         if not parent:
-            parent = self.parent()
+            parent = self.identifier.parent().object()
         
         if cleaned_data:
             self.form_post(cleaned_data)
         
         self.write_json()
-        updated_files = [self.json_path,]
-
-        if commit:
-            exit,status = commands.entity_update(
-                git_name, git_mail,
-                collection, parent,
-                updated_files,
-                agent
-            )
-        else:
-            exit = 0
-            status = 'staged'
-        return exit,status
+        updated_files = [
+            self.json_path,
+        ]
+        
+        if parent and isinstance(parent, Entity):
+            # update parent .children and .file_groups
+            parent.children(force_read=True)
+            parent.write_json()
+            updated_files.append(parent.json_path)
+        
+        exit,status = commands.entity_update(
+            git_name, git_mail,
+            collection, parent,
+            updated_files,
+            agent,
+            commit
+        )
+        return exit,status,updated_files
         
     # _lockfile
     # lock
@@ -2117,7 +2138,7 @@ class File( object ):
         return modules.Module(module).labels_values(self)
     
     def form_prep(self):
-        """Apply formprep_{field} functions to prep data dict to pass into DDRForm object.
+        """Apply formprep_{field} functions in File module to prep data dict to pass into DDRForm object.
         
         @returns data: dict object as used by Django Form object.
         """
