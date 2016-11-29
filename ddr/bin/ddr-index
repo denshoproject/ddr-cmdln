@@ -127,8 +127,9 @@ def host_status(hosts, index=None, mappings=False):
     @param hosts: dict
     @param index: str Index name
     """
-    status = docstore.status(hosts)
-    aliases = docstore.aliases(hosts)
+    d = docstore.Docstore(hosts)
+    status = d.status()
+    aliases = d.aliases()
     
     # list indices
     print('Indices on this cluster:')
@@ -156,7 +157,7 @@ def host_status(hosts, index=None, mappings=False):
     # mappings
     if mappings:
         print('Mappings')
-        print(docstore.get_mappings(hosts, index))
+        print(d.get_mappings(index))
 
 
 def main():
@@ -181,21 +182,21 @@ def main():
         description=subparser_description,
         help=subparser_help)
     
-    post_descr,post_epilog = split_docstring(docstore.post)
-    get_descr,get_epilog = split_docstring(docstore.get)
-    init_descr,init_epilog = split_docstring(docstore.index)
-    create_descr,create_epilog = split_docstring(docstore.index)
-    remove_descr,remove_epilog = split_docstring(docstore.index)
-    index_descr,index_epilog = split_docstring(docstore.index)
-    reindex_descr,reindex_epilog = split_docstring(docstore.reindex)
-    alias_descr,alias_epilog = split_docstring(docstore.set_alias)
-    mappings_descr,mappings_epilog = split_docstring(docstore.put_mappings)
-    facets_descr,facets_epilog = split_docstring(docstore.put_facets)
-    exists_descr,exists_epilog = split_docstring(docstore.exists)
-    status_descr,status_epilog = split_docstring(docstore.status)
-    repo_descr,repo_epilog = split_docstring(docstore.repo)
-    org_descr,org_epilog = split_docstring(docstore.org)
-    delete_descr,delete_epilog = split_docstring(docstore.delete)
+    post_descr,post_epilog = split_docstring(docstore.Docstore.post)
+    get_descr,get_epilog = split_docstring(docstore.Docstore.get)
+    init_descr,init_epilog = split_docstring(docstore.Docstore.index)
+    create_descr,create_epilog = split_docstring(docstore.Docstore.index)
+    remove_descr,remove_epilog = split_docstring(docstore.Docstore.index)
+    index_descr,index_epilog = split_docstring(docstore.Docstore.index)
+    reindex_descr,reindex_epilog = split_docstring(docstore.Docstore.reindex)
+    alias_descr,alias_epilog = split_docstring(docstore.Docstore.set_alias)
+    mappings_descr,mappings_epilog = split_docstring(docstore.Docstore.put_mappings)
+    facets_descr,facets_epilog = split_docstring(docstore.Docstore.put_facets)
+    exists_descr,exists_epilog = split_docstring(docstore.Docstore.exists)
+    status_descr,status_epilog = split_docstring(docstore.Docstore.status)
+    repo_descr,repo_epilog = split_docstring(docstore.Docstore.repo)
+    org_descr,org_epilog = split_docstring(docstore.Docstore.org)
+    delete_descr,delete_epilog = split_docstring(docstore.Docstore.delete)
     
     post_parser = subparsers.add_parser('post', description=post_descr, epilog=post_epilog, formatter_class=formatter,)
     get_parser = subparsers.add_parser('get', description=get_descr, epilog=get_epilog, formatter_class=formatter,)
@@ -213,21 +214,21 @@ def main():
     org_parser = subparsers.add_parser('org', description=org_descr, epilog=org_epilog, formatter_class=formatter,)
     delete_parser = subparsers.add_parser('delete', description=delete_descr, epilog=delete_epilog, formatter_class=formatter,)
     
-    post_parser.set_defaults(func=docstore.post)
-    get_parser.set_defaults(func=docstore.get)
-    init_parser.set_defaults(func=docstore.init_index)
-    create_parser.set_defaults(func=docstore.create_index)
-    remove_parser.set_defaults(func=docstore.delete_index)
-    index_parser.set_defaults(func=docstore.index)
-    reindex_parser.set_defaults(func=docstore.reindex)
-    alias_parser.set_defaults(func=docstore.set_alias)
-    mappings_parser.set_defaults(func=docstore.put_mappings)
-    facets_parser.set_defaults(func=docstore.put_facets)
-    exists_parser.set_defaults(func=docstore.exists)
-    status_parser.set_defaults(func=docstore.status)
-    repo_parser.set_defaults(func=docstore.repo)
-    org_parser.set_defaults(func=docstore.org)
-    delete_parser.set_defaults(func=docstore.delete)
+    post_parser.set_defaults(func=docstore.Docstore.post)
+    get_parser.set_defaults(func=docstore.Docstore.get)
+    init_parser.set_defaults(func=docstore.Docstore.init_index)
+    create_parser.set_defaults(func=docstore.Docstore.create_index)
+    remove_parser.set_defaults(func=docstore.Docstore.delete_index)
+    index_parser.set_defaults(func=docstore.Docstore.index)
+    reindex_parser.set_defaults(func=docstore.Docstore.reindex)
+    alias_parser.set_defaults(func=docstore.Docstore.set_alias)
+    mappings_parser.set_defaults(func=docstore.Docstore.put_mappings)
+    facets_parser.set_defaults(func=docstore.Docstore.put_facets)
+    exists_parser.set_defaults(func=docstore.Docstore.exists)
+    status_parser.set_defaults(func=docstore.Docstore.status)
+    repo_parser.set_defaults(func=docstore.Docstore.repo)
+    org_parser.set_defaults(func=docstore.Docstore.org)
+    delete_parser.set_defaults(func=docstore.Docstore.delete)
     
     post_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
     post_parser.add_argument('-l', '--log', help='Log file..')
@@ -334,6 +335,7 @@ def main():
         sys.exit(1)
     
     hosts = make_hosts( args.host )
+    d = docstore.Docstore(args.host)
     
     if args.log and (os.path.exists(args.log) or os.path.exists(os.path.basename(args.log))):
         logging.basicConfig(format=LOGGING_FORMAT, datefmt=LOGGING_DATEFMT, level=logging.DEBUG, filename=args.log)
@@ -344,23 +346,23 @@ def main():
         document = json.loads(
             identifier.Identifier(args.path).object().dump_json()
         )
-        msg = docstore.post(hosts, args.index, document)
+        msg = d.post(args.index, document)
         print(msg)
     elif args.cmd == 'get':
-        msg = docstore.get(hosts, args.index, args.model, args.id)
+        msg = d.get(args.index, args.model, args.id)
         print(format_json(msg, sort_keys=False))
     elif args.cmd == 'init':
-        statuses = docstore.init_index(hosts, args.index, args.path)
+        statuses = d.init_index(args.index, args.path)
         for key,val in statuses.iteritems():
             print('%s: %s' % (key,val))
     elif args.cmd == 'create':
-        results = docstore.create_index(hosts, args.index)
+        results = d.create_index(args.index)
     elif args.cmd == 'remove':
-        results = docstore.delete_index(hosts, args.index)
+        results = d.delete_index(args.index)
     elif args.cmd == 'index':
         start = datetime.now()
-        results = docstore.index(hosts, args.index, args.path,
-                                 recursive=args.recursive, public=args.public)
+        results = d.index(args.index, args.path,
+                          recursive=args.recursive, public=args.public)
         end = datetime.now()
         elapsed = end - start
         if results['bad']:
@@ -377,35 +379,35 @@ def main():
         print('Errors:          %s' % len(results['bad']))
         print('Time elapsed:    %s' % elapsed)
     elif args.cmd == 'reindex':
-        results = docstore.reindex(hosts, args.source, args.dest)
+        results = d.reindex(args.source, args.dest)
         print(results)
     elif args.cmd == 'alias':
-        msg = docstore.set_alias(
-            hosts, args.alias, args.index, remove=args.remove, create=False
+        msg = d.set_alias(
+            args.alias, args.index, remove=args.remove, create=False
         )
         print(msg)
     elif args.cmd == 'mappings':
-        mpath = docstore.mappings_path(args.path)
-        msg = docstore.put_mappings(hosts, args.index, mpath)
+        mpath = d.mappings_path(args.path)
+        msg = d.put_mappings(args.index, mpath)
         print(msg)
     elif args.cmd == 'facets':
-        fpath = docstore.facets_path(args.path)
-        msg = docstore.put_facets(hosts, args.index, fpath)
+        fpath = d.facets_path(args.path)
+        msg = d.put_facets(args.index, fpath)
         print(msg)
     elif args.cmd == 'exists':
-        msg = docstore.exists(hosts, args.index, args.model, args.id)
+        msg = d.exists(args.index, args.model, args.id)
         print(msg)
     elif args.cmd == 'status':
         msg = host_status(hosts, args.index, args.mappings)
         print(msg)
     elif args.cmd == 'repo':
-        msg = docstore.repo(hosts, args.index, args.path)
+        msg = d.repo(args.index, args.path)
         print(msg)
     elif args.cmd == 'org':
-        msg = docstore.org(hosts, args.index, args.path, args.remove)
+        msg = d.org(args.index, args.path, args.remove)
         print(msg)
     elif args.cmd == 'delete':
-        msg = docstore.delete(hosts, args.index, args.id, recursive=args.recursive)
+        msg = d.delete(args.index, args.id, recursive=args.recursive)
         print(msg)
     
     if exit:
