@@ -807,7 +807,13 @@ def annex_get_description(repo, annex_status):
     @param annex_status: dict Output of dvcs.annex_status.
     @return String description or None
     """
-    return _annex_parse_description(annex_status, repo.git.config('annex.uuid'))
+    # TODO 
+    try:
+        uuid = repo.git.config('annex.uuid')
+    except:
+        uuid = 'unknown-annex-uuid'
+        logging.error('UNKNOWN ANNEX UUID')
+    return _annex_parse_description(annex_status, uuid)
 
 def _annex_make_description( drive_label=None, hostname=None, partner_host=None, mail=None ):
     description = None
