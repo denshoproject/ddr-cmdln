@@ -1017,7 +1017,7 @@ class Updater():
                 data = {
                     'id': cid,
                     'verdict': 'FAIL',
-                    'failures':0, 'objects':0, 'files':0, 'elapsed':'', 'per':'',
+                    'failures':0, 'objects_saved':0, 'files_updated':0, 'elapsed':'', 'per':'',
                     'error': 'clone failed'
                 }
                 Updater._write_done(basedir, data)
@@ -1034,7 +1034,7 @@ class Updater():
                 data = {
                     'id': cid,
                     'verdict': 'FAIL',
-                    'failures':0, 'objects':0, 'files':0, 'elapsed':'', 'per':'',
+                    'failures':0, 'objects_saved':0, 'files_updated':0, 'elapsed':'', 'per':'',
                     'error': 'update failed'
                 }
                 Updater._write_done(basedir, data)
@@ -1144,7 +1144,10 @@ class Updater():
     
     @staticmethod
     def _analyze(start, end, response):
-        data = {'id': response['id']}
+        data = {
+            'id': response['id'],
+            'error': '',
+        }
         elapsed = end - start
         if elapsed and response.get('num'):
             per = elapsed / response['num']
@@ -1283,6 +1286,7 @@ class Updater():
                 data['files_updated'],
                 data['elapsed'],
                 data['per'],
+                data['error'],
             ]
             rows.append(row)
         Updater._write_csv(path, headers, rows)
