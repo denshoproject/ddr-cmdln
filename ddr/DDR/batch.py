@@ -947,7 +947,10 @@ class Updater():
     DONE = 'done.csv'
     COLLECTION_LOG = '%s.log'
     DONE_HEADERS = [
-        'id', 'verdict', 'failures', 'objects', 'files', 'elapsed', 'per'
+        'id',
+        'verdict',
+        'failures', 'objects', 'files', 'elapsed', 'per',
+        'error',
     ]
 
     @staticmethod
@@ -1003,15 +1006,43 @@ class Updater():
                 logging.info('Removing existing repo: %s' % collection_path)
                 shutil.rmtree(collection_path)
             logging.info('Cloning %s' % collection_path)
-            clone_exit,clone_status = commands.clone(
-                user, mail,
-                cidentifier,
-                collection_path
-            )
-            logging.info('ok')
+            try:
+                clone_exit,clone_status = commands.clone(
+                    user, mail,
+                    cidentifier,
+                    collection_path
+                )
+                logging.info('ok')
+            except:
+                data = {
+                    'id': cid,
+                    'verdict': 'FAIL',
+                    'failures':0, 'objects':0, 'files':0, 'elapsed':'', 'per':'',
+                    'error': 'clone failed'
+                }
+                Updater._write_done(basedir, data)
+                # update THIS, not writing this collection any more
+                Updater._write_this(basedir, '')
+                completed += 1
+                logging.info('')
+                
             
             # transform
-            data = Updater.update_collection(cidentifier, user, mail, commit=commit)
+            try:
+                data = Updater.update_collection(cidentifier, user, mail, commit=commit)
+            except:
+                data = {
+                    'id': cid,
+                    'verdict': 'FAIL',
+                    'failures':0, 'objects':0, 'files':0, 'elapsed':'', 'per':'',
+                    'error': 'update failed'
+                }
+                Updater._write_done(basedir, data)
+                # update THIS, not writing this collection any more
+                Updater._write_this(basedir, '')
+                completed += 1
+                logging.info('')
+                
             if data['verdict'] == 'ok':
                 logging.info(data['verdict'])
                 successful += 1
@@ -1031,7 +1062,7 @@ class Updater():
                 logging.info('Committing %s' % collection_path)
                 pass
             
-            if not keep:
+            if os.path.exists(collection_path) and not keep:
                 logging.info('Deleting %s' % collection_path)
                 shutil.rmtree(collection_path)
             
