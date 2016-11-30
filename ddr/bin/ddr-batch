@@ -96,8 +96,8 @@ def main():
     logging.info('objects saved: %s' % data['objects_saved'])
     logging.info('files updated: %s' % data['files_updated'])
     logging.info('failures       %s' % data['failures'])
-    
-    deltas = [delta.total_seconds() for delta in data['per_objects']]
+
+    deltas = [delta.total_seconds() for delta in data['per_objects'] if delta]
     if len(deltas) and sum(deltas):
         avg = sum(deltas) / len(deltas)
         logging.info('avg s/object %s' % avg)

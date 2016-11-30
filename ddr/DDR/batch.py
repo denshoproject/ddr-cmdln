@@ -15,6 +15,7 @@ import json
 import logging
 import os
 import shutil
+import traceback
 
 import requests
 
@@ -939,6 +940,44 @@ class Importer():
         logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
 
 
+class UpdaterMetrics():
+    cid = None
+    verdict = 'unknown'
+    failures = 0
+    objects_saved = 0
+    files_updated = 0
+    elapsed = None
+    per_object = None
+    error = ''
+    traceback = ''
+
+    def headers(self):
+        return [
+            'id',
+            'verdict',
+            'failures',
+            'objects_saved',
+            'files_updated',
+            'elapsed',
+            'per_object',
+            'error',
+            'traceback',
+        ]
+    
+    def row(self):
+        return [
+            self.cid,
+            self.verdict,
+            self.failures,
+            self.objects_saved,
+            self.files_updated,
+            self.elapsed,
+            self.per_object,
+            self.error,
+            self.traceback,
+        ]
+
+
 class Updater():
     
     AGENT = 'ddr-transform'
@@ -946,12 +985,6 @@ class Updater():
     THIS = 'this'
     DONE = 'done.csv'
     COLLECTION_LOG = '%s.log'
-    DONE_HEADERS = [
-        'id',
-        'verdict',
-        'failures', 'objects', 'files', 'elapsed', 'per',
-        'error',
-    ]
 
     @staticmethod
     def update_collection(cidentifier, user, mail, commit=False):
@@ -1014,48 +1047,35 @@ class Updater():
                 )
                 logging.info('ok')
             except:
-                data = {
-                    'id': cid,
-                    'verdict': 'FAIL',
-                    'failures':0, 'objects_saved':0, 'files_updated':0, 'elapsed':'', 'per':'',
-                    'error': 'clone failed'
-                }
-                Updater._write_done(basedir, data)
-                # update THIS, not writing this collection any more
-                Updater._write_this(basedir, '')
-                completed += 1
-                logging.info('')
-                
+                metrics = UpdaterMetrics()
+                metrics.cid = cid
+                metrics.verdict = 'FAIL'
+                metrics.error = 'clone failed'
+                metrics.traceback = traceback.format_exc().strip()
             
             # transform
             try:
-                data = Updater.update_collection(cidentifier, user, mail, commit=commit)
+                metrics = Updater.update_collection(cidentifier, user, mail, commit=commit)
             except:
-                data = {
-                    'id': cid,
-                    'verdict': 'FAIL',
-                    'failures':0, 'objects_saved':0, 'files_updated':0, 'elapsed':'', 'per':'',
-                    'error': 'update failed'
-                }
-                Updater._write_done(basedir, data)
-                # update THIS, not writing this collection any more
-                Updater._write_this(basedir, '')
-                completed += 1
-                logging.info('')
+                metrics = UpdaterMetrics()
+                metrics.cid = cid
+                metrics.verdict = 'FAIL'
+                metrics.error = 'update failed'
+                metrics.traceback = traceback.format_exc().strip()
                 
-            if data['verdict'] == 'ok':
-                logging.info(data['verdict'])
+            if metrics.verdict == 'ok':
+                logging.info(metrics.verdict)
                 successful += 1
             else:
-                logging.error(data)
-            logging.info('objects_saved: %s' % data['objects_saved'])
-            logging.info('files_updated: %s' % data['files_updated'])
-            logging.info('failures:      %s' % data['failures'])
-            logging.info('s/object:      %s' % data['per'])
-            total_objects_saved += data['objects_saved']
-            total_files_updated += data['files_updated']
-            total_failures += data['failures']
-            delta = data['per']
+                logging.error(metrics)
+            logging.info('objects_saved: %s' % metrics.objects_saved)
+            logging.info('files_updated: %s' % metrics.files_updated)
+            logging.info('failures:      %s' % metrics.failures)
+            logging.info('s/object:      %s' % metrics.per_object)
+            total_objects_saved += metrics.objects_saved
+            total_files_updated += metrics.files_updated
+            total_failures += metrics.failures
+            delta = metrics.per_object
             per_objects.append(delta)
             
             if commit:
@@ -1066,7 +1086,7 @@ class Updater():
                 logging.info('Deleting %s' % collection_path)
                 shutil.rmtree(collection_path)
             
-            Updater._write_done(basedir, data)
+            Updater._write_done(basedir, metrics)
             # update THIS, not writing this collection any more
             Updater._write_this(basedir, '')
             completed += 1
@@ -1080,7 +1100,6 @@ class Updater():
             'failures': total_failures,
             'per_objects': per_objects,
         }
-
     
     @staticmethod
     def _consolidate_paths(updated_files):
@@ -1135,36 +1154,39 @@ class Updater():
         else:
             logging.info('Changes not committed')
         return {
-            'id': cidentifier.id,
-            'num': num,
-            'exits': exits,
-            'statuses': statuses,
-            'updated': updated_files,
+            'cid': cidentifier.id,    # str collection ID
+            'num': num,               # int raw number of objects
+            'exits': exits,           # dict non-zero exits by object ID
+            'statuses': statuses,     # dict non-ok statuses by object ID
+            'updated': updated_files, # dict updated files by object ID
         }
     
     @staticmethod
     def _analyze(start, end, response):
-        data = {
-            'id': response['id'],
-            'error': '',
-        }
-        elapsed = end - start
-        if elapsed and response.get('num'):
-            per = elapsed / response['num']
+        """
+        @param start: datetime
+        @param end: datetime
+        @param response: dict
+        @returns: UpdaterMetrics
+        """
+        metrics = UpdaterMetrics()
+        metrics.cid  =  response['cid']
+        metrics.objects_saved  =  response['num']
+        metrics.failures  =  len(response['exits'].keys())
+        metrics.files_updated  =  len(Updater._consolidate_paths(response['updated']))
+        
+        metrics.elapsed = end - start
+        if metrics.elapsed and response.get('num'):
+            metrics.per_object = metrics.elapsed / response['num']
+        
+        if metrics.failures \
+        or (metrics.objects_saved == 0) \
+        or (metrics.files_updated == 0):
+            metrics.verdict = 'FAIL'
         else:
-            per = 'unknown'
-        data['elapsed'] = elapsed
-        data['per'] = per
-        data['objects_saved'] = response['num']
-        data['files_updated'] = len(Updater._consolidate_paths(response['updated']))
-        data['failures'] = len(response['exits'].keys())
-        # verdict
-        if data['failures'] \
-        or (data['objects_saved'] == 0) or (data['files_updated'] == 0):
-            data['verdict'] = 'FAIL'
-        else:
-            data['verdict'] = 'ok'
-        return data
+            metrics.verdict = 'ok'
+        
+        return metrics
     
     @staticmethod
     def _prep_todo(basedir, source):
@@ -1267,26 +1289,16 @@ class Updater():
         return headers,rows
     
     @staticmethod
-    def _write_done(basedir, data={}):
+    def _write_done(basedir, metrics=UpdaterMetrics()):
         path = os.path.join(basedir, Updater.DONE)
-        headers = None
+        headers = []
         rows = []
         if os.path.exists(path):
             rows = Updater._read_csv(path)
             if rows:
                 headers = rows.pop(0)
         if not headers:
-            headers = Updater.DONE_HEADERS
-        if data:
-            row = [
-                data['id'],
-                data['verdict'],
-                data['failures'],
-                data['objects_saved'],
-                data['files_updated'],
-                data['elapsed'],
-                data['per'],
-                data['error'],
-            ]
-            rows.append(row)
+            headers = metrics.headers()
+        if metrics.cid:
+            rows.append(metrics.row())
         Updater._write_csv(path, headers, rows)
