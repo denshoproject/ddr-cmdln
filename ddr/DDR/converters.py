@@ -9,6 +9,7 @@
 
 import copy
 from datetime import datetime
+import json
 import logging
 logger = logging.getLogger(__name__)
 import re
@@ -23,6 +24,17 @@ def normalize_string(text):
     if not text:
         return u''
     return unicode(text).replace('\r\n', '\n').replace('\r', '\n').strip()
+
+def load_dirty_json(text):
+    # http://grimhacker.com/2016/04/24/loading-dirty-json-with-python/
+    regex_replace = [
+        (r"([ \{,:\[])(u)?'([^']+)'", r'\1"\3"'),
+        (r" False([, \}\]])", r' false\1'),
+        (r" True([, \}\]])", r' true\1')
+    ]
+    for r, s in regex_replace:
+        text = re.sub(r, s, text)
+    return json.loads(text)
 
 def strip_list(data):
     """Remove empty list items (ex: ['not empty, '']
@@ -403,6 +415,17 @@ def text_to_rolepeople(text):
     text = normalize_string(text)
     if not text:
         return []
+    # try JSON first
+    try:
+        data = json.loads(text)
+        return data
+    except ValueError:
+        pass
+    try:
+        data = load_dirty_json(text)
+        return data
+    except ValueError:
+        pass
     data = []
     for a in text.split(';'):
         b = a.strip()
