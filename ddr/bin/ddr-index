@@ -156,7 +156,7 @@ def host_status(d, mappings=False):
     # mappings
     if mappings:
         print('Mappings')
-        print(d.get_mappings(index))
+        print(format_json(d.get_mappings()))
 
 
 def main():
