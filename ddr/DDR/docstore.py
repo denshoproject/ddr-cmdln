@@ -420,13 +420,11 @@ class Docstore():
         return results['facets']['results']
 
     def _repo_org(self, path, doctype, remove=False):
-        """Add or update base repository metadata.
-        """
         # get and validate file
         with open(path, 'r') as f:
             body = f.read()
         data = json.loads(body)
-        if (not (data.get('id') and  data.get('repo'))) or (data.get('org')):
+        if (not (data.get('id') and data.get('repo'))):
             raise Exception('Data file is not well-formed.')
         document_id = data['id']
         # add/update
@@ -437,9 +435,21 @@ class Docstore():
         return results
     
     def repo(self, path, remove=False):
+        """Add/update or remove base repository metadata.
+        
+        @param path: str Absolute path to repository.json
+        @param remove: bool Remove record from ES
+        @returns: dict
+        """
         return self._repo_org(path, 'repository', remove)
     
     def org(self, path, remove=False):
+        """Add/update or remove base organization metadata.
+        
+        @param path: str Absolute path to organization.json
+        @param remove: bool Remove record from ES
+        @returns: dict
+        """
         return self._repo_org(path, 'repository', remove)
     
     def post(self, document, public_fields=[], additional_fields={}, private_ok=False):
