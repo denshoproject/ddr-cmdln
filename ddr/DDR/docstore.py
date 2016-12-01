@@ -1180,7 +1180,7 @@ def _publishable_or_not( paths, parents ):
             response = 'parent unpublishable: %s' % UNPUBLISHABLE
             bad_paths.append((path,403,response))
         if not UNPUBLISHABLE:
-            if path and index and identifier.model:
+            if path and identifier.model:
                 successful_paths.append(path)
             else:
                 logger.error('missing information!: %s' % path)
