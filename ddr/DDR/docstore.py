@@ -145,6 +145,11 @@ class Docstore():
         else:
             self.es = Elasticsearch(hosts)
     
+    def __repr__(self):
+        return "<%s.%s %s:%s>" % (
+            self.__module__, self.__class__.__name__, self.hosts, self.indexname
+        )
+    
     def index_exists(self):
         """
         """
