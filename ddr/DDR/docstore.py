@@ -132,14 +132,14 @@ class EmptyPage(InvalidPage):
 
 class Docstore():
     hosts = None
-    index = None
+    indexname = None
     mappings = None
     facets = None
     es = None
 
     def __init__(self, hosts=config.DOCSTORE_HOST, index=config.DOCSTORE_INDEX, connection=None):
         self.hosts = hosts
-        self.index = index
+        self.indexname = index
         if connection:
             self.es = connection
         else:
@@ -148,7 +148,7 @@ class Docstore():
     def index_exists(self):
         """
         """
-        return self.es.indices.exists(index=self.index)
+        return self.es.indices.exists(index=self.indexname)
     
     def status(self):
         """Returns status information from the Elasticsearch cluster.
@@ -216,9 +216,9 @@ class Docstore():
         """
         logger.debug('init_index(%s)' % (path))
         statuses = {}
-        statuses['create'] = self.create_index(self.index)
-        statuses['mappings'] = self.put_mappings(self.index, self.mappings_path(path))
-        statuses['facets'] = self.put_facets(self.index, self.facets_path(path))
+        statuses['create'] = self.create_index(self.indexname)
+        statuses['mappings'] = self.put_mappings(self.indexname, self.mappings_path(path))
+        statuses['facets'] = self.put_facets(self.indexname, self.facets_path(path))
         return statuses
      
     def create_index(self):
@@ -226,21 +226,21 @@ class Docstore():
         
         @returns: JSON dict with status codes and responses
         """
-        logger.debug('create_index(%s)' % (self.index))
+        logger.debug('create_index(%s)' % (self.indexname))
         body = {
             'settings': {},
             'mappings': {}
             }
-        return self.es.indices.create(index=self.index, body=body)
+        return self.es.indices.create(index=self.indexname, body=body)
      
     def delete_index(self):
         """Delete the specified index.
         
         @returns: JSON dict with status code and response
         """
-        logger.debug('delete_index(%s)' % (self.index))
-        if self.index_exists(self.index):
-            status = self.es.indices.delete(index=self.index)
+        logger.debug('delete_index(%s)' % (self.indexname))
+        if self.index_exists():
+            status = self.es.indices.delete(index=self.indexname)
             return status
         return '{"status":500, "message":"Index does not exist"}'
     
@@ -304,7 +304,7 @@ class Docstore():
         @param mappings_path: Absolute path to mappings JSON.
         @returns: JSON dict with status code and response
         """
-        logger.debug('put_mappings(%s, %s)' % (self.index, mappings_path))
+        logger.debug('put_mappings(%s, %s)' % (self.indexname, mappings_path))
         with open(mappings_path, 'r') as f:
             mappings = json.loads(f.read())
         mappings_list = _make_mappings(mappings)['documents']
@@ -313,7 +313,7 @@ class Docstore():
             model = mapping.keys()[0]
             logger.debug(model)
             logger.debug(json.dumps(mapping, indent=4, separators=(',', ': '), sort_keys=True))
-            status = self.es.indices.put_mapping(index=self.index, doc_type=model, body=mapping)
+            status = self.es.indices.put_mapping(index=self.indexname, doc_type=model, body=mapping)
             statuses.append( {'model':model, 'status':status} )
         self.mappings = mappings_list
         return statuses
@@ -323,7 +323,7 @@ class Docstore():
         
         @returns: str JSON
         """
-        self.mappings = self.es.indices.get_mapping(self.index)
+        self.mappings = self.es.indices.get_mapping(self.indexname)
         return self.mappings
      
     def facets_path(self, path):
@@ -338,14 +338,14 @@ class Docstore():
         @param path: Absolute path to dir containing facet files.
         @returns: JSON dict with status code and response
         """
-        logger.debug('index_facets(%s, %s)' % (self.index, path))
+        logger.debug('index_facets(%s, %s)' % (self.indexname, path))
         statuses = []
         for facet_json in os.listdir(path):
             facet = facet_json.split('.')[0]
             srcpath = os.path.join(path, facet_json)
             with open(srcpath, 'r') as f:
                 data = json.loads(f.read().strip())
-                status = self.es.index(index=self.index, doc_type='facet', id=facet, body=data)
+                status = self.es.index(index=self.indexname, doc_type='facet', id=facet, body=data)
                 statuses.append(status)
         return statuses
      
@@ -411,7 +411,7 @@ class Docstore():
                 }
             }
         }
-        results = self.es.search(index=self.index, doc_type=model, body=payload)
+        results = self.es.search(index=self.indexname, doc_type=model, body=payload)
         return results['facets']['results']
 
     def _repo_org(self, path, doctype, remove=False):
@@ -426,9 +426,9 @@ class Docstore():
         document_id = data['id']
         # add/update
         if remove and self.exists(doctype, document_id):
-            results = self.es.delete(index=self.index, doc_type=doctype, id=document_id)
+            results = self.es.delete(index=self.indexname, doc_type=doctype, id=document_id)
         else:
-            results = self.es.index(index=self.index, doc_type=doctype, id=document_id, body=data)
+            results = self.es.index(index=self.indexname, doc_type=doctype, id=document_id, body=data)
         return results
     
     def repo(self, path, remove=False):
@@ -460,7 +460,7 @@ class Docstore():
         @param private_ok: boolean Publish even if not "publishable".
         @returns: JSON dict with status code and response
         """
-        logger.debug('post(%s, %s, %s, %s, %s)' % (self.index, document, public_fields, additional_fields, private_ok))
+        logger.debug('post(%s, %s, %s, %s, %s)' % (self.indexname, document, public_fields, additional_fields, private_ok))
         
         document_id = None
         for field in document:
@@ -518,7 +518,7 @@ class Docstore():
         
         if identifier.id:
             return self.es.index(
-                index=self.index,
+                index=self.indexname,
                 doc_type=identifier.model, id=identifier.id, body=data
             )
         return {'status':4, 'response':'unknown problem'}
@@ -531,17 +531,17 @@ class Docstore():
         @param path: Absolute path to JSON document.
         @returns: dict Status info.
         """
-        logger.debug('post_json(%s, %s, %s, %s)' % (self.index, doc_type, document_id, path))
+        logger.debug('post_json(%s, %s, %s, %s)' % (self.indexname, doc_type, document_id, path))
         with open(path, 'r') as f:
             json_text = f.read()
-        return self.es.index(index=self.index, doc_type=doc_type, id=document_id, body=json_text)
+        return self.es.index(index=self.indexname, doc_type=doc_type, id=document_id, body=json_text)
      
     def exists(self, model, document_id):
         """
         @param model:
         @param document_id:
         """
-        return self.es.exists(index=self.index, doc_type=model, id=document_id)
+        return self.es.exists(index=self.indexname, doc_type=model, id=document_id)
      
     def get(self, model, document_id, fields=None):
         """
@@ -550,8 +550,8 @@ class Docstore():
         """
         if self.exists(model, document_id):
             if fields is not None:
-                return self.es.get(index=self.index, doc_type=model, id=document_id, fields=fields)
-            return self.es.get(index=self.index, doc_type=model, id=document_id)
+                return self.es.get(index=self.indexname, doc_type=model, id=document_id, fields=fields)
+            return self.es.get(index=self.indexname, doc_type=model, id=document_id)
         return None
     
     def search(self, model='', query='', term={}, filters={}, sort=[], fields=[], first=0, size=MAX_SIZE):
@@ -568,7 +568,7 @@ class Docstore():
         @returns raw ElasticSearch query output
         """
         logger.debug('search(index=%s, model=%s, query=%s, term=%s, filters=%s, sort=%s, fields=%s, first=%s, size=%s' % (
-            self.index, model, query, term, filters, sort, fields, first, size
+            self.indexname, model, query, term, filters, sort, fields, first, size
         ))
         _clean_dict(filters)
         _clean_dict(sort)
@@ -583,7 +583,7 @@ class Docstore():
         fields = ','.join(fields)
         if query:
             results = self.es.search(
-                index=self.index,
+                index=self.indexname,
                 doc_type=model,
                 q=query,
                 body=body,
@@ -593,7 +593,7 @@ class Docstore():
             )
         else:
             results = self.es.search(
-                index=self.index,
+                index=self.indexname,
                 doc_type=model,
                 body=body,
                 sort=sort_cleaned,
@@ -615,12 +615,12 @@ class Docstore():
             elif identifier.model == 'file': doc_type = 'file'
             query = 'id:"%s"' % identifier.id
             try:
-                return self.es.delete_by_query(index=self.index, doc_type=doc_type, q=query)
+                return self.es.delete_by_query(index=self.indexname, doc_type=doc_type, q=query)
             except TransportError:
                 pass
         else:
             try:
-                return self.es.delete(index=self.index, doc_type=identifier.model, id=identifier.id)
+                return self.es.delete(index=self.indexname, doc_type=identifier.model, id=identifier.id)
             except TransportError:
                 pass
     
@@ -642,7 +642,7 @@ class Docstore():
         @param paths: Absolute paths to directory containing collections.
         @returns: number successful,list of paths that didn't work out
         """
-        logger.debug('index(%s, %s)' % (self.index, path))
+        logger.debug('index(%s, %s)' % (self.indexname, path))
         
         publicfields = _public_fields()
         
