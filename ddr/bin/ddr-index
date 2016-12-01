@@ -121,16 +121,15 @@ def make_hosts( text ):
         hosts.append( {'host':h, 'port':p} )
     return hosts
     
-def host_status(hosts, index=None, mappings=False):
+def host_status(d, mappings=False):
     """Gets host and index status and prints.
     
-    @param hosts: dict
-    @param index: str Index name
+    @param d: Docstore object
+    @param mappings: bool
     """
-    d = docstore.Docstore(hosts)
     status = d.status()
     aliases = d.aliases()
-    
+
     # list indices
     print('Indices on this cluster:')
     indices = status['indices'].keys()
@@ -335,7 +334,7 @@ def main():
         sys.exit(1)
     
     hosts = make_hosts( args.host )
-    d = docstore.Docstore(args.host)
+    d = docstore.Docstore(args.host, args.index)
     
     if args.log and (os.path.exists(args.log) or os.path.exists(os.path.basename(args.log))):
         logging.basicConfig(format=LOGGING_FORMAT, datefmt=LOGGING_DATEFMT, level=logging.DEBUG, filename=args.log)
@@ -346,23 +345,23 @@ def main():
         document = json.loads(
             identifier.Identifier(args.path).object().dump_json()
         )
-        msg = d.post(args.index, document)
+        msg = d.post(document)
         print(msg)
     elif args.cmd == 'get':
-        msg = d.get(args.index, args.model, args.id)
+        msg = d.get(args.model, args.id)
         print(format_json(msg, sort_keys=False))
     elif args.cmd == 'init':
-        statuses = d.init_index(args.index, args.path)
+        statuses = d.init_index(args.path)
         for key,val in statuses.iteritems():
             print('%s: %s' % (key,val))
     elif args.cmd == 'create':
-        results = d.create_index(args.index)
+        results = d.create_index()
     elif args.cmd == 'remove':
-        results = d.delete_index(args.index)
+        results = d.delete_index()
+    
     elif args.cmd == 'index':
         start = datetime.now()
-        results = d.index(args.index, args.path,
-                          recursive=args.recursive, public=args.public)
+        results = d.index(args.path, recursive=True, public=True)
         end = datetime.now()
         elapsed = end - start
         if results['bad']:
@@ -388,26 +387,25 @@ def main():
         print(msg)
     elif args.cmd == 'mappings':
         mpath = d.mappings_path(args.path)
-        msg = d.put_mappings(args.index, mpath)
+        msg = d.put_mappings(mpath)
         print(msg)
     elif args.cmd == 'facets':
         fpath = d.facets_path(args.path)
-        msg = d.put_facets(args.index, fpath)
+        msg = d.put_facets(fpath)
         print(msg)
     elif args.cmd == 'exists':
-        msg = d.exists(args.index, args.model, args.id)
+        msg = d.exists(args.model, args.id)
         print(msg)
     elif args.cmd == 'status':
-        msg = host_status(hosts, args.index, args.mappings)
-        print(msg)
+        host_status(d, args.mappings)
     elif args.cmd == 'repo':
-        msg = d.repo(args.index, args.path)
+        msg = d.repo(args.path)
         print(msg)
     elif args.cmd == 'org':
-        msg = d.org(args.index, args.path, args.remove)
+        msg = d.org(args.path, args.remove)
         print(msg)
     elif args.cmd == 'delete':
-        msg = d.delete(args.index, args.id, recursive=args.recursive)
+        msg = d.delete(args.id, recursive=args.recursive)
         print(msg)
     
     if exit:
