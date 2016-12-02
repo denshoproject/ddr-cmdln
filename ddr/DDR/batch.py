@@ -1065,7 +1065,7 @@ class Updater():
                 metrics.cid = cid
                 metrics.verdict = 'FAIL'
                 metrics.error = 'clone failed'
-                metrics.tracebacks.append(traceback.format_exc().strip())
+                metrics.traceback = traceback.format_exc().strip()
             
             # transform
             try:
@@ -1075,7 +1075,7 @@ class Updater():
                 metrics.cid = cid
                 metrics.verdict = 'FAIL'
                 metrics.error = 'update failed'
-                metrics.tracebacks.append(traceback.format_exc().strip())
+                metrics.traceback = traceback.format_exc().strip()
                 
             if metrics.verdict == 'ok':
                 logging.info(metrics.verdict)
