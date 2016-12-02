@@ -95,7 +95,7 @@ def main():
     logging.info('successful:    %s' % data['successful'])
     logging.info('objects saved: %s' % data['objects_saved'])
     logging.info('files updated: %s' % data['files_updated'])
-    logging.info('failures       %s' % data['failures'])
+    logging.info('failures:      %s' % data['failures'])
 
     deltas = [delta.total_seconds() for delta in data['per_objects'] if delta]
     if len(deltas) and sum(deltas):

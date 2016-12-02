@@ -943,7 +943,9 @@ class Importer():
 class UpdaterMetrics():
     cid = None
     verdict = 'unknown'
-    failures = 0
+    load_errs = {}
+    save_errs = {}
+    bad_exits = {}
     objects_saved = 0
     files_updated = 0
     elapsed = None
@@ -962,19 +964,29 @@ class UpdaterMetrics():
             'per_object',
             'error',
             'traceback',
+            'load_errs',
+            'save_errs',
+            'bad_exits',
         ]
     
     def row(self):
+        failures = len(self.load_errs.keys()) + len(self.save_errs.keys()) + len(self.bad_exits.keys())
+        load_errs = [':'.join([key,val]) for key,val in self.load_errs.iteritems()]
+        save_errs = [':'.join([key,val]) for key,val in self.save_errs.iteritems()]
+        bad_exits = [':'.join([key,val]) for key,val in self.bad_exits.iteritems()]
         return [
             self.cid,
             self.verdict,
-            self.failures,
+            failures,
             self.objects_saved,
             self.files_updated,
             self.elapsed,
             self.per_object,
             self.error,
             self.traceback,
+            '\n'.join(load_errs),
+            '\n'.join(save_errs),
+            '\n'.join(bad_exits),
         ]
 
 
@@ -1018,9 +1030,11 @@ class Updater():
         
         completed = 0
         successful = 0
+        total_load_errs = 0
+        total_save_errs = 0
+        total_bad_exits = 0
         total_objects_saved = 0
         total_files_updated = 0
-        total_failures = 0
         per_objects = []
         while(cids):
             logging.info('------------------------------------------------------------------------')
@@ -1051,7 +1065,7 @@ class Updater():
                 metrics.cid = cid
                 metrics.verdict = 'FAIL'
                 metrics.error = 'clone failed'
-                metrics.traceback = traceback.format_exc().strip()
+                metrics.tracebacks.append(traceback.format_exc().strip())
             
             # transform
             try:
@@ -1061,20 +1075,24 @@ class Updater():
                 metrics.cid = cid
                 metrics.verdict = 'FAIL'
                 metrics.error = 'update failed'
-                metrics.traceback = traceback.format_exc().strip()
+                metrics.tracebacks.append(traceback.format_exc().strip())
                 
             if metrics.verdict == 'ok':
                 logging.info(metrics.verdict)
                 successful += 1
             else:
                 logging.error(metrics)
+            logging.info('load_errs:     %s' % len(metrics.load_errs))
+            logging.info('save_errs:     %s' % len(metrics.save_errs))
+            logging.info('bad_exits:     %s' % len(metrics.bad_exits))
             logging.info('objects_saved: %s' % metrics.objects_saved)
             logging.info('files_updated: %s' % metrics.files_updated)
-            logging.info('failures:      %s' % metrics.failures)
             logging.info('s/object:      %s' % metrics.per_object)
+            total_load_errs += len(metrics.load_errs.keys())
+            total_save_errs += len(metrics.save_errs.keys())
+            total_bad_exits += len(metrics.bad_exits.keys())
             total_objects_saved += metrics.objects_saved
             total_files_updated += metrics.files_updated
-            total_failures += metrics.failures
             delta = metrics.per_object
             per_objects.append(delta)
             
@@ -1095,9 +1113,9 @@ class Updater():
         return {
             'collections': completed,
             'successful': successful,
+            'failures': total_load_errs + total_save_errs + total_bad_exits,
             'objects_saved': total_objects_saved,
             'files_updated': total_files_updated,
-            'failures': total_failures,
             'per_objects': per_objects,
         }
     
@@ -1127,17 +1145,30 @@ class Updater():
         num = len(paths)
         logging.info('%s paths' % num)
         logging.info('Writing')
-        exits = {}
+        load_errs = {}
+        save_errs = {}
+        bad_exits = {}
         statuses = {}
         updated_files = {}
         for n,path in enumerate(paths):
             logging.info('%s/%s %s' % (n, num, path))
-            o = identifier.Identifier(path).object()
-            exit,status,updated = o.save(
-                git_user, git_mail, agent=Updater.AGENT, commit=False
-            )
+            try:
+                o = identifier.Identifier(path).object()
+            except:
+                load_errs[o.identifier.id] = traceback.format_exc().strip().splitlines()[-1]
+                logging.error('ERROR: instantiation')
+                continue
+            try:
+                exit,status,updated = o.save(
+                    git_user, git_mail, agent=Updater.AGENT, commit=False
+                )
+            except:
+                save_errs[o.identifier.id] = traceback.format_exc().strip().splitlines()[-1]
+                logging.error('ERROR: save')
+                continue
             if exit != 0:
-                exits[o.identifier.id] = exit
+                bad_exits[o.identifier.id] = exit
+                logging.error('ERROR: bad exit')
             if status != 'ok':
                 statuses[o.identifier.id] = status
             updated_files[o.identifier.id] = updated
@@ -1156,7 +1187,9 @@ class Updater():
         return {
             'cid': cidentifier.id,    # str collection ID
             'num': num,               # int raw number of objects
-            'exits': exits,           # dict non-zero exits by object ID
+            'load_errs': load_errs,   # dict load errs by object ID
+            'save_errs': save_errs,   # dict save errs by object ID
+            'bad_exits': bad_exits,   # dict non-zero exits by object ID
             'statuses': statuses,     # dict non-ok statuses by object ID
             'updated': updated_files, # dict updated files by object ID
         }
@@ -1171,15 +1204,17 @@ class Updater():
         """
         metrics = UpdaterMetrics()
         metrics.cid  =  response['cid']
+        metrics.load_errs  =  response['load_errs']
+        metrics.save_errs  =  response['save_errs']
+        metrics.bad_exits  =  response['bad_exits']
         metrics.objects_saved  =  response['num']
-        metrics.failures  =  len(response['exits'].keys())
         metrics.files_updated  =  len(Updater._consolidate_paths(response['updated']))
         
         metrics.elapsed = end - start
         if metrics.elapsed and response.get('num'):
             metrics.per_object = metrics.elapsed / response['num']
         
-        if metrics.failures \
+        if metrics.load_errs or metrics.save_errs or metrics.bad_exits \
         or (metrics.objects_saved == 0) \
         or (metrics.files_updated == 0):
             metrics.verdict = 'FAIL'
