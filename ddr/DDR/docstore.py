@@ -150,10 +150,10 @@ class Docstore():
             self.__module__, self.__class__.__name__, self.hosts, self.indexname
         )
     
-    def index_exists(self):
+    def index_exists(self, index):
         """
         """
-        return self.es.indices.exists(index=self.indexname)
+        return self.es.indices.exists(index=index)
     
     def status(self):
         """Returns status information from the Elasticsearch cluster.
@@ -226,26 +226,30 @@ class Docstore():
         statuses['facets'] = self.put_facets(self.indexname, self.facets_path(path))
         return statuses
      
-    def create_index(self):
+    def create_index(self, index=None):
         """Creates the specified index if it does not already exist.
         
         @returns: JSON dict with status codes and responses
         """
-        logger.debug('create_index(%s)' % (self.indexname))
+        if not index:
+            index = self.indexname
+        logger.debug('create_index(%s)' % (index))
         body = {
             'settings': {},
             'mappings': {}
             }
-        return self.es.indices.create(index=self.indexname, body=body)
+        return self.es.indices.create(index=index, body=body)
      
-    def delete_index(self):
+    def delete_index(self, index=None):
         """Delete the specified index.
         
         @returns: JSON dict with status code and response
         """
-        logger.debug('delete_index(%s)' % (self.indexname))
-        if self.index_exists():
-            status = self.es.indices.delete(index=self.indexname)
+        if not index:
+            index = self.indexname
+        logger.debug('delete_index(%s)' % (index))
+        if self.index_exists(index):
+            status = self.es.indices.delete(index=index)
             return status
         return '{"status":500, "message":"Index does not exist"}'
     
