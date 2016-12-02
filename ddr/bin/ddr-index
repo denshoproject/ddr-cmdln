@@ -269,6 +269,7 @@ def main():
     reindex_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
     reindex_parser.add_argument('-l', '--log', help='Log file..')
     reindex_parser.add_argument('-H', '--host', help='Hostname and port (HOST:PORT).', **hostsarg)
+    reindex_parser.add_argument('-i', '--index', help='index.', **indexarg)
     reindex_parser.add_argument('source', help='Source index.')
     reindex_parser.add_argument('dest', help='Destination index.')
     
