@@ -44,7 +44,11 @@ class Definitions():
             except ImportError:
                 couldnt.append(module)
         if couldnt:
-            raise Exception('Could not import module(s) %s' % couldnt)
+            raise Exception(
+                'Could not import module(s) %s. ' \
+                'May indicate problem in definitions module or dependency (e.g. lxml).' % (
+                    couldnt
+            ))
         return modules
 
     @staticmethod
@@ -380,7 +384,10 @@ class Definitions():
 try:
     from repo_models.identifier import IDENTIFIERS
 except ImportError:
-    raise Exception('Could not import Identifier definitions!')
+    raise Exception(
+        'Could not import Identifier definitions! ' \
+        'May indicate problem in definitions module or dependency (e.g. lxml).'
+    )
 
 MODELS = Definitions.models(IDENTIFIERS)
 MODULES = Definitions.import_modules(IDENTIFIERS, Definitions.modules(IDENTIFIERS))
