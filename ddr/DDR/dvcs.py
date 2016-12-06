@@ -94,9 +94,9 @@ def _parse_cmp_commits(gitlog, a, b):
     }
     commits = gitlog.strip().split('\n')
     commits.reverse()
-    if a not in commits: raise ValueError("A (%s) is not in log" % a)
-    elif b not in commits: raise ValueError("B (%s) is not in log" % b)
-    if commits.index(a) < commits.index(b): result['op'] = 'lt'
+    if   a not in commits: result['op'] = 'a!' # App source was on unmerged
+    elif b not in commits: result['op'] = 'b!' # branch when doc committed.
+    elif commits.index(a) < commits.index(b): result['op'] = 'lt'
     elif commits.index(a) == commits.index(b): result['op'] = 'eq'
     elif commits.index(a) > commits.index(b): result['op'] = 'gt'
     else: result['op'] = '--'
