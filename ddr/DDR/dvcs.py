@@ -1028,10 +1028,11 @@ class Cgit():
         return title
 
 
-class Gitolite():
+class Gitolite(object):
     """Access information about Gitolite server
     
-    >>> gitolite = dvcs.Gitolite.initialize(config.GITOLITE)
+    >>> gitolite = dvcs.Gitolite(config.GITOLITE)
+    >>> gitolite.initialize()
     >>> gitolite.connected
     True
     >>> gitolite.authorized
@@ -1044,31 +1045,46 @@ class Gitolite():
     [('ddr-test-1', 'A Collection'), ('ddr-test-2', 'Another Collection')]
     """
     server = None
+    timeout = None
     info = None
     connected = None
     authorized = None
     
-    @staticmethod
-    def initialize(server, timeout=60):
+    def __init__(self, server=config.GITOLITE, timeout=60):
         """
         @param server: USERNAME@DOMAIN
         @param timeout: int Maximum seconds to wait for reponse
-        @return: raw Gitolite output from SSH
         """
-        gitolite = Gitolite()
-        gitolite.server = server
-        cmd = 'ssh {} info'.format(gitolite.server)
+        self.server = server
+        self.timeout = timeout
+    
+    def __repr__(self):
+        status = []
+        if self.info: status.append('Init')
+        else: status.append('noinit')
+        if self.connected: status.append('Conn')
+        else: status.append('noconn')
+        if self.authorized: status.append('Auth')
+        else: status.append('noauth')
+        return "<%s.%s %s %s>" % (
+            self.__module__, self.__class__.__name__,
+            self.server, ','.join(status)
+        )
+    
+    def initialize(self):
+        """Connect to Gitolite server.
+        """
+        cmd = 'ssh {} info'.format(self.server)
         logging.debug('        {}'.format(cmd))
-        r = envoy.run(cmd, timeout=int(timeout))
+        r = envoy.run(cmd, timeout=int(self.timeout))
         logging.debug('        {}'.format(r.status_code))
-        status = r.status_code
-        if r.status_code == 0:
-            gitolite.connected = True
-            gitolite.info = r.std_out
-            gitolite.authorized = gitolite._authorized()
+        self.status = r.status_code
+        if self.status == 0:
+            self.info = r.std_out
+            self.connected = True
+            self.authorized = self._authorized()
         else:
-            gitolite.connected = False
-        return gitolite
+            self.connected = False
     
     def _authorized(self):
         """Parse Gitolite server response, indicate whether user is authorized
