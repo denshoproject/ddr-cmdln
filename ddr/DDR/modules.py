@@ -176,6 +176,8 @@ class Module(object):
         the results.
         Note: if a document has no defs commit it is considered older
         than the module.
+        NOTE: commit may not be found in log if definitions were on a
+        branch at the time the document was committed.
         
         @param document: A Collection, Entity, or File object.
         @returns: dict See DDR.dvcs.cmp_commits
