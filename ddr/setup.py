@@ -63,6 +63,7 @@ setup(
     scripts = [
         'bin/ddr',
         'bin/ddr-backup',
+        'bin/ddr-batch',
         'bin/ddr-checkencoding',
         'bin/ddr-checkbinaries',
         'bin/ddr-config',

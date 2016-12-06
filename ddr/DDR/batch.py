@@ -9,15 +9,19 @@ Register newly added EIDs
 """
 
 import codecs
+import csv
 from datetime import datetime
 import json
 import logging
 import os
+import shutil
+import traceback
 
 import requests
 
-from DDR import changelog
 from DDR import config
+from DDR import changelog
+from DDR import commands
 from DDR import csvfile
 from DDR import dvcs
 from DDR import fileio
@@ -934,3 +938,402 @@ class Importer():
             logging.info('%s registered' % len(created))
         
         logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
+
+
+class UpdaterMetrics():
+    cid = None
+    verdict = 'unknown'
+    load_errs = {}
+    save_errs = {}
+    bad_exits = {}
+    objects_saved = 0
+    files_updated = 0
+    elapsed = None
+    per_object = None
+    error = ''
+    traceback = ''
+
+    def headers(self):
+        return [
+            'id',
+            'verdict',
+            'failures',
+            'objects_saved',
+            'files_updated',
+            'elapsed',
+            'per_object',
+            'error',
+            'traceback',
+            'load_errs',
+            'save_errs',
+            'bad_exits',
+        ]
+    
+    def row(self):
+        failures = len(self.load_errs.keys()) + len(self.save_errs.keys()) + len(self.bad_exits.keys())
+        load_errs = [':'.join([key,val]) for key,val in self.load_errs.iteritems()]
+        save_errs = [':'.join([key,val]) for key,val in self.save_errs.iteritems()]
+        bad_exits = [':'.join([key,val]) for key,val in self.bad_exits.iteritems()]
+        return [
+            self.cid,
+            self.verdict,
+            failures,
+            self.objects_saved,
+            self.files_updated,
+            self.elapsed,
+            self.per_object,
+            self.error,
+            self.traceback,
+            '\n'.join(load_errs),
+            '\n'.join(save_errs),
+            '\n'.join(bad_exits),
+        ]
+
+
+class Updater():
+    
+    AGENT = 'ddr-transform'
+    TODO = 'todo'
+    THIS = 'this'
+    DONE = 'done.csv'
+    COLLECTION_LOG = '%s.log'
+
+    @staticmethod
+    def update_collection(cidentifier, user, mail, commit=False):
+        if commit and ((not user) or (not mail)):
+            logging.error('You must specify a user and email address! >:-0')
+            sys.exit(1)
+        else:
+            logging.info('Not committing changes')
+            commit = False
+        
+        start = datetime.now()
+        response = Updater._update_collection_objects(cidentifier, user, mail, commit)
+        end = datetime.now()
+        return Updater._analyze(start, end, response)
+    
+    @staticmethod
+    def update_multi(basedir, source, user, mail, commit=False, keep=False):
+        """
+        @param user: str User name
+        @param mail: str User email
+        @param basedir: str Absolute path to base dir.
+        @param source: str Absolute path to list file.
+        @param commit: boolean
+        @param keep: boolean
+        @return:
+        """
+        logging.info('========================================================================')
+        logging.info('Prepping collections list')
+        cids_path = Updater._prep_todo(basedir, source)
+        cids = Updater._read_todo(cids_path)
+        
+        completed = 0
+        successful = 0
+        total_load_errs = 0
+        total_save_errs = 0
+        total_bad_exits = 0
+        total_objects_saved = 0
+        total_files_updated = 0
+        per_objects = []
+        while(cids):
+            logging.info('------------------------------------------------------------------------')
+            # rm current cid from TODO, update TODO and THIS
+            cid = cids.pop(0)
+            logging.info(cid)
+            Updater._write_todo(cids, cids_path)
+            Updater._write_this(basedir, cid)
+            
+            collection_log = os.path.join(basedir, Updater.COLLECTION_LOG % cid)
+            collection_path = os.path.join(basedir, cid)
+            cidentifier = identifier.Identifier(cid, base_path=basedir)
+            
+            # clone
+            if os.path.exists(collection_path):
+                logging.info('Removing existing repo: %s' % collection_path)
+                shutil.rmtree(collection_path)
+            logging.info('Cloning %s' % collection_path)
+            try:
+                clone_exit,clone_status = commands.clone(
+                    user, mail,
+                    cidentifier,
+                    collection_path
+                )
+                logging.info('ok')
+            except:
+                metrics = UpdaterMetrics()
+                metrics.cid = cid
+                metrics.verdict = 'FAIL'
+                metrics.error = 'clone failed'
+                metrics.traceback = traceback.format_exc().strip()
+            
+            # transform
+            try:
+                metrics = Updater.update_collection(cidentifier, user, mail, commit=commit)
+            except:
+                metrics = UpdaterMetrics()
+                metrics.cid = cid
+                metrics.verdict = 'FAIL'
+                metrics.error = 'update failed'
+                metrics.traceback = traceback.format_exc().strip()
+                
+            if metrics.verdict == 'ok':
+                logging.info(metrics.verdict)
+                successful += 1
+            else:
+                logging.error(metrics)
+            logging.info('load_errs:     %s' % len(metrics.load_errs))
+            logging.info('save_errs:     %s' % len(metrics.save_errs))
+            logging.info('bad_exits:     %s' % len(metrics.bad_exits))
+            logging.info('objects_saved: %s' % metrics.objects_saved)
+            logging.info('files_updated: %s' % metrics.files_updated)
+            logging.info('s/object:      %s' % metrics.per_object)
+            total_load_errs += len(metrics.load_errs.keys())
+            total_save_errs += len(metrics.save_errs.keys())
+            total_bad_exits += len(metrics.bad_exits.keys())
+            total_objects_saved += metrics.objects_saved
+            total_files_updated += metrics.files_updated
+            delta = metrics.per_object
+            per_objects.append(delta)
+            
+            if commit:
+                logging.info('Committing %s' % collection_path)
+                pass
+            
+            if os.path.exists(collection_path) and not keep:
+                logging.info('Deleting %s' % collection_path)
+                shutil.rmtree(collection_path)
+            
+            Updater._write_done(basedir, metrics)
+            # update THIS, not writing this collection any more
+            Updater._write_this(basedir, '')
+            completed += 1
+            logging.info('')
+
+        return {
+            'collections': completed,
+            'successful': successful,
+            'failures': total_load_errs + total_save_errs + total_bad_exits,
+            'objects_saved': total_objects_saved,
+            'files_updated': total_files_updated,
+            'per_objects': per_objects,
+        }
+    
+    @staticmethod
+    def _consolidate_paths(updated_files):
+        updated = []
+        for oid,paths in updated_files.iteritems():
+            for path in paths:
+                if path not in updated:
+                    updated.append(path)
+        return updated
+    
+    @staticmethod
+    def _update_collection_objects(cidentifier, git_user, git_mail, commit=False):
+        """Loads and saves each object in collection
+        """
+        logging.info('Loading collection')
+        collection = cidentifier.object()
+        logging.info(collection)
+        
+        logging.info('Finding metadata files %s' % cidentifier.path_abs())
+        paths = util.find_meta_files(
+            cidentifier.path_abs(),
+            recursive=True, force_read=True,
+            testing=True  # otherwise will be excluded if basedir is under /tmp
+        )
+        num = len(paths)
+        logging.info('%s paths' % num)
+        logging.info('Writing')
+        load_errs = {}
+        save_errs = {}
+        bad_exits = {}
+        statuses = {}
+        updated_files = {}
+        for n,path in enumerate(paths):
+            logging.info('%s/%s %s' % (n, num, path))
+            try:
+                o = identifier.Identifier(path).object()
+            except:
+                load_errs[o.identifier.id] = traceback.format_exc().strip().splitlines()[-1]
+                logging.error('ERROR: instantiation')
+                continue
+            try:
+                exit,status,updated = o.save(
+                    git_user, git_mail, agent=Updater.AGENT, commit=False
+                )
+            except:
+                save_errs[o.identifier.id] = traceback.format_exc().strip().splitlines()[-1]
+                logging.error('ERROR: save')
+                continue
+            if exit != 0:
+                bad_exits[o.identifier.id] = exit
+                logging.error('ERROR: bad exit')
+            if status != 'ok':
+                statuses[o.identifier.id] = status
+            updated_files[o.identifier.id] = updated
+        
+        if commit:
+            logging.info('Committing changes')
+            status,msg = commands.update(
+                git_user, git_mail,
+                collection,
+                Updater._consolidate_paths(updated_files),
+                agent=Updater.AGENT
+            )
+            logging.info('ok')
+        else:
+            logging.info('Changes not committed')
+        return {
+            'cid': cidentifier.id,    # str collection ID
+            'num': num,               # int raw number of objects
+            'load_errs': load_errs,   # dict load errs by object ID
+            'save_errs': save_errs,   # dict save errs by object ID
+            'bad_exits': bad_exits,   # dict non-zero exits by object ID
+            'statuses': statuses,     # dict non-ok statuses by object ID
+            'updated': updated_files, # dict updated files by object ID
+        }
+    
+    @staticmethod
+    def _analyze(start, end, response):
+        """
+        @param start: datetime
+        @param end: datetime
+        @param response: dict
+        @returns: UpdaterMetrics
+        """
+        metrics = UpdaterMetrics()
+        metrics.cid  =  response['cid']
+        metrics.load_errs  =  response['load_errs']
+        metrics.save_errs  =  response['save_errs']
+        metrics.bad_exits  =  response['bad_exits']
+        metrics.objects_saved  =  response['num']
+        metrics.files_updated  =  len(Updater._consolidate_paths(response['updated']))
+        
+        metrics.elapsed = end - start
+        if metrics.elapsed and response.get('num'):
+            metrics.per_object = metrics.elapsed / response['num']
+        
+        if metrics.load_errs or metrics.save_errs or metrics.bad_exits \
+        or (metrics.objects_saved == 0) \
+        or (metrics.files_updated == 0):
+            metrics.verdict = 'FAIL'
+        else:
+            metrics.verdict = 'ok'
+        
+        return metrics
+    
+    @staticmethod
+    def _prep_todo(basedir, source):
+        """
+        read cids list from SOURCE
+        read cids from DONE
+        remove DONE cids from TODO cids
+        write TODO cids to TODO
+        """
+        path = os.path.join(basedir, Updater.TODO)
+        logging.info('Prepping TODO file: %s' % path)
+        # Read cids list from SOURCE
+        logging.info('Getting collections list from %s' % source)
+        if os.path.exists(source):
+            cids = Updater._read_todo(source)
+        # get list from Gitolite
+        elif '@' in source:
+            pass
+        # Read cids from DONE
+        if not os.path.join(basedir, Updater.DONE):
+            Updater._write_done(basedir, None)
+        done_headers,done_rows = Updater._read_done(basedir)
+        done = [row[0] for row in done_rows]
+        # Remove DONE cids from TODO cids
+        completed = []
+        for cid in done:
+            if cid in cids:
+                completed.append(cid)
+                cids.remove(cid)
+        logging.info('Removed completed collections: %s' % completed)
+        # Write TODO cids to TODO
+        Updater._write_todo(cids, path)
+        return path
+    
+    @staticmethod
+    def _read_todo(path):
+        #logging.debug('_read_todo(%s)' % path)
+        with open(path, 'r') as f:
+            text = f.read()
+        cids = [line.strip() for line in text.strip().split('\n') if line.strip()]
+        return cids
+    
+    @staticmethod
+    def _write_todo(cids, path):
+        #logging.debug('_write_todo(%s, %s)' % (cids, path))
+        with open(path, 'w') as f:
+            f.write('\n'.join(cids))
+    
+    @staticmethod
+    def _read_this(basedir):
+        with open(path, 'r') as f:
+            text = f.read()
+        return text.strip()
+    
+    @staticmethod
+    def _write_this(basedir, cid):
+        path = os.path.join(basedir, Updater.THIS)
+        with open(path, 'w') as f:
+            f.write(cid)
+
+    # NOTE: should use DDR.fileio but quoting/delimiters/etc are hardcoded
+    
+    @staticmethod
+    def _csv_reader(csvfile):
+        return csv.reader(
+            csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL,
+        )
+    
+    @staticmethod
+    def _csv_writer(csvfile):
+        return csv.writer(
+            csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL,
+        )
+    
+    @staticmethod
+    def _read_csv(path):
+        rows = []
+        with open(path, 'rU') as f:  # the 'U' is for universal-newline mode
+            for row in Updater._csv_reader(f):
+                rows.append(row)
+        return rows
+    
+    @staticmethod
+    def _write_csv(path, headers, rows):
+        with open(path, 'wb') as f:
+            writer = Updater._csv_writer(f)
+            writer.writerow(headers)
+            for row in rows:
+                writer.writerow(row)
+    
+    @staticmethod
+    def _read_done(basedir):
+        path = os.path.join(basedir, Updater.DONE)
+        headers = None
+        rows = []
+        if os.path.exists(path):
+            rows = Updater._read_csv(path)
+            if rows:
+                headers = rows.pop(0)
+        return headers,rows
+    
+    @staticmethod
+    def _write_done(basedir, metrics=UpdaterMetrics()):
+        path = os.path.join(basedir, Updater.DONE)
+        headers = []
+        rows = []
+        if os.path.exists(path):
+            rows = Updater._read_csv(path)
+            if rows:
+                headers = rows.pop(0)
+        if not headers:
+            headers = metrics.headers()
+        if metrics.cid:
+            rows.append(metrics.row())
+        Updater._write_csv(path, headers, rows)
