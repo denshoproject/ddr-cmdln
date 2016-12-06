@@ -400,6 +400,8 @@ def labelledlist_to_text(data, separator=u'; '):
 #
 
 def text_to_rolepeople(text):
+    if _is_listofdicts(text):
+        return text
     text = normalize_string(text)
     if not text:
         return []
@@ -452,6 +454,16 @@ def rolepeople_to_text(data):
 #     {'label':'Post WWII', 'start':'1944'}
 # ]
 # 
+
+def _is_listofdicts(data):
+    if isinstance(data, list):
+        num_dicts = 0
+        for x in data:
+            if isinstance(x, dict):
+                num_dicts += 1
+        if num_dicts == len(data):
+            return True
+    return False
 
 def text_to_dicts(text, terms, separator=';'):
     text = normalize_string(text)
