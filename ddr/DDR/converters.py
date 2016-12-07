@@ -73,6 +73,20 @@ def coerce_text(data):
 # data = datetime.datetime(1970, 1, 1, 0, 0)
 # 
 
+ALT_DATETIME_FORMATS = [
+    '%Y-%m-%dT%H:%M:%S:%f',
+    '%Y-%m-%dT%H:%M:%S.%f',
+    '%Y-%m-%d %H:%M:%S.%f',
+    '%Y-%m-%d %H:%M:%S',
+    '%Y-%m-%dT%H:%M:%S%Z%z',
+    '%Y-%m-%dT%H:%M:%S%Z',
+    '%Y-%m-%dT%H:%M:%S%z',
+    '%Y-%m-%dT%H:%M:%S',
+    '%Y-%m-%dT%H:%M:%S.%f%Z%z',
+    '%Y-%m-%dT%H:%M:%S.%f%Z',
+    '%Y-%m-%dT%H:%M:%S.%f%z',
+]
+
 def text_to_datetime(text, fmt=config.DATETIME_FORMAT):
     """Load datatime from text in specified format.
     
@@ -85,7 +99,15 @@ def text_to_datetime(text, fmt=config.DATETIME_FORMAT):
     """
     text = normalize_string(text)
     if text:
-        return parser.parse(text)
+        try:
+            return parser.parse(text)
+        except:
+            # try a bunch of old/messed up formats
+            for fmt in ALT_DATETIME_FORMATS:
+                try:
+                    return datetime.strptime(text, fmt)
+                except:
+                    pass
     return ''
 
 def datetime_to_text(data, fmt=config.DATETIME_FORMAT):
