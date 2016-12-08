@@ -873,7 +873,7 @@ class Collection( object ):
         # NOTE: this is same basic code as Docstore.index
         return docstore.Docstore().post(
             load_json_lite(self.json_path, self.identifier.model, self.id),
-            docstore.public_fields().get(self.identifier.model, []),
+            docstore._public_fields().get(self.identifier.model, []),
             {
                 'parent_id': self.identifier.parent_id(),
             }
@@ -1506,7 +1506,7 @@ class Entity( object ):
         return docstore.Docstore().post(
             hosts, index,
             load_json_lite(self.json_path, self.identifier.model, self.id),
-            docstore.public_fields().get(self.identifier.model, []),
+            docstore._public_fields().get(self.identifier.model, []),
             {
                 'parent_id': self.parent_id,
             }
@@ -2243,7 +2243,7 @@ class File( object ):
         return docstore.Docstore().post(
             hosts, index,
             load_json_lite(self.json_path, self.identifier.model, self.id),
-            docstore.public_fields().get(self.identifier.model, []),
+            docstore._public_fields().get(self.identifier.model, []),
             {
                 'parent_id': self.parent_id,
                 'entity_id': self.parent_id,
