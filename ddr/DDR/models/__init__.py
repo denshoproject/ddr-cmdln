@@ -352,19 +352,22 @@ def from_json(model, json_path, identifier):
     @returns: object
     """
     document = None
-    if json_path and os.path.exists(json_path):
-        if identifier.model in ['file']:
-            # object_id is in .json file
-            path = os.path.splitext(json_path)[0]
-            document = model(path, identifier=identifier)
-        else:
-            # object_id is in object directory
-            document = model(os.path.dirname(json_path), identifier=identifier)
-        document_id = document.id  # save this just in case
-        document.load_json(fileio.read_text(json_path))
-        if not document.id:
-            # id gets overwritten if document.json is blank
-            document.id = document_id
+    if not model:
+        raise Exception('Cannot instantiate from JSON without a model object.')
+    if not json_path:
+        raise Exception('Bad path: %s' % json_path)
+    if identifier.model in ['file']:
+        # object_id is in .json file
+        path = os.path.splitext(json_path)[0]
+        document = model(path, identifier=identifier)
+    else:
+        # object_id is in object directory
+        document = model(os.path.dirname(json_path), identifier=identifier)
+    document_id = document.id  # save this just in case
+    document.load_json(fileio.read_text(json_path))
+    if not document.id:
+        # id gets overwritten if document.json is blank
+        document.id = document_id
     return document
 
 def prep_csv(obj, module, headers=[]):
