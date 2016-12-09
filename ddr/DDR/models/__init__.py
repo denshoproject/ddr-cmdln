@@ -1705,6 +1705,8 @@ class Entity( object ):
     def load_file_objects(self, identifier_class, object_class, force_read=False):
         """Regenerates list of file info dicts with list of File objects
         
+        NOTE: if file_groups contains pointer to nonexistent file, insert a dict
+        containing the error message rather than crashing.
         TODO Don't call in loop - causes all file .JSONs to be loaded!
         
         @param force_read: bool Traverse filesystem if true.
@@ -1716,24 +1718,32 @@ class Entity( object ):
             for json_path in self._file_paths():
                 fid = os.path.splitext(os.path.basename(json_path))[0]
                 basepath = self.identifier.basepath
-                file_ = object_class.from_identifier(
-                    identifier_class(
-                        id=fid,
-                        base_path=basepath
+                try:
+                    file_ = object_class.from_identifier(
+                        identifier_class(
+                            id=fid,
+                            base_path=basepath
+                        )
                     )
-                )
+                except IOError as err:
+                    f['error'] = err
+                    file_ = {'id': fid, 'error': err}
                 self._file_objects.append(file_)
         else:
             for f in self.files:
                 if f and f.get('path_rel',None):
                     basename = os.path.basename(f['path_rel'])
                     fid = os.path.splitext(basename)[0]
-                    file_ = object_class.from_identifier(
-                        identifier_class(
-                            id=fid,
-                            base_path=self.identifier.basepath
+                    try:
+                        file_ = object_class.from_identifier(
+                            identifier_class(
+                                id=fid,
+                                base_path=self.identifier.basepath
+                            )
                         )
-                    )
+                    except IOError as err:
+                        f['error'] = err
+                        file_ = {'id': fid, 'error': err}
                     self._file_objects.append(file_)
         # keep track of how many times this gets loaded...
         self._file_objects_loaded = self._file_objects_loaded + 1
