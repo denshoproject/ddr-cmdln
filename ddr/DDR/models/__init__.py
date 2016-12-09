@@ -1011,7 +1011,7 @@ class Collection( object ):
 # ],
 # "file_groups": [
 #   {
-#     "role": "transcript",
+#     "role": "master",
 #     "files": [
 #       {
 #         "id": "ddr-densho-23-1-transcript-adb451ffec",
@@ -1024,7 +1024,15 @@ class Collection( object ):
 #         "sort": "1"
 #       }
 #     ]
-#   }
+#   },
+#   {
+#     "role": "mezzanine",
+#     "files": [...]
+#   },
+#   {
+#     "role": "transcript",
+#     "files": [...]
+#   },
 # ]
 
 def filegroups_to_files(file_groups):
@@ -1054,8 +1062,8 @@ def files_to_filegroups(files, to_dict=False):
         elif isinstance(f, dict) and f.get('role'):
             return f.get('role')
         elif isinstance(f, dict) and f.get('path_rel'):
-            fid = os.path.splitext(f['path_rel'])[0]
-            fi = Identifier(fid)
+            fid = os.path.basename(os.path.splitext(f['path_rel'])[0])
+            fi = Identifier(id=fid)
             return fi.idparts['role']
         return None
     # intermediate format
@@ -1859,6 +1867,7 @@ class Entity( object ):
         @param file_: File
         """
         logger.debug('%s.rm_file(%s)' % (self, file_))
+        
         # list of files to be *removed*
         rm_files = [
             f for f in file_.files_rel()
@@ -1866,13 +1875,17 @@ class Entity( object ):
                 os.path.join(self.collection_path, f)
             )
         ]
-        # remove pointers to file in entity.json
-        logger.debug('removing:')
-        for f in self.files:
-            logger.debug('| %s' % f)
-            if file_.id in f['path_rel']:
-                logger.debug('| --entity.files.remove(%s)' % f)
-                self.files.remove(f)
+        
+        # remove file from entity.file_groups
+        files = filegroups_to_files(self.file_groups)
+        # make sure each file dict has an id
+        for f in files:
+            if f.get('path_rel') and not f.get('id'):
+                f['id'] = os.path.basename(os.path.splitext(f['path_rel'])[0])
+        # exclude the file
+        filez = [f for f in files if f['id'] != file_.id]
+        self.file_groups = files_to_filegroups(filez)
+        
         self.write_json()
         # list of files to be *updated*
         updated_files = ['entity.json']
@@ -2093,7 +2106,35 @@ class File( object ):
             commit
         )
         return exit,status,updated_files
+
+    def delete(self, git_name, git_mail, agent, entity=None, collection=None, commit=True):
+        """Removes File metadata and file, updates parent entity, and commits.
         
+        @param git_name: str
+        @param git_mail: str
+        @param agent: str
+        @param commit: boolean
+        @returns: exit,status,removed_files,updated_files (int,str,list,list)
+        """
+        exit = 1; status = 'unknown'; updated_files = []
+        if not entity:
+            entity = self.parent()
+        if not collection:
+            collection = self.identifier.collection().object()
+        
+        # remove file from parent entity.file_groups
+        rm_files,updated_files = entity.prep_rm_file(self)
+        
+        # write files and commit
+        status,message,updated_files = commands.file_destroy(
+            git_name, git_mail,
+            collection, entity,
+            rm_files, updated_files,
+            agent=agent,
+            commit=commit
+        )
+        return exit, status, rm_files, updated_files
+
     # _lockfile
     # lock
     # unlock

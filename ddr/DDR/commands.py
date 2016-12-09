@@ -593,7 +593,7 @@ def entity_destroy(user_name, user_mail, collection, entity, agent=''):
 
 @command
 @local_only
-def file_destroy(user_name, user_mail, collection, entity, rm_files, updated_files, agent=''):
+def file_destroy(user_name, user_mail, collection, entity, rm_files, updated_files, agent='', commit=True):
     """Command-line function for creating an entity and adding it to the collection.
     
     - check that paths exist, etc
@@ -609,7 +609,8 @@ def file_destroy(user_name, user_mail, collection, entity, rm_files, updated_fil
     @param rm_files: List of paths to files to delete (relative to entity files dir).
     @param updated_files: List of paths to updated file(s), relative to entitys.
     @param agent: (optional) Name of software making the change.
-    @return: message ('ok' if successful)
+    @param commit: (optional) Commit files after staging them.
+    @return: exit,message,touched_files ('ok' if successful)
     """
     repo = dvcs.repository(collection.path, user_name, user_mail)
     repo.git.checkout('master')
@@ -646,8 +647,9 @@ def file_destroy(user_name, user_mail, collection, entity, rm_files, updated_fil
     
     # add files and commit
     commit_message = dvcs.compose_commit_message('Deleted entity file(s)', agent=agent)
-    repo = commit_files(repo, commit_message, git_files, [])
-    return 0,'ok'
+    if commit:
+        repo = commit_files(repo, commit_message, git_files, [])
+    return 0,'ok',git_files
 
 
 @command
