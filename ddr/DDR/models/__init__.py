@@ -869,7 +869,7 @@ class Collection( object ):
             self.json_path
         )
     
-    def post_json(self, hosts, index):
+    def post_json(self):
         # NOTE: this is same basic code as Docstore.index
         return docstore.Docstore().post(
             load_json_lite(self.json_path, self.identifier.model, self.id),
@@ -1501,10 +1501,9 @@ class Entity( object ):
             self.json_path
         )
     
-    def post_json(self, hosts, index):
+    def post_json(self):
         # NOTE: this is same basic code as docstore.index
         return docstore.Docstore().post(
-            hosts, index,
             load_json_lite(self.json_path, self.identifier.model, self.id),
             docstore._public_fields().get(self.identifier.model, []),
             {
@@ -2238,10 +2237,9 @@ class File( object ):
             self.json_path
         )
     
-    def post_json(self, hosts, index, public=False):
+    def post_json(self, public=False):
         # NOTE: this is same basic code as docstore.index
         return docstore.Docstore().post(
-            hosts, index,
             load_json_lite(self.json_path, self.identifier.model, self.id),
             docstore._public_fields().get(self.identifier.model, []),
             {
