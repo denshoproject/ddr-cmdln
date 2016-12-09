@@ -154,7 +154,13 @@ class Module(object):
                 )
                 lv.append( {'label':label, 'value':value,} )
         return lv
-
+    
+    def field_choices(self, field_name):
+        for f in self.module.FIELDS:
+            if (f['name'] == field_name) and (f['form'].get('choices')):
+                return f['form']['choices']
+        return None
+    
     def _parse_commit(self, text):
         return text.strip().split(' ')[0]
     

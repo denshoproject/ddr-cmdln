@@ -786,6 +786,14 @@ class Collection( object ):
         module = self.identifier.fields_module()
         return modules.Module(module).labels_values(self)
     
+    def choices(self, field_name):
+        """Returns controlled-vocab choices for specified field, if any
+        
+        @param field_name: str
+        @returns: list or None
+        """
+        return modules.Module(self.identifier.fields_module()).field_choices(field_name)
+    
     def form_prep(self):
         """Apply formprep_{field} functions in Collection module to prep data dict to pass into DDRForm object.
         
@@ -1398,6 +1406,14 @@ class Entity( object ):
         """
         module = self.identifier.fields_module()
         return modules.Module(module).labels_values(self)
+    
+    def choices(self, field_name):
+        """Returns controlled-vocab choices for specified field, if any
+        
+        @param field_name: str
+        @returns: list or None
+        """
+        return modules.Module(self.identifier.fields_module()).field_choices(field_name)
     
     def form_prep(self):
         """Apply formprep_{field} functions in Entity module to prep data dict to pass into DDRForm object.
@@ -2188,6 +2204,14 @@ class File( object ):
         """
         module = self.identifier.fields_module()
         return modules.Module(module).labels_values(self)
+    
+    def choices(self, field_name):
+        """Returns controlled-vocab choices for specified field, if any
+        
+        @param field_name: str
+        @returns: list or None
+        """
+        return modules.Module(self.identifier.fields_module()).field_choices(field_name)
     
     def form_prep(self):
         """Apply formprep_{field} functions in File module to prep data dict to pass into DDRForm object.
