@@ -454,7 +454,7 @@ class Docstore():
         @param remove: bool Remove record from ES
         @returns: dict
         """
-        return self._repo_org(path, 'repository', remove)
+        return self._repo_org(path, 'organization', remove)
     
     def post(self, document, public_fields=[], additional_fields={}, private_ok=False):
         """Add a new document to an index or update an existing one.
