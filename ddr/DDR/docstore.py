@@ -431,6 +431,10 @@ class Docstore():
         if (not (data.get('id') and data.get('repo'))):
             raise Exception('Data file is not well-formed.')
         document_id = data['id']
+        # Add parts of id (e.g. repo, org, cid) to document as separate fields.
+        for key in ['repo', 'org', 'cid', 'eid', 'sid', 'role', 'sha1']:
+            if key not in data:
+                data[key] = ''
         # add/update
         if remove and self.exists(doctype, document_id):
             results = self.es.delete(index=self.indexname, doc_type=doctype, id=document_id)
@@ -525,8 +529,8 @@ class Docstore():
             data['title'] = label
         
         # Add parts of id (e.g. repo, org, cid) to document as separate fields.
-        for key,val in identifier.parts.iteritems():
-            data[key] = val
+        for key in ['repo', 'org', 'cid', 'eid', 'sid', 'role', 'sha1']:
+            data[key] = identifier.parts.get(key, '')
         # additional_fields
         for key,val in additional_fields.iteritems():
             data[key] = val
