@@ -43,7 +43,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument('-C', '--commit', action='store_true', help='Commit collections if successful.')
-    parser.add_argument('-k', '--keep', action='store_true', help='Keep collections after finishing.')
+    parser.add_argument('-K', '--keep', action='store_true', help='Keep collections after finishing.')
     parser.add_argument('user', help='User name (used for commits)')
     parser.add_argument('mail', help='User email (used for commits)')
     parser.add_argument('basedir', help='Absolute path to base dir.')

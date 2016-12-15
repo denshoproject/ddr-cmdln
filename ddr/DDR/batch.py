@@ -1128,18 +1128,20 @@ class Updater():
                     # (remotes will return next time it's modded tho)
                     for name in dvcs.repos_remotes(repo):
                         repo.remove_remote(remote)
-                    logging.info('committed %s changed files' % len(stage_these))
-                    logging.info(committed)
-                    metrics.committed = True
+                    logging.info('%s changed files -> %s' % (len(stage_these), committed))
+                    metrics.committed = str(committed)[:10]
+                    logging.info('ok')
             else:
-                metrics.committed = False
+                metrics.committed = 'nocommit'
             
             if os.path.exists(collection_path) and not keep:
                 logging.info('Deleting %s' % collection_path)
                 shutil.rmtree(collection_path)
-                metrics.kept = False
+                logging.info('ok')
+                metrics.kept = 'nokeep'
             else:
-                metrics.kept = True
+                logging.info('Keeping %s' % collection_path)
+                metrics.kept = 'kept'
             
             Updater._write_done(basedir, metrics)
             # update THIS, not writing this collection any more
