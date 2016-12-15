@@ -304,17 +304,17 @@ def text_to_dict(text, keys):
     """
     if not text:
         return {}
-    if _detect_text_labels(text, separators=[':','|']):
-        data = textlabels_to_dict(text, keys, separators=[':','|'])
-    elif _detect_text_nolabels(text):
-        data = textnolabels_to_dict(text, keys, separator=':')
-    else:
-        m = _detect_text_bracketid(text)
+    m = _detect_text_bracketid(text)
+    if m:
         if m:
             data = textbracketid_to_dict(text)
         else:
             data = {}
             data[keys[0]] = text
+    elif _detect_text_labels(text, separators=[':','|']):
+        data = textlabels_to_dict(text, keys, separators=[':','|'])
+    elif _detect_text_nolabels(text):
+        data = textnolabels_to_dict(text, keys, separator=':')
     # strip strings, force int values to int
     d = {}
     for key,val in data.iteritems():
