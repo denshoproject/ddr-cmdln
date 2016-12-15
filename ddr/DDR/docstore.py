@@ -321,8 +321,12 @@ class Docstore():
         for mapping in mappings_list:
             model = mapping.keys()[0]
             logger.debug(model)
-            logger.debug(json.dumps(mapping, indent=4, separators=(',', ': '), sort_keys=True))
-            status = self.es.indices.put_mapping(index=self.indexname, doc_type=model, body=mapping)
+            logger.debug(
+                json.dumps(mapping, indent=4, separators=(',', ': '), sort_keys=True)
+            )
+            status = self.es.indices.put_mapping(
+                index=self.indexname, doc_type=model, body=mapping
+            )
             statuses.append( {'model':model, 'status':status} )
         self.mappings = mappings_list
         return statuses
@@ -342,7 +346,10 @@ class Docstore():
         """PUTs facets from file into ES.
         
         curl -XPUT 'http://localhost:9200/meta/facet/format' -d '{ ... }'
-        >>> elasticsearch.put_facets('192.168.56.120:9200', 'meta', '/usr/local/src/ddr-cmdln/ddr/DDR/models/facets.json')
+        >>> elasticsearch.put_facets(
+            '192.168.56.120:9200', 'meta',
+            '/usr/local/src/ddr-cmdln/ddr/DDR/models/facets.json'
+            )
         
         @param path: Absolute path to dir containing facet files.
         @returns: JSON dict with status code and response
@@ -354,7 +361,9 @@ class Docstore():
             srcpath = os.path.join(path, facet_json)
             with open(srcpath, 'r') as f:
                 data = json.loads(f.read().strip())
-                status = self.es.index(index=self.indexname, doc_type='facet', id=facet, body=data)
+                status = self.es.index(
+                    index=self.indexname, doc_type='facet', id=facet, body=data
+                )
                 statuses.append(status)
         return statuses
      
@@ -437,9 +446,13 @@ class Docstore():
                 data[key] = ''
         # add/update
         if remove and self.exists(doctype, document_id):
-            results = self.es.delete(index=self.indexname, doc_type=doctype, id=document_id)
+            results = self.es.delete(
+                index=self.indexname, doc_type=doctype, id=document_id
+            )
         else:
-            results = self.es.index(index=self.indexname, doc_type=doctype, id=document_id, body=data)
+            results = self.es.index(
+                index=self.indexname, doc_type=doctype, id=document_id, body=data
+            )
         return results
     
     def repo(self, path, remove=False):
@@ -483,7 +496,9 @@ class Docstore():
         @param private_ok: boolean Publish even if not "publishable".
         @returns: JSON dict with status code and response
         """
-        logger.debug('post(%s, %s, %s, %s, %s)' % (self.indexname, document, public_fields, additional_fields, private_ok))
+        logger.debug('post(%s, %s, %s, %s, %s)' % (
+            self.indexname, document, public_fields, additional_fields, private_ok
+        ))
         
         document_id = None
         for field in document:
@@ -554,10 +569,14 @@ class Docstore():
         @param path: Absolute path to JSON document.
         @returns: dict Status info.
         """
-        logger.debug('post_json(%s, %s, %s, %s)' % (self.indexname, doc_type, document_id, path))
+        logger.debug('post_json(%s, %s, %s, %s)' % (
+            self.indexname, doc_type, document_id, path
+        ))
         with open(path, 'r') as f:
             json_text = f.read()
-        return self.es.index(index=self.indexname, doc_type=doc_type, id=document_id, body=json_text)
+        return self.es.index(
+            index=self.indexname, doc_type=doc_type, id=document_id, body=json_text
+        )
      
     def exists(self, model, document_id):
         """
@@ -573,8 +592,12 @@ class Docstore():
         """
         if self.exists(model, document_id):
             if fields is not None:
-                return self.es.get(index=self.indexname, doc_type=model, id=document_id, fields=fields)
-            return self.es.get(index=self.indexname, doc_type=model, id=document_id)
+                return self.es.get(
+                    index=self.indexname, doc_type=model, id=document_id, fields=fields
+                )
+            return self.es.get(
+                index=self.indexname, doc_type=model, id=document_id
+            )
         return None
     
     def search(self, model='', query='', term={}, filters={}, sort=[], fields=[], first=0, size=MAX_SIZE):
@@ -638,12 +661,16 @@ class Docstore():
             elif identifier.model == 'file': doc_type = 'file'
             query = 'id:"%s"' % identifier.id
             try:
-                return self.es.delete_by_query(index=self.indexname, doc_type=doc_type, q=query)
+                return self.es.delete_by_query(
+                    index=self.indexname, doc_type=doc_type, q=query
+                )
             except TransportError:
                 pass
         else:
             try:
-                return self.es.delete(index=self.indexname, doc_type=identifier.model, id=identifier.id)
+                return self.es.delete(
+                    index=self.indexname, doc_type=identifier.model, id=identifier.id
+                )
             except TransportError:
                 pass
     
@@ -677,7 +704,8 @@ class Docstore():
             paths = util.find_meta_files(path, recursive, files_first=1)
         
         # Store value of public,status for each collection,entity.
-        # Values will be used by entities and files to inherit these values from their parent.
+        # Values will be used by entities and files to inherit these values
+        # from their parent.
         parents = _parents_status(paths)
         
         # Determine if paths are publishable or not
@@ -718,13 +746,16 @@ class Docstore():
                 result_version = result.get('version', None)
                 if not result_version:
                     result_version = result.get('_version', None)
-                if result['created'] or (existing_version and (result_version > existing_version)):
+                if result['created'] \
+                or (existing_version and (result_version > existing_version)):
                     successful += 1
                 status = ''
             else:
                 bad_paths.append((path, result['status'], result['response']))
                 status = '   %s %s' % (result['status'], result['response'])
-            print('%s | %s/%s %s%s' % (datetime.now(config.TZ), n, num, identifier.id, status))
+            print('%s | %s/%s %s%s' % (
+                datetime.now(config.TZ), n, num, identifier.id, status)
+            )
         logger.debug('INDEXING COMPLETED')
         return {'total':len(paths), 'successful':successful, 'bad':bad_paths}
 
@@ -981,7 +1012,9 @@ def _format_datetimes(data):
                 timezone = config.TZ
             if not dt.tzinfo:
                 timezone.localize(dt)
-            data[field] = converters.datetime_to_text(dt, config.ELASTICSEARCH_DATETIME_FORMAT)
+            data[field] = converters.datetime_to_text(
+                dt, config.ELASTICSEARCH_DATETIME_FORMAT
+            )
 
 def _filter_fields(i, data):
     """Run index_* functions on data
@@ -1065,7 +1098,7 @@ def massage_query_results(results, thispage, page_size):
                  'id': hit['_id'],
                  'placeholder': True}
             if (n >= bottom) and (n < top):
-                # if we tell ES to only return certain fields, the object is in 'fields'
+                # if we tell ES only return certain fields, object is in 'fields'
                 if hit.get('fields', None):
                     o = hit['fields']
                 elif hit.get('_source', None):
@@ -1075,7 +1108,8 @@ def massage_query_results(results, thispage, page_size):
                 o['type'] = hit['_type']
                 o['model'] = hit['_type']
                 o['id'] = hit['_id']
-                # ElasticSearch wraps field values in lists when you use a 'fields' array in a query
+                # ElasticSearch wraps field values in lists
+                # when you use a 'fields' array in a query
                 for fieldname in all_list_fields():
                     unlistify(o, fieldname)
             objects.append(o)
@@ -1109,7 +1143,8 @@ def _public_fields(modules=MODULES):
             mfields = [
                 field['name']
                 for field in module.FIELDS
-                if field.get('elasticsearch',None) and field['elasticsearch'].get('public',None)
+                if field.get('elasticsearch',None) \
+                and field['elasticsearch'].get('public',None)
             ]
             public_fields[model] = mfields
     # add dynamically created fields
