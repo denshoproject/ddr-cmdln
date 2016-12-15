@@ -947,7 +947,10 @@ class UpdaterMetrics():
     save_errs = {}
     bad_exits = {}
     objects_saved = 0
+    updated = []
     files_updated = 0
+    committed = None
+    kept = None
     elapsed = None
     per_object = None
     error = ''
@@ -962,6 +965,8 @@ class UpdaterMetrics():
             'files_updated',
             'elapsed',
             'per_object',
+            'committed',
+            'kept',
             'error',
             'traceback',
             'load_errs',
@@ -982,6 +987,8 @@ class UpdaterMetrics():
             self.files_updated,
             self.elapsed,
             self.per_object,
+            self.committed,
+            self.kept,
             self.error,
             self.traceback,
             '\n'.join(load_errs),
@@ -1098,11 +1105,41 @@ class Updater():
             
             if commit:
                 logging.info('Committing %s' % collection_path)
-                pass
+                if metrics.load_errs or metrics.save_errs or metrics.bad_exits:
+                    logging.error('We have errors! Cannot commit!')
+                    metrics.committed = False
+                else:
+                    repo = dvcs.repository(
+                        collection_path,
+                        user_name=user, user_mail=mail
+                    )
+                    # stage
+                    stage_these = []
+                    for f in metrics.updated.itervalues():
+                        stage_these.extend(f)
+                    staged = dvcs.stage(repo, git_files=stage_these)
+                    # commit
+                    committed = dvcs.commit(
+                        repo,
+                        "Batch updated all objects in collection",
+                        agent=Updater.AGENT
+                    )
+                    # remove remotes so you can't sync
+                    # (remotes will return next time it's modded tho)
+                    for name in dvcs.repos_remotes(repo):
+                        repo.remove_remote(remote)
+                    logging.info('committed %s changed files' % len(stage_these))
+                    logging.info(committed)
+                    metrics.committed = True
+            else:
+                metrics.committed = False
             
             if os.path.exists(collection_path) and not keep:
                 logging.info('Deleting %s' % collection_path)
                 shutil.rmtree(collection_path)
+                metrics.kept = False
+            else:
+                metrics.kept = True
             
             Updater._write_done(basedir, metrics)
             # update THIS, not writing this collection any more
@@ -1173,17 +1210,6 @@ class Updater():
                 statuses[o.identifier.id] = status
             updated_files[o.identifier.id] = updated
         
-        if commit:
-            logging.info('Committing changes')
-            status,msg = commands.update(
-                git_user, git_mail,
-                collection,
-                Updater._consolidate_paths(updated_files),
-                agent=Updater.AGENT
-            )
-            logging.info('ok')
-        else:
-            logging.info('Changes not committed')
         return {
             'cid': cidentifier.id,    # str collection ID
             'num': num,               # int raw number of objects
@@ -1191,7 +1217,7 @@ class Updater():
             'save_errs': save_errs,   # dict save errs by object ID
             'bad_exits': bad_exits,   # dict non-zero exits by object ID
             'statuses': statuses,     # dict non-ok statuses by object ID
-            'updated': updated_files, # dict updated files by object ID
+            'updated_files': updated_files, # dict updated files by object ID
         }
     
     @staticmethod
@@ -1208,7 +1234,8 @@ class Updater():
         metrics.save_errs  =  response['save_errs']
         metrics.bad_exits  =  response['bad_exits']
         metrics.objects_saved  =  response['num']
-        metrics.files_updated  =  len(Updater._consolidate_paths(response['updated']))
+        metrics.updated = response['updated_files']
+        metrics.files_updated  =  len(metrics.updated)
         
         metrics.elapsed = end - start
         if metrics.elapsed and response.get('num'):
@@ -1240,6 +1267,8 @@ class Updater():
         # get list from Gitolite
         elif '@' in source:
             pass
+        else:
+            cids = []
         # Read cids from DONE
         if not os.path.join(basedir, Updater.DONE):
             Updater._write_done(basedir, None)
