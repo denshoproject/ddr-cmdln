@@ -289,19 +289,14 @@ Example:
         logging.basicConfig(format=LOGGING_FORMAT, datefmt=LOGGING_DATEFMT, level=logging.DEBUG, filename=args.log)
 
     cidentifier = None
-    collection = None
     if hasattr(args, 'collection'):
         cidentifier = Identifier(args.collection, MEDIA_BASE)
-        collection = Collection.from_identifier(cidentifier)
     elif hasattr(args, 'cid'):
         cidentifier = Identifier(args.cid, MEDIA_BASE)
-        collection = Collection.from_identifier(cidentifier)
     
     eidentifier = None
-    entity = None
     if hasattr(args, 'entity'):
         eidentifier = Identifier(args.entity, MEDIA_BASE)
-        entity = Entity.from_identifier(eidentifier)
     
     # call selected function
     #exit,msg = args.func(args)
