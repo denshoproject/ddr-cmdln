@@ -434,20 +434,29 @@ def labelledlist_to_text(data, separator=u'; '):
 #
 
 def text_to_rolepeople(text):
+    # NOTE: filters out items with empty nameparts
+    # TODO refactor this is a horrible function
     if _is_listofdicts(text):
-        return text
+        data = [
+            item
+            for item in text
+            if item['namepart'] and item['role']
+        ]
+        return data
     text = normalize_string(text)
     if not text:
         return []
     # try JSON first
     try:
         data = json.loads(text)
-        return data
+        if data['namepart'] and data['role']:
+            return data
     except ValueError:
         pass
     try:
         data = load_dirty_json(text)
-        return data
+        if data['namepart'] and data['role']:
+            return data
     except ValueError:
         pass
     data = []
@@ -455,11 +464,14 @@ def text_to_rolepeople(text):
         b = a.strip()
         if b:
             if ':' in b:
-                name,role = b.strip().split(':')
+                name,role = b.split(':')
             else:
                 name = b; role = 'author'
-            c = {'namepart': name.strip(), 'role': role.strip(),}
-            data.append(c)
+            name = name.strip()
+            role = role.strip()
+            if name and role:
+                c = {'namepart': name.strip(), 'role': role.strip(),}
+                data.append(c)
     return data
 
 def rolepeople_to_text(data):
