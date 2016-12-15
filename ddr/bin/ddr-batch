@@ -21,7 +21,7 @@ Example:
 
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import argparse
 import logging
 import sys
@@ -65,10 +65,29 @@ def main():
     logging.info('files updated: %s' % data['files_updated'])
     logging.info('failures:      %s' % data['failures'])
 
-    deltas = [delta.total_seconds() for delta in data['per_objects'] if delta]
+    def isnumber(x):
+        try:
+            x.isdigit()
+            return x
+        except:
+            return False
+        try:
+            int(x)
+            return x
+        except:
+            return False
+        return False
+    
+    deltas = [
+        delta.total_seconds()
+        for delta in data['per_objects']
+        if delta and isinstance(delta, timedelta)
+    ]
     if len(deltas) and sum(deltas):
         avg = sum(deltas) / len(deltas)
-        logging.info('avg s/object %s' % avg)
+    else:
+        avg = 'n/a'
+    logging.info('avg s/object   %s' % avg)
     
     finish = datetime.now()
     elapsed = finish - start

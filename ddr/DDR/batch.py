@@ -947,12 +947,12 @@ class UpdaterMetrics():
     save_errs = {}
     bad_exits = {}
     objects_saved = 0
-    updated = []
+    updated = {}
     files_updated = 0
     committed = None
     kept = None
     elapsed = None
-    per_object = None
+    per_object = 'n/a'
     error = ''
     traceback = ''
 
@@ -1104,7 +1104,6 @@ class Updater():
             per_objects.append(delta)
             
             if commit:
-                logging.info('Committing %s' % collection_path)
                 if metrics.load_errs or metrics.save_errs or metrics.bad_exits:
                     logging.error('We have errors! Cannot commit!')
                     metrics.committed = False
@@ -1115,22 +1114,28 @@ class Updater():
                     )
                     # stage
                     stage_these = []
-                    for f in metrics.updated.itervalues():
-                        stage_these.extend(f)
-                    staged = dvcs.stage(repo, git_files=stage_these)
-                    # commit
-                    committed = dvcs.commit(
-                        repo,
-                        "Batch updated all objects in collection",
-                        agent=Updater.AGENT
-                    )
-                    # remove remotes so you can't sync
-                    # (remotes will return next time it's modded tho)
-                    for name in dvcs.repos_remotes(repo):
-                        repo.remove_remote(remote)
-                    logging.info('%s changed files -> %s' % (len(stage_these), committed))
-                    metrics.committed = str(committed)[:10]
-                    logging.info('ok')
+                    if metrics.updated:
+                        for f in metrics.updated.itervalues():
+                            stage_these.extend(f)
+                    logging.info('%s files changed' % (len(stage_these)))
+                    if stage_these:
+                        logging.info('Staging...')
+                        staged = dvcs.stage(repo, git_files=stage_these)
+                        logging.info('Committing...')
+                        committed = dvcs.commit(
+                            repo,
+                            "Batch updated all objects in collection",
+                            agent=Updater.AGENT
+                        )
+                        logging.info('commit %s' % committed)
+                        metrics.committed = str(committed)[:10]
+                        # remove remotes so you can't sync
+                        # (remotes will return next time it's modded tho)
+                        for name in dvcs.repos_remotes(repo):
+                            repo.remove_remote(remote)
+                        logging.info('ok')
+                    else:
+                        metrics.committed = 'nochanges'
             else:
                 metrics.committed = 'nocommit'
             
