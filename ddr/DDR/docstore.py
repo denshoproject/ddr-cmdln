@@ -626,7 +626,7 @@ class Docstore():
             )
         return None
     
-    def search(self, model='', query='', term={}, filters={}, sort=[], fields=[], first=0, size=MAX_SIZE):
+    def search(self, model='', query='', term={}, filters={}, sort=[], fields=[], from_=0, size=MAX_SIZE):
         """Run a query, get a list of zero or more hits.
         
         @param model: Type of object ('collection', 'entity', 'file')
@@ -635,13 +635,15 @@ class Docstore():
         @param filters: dict
         @param sort: list of (fieldname,direction) tuples
         @param fields: str
-        @param first: int Index of document from which to start results
+        @param from_: int Index of document from which to start results
         @param size: int Number of results to return
         @returns raw ElasticSearch query output
         """
-        logger.debug('search(index=%s, model=%s, query=%s, term=%s, filters=%s, sort=%s, fields=%s, first=%s, size=%s' % (
-            self.indexname, model, query, term, filters, sort, fields, first, size
+        logger.debug('search(index=%s, model=%s, query=%s, term=%s, filters=%s, sort=%s, fields=%s, from_=%s, size=%s' % (
+            self.indexname, model, query, term, filters, sort, fields, from_, size
         ))
+        if not (model or query or term or filters):
+            raise Exception("Can't do an empty search. Give me something to work with here.")
         _clean_dict(filters)
         _clean_dict(sort)
         body = {}
@@ -660,6 +662,7 @@ class Docstore():
                 q=query,
                 body=body,
                 sort=sort_cleaned,
+                from_=from_,
                 size=size,
                 _source_include=fields,
             )
@@ -669,6 +672,7 @@ class Docstore():
                 doc_type=model,
                 body=body,
                 sort=sort_cleaned,
+                from_=from_,
                 size=size,
                 _source_include=fields,
             )
