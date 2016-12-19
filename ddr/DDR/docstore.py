@@ -29,9 +29,9 @@ d.put_facets(docstore.FACETS_PATH)
 d.delete(os.path.basename(PATH), recursive=True)
 
 # Repository, organization metadata
-d.post_json('repository', 'ddr', '%s/ddr/repository.json' % PATH)
+d.repo(path='%s/ddr/repository.json' % PATH, remove=False)
 # Do this once per organization.
-d.post_json('organization', 'REPO-ORG', '%s/REPO-ORG/organization.json' % PATH)
+d.org(path='%s/REPO-ORG/organization.json' % PATH, remove=False)
 
 d.index(PATH, recursive=True, public=True )
 
@@ -435,8 +435,8 @@ class Docstore():
     def _repo_org(self, path, doctype, remove=False):
         # get and validate file
         with open(path, 'r') as f:
-            body = f.read()
-        data = json.loads(body)
+            json_text = f.read()
+        data = json.loads(json_text)
         if (not (data.get('id') and data.get('repo'))):
             raise Exception('Data file is not well-formed.')
         document_id = data['id']
@@ -561,19 +561,17 @@ class Docstore():
             )
         return {'status':4, 'response':'unknown problem'}
     
-    def post_json(self, doc_type, document_id, path):
+    def post_json(self, doc_type, document_id, json_text):
         """POST the specified JSON document as-is.
         
         @param doc_type: str
         @param document_id: str
-        @param path: Absolute path to JSON document.
+        @param json_text: str JSON-formatted string
         @returns: dict Status info.
         """
-        logger.debug('post_json(%s, %s, %s, %s)' % (
-            self.indexname, doc_type, document_id, path
+        logger.debug('post_json(%s, %s, %s)' % (
+            self.indexname, doc_type, document_id
         ))
-        with open(path, 'r') as f:
-            json_text = f.read()
         return self.es.index(
             index=self.indexname, doc_type=doc_type, id=document_id, body=json_text
         )
