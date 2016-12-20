@@ -8,6 +8,9 @@ import converters
 
 def test_normalize_string():
     assert converters.normalize_string(None) == u''
+    assert converters.normalize_string(1) == 1
+    assert converters.normalize_string([]) == []
+    assert converters.normalize_string({}) == {}
     assert converters.normalize_string('') == u''
     assert converters.normalize_string('a\r\nb') == u'a\nb'
     assert converters.normalize_string('a\rb') == u'a\nb'
@@ -46,6 +49,8 @@ def test_list_to_text():
 TEXT_DICT_TEXT_LABELS    = 'term:ABC|id:123'
 TEXT_DICT_TEXT_NOLABELS  = 'ABC:123'
 TEXT_DICT_TEXT_BRACKETID = 'ABC [123]'
+TEXT_DICT_TEXT_BRACKETID_NL = 'ABC\n[123]'
+TEXT_DICT_TEXT_BRACKETID_QUOTES = '"ABC" [123]'
 TEXT_DICT_KEYS = ['term', 'id']
 TEXT_DICT_SEPARATORS = ':|'
 TEXT_DICT_SEPARATOR = ':'
@@ -73,6 +78,8 @@ def test_dict_to_textnolabels():
 def test_textbracketid_to_dict():
     assert converters.textbracketid_to_dict('', []) == {}
     assert converters.textbracketid_to_dict(TEXT_DICT_TEXT_BRACKETID, TEXT_DICT_KEYS) == TEXT_DICT_DATA
+    assert converters.textbracketid_to_dict(TEXT_DICT_TEXT_BRACKETID_NL, TEXT_DICT_KEYS) == TEXT_DICT_DATA
+    assert converters.textbracketid_to_dict(TEXT_DICT_TEXT_BRACKETID_QUOTES, TEXT_DICT_KEYS) == TEXT_DICT_DATA
     
 def test_dict_to_textbracketid():
     assert converters.dict_to_textbracketid(TEXT_DICT_DATA, TEXT_DICT_KEYS) == TEXT_DICT_TEXT_BRACKETID
@@ -131,25 +138,63 @@ def test_labelledlist_to_text():
     assert converters.labelledlist_to_text(TEXTLABELLEDLIST_DATA3) == TEXTLABELLEDLIST_DOUT3
 
 TEXTROLEPEOPLE_NAME_TEXT = "Watanabe, Joe"
+# output has role even if input does not
 TEXTROLEPEOPLE_NAME_DATA = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'}
 ]
-TEXTROLEPEOPLE_NAME_OUT = "Watanabe, Joe:author" # output has role even if input does not
-TEXTROLEPEOPLE_SINGLE_TEXT = "Masuda, Kikuye:author"
+TEXTROLEPEOPLE_NAME_OUT = 'Watanabe, Joe:author'
+
+TEXTROLEPEOPLE_SINGLE_TEXT = 'Masuda, Kikuye:photographer'
 TEXTROLEPEOPLE_SINGLE_DATA = [
-    {'namepart': 'Masuda, Kikuye', 'role': 'author'}
-]
-TEXTROLEPEOPLE_MULTI_TEXT = "Boyle, Rob:concept,editor; Cross, Brian:concept,editor"
-TEXTROLEPEOPLE_MULTI_DATA = [
-    {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
-    {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
+    {'namepart': 'Masuda, Kikuye', 'role': 'photographer'}
 ]
 
+TEXTROLEPEOPLE_MULTI_TEXT = 'Watanabe, Joe:author; Masuda, Kikuye:photographer'
+TEXTROLEPEOPLE_MULTI_DATA = [
+    {'namepart': 'Watanabe, Joe', 'role': 'author'},
+    {'namepart': 'Masuda, Kikuye', 'role': 'photographer'},
+]
+
+TEXTROLEPEOPLE_LISTSTRSNAME_TEXT = [
+    'Watanabe, Joe',
+]
+TEXTROLEPEOPLE_LISTSTRSNAME_DATA = [
+    {'namepart': 'Watanabe, Joe', 'role': 'author'},
+]
+
+TEXTROLEPEOPLE_LISTSTRS_TEXT = [
+    'Watanabe, Joe:author',
+    'Masuda, Kikuye:photographer',
+]
+TEXTROLEPEOPLE_LISTSTRS_DATA = [
+    {'namepart': 'Watanabe, Joe', 'role': 'author'},
+    {'namepart': 'Masuda, Kikuye', 'role': 'photographer'},
+]
+
+TEXTROLEPEOPLE_MULTI_TEXT = 'Watanabe, Joe:author; Masuda, Kikuye [42]:narrator'
+TEXTROLEPEOPLE_MULTI_DATA = [
+    {'namepart': 'Watanabe, Joe', 'role': 'author'},
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id':42},
+]
+
+
+
+# many legacy files have this pattern
+TEXTROLEPEOPLE_MULTIERR_TEXT = [
+    {'namepart': '', 'role': 'author'},
+]
+TEXTROLEPEOPLE_MULTIERR_DATA = []
+
 def test_text_to_rolepeople():
+    assert converters.text_to_rolepeople(None) == []
     assert converters.text_to_rolepeople('') == []
     assert converters.text_to_rolepeople(TEXTROLEPEOPLE_NAME_TEXT) == TEXTROLEPEOPLE_NAME_DATA
     assert converters.text_to_rolepeople(TEXTROLEPEOPLE_SINGLE_TEXT) == TEXTROLEPEOPLE_SINGLE_DATA
     assert converters.text_to_rolepeople(TEXTROLEPEOPLE_MULTI_TEXT) == TEXTROLEPEOPLE_MULTI_DATA
+    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_LISTSTRSNAME_TEXT) == TEXTROLEPEOPLE_LISTSTRSNAME_DATA
+    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_LISTSTRS_TEXT) == TEXTROLEPEOPLE_LISTSTRS_DATA
+    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_MULTI_DATA) == TEXTROLEPEOPLE_MULTI_DATA
+    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_MULTIERR_TEXT) == TEXTROLEPEOPLE_MULTIERR_DATA
 
 def test_rolepeople_to_text():
     assert converters.rolepeople_to_text([]) == ''

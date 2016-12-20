@@ -21,7 +21,11 @@ from DDR import config
 
 
 def normalize_string(text):
-    if not text:
+    if text == None:
+        return u''
+    elif not isinstance(text, basestring):
+        return text
+    elif not text:
         return u''
     return unicode(text).replace('\r\n', '\n').replace('\r', '\n').strip()
 
@@ -267,6 +271,7 @@ def textbracketid_to_dict(text, keys=['term', 'id'], pattern=TEXT_BRACKETID_REGE
     @param match: re.MatchObject
     @returns: dict
     """
+    text = normalize_string(text).replace('\n',' ').replace('"','')
     if not text:
         return {}
     if match:
@@ -302,6 +307,7 @@ def text_to_dict(text, keys):
     @param keys: list
     @returns: dict
     """
+    text = normalize_string(text).replace('\n',' ').replace('"','')
     if not text:
         return {}
     m = _detect_text_bracketid(text)
@@ -315,6 +321,8 @@ def text_to_dict(text, keys):
         data = textlabels_to_dict(text, keys, separators=[':','|'])
     elif _detect_text_nolabels(text):
         data = textnolabels_to_dict(text, keys, separator=':')
+    else:
+        raise Exception('text_to_dict could not parse "%s"' % text)
     # strip strings, force int values to int
     d = {}
     for key,val in data.iteritems():
@@ -418,61 +426,96 @@ def labelledlist_to_text(data, separator=u'; '):
 # 
 # text = ''
 # data = []
+# 
 # text = "Watanabe, Joe"
 # data = [
 #     {'namepart': 'Watanabe, Joe', 'role': 'author'}
 # ]
+# 
 # text = "Masuda, Kikuye:author"
 # data = [
 #     {'namepart': 'Masuda, Kikuye', 'role': 'author'}
 # ]
+# 
 # text = "Boyle, Rob:concept,editor; Cross, Brian:concept,editor"
+# data = [
+#     {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
+#     {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
+# ]
+# 
+# text = [
+#     'Boyle, Rob: concept,editor',
+#     'Cross, Brian: concept,editor'
+# ]
+# data = [
+#     {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
+#     {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
+# ]
+# 
+# text = [
+#     {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
+#     {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
+# ]
 # data = [
 #     {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
 #     {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
 # ]
 #
 
+def _filter_rolepeople(data):
+    """filters out items with empty nameparts
+    prevents this: [{'namepart': '', 'role': 'author'}]
+    """
+    return [
+        item for item in data
+        if item.get('namepart') and item.get('role')
+    ]
+
+def _parse_rolepeople_text(texts):
+    data = []
+    for text in texts:
+        txt = text.strip()
+        if txt:
+            if ':' in txt:
+                try:
+                    name,role = txt.split(':')
+                except:
+                    print(text)
+                    print(type(text))
+                    raise Exception('text_to_rolepeople could not parse "%s"' % text)
+            else:
+                name = txt; role = 'author'
+            data.append( {'namepart': name.strip(), 'role': role.strip(),} )
+    return data
+
 def text_to_rolepeople(text):
-    # NOTE: filters out items with empty nameparts
-    # TODO refactor this is a horrible function
-    if _is_listofdicts(text):
-        data = [
-            item
-            for item in text
-            if item['namepart'] and item['role']
-        ]
-        return data
-    text = normalize_string(text)
     if not text:
         return []
-    # try JSON first
+    
+    # might already be listofdicts or listofstrs
+    if isinstance(text, list):
+        if _is_listofdicts(text):
+            return _filter_rolepeople(text)
+        elif _is_listofstrs(text):
+            data = _parse_rolepeople_text(text)
+            return _filter_rolepeople(data)
+    
+    text = normalize_string(text)
+    
+    # or it might be JSON
     try:
         data = json.loads(text)
-        if data['namepart'] and data['role']:
-            return data
     except ValueError:
-        pass
-    try:
-        data = load_dirty_json(text)
-        if data['namepart'] and data['role']:
-            return data
-    except ValueError:
-        pass
-    data = []
-    for a in text.split(';'):
-        b = a.strip()
-        if b:
-            if ':' in b:
-                name,role = b.split(':')
-            else:
-                name = b; role = 'author'
-            name = name.strip()
-            role = role.strip()
-            if name and role:
-                c = {'namepart': name.strip(), 'role': role.strip(),}
-                data.append(c)
-    return data
+        try:
+            data = load_dirty_json(text)
+        except ValueError:
+            data = []
+    if data:
+        return _filter_rolepeople(data)
+    
+    # looks like it's raw text
+    data = _parse_rolepeople_text(text.split(';'))
+    return _filter_rolepeople(data)
 
 def rolepeople_to_text(data):
     if isinstance(data, basestring):
@@ -487,6 +530,24 @@ def rolepeople_to_text(data):
                 items.append('%s:%s' % (d['namepart'],d['role']))
         text = '; '.join(items)
     return text
+
+
+# listofstrs -----------------------------------------------------------
+#
+# text0 = [
+#     'this is a string',
+# ]
+#
+
+def _is_listofstrs(data):
+    if isinstance(data, list):
+        num_strs = 0
+        for x in data:
+            if isinstance(x, basestring):
+                num_strs += 1
+        if num_strs == len(data):
+            return True
+    return False
 
 
 # listofdicts ----------------------------------------------------------
