@@ -662,33 +662,23 @@ def listofdicts_to_textnolabels(data, keys, separators=TEXTNOLABELS_LISTOFDICTS_
 #     {'namepart': 'Watanabe, Joe', 'role': 'author'}
 # ]
 # 
-# text = "Masuda, Kikuye:author"
+# text = "Masuda, Kikuye:narrator"
 # data = [
-#     {'namepart': 'Masuda, Kikuye', 'role': 'author'}
+#     {'namepart': 'Masuda, Kikuye', 'role': 'narrator'}
 # ]
 # 
-# text = "Boyle, Rob:concept,editor; Cross, Brian:concept,editor"
-# data = [
-#     {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
-#     {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
-# ]
-# 
+# text = "Watanabe, Joe:author; Masuda, Kikuye:narrator"
 # text = [
-#     'Boyle, Rob: concept,editor',
-#     'Cross, Brian: concept,editor'
+#     'Watanabe, Joe: author',
+#     'Masuda, Kikuye: narrator'
 # ]
-# data = [
-#     {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
-#     {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
-# ]
-# 
 # text = [
-#     {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
-#     {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
+#     {'namepart': 'Watanabe, Joe', 'role': 'author'}
+#     {'namepart': 'Masuda, Kikuye', 'role': 'narrator'}
 # ]
 # data = [
-#     {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
-#     {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
+#     {'namepart': 'Watanabe, Joe', 'role': 'author'}
+#     {'namepart': 'Masuda, Kikuye', 'role': 'narrator'}
 # ]
 #
 
