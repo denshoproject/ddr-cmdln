@@ -32,6 +32,8 @@ TEXT_DATETIME_DATA = datetime(2016,8,31,15,42,17)
 
 def test_text_to_datetime():
     assert converters.text_to_datetime(TEXT_DATETIME_TEXT) == TEXT_DATETIME_DATA
+    # already in target format
+    assert converters.text_to_datetime(TEXT_DATETIME_DATA) == TEXT_DATETIME_DATA
 
 def test_datetime_to_text():
     assert converters.datetime_to_text(TEXT_DATETIME_DATA) == TEXT_DATETIME_TEXT
@@ -41,15 +43,16 @@ TEXTLIST_TEXT = 'thing1; thing2'
 TEXTLIST_DATA = ['thing1', 'thing2']
 
 def test_is_listofstrs():
-    assert converters._is_listofstrs(TEXTLIST_TEXT) == True
-    assert converters._is_listofstrs(TEXTLIST_DATA) == True
+    assert converters._is_listofstrs(TEXTLIST_TEXT) == False
     BAD0 = {'abc':123}
     BAD1 = [{'abc':123}]
     assert converters._is_listofstrs(BAD0) == False
     assert converters._is_listofstrs(BAD1) == False
+    assert converters._is_listofstrs(TEXTLIST_DATA) == True
 
 def test_text_to_list():
     assert converters.text_to_list(TEXTLIST_TEXT) == TEXTLIST_DATA
+    # already in target format
     assert converters.text_to_list(TEXTLIST_DATA) == TEXTLIST_DATA
 
 def test_list_to_text():
@@ -69,6 +72,11 @@ TEXT_DICT_KEYS_DATE = ['term', 'startdate']
 TEXT_DICT_TEXT_NOLABELS_DATE = 'ABC:1970-01-01 00:00:00'
 TEXT_DICT_DATA_DATE = {'term': u'ABC', 'startdate': '1970-01-01 00:00:00'}
 
+def test_is_text_labels():
+    assert converters._is_text_labels(TEXT_DICT_TEXT_LABELS)
+    assert converters._is_text_labels(TEXT_DICT_TEXT_NOLABELS) == False
+    assert converters._is_text_labels(TEXT_DICT_TEXT_BRACKETID) == False
+
 def test_textlabels_to_dict():
     assert converters.textlabels_to_dict('', []) == {}
     assert converters.textlabels_to_dict(TEXT_DICT_TEXT_LABELS, TEXT_DICT_KEYS) == TEXT_DICT_DATA
@@ -76,20 +84,30 @@ def test_textlabels_to_dict():
 def test_dict_to_textlabels():
     assert converters.dict_to_textlabels(TEXT_DICT_DATA, TEXT_DICT_KEYS, TEXT_DICT_SEPARATORS) == TEXT_DICT_TEXT_LABELS
 
+def test_is_text_nolabels():
+    assert converters._is_text_nolabels(TEXT_DICT_TEXT_LABELS) == False
+    assert converters._is_text_nolabels(TEXT_DICT_TEXT_NOLABELS)
+    assert converters._is_text_nolabels(TEXT_DICT_TEXT_BRACKETID) == False
+
 def test_textnolabels_to_dict():
     assert converters.textnolabels_to_dict('', []) == {}
     assert converters.textnolabels_to_dict(TEXT_DICT_TEXT_NOLABELS, TEXT_DICT_KEYS) == TEXT_DICT_DATA
     assert converters.textnolabels_to_dict(TEXT_DICT_TEXT_NOLABELS_DATE, TEXT_DICT_KEYS_DATE) == TEXT_DICT_DATA_DATE
-    
+
 def test_dict_to_textnolabels():
     assert converters.dict_to_textnolabels(TEXT_DICT_DATA, TEXT_DICT_KEYS, TEXT_DICT_SEPARATOR) == TEXT_DICT_TEXT_NOLABELS
+
+def test_is_text_bracketid():
+    assert converters._is_text_bracketid(TEXT_DICT_TEXT_LABELS) == False
+    assert converters._is_text_bracketid(TEXT_DICT_TEXT_NOLABELS) == False
+    assert converters._is_text_bracketid(TEXT_DICT_TEXT_BRACKETID)
 
 def test_textbracketid_to_dict():
     assert converters.textbracketid_to_dict('', []) == {}
     assert converters.textbracketid_to_dict(TEXT_DICT_TEXT_BRACKETID, TEXT_DICT_KEYS) == TEXT_DICT_DATA
     assert converters.textbracketid_to_dict(TEXT_DICT_TEXT_BRACKETID_NL, TEXT_DICT_KEYS) == TEXT_DICT_DATA
     assert converters.textbracketid_to_dict(TEXT_DICT_TEXT_BRACKETID_QUOTES, TEXT_DICT_KEYS) == TEXT_DICT_DATA
-    
+
 def test_dict_to_textbracketid():
     assert converters.dict_to_textbracketid(TEXT_DICT_DATA, TEXT_DICT_KEYS) == TEXT_DICT_TEXT_BRACKETID
 
@@ -110,6 +128,16 @@ TEXTKVLIST_DATA = [
     {u'name1': u'author'},
     {u'name2': u'photog'}
 ]
+
+def test_is_kvlist():
+    assert converters._is_kvlist('') == False
+    assert converters._is_kvlist({}) == False
+    BAD0 = ['abc', 'def']
+    BAD1 = [['abc'], ['def']]
+    assert converters._is_kvlist(BAD0) == False
+    assert converters._is_kvlist(BAD1) == False
+    assert converters._is_kvlist([])
+    assert converters._is_kvlist(TEXTKVLIST_DATA)
 
 def test_text_to_kvlist():
     assert converters.text_to_kvlist('') == []

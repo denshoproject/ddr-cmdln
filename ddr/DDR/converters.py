@@ -113,6 +113,8 @@ def text_to_datetime(text, fmt=config.DATETIME_FORMAT):
     @param fmt: str
     @returns: datetime
     """
+    if isinstance(text, datetime):
+        return text
     text = normalize_string(text)
     if text:
         try:
@@ -170,6 +172,8 @@ def text_to_list(text, separator=LIST_SEPARATOR):
     @param separator: str
     @returns: list
     """
+    if isinstance(text, list):
+        return text
     text = normalize_string(text)
     if not text:
         return []
@@ -200,7 +204,7 @@ def list_to_text(data, separator=LIST_SEPARATOR_SPACE):
 # data = {'term':'ABC', 'id':'123'}
 #
 
-def _detect_text_labels(text, separators=[':','|']):
+def _is_text_labels(text, separators=[':','|']):
     # both separators
     sepsfound = [s for s in separators if s in text]
     if len(sepsfound) == len(separators):
@@ -234,7 +238,7 @@ def dict_to_textlabels(data, keys, separators):
 # text_nolabels  = 'ABC:123'
 # data = {'term':'ABC', 'id':123}
 
-def _detect_text_nolabels(text, separators=[':','|']):
+def _is_text_nolabels(text, separators=[':','|']):
     # Only first separator present
     if (separators[0] in text) and not (separators[1] in text):
         return True
@@ -271,7 +275,7 @@ def dict_to_textnolabels(data, keys, separator):
 TEXT_BRACKETID_TEMPLATE = '{term} [{id}]'
 TEXT_BRACKETID_REGEX = re.compile(r'([\w\d ()_-]+) \[(\d+)\]')
 
-def _detect_text_bracketid(text):
+def _is_text_bracketid(text):
     m = re.search(TEXT_BRACKETID_REGEX, text)
     if m and (len(m.groups()) == 2) and m.groups()[1].isdigit():
         return m
@@ -324,16 +328,16 @@ def text_to_dict(text, keys):
     text = normalize_string(text).replace('\n',' ').replace('"','')
     if not text:
         return {}
-    m = _detect_text_bracketid(text)
+    m = _is_text_bracketid(text)
     if m:
         if m:
             data = textbracketid_to_dict(text)
         else:
             data = {}
             data[keys[0]] = text
-    elif _detect_text_labels(text, separators=[':','|']):
+    elif _is_text_labels(text, separators=[':','|']):
         data = textlabels_to_dict(text, keys, separators=[':','|'])
-    elif _detect_text_nolabels(text):
+    elif _is_text_nolabels(text):
         data = textnolabels_to_dict(text, keys, separator=':')
     else:
         raise Exception('text_to_dict could not parse "%s"' % text)
@@ -373,7 +377,19 @@ def dict_to_text(data, keys, style='labels', nolabelsep=':', labelseps=[':','|']
 # ]
 # 
 
+def _is_kvlist(text):
+    if isinstance(text, list):
+        matches = 0
+        for item in text:
+            if isinstance(item, dict):
+                matches += 1
+        if matches == len(text):
+            return True
+    return False
+
 def text_to_kvlist(text):
+    if _is_kvlist(text):
+        return text
     text = normalize_string(text)
     if not text:
         return []
