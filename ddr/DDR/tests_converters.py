@@ -245,10 +245,10 @@ TEXTROLEPEOPLE_LISTSTRS_DATA = [
     {'namepart': 'Masuda, Kikuye', 'role': 'photographer'},
 ]
 
-TEXTROLEPEOPLE_MULTI_TEXT = 'Watanabe, Joe:author; Masuda, Kikuye [42]:narrator'
+TEXTROLEPEOPLE_MULTI_TEXT = 'Watanabe, Joe:author; Masuda, Kikuye:narrator'
 TEXTROLEPEOPLE_MULTI_DATA = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'},
-    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id':42},
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator'},
 ]
 
 # many legacy files have this pattern
