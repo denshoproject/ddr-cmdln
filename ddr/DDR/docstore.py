@@ -33,6 +33,9 @@ d.repo(path='%s/ddr/repository.json' % PATH, remove=False)
 # Do this once per organization.
 d.org(path='%s/REPO-ORG/organization.json' % PATH, remove=False)
 
+# Narrators metadata
+d.narrators(NARRATORS_PATH)
+
 d.index(PATH, recursive=True, public=True )
 
 ------------------------------------------------------------------------
@@ -472,6 +475,31 @@ class Docstore():
         @returns: dict
         """
         return self._repo_org(path, 'organization', remove)
+    
+    def narrators(self, path):
+        """Add/update or remove narrators metadata.
+        
+        @param path: str Absolute path to narrators.json
+        @returns: dict
+        """
+        DOC_TYPE = 'narrator'
+        def make_doc_id(data):
+            first_middle = ' '.join([
+                data['first_name'],
+                data['middle_name']
+            ])
+            return ','.join([
+                data['last_name'],
+                first_middle,
+            ])
+         
+        with open(path, 'r') as f:
+            json_text = f.read()
+        data = json.loads(json_text)
+        for n in data['narrators']:
+            document_id = make_doc_id(n)
+            result = self.post_json(DOC_TYPE, document_id, json.dumps(n))
+            logging.debug(document_id, result)
     
     def post(self, document, public_fields=[], additional_fields={}, private_ok=False):
         """Add a new document to an index or update an existing one.
