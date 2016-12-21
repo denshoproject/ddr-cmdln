@@ -273,7 +273,7 @@ def dict_to_textnolabels(data, keys, separator):
 # data = {'term':'ABC', 'id':123}
 
 TEXT_BRACKETID_TEMPLATE = '{term} [{id}]'
-TEXT_BRACKETID_REGEX = re.compile(r'([\w\d ()_-]+) \[(\d+)\]')
+TEXT_BRACKETID_REGEX = re.compile(r'(?P<term>[\w\d ()_,:-]+)\s\[(?P<id>\d+)\]')
 
 def _is_text_bracketid(text):
     m = re.search(TEXT_BRACKETID_REGEX, text)
@@ -328,13 +328,9 @@ def text_to_dict(text, keys):
     text = normalize_string(text).replace('\n',' ').replace('"','')
     if not text:
         return {}
-    m = _is_text_bracketid(text)
-    if m:
-        if m:
-            data = textbracketid_to_dict(text)
-        else:
-            data = {}
-            data[keys[0]] = text
+    match = _is_text_bracketid(text)
+    if match:
+        data = textbracketid_to_dict(text, match=match)
     elif _is_text_labels(text, separators=[':','|']):
         data = textlabels_to_dict(text, keys, separators=[':','|'])
     elif _is_text_nolabels(text):
@@ -662,23 +658,23 @@ def listofdicts_to_textnolabels(data, keys, separators=TEXTNOLABELS_LISTOFDICTS_
 #     {'namepart': 'Watanabe, Joe', 'role': 'author'}
 # ]
 # 
-# text = "Masuda, Kikuye:narrator"
+# text = "Masuda, Kikuye [42]:narrator"
 # data = [
-#     {'namepart': 'Masuda, Kikuye', 'role': 'narrator'}
+#     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42}
 # ]
 # 
 # text = "Watanabe, Joe:author; Masuda, Kikuye:narrator"
 # text = [
 #     'Watanabe, Joe: author',
-#     'Masuda, Kikuye: narrator'
+#     'Masuda, Kikuye [42]: narrator'
 # ]
 # text = [
 #     {'namepart': 'Watanabe, Joe', 'role': 'author'}
-#     {'namepart': 'Masuda, Kikuye', 'role': 'narrator'}
+#     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42}
 # ]
 # data = [
 #     {'namepart': 'Watanabe, Joe', 'role': 'author'}
-#     {'namepart': 'Masuda, Kikuye', 'role': 'narrator'}
+#     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42}
 # ]
 #
 
@@ -696,6 +692,7 @@ def _parse_rolepeople_text(texts):
     for text in texts:
         txt = text.strip()
         if txt:
+            # separate namepart and role
             if ':' in txt:
                 try:
                     name,role = txt.split(':')
@@ -705,7 +702,21 @@ def _parse_rolepeople_text(texts):
                     raise Exception('text_to_rolepeople could not parse "%s"' % text)
             else:
                 name = txt; role = 'author'
-            data.append( {'namepart': name.strip(), 'role': role.strip(),} )
+            # extract person ID if present
+            match = _is_text_bracketid(text)
+            if match:
+                item = {
+                    'namepart': match.groupdict()['term'].strip(),
+                    'id': int(match.groupdict()['id'].strip()),
+                    'role': role.strip(),
+                }
+            # no person ID
+            else:
+                item = {
+                    'namepart': name.strip(),
+                    'role': role.strip(),
+                }
+            data.append(item)
     return data
 
 def text_to_rolepeople(text):

@@ -218,15 +218,20 @@ TEXTROLEPEOPLE_NAME_DATA = [
 ]
 TEXTROLEPEOPLE_NAME_OUT = 'Watanabe, Joe:author'
 
-TEXTROLEPEOPLE_SINGLE_TEXT = 'Masuda, Kikuye:photographer'
+TEXTROLEPEOPLE_SINGLE_TEXT = 'Masuda, Kikuye:narrator'
 TEXTROLEPEOPLE_SINGLE_DATA = [
-    {'namepart': 'Masuda, Kikuye', 'role': 'photographer'}
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator'}
 ]
 
-TEXTROLEPEOPLE_MULTI_TEXT = 'Watanabe, Joe:author; Masuda, Kikuye:photographer'
+TEXTROLEPEOPLE_SINGLE_ID_TEXT = 'Masuda, Kikuye [42]:narrator'
+TEXTROLEPEOPLE_SINGLE_ID_DATA = [
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42}
+]
+
+TEXTROLEPEOPLE_MULTI_TEXT = 'Watanabe, Joe:author; Masuda, Kikuye:narrator'
 TEXTROLEPEOPLE_MULTI_DATA = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'},
-    {'namepart': 'Masuda, Kikuye', 'role': 'photographer'},
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator'},
 ]
 
 TEXTROLEPEOPLE_LISTSTRSNAME_TEXT = [
@@ -238,11 +243,11 @@ TEXTROLEPEOPLE_LISTSTRSNAME_DATA = [
 
 TEXTROLEPEOPLE_LISTSTRS_TEXT = [
     'Watanabe, Joe:author',
-    'Masuda, Kikuye:photographer',
+    'Masuda, Kikuye:narrator',
 ]
 TEXTROLEPEOPLE_LISTSTRS_DATA = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'},
-    {'namepart': 'Masuda, Kikuye', 'role': 'photographer'},
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator'},
 ]
 
 TEXTROLEPEOPLE_MULTI_TEXT = 'Watanabe, Joe:author; Masuda, Kikuye:narrator'
@@ -262,6 +267,7 @@ def test_text_to_rolepeople():
     assert converters.text_to_rolepeople('') == []
     assert converters.text_to_rolepeople(TEXTROLEPEOPLE_NAME_TEXT) == TEXTROLEPEOPLE_NAME_DATA
     assert converters.text_to_rolepeople(TEXTROLEPEOPLE_SINGLE_TEXT) == TEXTROLEPEOPLE_SINGLE_DATA
+    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_SINGLE_ID_TEXT) == TEXTROLEPEOPLE_SINGLE_ID_DATA
     assert converters.text_to_rolepeople(TEXTROLEPEOPLE_MULTI_TEXT) == TEXTROLEPEOPLE_MULTI_DATA
     assert converters.text_to_rolepeople(TEXTROLEPEOPLE_LISTSTRSNAME_TEXT) == TEXTROLEPEOPLE_LISTSTRSNAME_DATA
     assert converters.text_to_rolepeople(TEXTROLEPEOPLE_LISTSTRS_TEXT) == TEXTROLEPEOPLE_LISTSTRS_DATA
