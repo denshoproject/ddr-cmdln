@@ -143,12 +143,26 @@ def datetime_to_text(data, fmt=config.DATETIME_FORMAT):
 
 # list ----------------------------------------------------------------
 #
-# text = 'thing1; thing2'
+# text0 = 'thing1; thing2'
+# text1 = [
+#     'thing1',
+#     'thing2',
+# ]
 # data = ['thing1', 'thing2']
 #
 
 LIST_SEPARATOR = ';'
 LIST_SEPARATOR_SPACE = '%s ' % LIST_SEPARATOR
+
+def _is_listofstrs(data):
+    if isinstance(data, list):
+        num_strs = 0
+        for x in data:
+            if isinstance(x, basestring):
+                num_strs += 1
+        if num_strs == len(data):
+            return True
+    return False
 
 def text_to_list(text, separator=LIST_SEPARATOR):
     """
@@ -420,136 +434,6 @@ def labelledlist_to_text(data, separator=u'; '):
     return separator.join(data)
 
 
-# rolepeople -----------------------------------------------------------
-#
-# List listofdicts but adds default key:val pairs if missing
-# 
-# text = ''
-# data = []
-# 
-# text = "Watanabe, Joe"
-# data = [
-#     {'namepart': 'Watanabe, Joe', 'role': 'author'}
-# ]
-# 
-# text = "Masuda, Kikuye:author"
-# data = [
-#     {'namepart': 'Masuda, Kikuye', 'role': 'author'}
-# ]
-# 
-# text = "Boyle, Rob:concept,editor; Cross, Brian:concept,editor"
-# data = [
-#     {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
-#     {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
-# ]
-# 
-# text = [
-#     'Boyle, Rob: concept,editor',
-#     'Cross, Brian: concept,editor'
-# ]
-# data = [
-#     {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
-#     {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
-# ]
-# 
-# text = [
-#     {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
-#     {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
-# ]
-# data = [
-#     {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
-#     {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
-# ]
-#
-
-def _filter_rolepeople(data):
-    """filters out items with empty nameparts
-    prevents this: [{'namepart': '', 'role': 'author'}]
-    """
-    return [
-        item for item in data
-        if item.get('namepart') and item.get('role')
-    ]
-
-def _parse_rolepeople_text(texts):
-    data = []
-    for text in texts:
-        txt = text.strip()
-        if txt:
-            if ':' in txt:
-                try:
-                    name,role = txt.split(':')
-                except:
-                    print(text)
-                    print(type(text))
-                    raise Exception('text_to_rolepeople could not parse "%s"' % text)
-            else:
-                name = txt; role = 'author'
-            data.append( {'namepart': name.strip(), 'role': role.strip(),} )
-    return data
-
-def text_to_rolepeople(text):
-    if not text:
-        return []
-    
-    # might already be listofdicts or listofstrs
-    if isinstance(text, list):
-        if _is_listofdicts(text):
-            return _filter_rolepeople(text)
-        elif _is_listofstrs(text):
-            data = _parse_rolepeople_text(text)
-            return _filter_rolepeople(data)
-    
-    text = normalize_string(text)
-    
-    # or it might be JSON
-    try:
-        data = json.loads(text)
-    except ValueError:
-        try:
-            data = load_dirty_json(text)
-        except ValueError:
-            data = []
-    if data:
-        return _filter_rolepeople(data)
-    
-    # looks like it's raw text
-    data = _parse_rolepeople_text(text.split(';'))
-    return _filter_rolepeople(data)
-
-def rolepeople_to_text(data):
-    if isinstance(data, basestring):
-        text = data
-    else:
-        items = []
-        for d in data:
-            # strings probably formatted or close enough
-            if isinstance(d, basestring):
-                items.append(d)
-            elif isinstance(d, dict) and d.get('namepart',None):
-                items.append('%s:%s' % (d['namepart'],d['role']))
-        text = '; '.join(items)
-    return text
-
-
-# listofstrs -----------------------------------------------------------
-#
-# text0 = [
-#     'this is a string',
-# ]
-#
-
-def _is_listofstrs(data):
-    if isinstance(data, list):
-        num_strs = 0
-        for x in data:
-            if isinstance(x, basestring):
-                num_strs += 1
-        if num_strs == len(data):
-            return True
-    return False
-
-
 # listofdicts ----------------------------------------------------------
 #
 # Converts between labelled fields in text to list-of-dicts.
@@ -748,3 +632,115 @@ def listofdicts_to_textnolabels(data, keys, separators=TEXTNOLABELS_LISTOFDICTS_
     
     joiner = '%s\n' % separators[1]
     return joiner.join(items)
+
+
+# rolepeople -----------------------------------------------------------
+#
+# List listofdicts but adds default key:val pairs if missing
+# 
+# text = ''
+# data = []
+# 
+# text = "Watanabe, Joe"
+# data = [
+#     {'namepart': 'Watanabe, Joe', 'role': 'author'}
+# ]
+# 
+# text = "Masuda, Kikuye:author"
+# data = [
+#     {'namepart': 'Masuda, Kikuye', 'role': 'author'}
+# ]
+# 
+# text = "Boyle, Rob:concept,editor; Cross, Brian:concept,editor"
+# data = [
+#     {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
+#     {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
+# ]
+# 
+# text = [
+#     'Boyle, Rob: concept,editor',
+#     'Cross, Brian: concept,editor'
+# ]
+# data = [
+#     {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
+#     {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
+# ]
+# 
+# text = [
+#     {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
+#     {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
+# ]
+# data = [
+#     {'namepart': 'Boyle, Rob', 'role': 'concept,editor'},
+#     {'namepart': 'Cross, Brian', 'role': 'concept,editor'}
+# ]
+#
+
+def _filter_rolepeople(data):
+    """filters out items with empty nameparts
+    prevents this: [{'namepart': '', 'role': 'author'}]
+    """
+    return [
+        item for item in data
+        if item.get('namepart') and item.get('role')
+    ]
+
+def _parse_rolepeople_text(texts):
+    data = []
+    for text in texts:
+        txt = text.strip()
+        if txt:
+            if ':' in txt:
+                try:
+                    name,role = txt.split(':')
+                except:
+                    print(text)
+                    print(type(text))
+                    raise Exception('text_to_rolepeople could not parse "%s"' % text)
+            else:
+                name = txt; role = 'author'
+            data.append( {'namepart': name.strip(), 'role': role.strip(),} )
+    return data
+
+def text_to_rolepeople(text):
+    if not text:
+        return []
+    
+    # might already be listofdicts or listofstrs
+    if isinstance(text, list):
+        if _is_listofdicts(text):
+            return _filter_rolepeople(text)
+        elif _is_listofstrs(text):
+            data = _parse_rolepeople_text(text)
+            return _filter_rolepeople(data)
+    
+    text = normalize_string(text)
+    
+    # or it might be JSON
+    try:
+        data = json.loads(text)
+    except ValueError:
+        try:
+            data = load_dirty_json(text)
+        except ValueError:
+            data = []
+    if data:
+        return _filter_rolepeople(data)
+    
+    # looks like it's raw text
+    data = _parse_rolepeople_text(text.split(';'))
+    return _filter_rolepeople(data)
+
+def rolepeople_to_text(data):
+    if isinstance(data, basestring):
+        text = data
+    else:
+        items = []
+        for d in data:
+            # strings probably formatted or close enough
+            if isinstance(d, basestring):
+                items.append(d)
+            elif isinstance(d, dict) and d.get('namepart',None):
+                items.append('%s:%s' % (d['namepart'],d['role']))
+        text = '; '.join(items)
+    return text

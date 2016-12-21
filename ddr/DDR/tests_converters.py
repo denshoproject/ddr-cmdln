@@ -40,8 +40,17 @@ def test_datetime_to_text():
 TEXTLIST_TEXT = 'thing1; thing2'
 TEXTLIST_DATA = ['thing1', 'thing2']
 
+def test_is_listofstrs():
+    assert converters._is_listofstrs(TEXTLIST_TEXT) == True
+    assert converters._is_listofstrs(TEXTLIST_DATA) == True
+    BAD0 = {'abc':123}
+    BAD1 = [{'abc':123}]
+    assert converters._is_listofstrs(BAD0) == False
+    assert converters._is_listofstrs(BAD1) == False
+
 def test_text_to_list():
     assert converters.text_to_list(TEXTLIST_TEXT) == TEXTLIST_DATA
+    assert converters.text_to_list(TEXTLIST_DATA) == TEXTLIST_DATA
 
 def test_list_to_text():
     assert converters.list_to_text(TEXTLIST_DATA) == TEXTLIST_TEXT
@@ -137,6 +146,43 @@ def test_labelledlist_to_text():
     assert converters.labelledlist_to_text(TEXTLABELLEDLIST_DATA2) == TEXTLABELLEDLIST_DOUT2
     assert converters.labelledlist_to_text(TEXTLABELLEDLIST_DATA3) == TEXTLABELLEDLIST_DOUT3
 
+LISTOFDICTS_TERMS0 = ['label', 'url']
+LISTOFDICTS_TEXT0 = 'label:ABC|url:http://abc.org/'
+LISTOFDICTS_DATA0 = [
+    {'label': 'ABC', 'url': 'http://abc.org/'}
+]
+LISTOFDICTS_TERMS1 = ['label', 'url']
+LISTOFDICTS_TEXT1 = 'label:ABC|url:http://abc.org/;\nlabel:DEF|url:http://def.org/'
+LISTOFDICTS_DATA1 = [
+    {'label': 'ABC', 'url': 'http://abc.org/'},
+    {'label': 'DEF', 'url': 'http://def.org/'}
+]
+LISTOFDICTS_TERMS2 = ['label', 'start', 'end']
+LISTOFDICTS_TEXT2 = 'label:Pre WWII|end:1941;\nlabel:WWII|start:1941|end:1944;\nlabel:Post WWII|start:1944'
+LISTOFDICTS_DATA2 = [
+    {u'end': '1941', u'label': u'Pre WWII'},
+    {u'start': '1941', u'end': '1944', u'label': u'WWII'},
+    {u'start': '1944', u'label': u'Post WWII'}
+]
+
+def test_text_to_dicts():
+    assert converters.text_to_dicts('', []) == []
+    assert converters.text_to_dicts(LISTOFDICTS_TEXT0, LISTOFDICTS_TERMS0) == LISTOFDICTS_DATA0
+    assert converters.text_to_dicts(LISTOFDICTS_TEXT1, LISTOFDICTS_TERMS1) == LISTOFDICTS_DATA1
+    assert converters.text_to_dicts(LISTOFDICTS_TEXT2, LISTOFDICTS_TERMS2) == LISTOFDICTS_DATA2
+
+def test_text_to_listofdicts():
+    assert converters.text_to_listofdicts('', []) == []
+    assert converters.text_to_listofdicts(LISTOFDICTS_TEXT0) == LISTOFDICTS_DATA0
+    assert converters.text_to_listofdicts(LISTOFDICTS_TEXT1) == LISTOFDICTS_DATA1
+    assert converters.text_to_listofdicts(LISTOFDICTS_TEXT2) == LISTOFDICTS_DATA2
+
+def test_listofdicts_to_text():
+    assert converters.listofdicts_to_text([], []) == ''
+    assert converters.listofdicts_to_text(LISTOFDICTS_DATA0, LISTOFDICTS_TERMS0) == LISTOFDICTS_TEXT0
+    assert converters.listofdicts_to_text(LISTOFDICTS_DATA1, LISTOFDICTS_TERMS1) == LISTOFDICTS_TEXT1
+    assert converters.listofdicts_to_text(LISTOFDICTS_DATA2, LISTOFDICTS_TERMS2) == LISTOFDICTS_TEXT2
+
 TEXTROLEPEOPLE_NAME_TEXT = "Watanabe, Joe"
 # output has role even if input does not
 TEXTROLEPEOPLE_NAME_DATA = [
@@ -177,8 +223,6 @@ TEXTROLEPEOPLE_MULTI_DATA = [
     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id':42},
 ]
 
-
-
 # many legacy files have this pattern
 TEXTROLEPEOPLE_MULTIERR_TEXT = [
     {'namepart': '', 'role': 'author'},
@@ -201,40 +245,3 @@ def test_rolepeople_to_text():
     assert converters.rolepeople_to_text(TEXTROLEPEOPLE_NAME_DATA) == TEXTROLEPEOPLE_NAME_OUT
     assert converters.rolepeople_to_text(TEXTROLEPEOPLE_SINGLE_DATA) == TEXTROLEPEOPLE_SINGLE_TEXT
     assert converters.rolepeople_to_text(TEXTROLEPEOPLE_MULTI_DATA) == TEXTROLEPEOPLE_MULTI_TEXT
-
-LISTOFDICTS_TERMS0 = ['label', 'url']
-LISTOFDICTS_TEXT0 = 'label:ABC|url:http://abc.org/'
-LISTOFDICTS_DATA0 = [
-    {'label': 'ABC', 'url': 'http://abc.org/'}
-]
-LISTOFDICTS_TERMS1 = ['label', 'url']
-LISTOFDICTS_TEXT1 = 'label:ABC|url:http://abc.org/;\nlabel:DEF|url:http://def.org/'
-LISTOFDICTS_DATA1 = [
-    {'label': 'ABC', 'url': 'http://abc.org/'},
-    {'label': 'DEF', 'url': 'http://def.org/'}
-]
-LISTOFDICTS_TERMS2 = ['label', 'start', 'end']
-LISTOFDICTS_TEXT2 = 'label:Pre WWII|end:1941;\nlabel:WWII|start:1941|end:1944;\nlabel:Post WWII|start:1944'
-LISTOFDICTS_DATA2 = [
-    {u'end': '1941', u'label': u'Pre WWII'},
-    {u'start': '1941', u'end': '1944', u'label': u'WWII'},
-    {u'start': '1944', u'label': u'Post WWII'}
-]
-
-def test_text_to_dicts():
-    assert converters.text_to_dicts('', []) == []
-    assert converters.text_to_dicts(LISTOFDICTS_TEXT0, LISTOFDICTS_TERMS0) == LISTOFDICTS_DATA0
-    assert converters.text_to_dicts(LISTOFDICTS_TEXT1, LISTOFDICTS_TERMS1) == LISTOFDICTS_DATA1
-    assert converters.text_to_dicts(LISTOFDICTS_TEXT2, LISTOFDICTS_TERMS2) == LISTOFDICTS_DATA2
-
-def test_text_to_listofdicts():
-    assert converters.text_to_listofdicts('', []) == []
-    assert converters.text_to_listofdicts(LISTOFDICTS_TEXT0) == LISTOFDICTS_DATA0
-    assert converters.text_to_listofdicts(LISTOFDICTS_TEXT1) == LISTOFDICTS_DATA1
-    assert converters.text_to_listofdicts(LISTOFDICTS_TEXT2) == LISTOFDICTS_DATA2
-
-def test_listofdicts_to_text():
-    assert converters.listofdicts_to_text([], []) == ''
-    assert converters.listofdicts_to_text(LISTOFDICTS_DATA0, LISTOFDICTS_TERMS0) == LISTOFDICTS_TEXT0
-    assert converters.listofdicts_to_text(LISTOFDICTS_DATA1, LISTOFDICTS_TERMS1) == LISTOFDICTS_TEXT1
-    assert converters.listofdicts_to_text(LISTOFDICTS_DATA2, LISTOFDICTS_TERMS2) == LISTOFDICTS_TEXT2
