@@ -184,6 +184,7 @@ def main():
         description=subparser_description,
         help=subparser_help)
     
+    #help
     post_descr,post_epilog = split_docstring(docstore.Docstore.post)
     get_descr,get_epilog = split_docstring(docstore.Docstore.get)
     init_descr,init_epilog = split_docstring(docstore.Docstore.index)
@@ -201,6 +202,7 @@ def main():
     narr_descr,narr_epilog = split_docstring(docstore.Docstore.narrators)
     delete_descr,delete_epilog = split_docstring(docstore.Docstore.delete)
     
+    help_parser = subparsers.add_parser('help', description=description, epilog=epilog, formatter_class=formatter,)
     post_parser = subparsers.add_parser('post', description=post_descr, epilog=post_epilog, formatter_class=formatter,)
     get_parser = subparsers.add_parser('get', description=get_descr, epilog=get_epilog, formatter_class=formatter,)
     init_parser = subparsers.add_parser('init', description=init_descr, epilog=init_epilog, formatter_class=formatter,)
@@ -234,6 +236,9 @@ def main():
     org_parser.set_defaults(func=docstore.Docstore.org)
     narr_parser.set_defaults(func=docstore.Docstore.narrators)
     delete_parser.set_defaults(func=docstore.Docstore.delete)
+    
+    help_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    #help_parser.add_argument('-l', '--log', help='Log file..')
     
     post_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
     post_parser.add_argument('-l', '--log', help='Log file..')
@@ -338,6 +343,11 @@ def main():
     delete_parser.add_argument('-r', '--recursive', action='store_true', help='Delete children of this document.')
     
     args = parser.parse_args()
+    
+    if args.cmd == 'help':
+        print(description)
+        print(epilog)
+        sys.exit(0)
     
     if args.debug:
         print(args)
