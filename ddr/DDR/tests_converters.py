@@ -211,6 +211,27 @@ def test_listofdicts_to_text():
     assert converters.listofdicts_to_text(LISTOFDICTS_DATA1, LISTOFDICTS_TERMS1) == LISTOFDICTS_TEXT1
     assert converters.listofdicts_to_text(LISTOFDICTS_DATA2, LISTOFDICTS_TERMS2) == LISTOFDICTS_TEXT2
 
+
+TEXTBRACKETIDS_FIELDS = ['term', 'id']
+TEXTBRACKETIDS_MULTI_TEXT = "ABC: DEF [123]; ABC: XYZ [456]"
+TEXTBRACKETIDS_MULTI_LIST = [
+    "ABC: DEF [123]",
+    "ABC: XYZ [456]",
+]
+TEXTBRACKETIDS_MULTI_DATA = [
+    {"term": "ABC: DEF", "id": '123'},
+    {"term": "ABC: XYZ", "id": '456'},
+]
+
+def test_text_to_bracketids():
+    assert converters.text_to_bracketids(None) == []
+    assert converters.text_to_bracketids('') == []
+    print(converters.text_to_bracketids(TEXTBRACKETIDS_MULTI_TEXT, TEXTBRACKETIDS_FIELDS))
+    assert converters.text_to_bracketids(TEXTBRACKETIDS_MULTI_TEXT, TEXTBRACKETIDS_FIELDS) == TEXTBRACKETIDS_MULTI_DATA
+    assert converters.text_to_bracketids(TEXTBRACKETIDS_MULTI_LIST, TEXTBRACKETIDS_FIELDS) == TEXTBRACKETIDS_MULTI_DATA
+    assert converters.text_to_bracketids(TEXTBRACKETIDS_MULTI_DATA, TEXTBRACKETIDS_FIELDS) == TEXTBRACKETIDS_MULTI_DATA
+
+
 TEXTROLEPEOPLE_NAME_TEXT = "Watanabe, Joe"
 # output has role even if input does not
 TEXTROLEPEOPLE_NAME_DATA = [

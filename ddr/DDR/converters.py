@@ -646,6 +646,43 @@ def listofdicts_to_textnolabels(data, keys, separators=TEXTNOLABELS_LISTOFDICTS_
     return joiner.join(items)
 
 
+# bracketids -----------------------------------------------------------
+#
+# List of bracketid items.
+# 
+# text = ''
+# data = []
+# 
+# text = "ABC: DEF [123]; ABC: XYZ [456]"
+# text = [
+#     "ABC: DEF [123]",
+#     "ABC: XYZ [456]",
+# ]
+# data = [
+#     {"term": "ABC: DEF", "id": '123'},
+#     {"term": "ABC: XYZ", "id": '456'},
+# ]
+
+def text_to_bracketids(text, fieldnames=[]):
+    data = []
+    # might already be listofdicts or listofstrs
+    if text and isinstance(text, list):
+        if _is_listofdicts(text):
+            data = text
+        elif _is_listofstrs(text):
+            data = [
+                text_to_dict(item, fieldnames)
+                for item in text
+            ]
+    # old-skool string
+    elif text and isinstance(text, basestring):
+        data = [
+            text_to_dict(item, fieldnames)
+            for item in text.split(';')
+        ]
+    return data
+
+
 # rolepeople -----------------------------------------------------------
 #
 # List listofdicts but adds default key:val pairs if missing
