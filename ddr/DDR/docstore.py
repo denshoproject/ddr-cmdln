@@ -886,6 +886,7 @@ def _make_mappings(mappings):
         mapping[model]['properties'] = {
             field['name']: field['elasticsearch']['properties']
             for field in module.FIELDS
+            if field['elasticsearch'].get('public')
         }
     # add mappings for ID fields (parent_id, collection_id, etc)
     ID_PROPERTIES = {'type':'string', 'index':'not_analyzed', 'store':True}
