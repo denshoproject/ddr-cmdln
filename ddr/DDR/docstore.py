@@ -54,7 +54,7 @@ from DDR import converters
 from DDR.identifier import Identifier, MODULES, InvalidInputException
 from DDR import util
 
-MAX_SIZE = 1000000
+MAX_SIZE = 10000
 DEFAULT_PAGE_SIZE = 20
 
 SUCCESS_STATUSES = [200, 201]
