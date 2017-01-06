@@ -943,24 +943,29 @@ class Importer():
 class UpdaterMetrics():
     cid = None
     verdict = 'unknown'
-    load_errs = {}
-    save_errs = {}
-    bad_exits = {}
+    objects = 0
     objects_saved = 0
     updated = {}
     files_updated = 0
+    load_errs = {}
+    save_errs = {}
+    bad_exits = {}
+    failures = 0
+    fail_rate = 0.0
     committed = None
     kept = None
     elapsed = None
     per_object = 'n/a'
     error = ''
     traceback = ''
-
+    
     def headers(self):
         return [
             'id',
             'verdict',
             'failures',
+            'fail_rate',
+            'objects',
             'objects_saved',
             'files_updated',
             'elapsed',
@@ -975,14 +980,15 @@ class UpdaterMetrics():
         ]
     
     def row(self):
-        failures = len(self.load_errs.keys()) + len(self.save_errs.keys()) + len(self.bad_exits.keys())
         load_errs = [':'.join([key,val]) for key,val in self.load_errs.iteritems()]
         save_errs = [':'.join([key,val]) for key,val in self.save_errs.iteritems()]
         bad_exits = [':'.join([key,val]) for key,val in self.bad_exits.iteritems()]
         return [
             self.cid,
             self.verdict,
-            failures,
+            self.failures,
+            self.fail_rate,
+            self.objects,
             self.objects_saved,
             self.files_updated,
             self.elapsed,
@@ -1037,6 +1043,7 @@ class Updater():
         
         completed = 0
         successful = 0
+        total_failures = 0
         total_load_errs = 0
         total_save_errs = 0
         total_bad_exits = 0
@@ -1089,17 +1096,19 @@ class Updater():
                 successful += 1
             else:
                 logging.error(metrics)
-            logging.info('load_errs:     %s' % len(metrics.load_errs))
-            logging.info('save_errs:     %s' % len(metrics.save_errs))
-            logging.info('bad_exits:     %s' % len(metrics.bad_exits))
             logging.info('objects_saved: %s' % metrics.objects_saved)
             logging.info('files_updated: %s' % metrics.files_updated)
             logging.info('s/object:      %s' % metrics.per_object)
+            logging.info('failures:      %s (%s)' % (metrics.failures, metrics.fail_rate))
+            logging.info('load_errs:     %s' % len(metrics.load_errs))
+            logging.info('save_errs:     %s' % len(metrics.save_errs))
+            logging.info('bad_exits:     %s' % len(metrics.bad_exits))
+            total_objects_saved += metrics.objects_saved
+            total_files_updated += metrics.files_updated
+            total_failures += metrics.failures
             total_load_errs += len(metrics.load_errs.keys())
             total_save_errs += len(metrics.save_errs.keys())
             total_bad_exits += len(metrics.bad_exits.keys())
-            total_objects_saved += metrics.objects_saved
-            total_files_updated += metrics.files_updated
             delta = metrics.per_object
             per_objects.append(delta)
             
@@ -1157,7 +1166,7 @@ class Updater():
         return {
             'collections': completed,
             'successful': successful,
-            'failures': total_load_errs + total_save_errs + total_bad_exits,
+            'failures': total_failures,
             'objects_saved': total_objects_saved,
             'files_updated': total_files_updated,
             'per_objects': per_objects,
@@ -1237,12 +1246,16 @@ class Updater():
         """
         metrics = UpdaterMetrics()
         metrics.cid  =  response['cid']
+        metrics.objects  =  response['num']
+        metrics.objects_saved  =  response['num']
         metrics.load_errs  =  response['load_errs']
         metrics.save_errs  =  response['save_errs']
         metrics.bad_exits  =  response['bad_exits']
-        metrics.objects_saved  =  response['num']
         metrics.updated = response['updated_files']
         metrics.files_updated  =  len(metrics.updated)
+        
+        metrics.failures = len(metrics.load_errs.keys()) + len(metrics.save_errs.keys()) + len(metrics.bad_exits.keys())
+        metrics.fail_rate = (metrics.failures * 1.0) / metrics.objects
         
         metrics.elapsed = end - start
         if metrics.elapsed and response.get('num'):

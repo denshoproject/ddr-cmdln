@@ -63,7 +63,8 @@ def main():
     logging.info('successful:    %s' % data['successful'])
     logging.info('objects saved: %s' % data['objects_saved'])
     logging.info('files updated: %s' % data['files_updated'])
-    logging.info('failures:      %s' % data['failures'])
+    fail_rate = (data['failures'] * 1.0) / data['objects_saved']
+    logging.info('failures:      %s (%s)' % (data['failures'], fail_rate))
 
     def isnumber(x):
         try:
