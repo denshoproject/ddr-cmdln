@@ -6,7 +6,8 @@
                           # LICENSE   DEBIAN PKG (WHEEZY)              (JESSIE)                       Python3
 
 beautifulsoup4==4.3.2     # MIT       python-beautifulsoup (3.2.1-1)   python-beautifulsoup (3.2.1-1) y
-elasticsearch==1.6.0      # Apache    n/a                              n/a                            y
+elasticsearch>=2.0.0,<3.0.0     # Apache                               ?                              y
+elasticsearch-dsl>=2.0.0,<3.0.0 # Apache                               ?                              y
 envoy==0.0.3              # MIT       n/a                              n/a                            y
 GitPython==0.3.2.RC1      # BSD       python-git (0.3.2~RC1-1)         python-git (0.3.2~RC1-3)       NO
 graphviz                  # MIT                                                                       y

@@ -160,8 +160,30 @@ class Docstore():
     
     def status(self):
         """Returns status information from the Elasticsearch cluster.
+        
+        >>> docstore.Docstore().status()
+        {
+            u'indices': {
+                u'ddrpublic-dev': {
+                    u'total': {
+                        u'store': {
+                            u'size_in_bytes': 4438191,
+                            u'throttle_time_in_millis': 0
+                        },
+                        u'docs': {
+                            u'max_doc': 2664,
+                            u'num_docs': 2504,
+                            u'deleted_docs': 160
+                        },
+                        ...
+                    },
+                    ...
+                }
+            },
+            ...
+        }
         """
-        return self.es.indices.status()
+        return self.es.indices.stats()
     
     def index_names(self):
         """Returns list of index names

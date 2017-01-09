@@ -151,12 +151,13 @@ def host_status(d, mappings=False):
     if d.indexname and (d.indexname not in indices):
         print('Selected index not present in cluster: %s' % d.indexname)
         sys.exit(1)
-    print('Selected index:')
+    print('Selected index: %s' % d.indexname)
     this_index = {
-        key: status['indices'][d.indexname][key]
-        for key in ['docs', 'index']
+        key: status['indices'][d.indexname]['total'][key]
+        for key in [
+            'docs', 'store'
+        ]
     }
-    this_index['name'] = d.indexname
     print(format_json(this_index))
 
     # mappings
