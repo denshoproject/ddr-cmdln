@@ -2,6 +2,7 @@
 
 # Non-Python dependencies
 # sudo apt-get install imagemagick libexempi3 libxml2-dev python-dev pmount udisks
+# Elasticsearch 2.4.3
 
                           # LICENSE   DEBIAN PKG (WHEEZY)              (JESSIE)                       Python3  PyPy
 
