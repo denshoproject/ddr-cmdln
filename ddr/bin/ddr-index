@@ -165,9 +165,36 @@ def host_status(d, mappings=False):
         print('Mappings')
         print(format_json(d.get_mappings()))
 
-def search_results(d, doctype, query, raw=False):
+def search_results(d, doctype, text, must=None, should=None, mustnot=None, raw=False):
+    if doctype in ['*', 'all', 'all_', '_all']:
+        doctypes = []
+    else:
+        doctypes = doctype.strip().split(',')
+    
+    def make_terms(arg):
+        # "language:eng,jpn!creators.role:author"
+        terms = []
+        if arg:
+            for term in arg.strip().split('!'):
+                fieldname,value = term.strip().split(':')
+                values = value.strip().split(',')
+                terms.append(
+                    {'terms': {fieldname: values}}
+                )
+        return terms
+    
+    q = docstore.search_query(
+        text=text,
+        must=make_terms(must),
+        should=make_terms(should),
+        mustnot=make_terms(mustnot),
+    )
+    if raw:
+        print(format_json(q, sort_keys=False))
+    
     data = d.search(
-        doctype, query,
+        doctypes=doctypes,
+        query=q,
         fields=['id','title'],
     )
     if raw:
@@ -272,13 +299,16 @@ def main():
     post_parser.add_argument('-i', '--index', help='index.', **indexarg)
     post_parser.add_argument('path', help='Absolute path to JSON file.')
     
-    search_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    search_parser.add_argument('-D', '--debug', action='store_true', help='Debug; prints lots of debug info.')
     search_parser.add_argument('-l', '--log', help='Log file..')
     search_parser.add_argument('-H', '--host', help='Hostname and port (HOST:PORT).', **hostsarg)
     search_parser.add_argument('-i', '--index', help='index.', **indexarg)
-    search_parser.add_argument('-r', '--raw', action='store_true', help='Print the raw Elasticsearch output.')
-    search_parser.add_argument('doctype', help='One or more doctypes (comma-separated).')
-    search_parser.add_argument('query', help='Query string, in double or single quotes.')
+    search_parser.add_argument('-d', '--doctype', help='One or more doctypes (comma-separated).')
+    search_parser.add_argument('-t', '--text', help='Query string, in double or single quotes.')
+    search_parser.add_argument('-a', '--AND', help='AND arg(s) (e.g. "language:eng,jpn!creators.role:author").')
+    search_parser.add_argument('-o', '--OR',  help ='OR arg(s) (e.g. "language:eng,jpn!creators.role:author").')
+    search_parser.add_argument('-n', '--NOT', help='NOT arg(s) (e.g. "language:eng,jpn!creators.role:author").')
+    search_parser.add_argument('-r', '--raw', action='store_true', help='Print raw Elasticsearch DSL and output.')
     
     get_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
     get_parser.add_argument('-l', '--log', help='Log file..')
@@ -405,7 +435,18 @@ def main():
         msg = d.post(document)
         print(msg)
     elif args.cmd == 'search':
-        search_results(d, args.doctype, args.query, args.raw)
+        if not (args.text or args.AND or args.OR or args.NOT):
+            print('ERROR: No search terms. Hint: --help')
+            sys.exit(1)
+        search_results(
+            d,
+            args.doctype,
+            args.text,
+            must=args.AND,
+            should=args.OR,
+            mustnot=args.NOT,
+            raw=args.raw
+        )
     elif args.cmd == 'get':
         msg = d.get(args.model, args.id)
         print(format_json(msg, sort_keys=False))
