@@ -505,23 +505,15 @@ class Docstore():
         @returns: dict
         """
         DOC_TYPE = 'narrator'
-        def make_doc_id(data):
-            first_middle = ' '.join([
-                data['first_name'],
-                data['middle_name']
-            ])
-            return ','.join([
-                data['last_name'],
-                first_middle,
-            ])
-         
         with open(path, 'r') as f:
-            json_text = f.read()
-        data = json.loads(json_text)
-        for n in data['narrators']:
-            document_id = make_doc_id(n)
-            result = self.post_json(DOC_TYPE, document_id, json.dumps(n))
-            logging.debug(document_id, result)
+            data = json.loads(f.read())
+        for document in data['narrators']:
+            if document.get('display_name'):
+                document['title'] = document.pop('display_name')
+            if document.get('bio'):
+                document['description'] = document.pop('bio')
+            result = self.post_json(DOC_TYPE, document['id'], json.dumps(document))
+            logging.debug(document['id'], result)
     
     def post(self, document, public_fields=[], additional_fields={}, private_ok=False):
         """Add a new document to an index or update an existing one.
