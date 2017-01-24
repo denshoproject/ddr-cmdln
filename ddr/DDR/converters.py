@@ -799,11 +799,11 @@ def rolepeople_to_text(data):
             elif isinstance(d, dict):
                 if d.get('namepart') and d.get('id'):
                     items.append(
-                        TEMPLATE_W_ID % (data=d)
+                        TEMPLATE_W_ID.format(data=d)
                     )
                 elif d.get('namepart'):
                     items.append(
-                        TEMPLATE_NOID % (data=d)
+                        TEMPLATE_NOID.format(data=d)
                     )
         text = '; '.join(items)
     return text
