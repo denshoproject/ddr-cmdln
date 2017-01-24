@@ -789,12 +789,21 @@ def rolepeople_to_text(data):
     if isinstance(data, basestring):
         text = data
     else:
+        TEMPLATE_W_ID = '{data.namepart} [{data.id}]:{data.role}'
+        TEMPLATE_NOID = '{data.namepart}:{data.role}'
         items = []
         for d in data:
             # strings probably formatted or close enough
             if isinstance(d, basestring):
                 items.append(d)
-            elif isinstance(d, dict) and d.get('namepart',None):
-                items.append('%s:%s' % (d['namepart'],d['role']))
+            elif isinstance(d, dict):
+                if d.get('namepart') and d.get('id'):
+                    items.append(
+                        TEMPLATE_W_ID % (data=d)
+                    )
+                elif d.get('namepart'):
+                    items.append(
+                        TEMPLATE_NOID % (data=d)
+                    )
         text = '; '.join(items)
     return text
