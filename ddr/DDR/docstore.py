@@ -508,10 +508,6 @@ class Docstore():
         with open(path, 'r') as f:
             data = json.loads(f.read())
         for document in data['narrators']:
-            if document.get('display_name'):
-                document['title'] = document.pop('display_name')
-            if document.get('bio'):
-                document['description'] = document.pop('bio')
             result = self.post_json(DOC_TYPE, document['id'], json.dumps(document))
             logging.debug(document['id'], result)
     
