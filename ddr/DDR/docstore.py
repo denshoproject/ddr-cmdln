@@ -366,7 +366,38 @@ class Docstore():
      
     def facets_path(self, path):
         return os.path.join(path, 'vocab')
-     
+
+    def put_facet(self, data):
+        FACET_DOCTYPE = 'facet'
+        TERM_DOCTYPE = 'facetterm'
+        statuses = []
+        facet = {
+            'id': data['id'],
+            'title': data['title'],
+            'description': data['description'],
+        }
+        status = self.es.index(
+            index=self.indexname,
+            doc_type=FACET_DOCTYPE,
+            id=facet['id'],
+            body=facet,
+        )
+        statuses.append(status)
+        for term in data['terms']:
+            term_id = '%s-%s' % (facet['id'], term['id'])
+            term['facet'] = facet['id']
+            term['parent_id'] = str(term.get('parent_id', ''))
+            if term.get('created'): term.pop('created')
+            if term.get('modified'): term.pop('modified')
+            status = self.es.index(
+                index=self.indexname,
+                doc_type=TERM_DOCTYPE,
+                id=term_id,
+                body=term,
+            )
+            statuses.append(status)
+        return statuses
+    
     def put_facets(self, path=config.FACETS_PATH):
         """PUTs facets from file into ES.
         
@@ -386,10 +417,8 @@ class Docstore():
             srcpath = os.path.join(path, facet_json)
             with open(srcpath, 'r') as f:
                 data = json.loads(f.read().strip())
-                status = self.es.index(
-                    index=self.indexname, doc_type='facet', id=facet, body=data
-                )
-                statuses.append(status)
+                fstatuses = self.put_facet(data)
+                statuses.extend(fstatuses)
         return statuses
      
     def get_facets(self, path=config.FACETS_PATH):
