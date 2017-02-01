@@ -293,10 +293,16 @@ Example:
         cidentifier = Identifier(args.collection, MEDIA_BASE)
     elif hasattr(args, 'cid'):
         cidentifier = Identifier(args.cid, MEDIA_BASE)
+    collection = None
+    if cidentifier:
+        collection = cidentifier.object()
     
     eidentifier = None
     if hasattr(args, 'entity'):
         eidentifier = Identifier(args.entity, MEDIA_BASE)
+    entity = None
+    if eidentifier:
+        entity = eidentifier.object()
     
     # call selected function
     #exit,msg = args.func(args)
