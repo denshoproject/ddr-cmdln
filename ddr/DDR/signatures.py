@@ -28,8 +28,10 @@ from DDR import util
 
 
 JSON_FIELDS = {
-    'sort': 1,
+    'public': -1,
+    'status': '',
     'signature_id': '',
+    'sort': 1,
 }
 
 # TODO derive this from repo_models/identifiers.py!
@@ -50,6 +52,9 @@ MODELS_DOWN = [
 class SigIdentifier(identifier.Identifier):
     """Subclass of Identifier used for finding/assigning object signature files
     """
+    model = None
+    public = None
+    status = None
     sort = 999999
     signature = None    # immediate signature, next in chain
     signature_id = None # ID of ultimate signature (should be a file)
@@ -106,6 +111,23 @@ class SigIdentifier(identifier.Identifier):
                     else:
                         data[key] = d[key]
         return data
+
+    def publishable(self):
+        """Determine if publishable based on .public and .status
+        """
+        # TODO refactor this
+        # duplicates ddr-filter.is_publishable
+        # duplicates ddr-filter.is_publishable_file
+        #print('%s model:%s public:%s status:%s' % (
+        #    self.id, self.model, self.public, self.status
+        #))
+        if (self.public != None) and (self.status != None):
+            if self.public and (self.status == 'completed'):
+                return True
+        elif (self.public != None):
+            if self.public:
+                return True
+        return False
     
     def _signature_id(self):
         """Follow chain of object signatures to end, return last object.id
@@ -119,7 +141,7 @@ def _metadata_paths(collection_path):
     return util.find_meta_files(collection_path, recursive=True, files_first=True, force_read=True)
 
 def _load_identifiers(paths, basepath):
-    """Loads and sorts list
+    """Loads and sorts list of *published* SigIdentifiers
     """
     logging.debug('Loading identifiers')
     identifiers_unsorted = {}
@@ -133,9 +155,11 @@ def _load_identifiers(paths, basepath):
             # entities, segments, collections
             oid = os.path.basename(os.path.dirname(path))
             i = SigIdentifier(oid, base_path=basepath)
-        if not identifiers_unsorted.get(i.model):
-            identifiers_unsorted[i.model] = []
-        identifiers_unsorted[i.model].append(i)
+        # EXCLUDE UNPUBLISHED
+        if i.publishable():
+            if not identifiers_unsorted.get(i.model):
+                identifiers_unsorted[i.model] = []
+            identifiers_unsorted[i.model].append(i)
         
     # - SORT THE LISTS
     logging.debug('| sorting')
@@ -285,7 +309,7 @@ def _print_identifiers(identifiers, models=MODELS_DOWN):
 
 
 def choose(collection_path):
-    """Given dict of id->signature_id, map to nodes
+    """Read data files, gather *published* Identifiers, map parents->nodes
     
     Outside function is responsible for reading object JSON files
     and extracting value of signature_id
@@ -299,10 +323,11 @@ def choose(collection_path):
         collection_path, recursive=True, force_read=True
     ):
         i = SigIdentifier(path=path)
-        if i.model in identifier.NODES:
-            nodes.append(i)
-        else:
-            parents.append(i)
+        if i.publishable():
+            if i.model in identifier.NODES:
+                nodes.append(i)
+            else:
+                parents.append(i)
     
     nodes.sort()
     parents.sort()
