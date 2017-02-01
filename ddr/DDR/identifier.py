@@ -197,6 +197,15 @@ class Definitions():
         ]
 
     @staticmethod
+    def component_types(identifiers):
+        """Python data type for each component
+        """
+        return {
+            i['component']['name']: i['component']['type']
+            for i in identifiers
+        }
+
+    @staticmethod
     def valid_components(identifiers):
         """Components in VALID_COMPONENTS.keys() must appear in VALID_COMPONENTS[key] to be valid.
         """
@@ -402,6 +411,7 @@ CHILDREN_ALL = Definitions.children(PARENTS_ALL)
 ROOTS = Definitions.endpoints(IDENTIFIERS, 'parents_all')
 NODES = Definitions.endpoints(IDENTIFIERS, 'children_all')
 ID_COMPONENTS = Definitions.id_components(IDENTIFIERS)
+COMPONENT_TYPES = Definitions.component_types(IDENTIFIERS)
 VALID_COMPONENTS = Definitions.valid_components(IDENTIFIERS)
 NEXTABLE_MODELS = Definitions.nextable_models(IDENTIFIERS)
 # Bits of file paths that uniquely identify file types.
@@ -492,12 +502,16 @@ def identify_filepath(path):
     elif 'master' in path: ftype = 'master'
     return ftype
 
-def set_idparts(i, groupdict, components=ID_COMPONENTS):
+def set_idparts(i, groupdict, components=ID_COMPONENTS, types=COMPONENT_TYPES):
     """Sets keys,values of groupdict as attributes of identifier.
+    
+    Each component is coerced to the data type specified in
+    IDENTIFIERS['component']['type'].  See Definitions.component_types.
     
     @param i: Identifier
     @param groupdict: dict
     @param components: list [optional]
+    @param types: dict
     """
     i.basepath = groupdict.get('basepath', None)
     if i.basepath:
@@ -511,10 +525,9 @@ def set_idparts(i, groupdict, components=ID_COMPONENTS):
     i.parts = OrderedDict(id_components)
     id_components.insert(0, ('model',i.model))
     i.idparts = OrderedDict(id_components)
-    # set object attributes with numbers as ints
+    # set ID parts to their assigned type
     for key,val in i.parts.items():
-        if val.isdigit():
-            i.parts[key] = int(val)
+        i.parts[key] = types[key](val)
 
 class IdentifierFormatException(Exception):
     pass
