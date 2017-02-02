@@ -17,6 +17,7 @@ import sys
 from DDR import config
 from DDR import identifier
 from DDR import signatures
+from DDR import util
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -42,7 +43,10 @@ def main():
     collection = identifier.Identifier(args.collection).object()
     logging.debug(collection)
 
-    parents = signatures.choose(args.collection)
+    paths = util.find_meta_files(args.collection, recursive=True, force_read=True)
+    # Read data files, gather *published* Identifiers, map parents->nodes
+    parents = signatures.choose(paths)
+    # Read collection .json files, assign signatures, write files
     updates = signatures.find_updates(parents)
 
     if args.nowrite:

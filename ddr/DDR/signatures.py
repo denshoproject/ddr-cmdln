@@ -51,6 +51,8 @@ MODELS_DOWN = [
 
 class SigIdentifier(identifier.Identifier):
     """Subclass of Identifier used for finding/assigning object signature files
+    
+    NOTE: Reads object JSON file during construction.
     """
     model = None
     public = None
@@ -72,8 +74,10 @@ class SigIdentifier(identifier.Identifier):
         return self.sort_key < other.sort_key
     
     def __init__(self, *args, **kwargs):
-        # Load Identifier, read .json and add sort/signature to self
-        # These are used for sorting
+        """Load Identifier, read .json and add extra fields
+        
+        Extra fields are used for sorting and tracking signature_id
+        """
         super(SigIdentifier, self).__init__(*args, **kwargs)
         
         # read from .json file
@@ -83,6 +87,7 @@ class SigIdentifier(identifier.Identifier):
                 setattr(self, key, val)
         
         # prep sorting key
+        # TODO refactor - knows too much about model definitions!
         sort_key = self.parts
         if self.model == 'file':
             # insert file sort before sha1
@@ -99,7 +104,8 @@ class SigIdentifier(identifier.Identifier):
         self.sort_key = sort_key.values()
     
     def _read_fields(self, path):
-        # extracts only specified fields from JSON
+        """Extracts specified fields from JSON
+        """
         data = {}
         with open(path, 'r') as f:
             for d in json.loads(f.read()):
@@ -115,17 +121,17 @@ class SigIdentifier(identifier.Identifier):
     def publishable(self):
         """Determine if publishable based on .public and .status
         """
-        # TODO refactor this
+        # TODO refactor this - it knows too much about model definitions
         # duplicates ddr-filter.is_publishable
         # duplicates ddr-filter.is_publishable_file
         #print('%s model:%s public:%s status:%s' % (
         #    self.id, self.model, self.public, self.status
         #))
-        if (self.public != None) and (self.status != None):
-            if self.public and (self.status == 'completed'):
-                return True
-        elif (self.public != None):
+        if self.model in identifier.NODES:
             if self.public:
+                return True
+        else:
+            if self.public and (self.status == 'completed'):
                 return True
         return False
     
@@ -308,20 +314,18 @@ def _print_identifiers(identifiers, models=MODELS_DOWN):
                 print oid
 
 
-def choose(collection_path):
-    """Read data files, gather *published* Identifiers, map parents->nodes
+def choose(paths):
+    """Reads data files, gathers *published* Identifiers, sorts and maps parents->nodes
     
     Outside function is responsible for reading object JSON files
     and extracting value of signature_id
     
-    @param collection_path: str
+    @param paths: list of object file paths from util.find_meta_files
     @returns: list of parent Identifiers
     """
     nodes = []
     parents = []
-    for path in util.find_meta_files(
-        collection_path, recursive=True, force_read=True
-    ):
+    for path in paths:
         i = SigIdentifier(path=path)
         if i.publishable():
             if i.model in identifier.NODES:
@@ -345,7 +349,7 @@ def choose(collection_path):
     return parents
 
 def find_updates(identifiers):
-    """Read collection .json files, assign signatures, write files
+    """Identifies files to be updated
     
     @param identifiers: list of parent Identifiers, with .signature_id attrs
     @returns: list of objects (Collections, Entities, etc)
@@ -353,18 +357,19 @@ def find_updates(identifiers):
     start = datetime.now(config.TZ)
     updates = []
     for n,i in enumerate(identifiers):
-        o = i.object()
-        # normalize
-        if not o.signature_id: o.signature_id = ''
-        if not i.signature_id: i.signature_id = ''
-        # only write file if changed
-        orig_value = o.signature_id
-        status = ''
-        if o.signature_id != i.signature_id:
-            status = 'updated (%s -> %s)' % (o.signature_id, i.signature_id)
-            o.signature_id = i.signature_id
-            updates.append(o)
-        logging.debug('| %s/%s %s %s' % (n+1, len(identifiers), i.id, status))
+        if not i.model in identifier.NODES:
+            o = i.object()
+            # normalize
+            if not o.signature_id: o.signature_id = ''
+            if not i.signature_id: i.signature_id = ''
+            # only write file if changed
+            orig_value = o.signature_id
+            status = ''
+            if o.signature_id != i.signature_id:
+                status = 'updated (%s -> %s)' % (o.signature_id, i.signature_id)
+                o.signature_id = i.signature_id
+                updates.append(o)
+            logging.debug('| %s/%s %s %s' % (n+1, len(identifiers), i.id, status))
     finish = datetime.now(config.TZ)
     elapsed = finish - start
     logging.debug('ok (%s elapsed)' % elapsed)
