@@ -142,40 +142,6 @@ class SigIdentifier(identifier.Identifier):
             return self.id
         return self.signature._signature_id()
 
-def write_updates(updates):
-    """Write metadata of updated objects to disk.
-    
-    @param updates: list of objects (Collections, Entities, Files, etc)
-    @returns: list of updated files (relative paths)
-    """
-    start = datetime.now(config.TZ)
-    logging.debug('Writing changes')
-    written = []
-    for n,o in enumerate(updates):
-        o.write_json()
-        written.append(o.identifier.path_abs('json'))
-        logging.debug('| %s/%s %s' % (n+1, len(updates), o.id))
-    finish = datetime.now(config.TZ)
-    elapsed = finish - start
-    logging.debug('ok (%s elapsed)' % elapsed)
-    logging.debug('NOTE: METADATA FILES ARE NOT YET COMMITTED!')
-    return written
-
-def commit_updates(collection, files_written, git_name, git_mail, agent):
-    """Commit written files to git repository.
-    
-    @param files_written: list
-    @returns: (int,str) status,message (from commands.update)
-    """
-    if files_written:
-        logger.debug('Committing changes')
-        return commands.update(
-            git_name, git_mail,
-            collection,
-            files_written,
-            agent
-        )
-    return 0,'no files to write'
 
 def choose(paths):
     """Reads data files, gathers *published* Identifiers, sorts and maps parents->nodes
@@ -237,3 +203,38 @@ def find_updates(identifiers):
     elapsed = finish - start
     logging.debug('ok (%s elapsed)' % elapsed)
     return updates
+
+def write_updates(updates):
+    """Write metadata of updated objects to disk.
+    
+    @param updates: list of objects (Collections, Entities, Files, etc)
+    @returns: list of updated files (relative paths)
+    """
+    start = datetime.now(config.TZ)
+    logging.debug('Writing changes')
+    written = []
+    for n,o in enumerate(updates):
+        o.write_json()
+        written.append(o.identifier.path_abs('json'))
+        logging.debug('| %s/%s %s' % (n+1, len(updates), o.id))
+    finish = datetime.now(config.TZ)
+    elapsed = finish - start
+    logging.debug('ok (%s elapsed)' % elapsed)
+    logging.debug('NOTE: METADATA FILES ARE NOT YET COMMITTED!')
+    return written
+
+def commit_updates(collection, files_written, git_name, git_mail, agent):
+    """Commit written files to git repository.
+    
+    @param files_written: list
+    @returns: (int,str) status,message (from commands.update)
+    """
+    if files_written:
+        logger.debug('Committing changes')
+        return commands.update(
+            git_name, git_mail,
+            collection,
+            files_written,
+            agent
+        )
+    return 0,'no files to write'
