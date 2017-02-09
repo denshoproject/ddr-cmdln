@@ -80,6 +80,7 @@ def filter_files(files, args):
         ftype = identifier.identify_filepath(f)
         if (ftype == 'access') and args.access: copy = True
         if (ftype == 'mezzanine') and args.mezzanine: copy = True
+        if (ftype == 'transcript') and args.transcript: copy = True
         if (ftype == 'master') and args.master: copy = True
         if copy:
             to_copy.append(f)
@@ -105,6 +106,7 @@ def main():
     parser.add_argument('destbase', help='Absolute path to destination base directory.')
     parser.add_argument('-a', '--access', action='store_const', const=1, help='git-annex copy access files.')
     parser.add_argument('-m', '--mezzanine', action='store_const', const=1, help='git-annex copy mezzanine files.')
+    parser.add_argument('-t', '--transcript', action='store_const', const=1, help='git-annex copy transcript')
     parser.add_argument('-M', '--master', action='store_const', const=1, help='git-annex copy master files.')
     args = parser.parse_args()
     
@@ -126,6 +128,7 @@ def main():
     
     if args.access:    logprint(LOG, 'Copying access')
     if args.mezzanine: logprint(LOG, 'Copying mezzanine')
+    if args.transcript: logprint(LOG, 'Copying transcript')
     if args.master:    logprint(LOG, 'Copying master')
     
     # if collection dir doesn't exist in destdir, mkdir
