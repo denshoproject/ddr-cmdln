@@ -500,6 +500,7 @@ def identify_filepath(path):
     if   '-a.'    in path: ftype = 'access'
     elif 'mezzan' in path: ftype = 'mezzanine'
     elif 'master' in path: ftype = 'master'
+    elif 'transcript' in path: ftype = 'transcript'
     return ftype
 
 def set_idparts(i, groupdict, components=ID_COMPONENTS, types=COMPONENT_TYPES):
