@@ -785,6 +785,9 @@ def text_to_rolepeople(text):
     data = _parse_rolepeople_text(text.split(';'))
     return _filter_rolepeople(data)
 
+ROLEPEOPLE_TEXT_TEMPLATE_W_ID = '{{ data.namepart }} [{{ data.id }}]:{{ data.role }}'
+ROLEPEOPLE_TEXT_TEMPLATE_NOID = '{{ data.namepart }}:{{ data.role }}'
+
 def rolepeople_to_text(data):
     if isinstance(data, basestring):
         text = data
@@ -794,7 +797,14 @@ def rolepeople_to_text(data):
             # strings probably formatted or close enough
             if isinstance(d, basestring):
                 items.append(d)
-            elif isinstance(d, dict) and d.get('namepart',None):
-                items.append('%s:%s' % (d['namepart'],d['role']))
+            elif isinstance(d, dict):
+                if d.get('namepart') and d.get('id'):
+                    items.append(
+                        render(ROLEPEOPLE_TEXT_TEMPLATE_W_ID, data=d)
+                    )
+                elif d.get('namepart'):
+                    items.append(
+                        render(ROLEPEOPLE_TEXT_TEMPLATE_NOID, data=d)
+                    )
         text = '; '.join(items)
     return text

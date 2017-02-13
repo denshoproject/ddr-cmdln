@@ -347,6 +347,7 @@ def test_identify_filepath():
     assert identifier.identify_filepath('something-a.jpg') == 'access'
     assert identifier.identify_filepath('ddr-test-123-456-mezzanine-abc123') == 'mezzanine'
     assert identifier.identify_filepath('ddr-test-123-456-master-abc123') == 'master'
+    assert identifier.identify_filepath('ddr-test-123-456-master-012012') == 'master'
     assert identifier.identify_filepath('nothing in particular') == None
 
 def test_set_idparts():
@@ -357,6 +358,14 @@ def test_set_idparts():
     assert i.parts['eid'] == 456
     assert i.parts['role'] == 'master'
     assert i.parts['sha1'] == 'abcde12345'
+    # sha1 should not be an int
+    i = identifier.Identifier('ddr-test-123-456-master-012345', '/tmp')
+    assert i.parts['repo'] == 'ddr'
+    assert i.parts['org'] == 'test'
+    assert i.parts['cid'] == 123
+    assert i.parts['eid'] == 456
+    assert i.parts['role'] == 'master'
+    assert i.parts['sha1'] == '012345'
 
 def test_format_id():
     templates = {

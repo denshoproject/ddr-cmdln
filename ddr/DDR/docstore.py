@@ -54,7 +54,7 @@ from DDR import converters
 from DDR.identifier import Identifier, MODULES, InvalidInputException
 from DDR import util
 
-MAX_SIZE = 1000000
+MAX_SIZE = 10000
 DEFAULT_PAGE_SIZE = 20
 
 SUCCESS_STATUSES = [200, 201]
@@ -160,8 +160,30 @@ class Docstore():
     
     def status(self):
         """Returns status information from the Elasticsearch cluster.
+        
+        >>> docstore.Docstore().status()
+        {
+            u'indices': {
+                u'ddrpublic-dev': {
+                    u'total': {
+                        u'store': {
+                            u'size_in_bytes': 4438191,
+                            u'throttle_time_in_millis': 0
+                        },
+                        u'docs': {
+                            u'max_doc': 2664,
+                            u'num_docs': 2504,
+                            u'deleted_docs': 160
+                        },
+                        ...
+                    },
+                    ...
+                }
+            },
+            ...
+        }
         """
-        return self.es.indices.status()
+        return self.es.indices.stats()
     
     def index_names(self):
         """Returns list of index names
@@ -344,7 +366,38 @@ class Docstore():
      
     def facets_path(self, path):
         return os.path.join(path, 'vocab')
-     
+
+    def put_facet(self, data):
+        FACET_DOCTYPE = 'facet'
+        TERM_DOCTYPE = 'facetterm'
+        statuses = []
+        facet = {
+            'id': data['id'],
+            'title': data['title'],
+            'description': data['description'],
+        }
+        status = self.es.index(
+            index=self.indexname,
+            doc_type=FACET_DOCTYPE,
+            id=facet['id'],
+            body=facet,
+        )
+        statuses.append(status)
+        for term in data['terms']:
+            term_id = '%s-%s' % (facet['id'], term['id'])
+            term['facet'] = facet['id']
+            term['parent_id'] = str(term.get('parent_id', ''))
+            if term.get('created'): term.pop('created')
+            if term.get('modified'): term.pop('modified')
+            status = self.es.index(
+                index=self.indexname,
+                doc_type=TERM_DOCTYPE,
+                id=term_id,
+                body=term,
+            )
+            statuses.append(status)
+        return statuses
+    
     def put_facets(self, path=config.FACETS_PATH):
         """PUTs facets from file into ES.
         
@@ -364,10 +417,8 @@ class Docstore():
             srcpath = os.path.join(path, facet_json)
             with open(srcpath, 'r') as f:
                 data = json.loads(f.read().strip())
-                status = self.es.index(
-                    index=self.indexname, doc_type='facet', id=facet, body=data
-                )
-                statuses.append(status)
+                fstatuses = self.put_facet(data)
+                statuses.extend(fstatuses)
         return statuses
      
     def get_facets(self, path=config.FACETS_PATH):
@@ -483,23 +534,11 @@ class Docstore():
         @returns: dict
         """
         DOC_TYPE = 'narrator'
-        def make_doc_id(data):
-            first_middle = ' '.join([
-                data['first_name'],
-                data['middle_name']
-            ])
-            return ','.join([
-                data['last_name'],
-                first_middle,
-            ])
-         
         with open(path, 'r') as f:
-            json_text = f.read()
-        data = json.loads(json_text)
-        for n in data['narrators']:
-            document_id = make_doc_id(n)
-            result = self.post_json(DOC_TYPE, document_id, json.dumps(n))
-            logging.debug(document_id, result)
+            data = json.loads(f.read())
+        for document in data['narrators']:
+            result = self.post_json(DOC_TYPE, document['id'], json.dumps(document))
+            logging.debug(document['id'], result)
     
     def post(self, document, public_fields=[], additional_fields={}, private_ok=False):
         """Add a new document to an index or update an existing one.
@@ -625,57 +664,67 @@ class Docstore():
                 index=self.indexname, doc_type=model, id=document_id
             )
         return None
-    
-    def search(self, model='', query='', term={}, filters={}, sort=[], fields=[], from_=0, size=MAX_SIZE):
-        """Run a query, get a list of zero or more hits.
+
+    def count(self, doctypes=[], query={}):
+        """Executes a query and returns number of hits.
         
-        @param model: Type of object ('collection', 'entity', 'file')
-        @param query: User's search text
-        @param term: dict
-        @param filters: dict
+        The "query" arg must be a dict that conforms to the Elasticsearch query DSL.
+        See docstore.search_query for more info.
+        
+        @param doctypes: list Type of object ('collection', 'entity', 'file')
+        @param query: dict The search definition using Elasticsearch Query DSL
+        @returns raw ElasticSearch query output
+        """
+        logger.debug('count(index=%s, doctypes=%s, query=%s' % (
+            self.indexname, doctypes, query
+        ))
+        if not query:
+            raise Exception("Can't do an empty search. Give me something to work with here.")
+        
+        doctypes = ','.join(doctypes)
+        logger.debug(json.dumps(query))
+        
+        return self.es.count(
+            index=self.indexname,
+            doc_type=doctypes,
+            body=query,
+        )
+
+    def search(self, doctypes=[], query={}, sort=[], fields=[], from_=0, size=MAX_SIZE):
+        """Executes a query, get a list of zero or more hits.
+        
+        The "query" arg must be a dict that conforms to the Elasticsearch query DSL.
+        See docstore.search_query for more info.
+        
+        @param doctypes: list Type of object ('collection', 'entity', 'file')
+        @param query: dict The search definition using Elasticsearch Query DSL
         @param sort: list of (fieldname,direction) tuples
         @param fields: str
         @param from_: int Index of document from which to start results
         @param size: int Number of results to return
         @returns raw ElasticSearch query output
         """
-        logger.debug('search(index=%s, model=%s, query=%s, term=%s, filters=%s, sort=%s, fields=%s, from_=%s, size=%s' % (
-            self.indexname, model, query, term, filters, sort, fields, from_, size
+        logger.debug('search(index=%s, doctypes=%s, query=%s, sort=%s, fields=%s, from_=%s, size=%s' % (
+            self.indexname, doctypes, query, sort, fields, from_, size
         ))
-        if not (model or query or term or filters):
+        if not query:
             raise Exception("Can't do an empty search. Give me something to work with here.")
-        _clean_dict(filters)
+        
+        doctypes = ','.join(doctypes)
+        logger.debug(json.dumps(query))
         _clean_dict(sort)
-        body = {}
-        if term:
-            body['query'] = {}
-            body['query']['term'] = term
-        if filters:
-            body['filter'] = {'term':filters}
-        logger.debug(json.dumps(body))
         sort_cleaned = _clean_sort(sort)
         fields = ','.join(fields)
-        if query:
-            results = self.es.search(
-                index=self.indexname,
-                doc_type=model,
-                q=query,
-                body=body,
-                sort=sort_cleaned,
-                from_=from_,
-                size=size,
-                _source_include=fields,
-            )
-        else:
-            results = self.es.search(
-                index=self.indexname,
-                doc_type=model,
-                body=body,
-                sort=sort_cleaned,
-                from_=from_,
-                size=size,
-                _source_include=fields,
-            )
+        
+        results = self.es.search(
+            index=self.indexname,
+            doc_type=doctypes,
+            body=query,
+            sort=sort_cleaned,
+            from_=from_,
+            size=size,
+            _source_include=fields,
+        )
         return results
     
     def delete(self, document_id, recursive=False):
@@ -886,6 +935,7 @@ def _make_mappings(mappings):
         mapping[model]['properties'] = {
             field['name']: field['elasticsearch']['properties']
             for field in module.FIELDS
+            if field['elasticsearch'].get('public')
         }
     # add mappings for ID fields (parent_id, collection_id, etc)
     ID_PROPERTIES = {'type':'string', 'index':'not_analyzed', 'store':True}
@@ -1270,3 +1320,54 @@ def _has_access_file( identifier ):
     if os.path.exists(access_abs) or os.path.islink(access_abs):
         return True
     return False
+
+def search_query(text='', must=[], should=[], mustnot=[]):
+    """Assembles a dict conforming to the Elasticsearch query DSL.
+    
+    Elasticsearch query dicts
+    See https://www.elastic.co/guide/en/elasticsearch/guide/current/_most_important_queries.html
+    - {"match": {"fieldname": "value"}}
+    - {"multi_match": {
+        "query": "full text search",
+        "fields": ["fieldname1", "fieldname2"]
+      }}
+    - {"terms": {"fieldname": ["value1","value2"]}},
+    - {"range": {"fieldname.subfield": {"gt":20, "lte":31}}},
+    - {"exists": {"fieldname": "title"}}
+    - {"missing": {"fieldname": "title"}}
+    
+    >>> from DDR import docstore,format_json
+    >>> t = 'posthuman'
+    >>> a = [{'terms':{'language':['eng','chi']}}, {'terms':{'creators.role':['distraction']}}]
+    >>> q = docstore.search_query(text=t, must=a)
+    >>> print(format_json(q))
+    >>> d = ['entity','segment']
+    >>> f = ['id','title']
+    >>> results = docstore.Docstore().search(doctypes=d, query=q, fields=f)
+    >>> for x in results['hits']['hits']:
+    ...     print x['_source']
+    
+    @param text: str Free-text search.
+    @param must: list of Elasticsearch query dicts (see above)
+    @param should:  list of Elasticsearch query dicts (see above)
+    @param mustnot: list of Elasticsearch query dicts (see above)
+    @returns: dict
+    """
+    body = {
+        "query": {
+            "bool": {
+                "must": must,
+                "should": should,
+                "must_not": mustnot,
+            }
+        }
+    }
+    if text:
+        body['query']['bool']['must'].append(
+            {
+                "match": {
+                    "_all": text
+                }
+            }
+        )
+    return body

@@ -239,20 +239,20 @@ TEXTROLEPEOPLE_NAME_DATA = [
 ]
 TEXTROLEPEOPLE_NAME_OUT = 'Watanabe, Joe:author'
 
-TEXTROLEPEOPLE_SINGLE_TEXT = 'Masuda, Kikuye:narrator'
+TEXTROLEPEOPLE_SINGLE_TEXT = 'Masuda, Kikuye [42]:narrator'
 TEXTROLEPEOPLE_SINGLE_DATA = [
-    {'namepart': 'Masuda, Kikuye', 'role': 'narrator'}
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
 ]
 
 TEXTROLEPEOPLE_SINGLE_ID_TEXT = 'Masuda, Kikuye [42]:narrator'
 TEXTROLEPEOPLE_SINGLE_ID_DATA = [
-    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42}
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
 ]
 
-TEXTROLEPEOPLE_MULTI_TEXT = 'Watanabe, Joe:author; Masuda, Kikuye:narrator'
+TEXTROLEPEOPLE_MULTI_TEXT = 'Watanabe, Joe:author; Masuda, Kikuye [42]:narrator'
 TEXTROLEPEOPLE_MULTI_DATA = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'},
-    {'namepart': 'Masuda, Kikuye', 'role': 'narrator'},
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
 ]
 
 TEXTROLEPEOPLE_LISTSTRSNAME_TEXT = [
@@ -264,17 +264,17 @@ TEXTROLEPEOPLE_LISTSTRSNAME_DATA = [
 
 TEXTROLEPEOPLE_LISTSTRS_TEXT = [
     'Watanabe, Joe:author',
-    'Masuda, Kikuye:narrator',
+    'Masuda, Kikuye [42]:narrator',
 ]
 TEXTROLEPEOPLE_LISTSTRS_DATA = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'},
-    {'namepart': 'Masuda, Kikuye', 'role': 'narrator'},
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
 ]
 
-TEXTROLEPEOPLE_MULTI_TEXT = 'Watanabe, Joe:author; Masuda, Kikuye:narrator'
+TEXTROLEPEOPLE_MULTI_TEXT = 'Watanabe, Joe:author; Masuda, Kikuye [42]:narrator'
 TEXTROLEPEOPLE_MULTI_DATA = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'},
-    {'namepart': 'Masuda, Kikuye', 'role': 'narrator'},
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
 ]
 
 # many legacy files have this pattern

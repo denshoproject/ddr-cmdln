@@ -70,6 +70,9 @@ Maintenance tasks:
     # See if document exists
     $ ddr-index exists -H localhost:9200 -i documents collection ddr-testing-123
     
+    # Search
+    $ ddr-index search -H localhost:9200 -i documents collection,entity Minidoka
+
     # Get document
     $ ddr-index get -H localhost:9200 -i documents collection ddr-testing-123
 
@@ -148,18 +151,65 @@ def host_status(d, mappings=False):
     if d.indexname and (d.indexname not in indices):
         print('Selected index not present in cluster: %s' % d.indexname)
         sys.exit(1)
-    print('Selected index:')
+    print('Selected index: %s' % d.indexname)
     this_index = {
-        key: status['indices'][d.indexname][key]
-        for key in ['docs', 'index']
+        key: status['indices'][d.indexname]['total'][key]
+        for key in [
+            'docs', 'store'
+        ]
     }
-    this_index['name'] = d.indexname
     print(format_json(this_index))
 
     # mappings
     if mappings:
         print('Mappings')
         print(format_json(d.get_mappings()))
+
+def search_results(d, doctype, text, must=None, should=None, mustnot=None, raw=False):
+    if doctype in ['*', 'all', 'all_', '_all']:
+        doctypes = []
+    else:
+        doctypes = doctype.strip().split(',')
+    
+    def make_terms(arg):
+        # "language:eng,jpn!creators.role:author"
+        terms = []
+        if arg:
+            for term in arg.strip().split('!'):
+                fieldname,value = term.strip().split(':')
+                values = value.strip().split(',')
+                terms.append(
+                    {'terms': {fieldname: values}}
+                )
+        return terms
+    
+    q = docstore.search_query(
+        text=text,
+        must=make_terms(must),
+        should=make_terms(should),
+        mustnot=make_terms(mustnot),
+    )
+    if raw:
+        print(format_json(q, sort_keys=False))
+    
+    data = d.search(
+        doctypes=doctypes,
+        query=q,
+        fields=['id','title'],
+    )
+    if raw:
+        print(format_json(data, sort_keys=False))
+    else:
+        try:
+            for item in data['hits']['hits']:
+                chunks = (
+                    item['_id'],
+                    item['_type'],
+                    item['_source'].get('title', ''),
+                )
+                print(chunks)
+        except:
+            print(format_json(data, sort_keys=False))
 
 
 def main():
@@ -184,7 +234,9 @@ def main():
         description=subparser_description,
         help=subparser_help)
     
+    #help
     post_descr,post_epilog = split_docstring(docstore.Docstore.post)
+    search_descr,search_epilog = split_docstring(docstore.Docstore.search)
     get_descr,get_epilog = split_docstring(docstore.Docstore.get)
     init_descr,init_epilog = split_docstring(docstore.Docstore.index)
     create_descr,create_epilog = split_docstring(docstore.Docstore.index)
@@ -201,7 +253,9 @@ def main():
     narr_descr,narr_epilog = split_docstring(docstore.Docstore.narrators)
     delete_descr,delete_epilog = split_docstring(docstore.Docstore.delete)
     
+    help_parser = subparsers.add_parser('help', description=description, epilog=epilog, formatter_class=formatter,)
     post_parser = subparsers.add_parser('post', description=post_descr, epilog=post_epilog, formatter_class=formatter,)
+    search_parser = subparsers.add_parser('search', description=search_descr, epilog=search_epilog, formatter_class=formatter,)
     get_parser = subparsers.add_parser('get', description=get_descr, epilog=get_epilog, formatter_class=formatter,)
     init_parser = subparsers.add_parser('init', description=init_descr, epilog=init_epilog, formatter_class=formatter,)
     create_parser = subparsers.add_parser('create', description=create_descr, epilog=create_epilog, formatter_class=formatter,)
@@ -219,6 +273,7 @@ def main():
     delete_parser = subparsers.add_parser('delete', description=delete_descr, epilog=delete_epilog, formatter_class=formatter,)
     
     post_parser.set_defaults(func=docstore.Docstore.post)
+    search_parser.set_defaults(func=docstore.Docstore.search)
     get_parser.set_defaults(func=docstore.Docstore.get)
     init_parser.set_defaults(func=docstore.Docstore.init_index)
     create_parser.set_defaults(func=docstore.Docstore.create_index)
@@ -235,11 +290,25 @@ def main():
     narr_parser.set_defaults(func=docstore.Docstore.narrators)
     delete_parser.set_defaults(func=docstore.Docstore.delete)
     
+    help_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    #help_parser.add_argument('-l', '--log', help='Log file..')
+    
     post_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
     post_parser.add_argument('-l', '--log', help='Log file..')
     post_parser.add_argument('-H', '--host', help='Hostname and port (HOST:PORT).', **hostsarg)
     post_parser.add_argument('-i', '--index', help='index.', **indexarg)
     post_parser.add_argument('path', help='Absolute path to JSON file.')
+    
+    search_parser.add_argument('-D', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    search_parser.add_argument('-l', '--log', help='Log file..')
+    search_parser.add_argument('-H', '--host', help='Hostname and port (HOST:PORT).', **hostsarg)
+    search_parser.add_argument('-i', '--index', help='index.', **indexarg)
+    search_parser.add_argument('-d', '--doctype', help='One or more doctypes (comma-separated).')
+    search_parser.add_argument('-t', '--text', help='Query string, in double or single quotes.')
+    search_parser.add_argument('-a', '--AND', help='AND arg(s) (e.g. "language:eng,jpn!creators.role:author").')
+    search_parser.add_argument('-o', '--OR',  help ='OR arg(s) (e.g. "language:eng,jpn!creators.role:author").')
+    search_parser.add_argument('-n', '--NOT', help='NOT arg(s) (e.g. "language:eng,jpn!creators.role:author").')
+    search_parser.add_argument('-r', '--raw', action='store_true', help='Print raw Elasticsearch DSL and output.')
     
     get_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
     get_parser.add_argument('-l', '--log', help='Log file..')
@@ -339,6 +408,11 @@ def main():
     
     args = parser.parse_args()
     
+    if args.cmd == 'help':
+        print(description)
+        print(epilog)
+        sys.exit(0)
+    
     if args.debug:
         print(args)
 
@@ -360,6 +434,19 @@ def main():
         )
         msg = d.post(document)
         print(msg)
+    elif args.cmd == 'search':
+        if not (args.text or args.AND or args.OR or args.NOT):
+            print('ERROR: No search terms. Hint: --help')
+            sys.exit(1)
+        search_results(
+            d,
+            args.doctype,
+            args.text,
+            must=args.AND,
+            should=args.OR,
+            mustnot=args.NOT,
+            raw=args.raw
+        )
     elif args.cmd == 'get':
         msg = d.get(args.model, args.id)
         print(format_json(msg, sort_keys=False))
