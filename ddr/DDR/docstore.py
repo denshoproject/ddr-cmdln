@@ -1321,7 +1321,7 @@ def _has_access_file( identifier ):
         return True
     return False
 
-def search_query(text='', must=[], should=[], mustnot=[]):
+def search_query(text='', must=[], should=[], mustnot=[], aggs={}):
     """Assembles a dict conforming to the Elasticsearch query DSL.
     
     Elasticsearch query dicts
@@ -1335,6 +1335,13 @@ def search_query(text='', must=[], should=[], mustnot=[]):
     - {"range": {"fieldname.subfield": {"gt":20, "lte":31}}},
     - {"exists": {"fieldname": "title"}}
     - {"missing": {"fieldname": "title"}}
+    
+    Elasticsearch aggregations
+    See https://www.elastic.co/guide/en/elasticsearch/guide/current/aggregations.html
+    aggs = {
+        'formats': {'terms': {'field': 'format'}},
+        'topics': {'terms': {'field': 'topics'}},
+    }
     
     >>> from DDR import docstore,format_json
     >>> t = 'posthuman'
@@ -1351,6 +1358,7 @@ def search_query(text='', must=[], should=[], mustnot=[]):
     @param must: list of Elasticsearch query dicts (see above)
     @param should:  list of Elasticsearch query dicts (see above)
     @param mustnot: list of Elasticsearch query dicts (see above)
+    @param aggs: dict Elasticsearch aggregations subquery (see above)
     @returns: dict
     """
     body = {
@@ -1370,4 +1378,6 @@ def search_query(text='', must=[], should=[], mustnot=[]):
                 }
             }
         )
+    if aggs:
+        body['aggregations'] = aggs
     return body
