@@ -537,14 +537,17 @@ class Docstore():
         with open(path, 'r') as f:
             data = json.loads(f.read())
         for document in data['narrators']:
-            if document.get('has_published'):
+            has_published = document.get('has_published', '')
+            if has_published.isdigit():
+                has_published = int(has_published)
+            if has_published:
                 result = self.post_json(DOC_TYPE, document['id'], json.dumps(document))
                 logging.debug(document['id'], result)
             else:
                 logging.debug('%s not published' % document['id'])
                 if self.get(DOC_TYPE, document['id'], fields=[]):
-                    self.delete(DOC_TYPE, document['id'])
-    
+                    self.delete(document['id'])
+
     def post(self, document, public_fields=[], additional_fields={}, private_ok=False):
         """Add a new document to an index or update an existing one.
         
