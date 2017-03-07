@@ -482,7 +482,7 @@ def main():
         print(results)
     elif args.cmd == 'alias':
         msg = d.set_alias(
-            args.alias, args.index, remove=args.remove, create=False
+            args.alias, args.index, remove=args.remove
         )
         print(msg)
     elif args.cmd == 'mappings':

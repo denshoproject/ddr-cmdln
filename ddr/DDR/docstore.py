@@ -198,7 +198,7 @@ class Docstore():
             self.es.cat.aliases(h=['index','alias'])
         )
      
-    def set_alias(self, alias, index, remove=False, create=True ):
+    def set_alias(self, alias, index, remove=False ):
         """Point alias at specified index; create index if doesn't exist.
         
         IMPORTANT: There is only ever ONE index at a time. All existing
@@ -207,18 +207,19 @@ class Docstore():
         @param alias: Name of the alias
         @param index: Name of the alias' target index.
         @param remove: boolean
-        @param create: boolean
         """
         logger.debug('set_alias(%s, %s, %s, %s)' % (self.hosts, alias, index, remove))
         alias = make_index_name(alias)
         index = make_index_name(index)
-        if (not self.index_exists(index)) and create:
-            self.create_index(index)
-        # delete existing aliases
-        for i,a in _parse_cataliases(self.es.cat.aliases(h=['index','alias'])):
-            self.es.indices.delete_alias(index=i, name=a)
-        if not remove:
-            # set the alias
+        if remove:
+            for i,a in self.aliases():
+                if a == alias:
+                    self.es.indices.delete_alias(index=i, name=a)
+        else:
+            # delete existing alias
+            for i,a in self.aliases():
+                if a == alias:
+                    self.es.indices.delete_alias(index=i, name=a)
             self.es.indices.put_alias(index=index, name=alias, body='')
      
     def target_index(self, alias):
