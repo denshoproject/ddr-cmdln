@@ -44,7 +44,7 @@ import re
 from StringIO import StringIO
 
 import envoy
-from lxml import etree
+from jinja2 import Template
 
 from DDR import VERSION
 from DDR import format_json
@@ -913,25 +913,11 @@ class Collection( object ):
     def dump_ead(self):
         """Dump Collection data to ead.xml file.
         
-        TODO render a Django/Jinja template instead of using lxml
         TODO This should not actually write the XML! It should return XML to the code that calls it.
         """
-        NAMESPACES = None
-        tree = etree.fromstring(self.ead().xml)
-        module = self.identifier.fields_module()
-        for f in module.FIELDS:
-            fieldname = f['name']
-            field_data = ''
-            if hasattr(self, f['name']):
-                field_data = getattr(self, fieldname)
-                # run ead_* functions on field data if present
-                tree = modules.Module(module).xml_function(
-                    'ead_%s' % fieldname,
-                    tree, NAMESPACES, f,
-                    field_data
-                )
-        xml_pretty = etree.tostring(tree, pretty_print=True)
-        return xml_pretty
+        with open(config.TEMPLATE_EAD_JINJA2, 'r') as f:
+            template = f.read()
+        return Template(template).render(object=self)
 
     def write_ead(self):
         """Write EAD XML file to disk.
@@ -1587,39 +1573,11 @@ class Entity( object ):
     def dump_mets(self):
         """Dump Entity data to mets.xml file.
         
-        TODO render a Django/Jinja template instead of using lxml
         TODO This should not actually write the XML! It should return XML to the code that calls it.
         """
-        NAMESPACES = {
-            'mets':  'http://www.loc.gov/METS/',
-            'mix':   'http://www.loc.gov/mix/v10',
-            'mods':  'http://www.loc.gov/mods/v3',
-            'rts':   'http://cosimo.stanford.edu/sdr/metsrights/',
-            'xlink': 'http://www.w3.org/1999/xlink',
-            'xsi':   'http://www.w3.org/2001/XMLSchema-instance',
-        }
-        NAMESPACES_TAGPREFIX = {}
-        for k,v in NAMESPACES.iteritems():
-            NAMESPACES_TAGPREFIX[k] = '{%s}' % v
-        NAMESPACES_XPATH = {'mets': NAMESPACES['mets'],}
-        NSMAP = {None : NAMESPACES['mets'],}
-        NS = NAMESPACES_TAGPREFIX
-        ns = NAMESPACES_XPATH
-        tree = etree.parse(StringIO(self.mets().xml))
-        module = self.identifier.fields_module()
-        for f in module.FIELDS:
-            fieldname = f['name']
-            field_data = ''
-            if hasattr(self, f['name']):
-                field_data = getattr(self, f['name'])
-                # run mets_* functions on field data if present
-                tree = modules.Module(module).xml_function(
-                    'mets_%s' % fieldname,
-                    tree, NAMESPACES, f,
-                    field_data
-                )
-        xml_pretty = etree.tostring(tree, pretty_print=True)
-        return xml_pretty
+        with open(config.TEMPLATE_METS_JINJA2, 'r') as f:
+            template = f.read()
+        return Template(template).render(object=self)
 
     def write_mets(self):
         """Write METS XML file to disk.

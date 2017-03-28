@@ -82,6 +82,8 @@ FACETS_PATH = os.path.join(REPO_MODELS_PATH, 'vocab')
 MAPPINGS_PATH = os.path.join(REPO_MODELS_PATH, 'docstore', 'mappings.json')
 TEMPLATE_EAD = os.path.join(REPO_MODELS_PATH, 'templates', 'ead.xml')
 TEMPLATE_METS = os.path.join(REPO_MODELS_PATH, 'templates', 'mets.xml')
+TEMPLATE_EAD_JINJA2 = os.path.join(REPO_MODELS_PATH, 'templates', 'ead.xml.j2')
+TEMPLATE_METS_JINJA2 = os.path.join(REPO_MODELS_PATH, 'templates', 'mets.xml.j2')
 TEMPLATE_CJSON = config.get('cmdln','template_cjson')
 TEMPLATE_EJSON = config.get('cmdln','template_ejson')
 
