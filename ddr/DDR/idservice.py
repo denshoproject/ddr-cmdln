@@ -2,7 +2,6 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 
-from bs4 import BeautifulSoup
 import requests
 
 from DDR import config

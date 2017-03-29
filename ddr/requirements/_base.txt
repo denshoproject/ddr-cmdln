@@ -13,7 +13,6 @@ envoy==0.0.3              # MIT       n/a                              n/a      
 GitPython==0.3.2.RC1      # BSD       python-git (0.3.2~RC1-1)         python-git (0.3.2~RC1-3)       y
 graphviz                  # MIT                                                                       y
 Jinja2==2.8               # BSD                                                                       y
-lxml==3.3.5               # BSD       python-lxml (2.3.2-1+deb7u1)     python-lxml (3.3.5-1+b1)       y        N(?)
 psutil==2.2.1             # BSD                                                                       y        y
 python-dateutil==2.2      # BSD       python-dateutil (1.5+dfsg-0.1)   python-dateutil (1.5+dfsg-1)   y
 python-xmp-toolkit==2.0.1 # New BSD   n/a                              (sid) python-libxmp (v?)       y
