@@ -61,7 +61,6 @@ from DDR import imaging
 from DDR import ingest
 from DDR import inheritance
 from DDR import locking
-from DDR.models.xml import EAD, METS
 from DDR import modules
 from DDR import util
 
@@ -901,14 +900,14 @@ class Collection( object ):
             CollectionControlFile.create(self.control_path, self.id)
         return CollectionControlFile(self.control_path)
     
-    def ead( self ):
-        """Returns a ddrlocal.models.xml.EAD object for the collection.
-        
-        TODO Do we really need this?
-        """
-        if not os.path.exists(self.ead_path):
-            EAD.create(self.ead_path)
-        return EAD(self)
+    #def ead( self ):
+    #    """Returns a ddrlocal.models.xml.EAD object for the collection.
+    #    
+    #    TODO Do we really need this?
+    #    """
+    #    if not os.path.exists(self.ead_path):
+    #        EAD.create(self.ead_path)
+    #    return EAD(self)
     
     def dump_ead(self):
         """Dump Collection data to ead.xml file.
@@ -1565,10 +1564,10 @@ class Entity( object ):
             EntityControlFile.create(self.control_path, self.parent_id, self.id)
         return EntityControlFile(self.control_path)
 
-    def mets( self ):
-        if not os.path.exists(self.mets_path):
-            METS.create(self.mets_path)
-        return METS(self)
+    #def mets( self ):
+    #    if not os.path.exists(self.mets_path):
+    #        METS.create(self.mets_path)
+    #    return METS(self)
     
     def dump_mets(self):
         """Dump Entity data to mets.xml file.
