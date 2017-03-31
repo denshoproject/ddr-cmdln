@@ -197,30 +197,43 @@ class Docstore():
         return _parse_cataliases(
             self.es.cat.aliases(h=['index','alias'])
         )
-     
-    def set_alias(self, alias, index, remove=False ):
-        """Point alias at specified index; create index if doesn't exist.
-        
-        IMPORTANT: There is only ever ONE index at a time. All existing
-        aliases are deleted before specified one is created.
+    
+    def rm_alias(self, alias, index):
+        """Remove specified alias.
         
         @param alias: Name of the alias
         @param index: Name of the alias' target index.
-        @param remove: boolean
         """
-        logger.debug('set_alias(%s, %s, %s, %s)' % (self.hosts, alias, index, remove))
+        logger.debug('rm_alias(%s, %s, %s)' % (self.hosts, alias, index))
         alias = make_index_name(alias)
         index = make_index_name(index)
-        if remove:
-            for i,a in self.aliases():
-                if a == alias:
-                    self.es.indices.delete_alias(index=i, name=a)
-        else:
-            # delete existing alias
-            for i,a in self.aliases():
-                if a == alias:
-                    self.es.indices.delete_alias(index=i, name=a)
-            self.es.indices.put_alias(index=index, name=alias, body='')
+        return self.es.indices.delete_alias(index=index, name=alias)
+    
+    def set_alias(self, alias, index):
+        """Point alias at specified index; create index if doesn't exist.
+        
+        IMPORTANT: There should only ever be ONE alias per index.
+        Existing aliases are deleted before specified one is created.
+        
+        @param alias: Name of the alias
+        @param index: Name of the alias' target index.
+        """
+        logger.debug('set_alias(%s, %s, %s)' % (self.hosts, alias, index))
+        alias = make_index_name(alias)
+        index = make_index_name(index)
+        # delete existing alias
+        for i,a in self.aliases():
+            removed = ''
+            if a == alias:
+                self.es.indices.delete_alias(
+                    # NOTE: "i" is probably not the arg "index".  That's what
+                    #       we want. We only want the arg "index".
+                    index=i,
+                    name=alias
+                )
+                removed = ' (removed)'
+            print('%s -> %s%s' % (a,i,removed))
+        return self.es.indices.put_alias(index=index, name=alias, body='')
      
     def target_index(self, alias):
         """Get the name of the index to which the alias points

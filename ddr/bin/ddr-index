@@ -481,9 +481,10 @@ def main():
         results = d.reindex(args.source, args.dest)
         print(results)
     elif args.cmd == 'alias':
-        msg = d.set_alias(
-            args.alias, args.index, remove=args.remove
-        )
+        if args.remove:
+            msg = d.rm_alias(args.alias, args.index)
+        else:
+            msg = d.set_alias(args.alias, args.index)
         print(msg)
     elif args.cmd == 'mappings':
         mpath = d.mappings_path(args.path)
