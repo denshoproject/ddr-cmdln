@@ -26,7 +26,6 @@ import subprocess
 
 import envoy
 import libxmp
-from lxml import etree
 
 IDENTIFY_CMD = 'identify "{path}"'
 CONVERT_CMD  = "convert \"{src}\"[0] -resize '{geometry}' {dest}"
@@ -156,11 +155,9 @@ def extract_xmp(path_abs):
     xmpfile.open_file(path_abs, open_read=True)
     xmp = xmpfile.get_xmp()
     if xmp:
-        xml  = xmp.serialize_to_unicode()
-        tree = etree.fromstring(xml)
-        s = etree.tostring(tree, pretty_print=False).strip()
-        while s.find('\n ') > -1:
-            s = s.replace('\n ', '\n')
-        s = s.replace('\n','')
-        return s
+        xml = xmp.serialize_to_unicode()
+        while xml.find('\n ') > -1:
+            xml = xml.replace('\n ', '\n')
+        xml = xml.replace('\n','')
+        return xml
     return None
