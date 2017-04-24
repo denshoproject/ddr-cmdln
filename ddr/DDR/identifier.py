@@ -206,6 +206,15 @@ class Definitions():
         }
 
     @staticmethod
+    def component_formfields(identifiers):
+        """Django form field info for each component
+        """
+        return {
+            i['component']['name']: i['component']['form']
+            for i in identifiers
+        }
+
+    @staticmethod
     def valid_components(identifiers):
         """Components in VALID_COMPONENTS.keys() must appear in VALID_COMPONENTS[key] to be valid.
         """
@@ -240,6 +249,20 @@ class Definitions():
             i['model']: re.compile(i.get('filename_regex'))
             for i in identifiers
             if i.get('filename_regex')
+        }
+
+    @staticmethod
+    def models_idparts(identifiers):
+        mi = {
+            i['model']: i['templates']['id']
+            for i in identifiers
+        }
+        return {
+            model: [
+                template.replace('{','').replace('}','').split('-')
+                for template in templates
+            ]
+            for model,templates in mi.iteritems()
         }
 
     # ----------------------------------------------------------------------
@@ -412,6 +435,7 @@ ROOTS = Definitions.endpoints(IDENTIFIERS, 'parents_all')
 NODES = Definitions.endpoints(IDENTIFIERS, 'children_all')
 ID_COMPONENTS = Definitions.id_components(IDENTIFIERS)
 COMPONENT_TYPES = Definitions.component_types(IDENTIFIERS)
+COMPONENT_FORMFIELDS = Definitions.component_formfields(IDENTIFIERS)
 VALID_COMPONENTS = Definitions.valid_components(IDENTIFIERS)
 NEXTABLE_MODELS = Definitions.nextable_models(IDENTIFIERS)
 # Bits of file paths that uniquely identify file types.
@@ -423,6 +447,7 @@ FILETYPE_MATCH_ANNEX = {
     'mezzanine': '*-mezzanine-*',
 }
 META_FILENAME_REGEX = Definitions.filename_regexes(IDENTIFIERS)
+MODELS_IDPARTS = Definitions.models_idparts(IDENTIFIERS)
 ID_PATTERNS = Definitions.id_patterns(IDENTIFIERS)
 PATH_PATTERNS = Definitions.path_patterns(IDENTIFIERS)
 URL_PATTERNS = Definitions.url_patterns(IDENTIFIERS)
