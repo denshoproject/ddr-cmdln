@@ -223,7 +223,7 @@ def write_updates(updates):
     logging.debug('NOTE: METADATA FILES ARE NOT YET COMMITTED!')
     return written
 
-def commit_updates(collection, files_written, git_name, git_mail, agent):
+def commit_updates(collection, files_written, git_name, git_mail, agent, commit=False):
     """Commit written files to git repository.
     
     @param files_written: list
@@ -235,6 +235,7 @@ def commit_updates(collection, files_written, git_name, git_mail, agent):
             git_name, git_mail,
             collection,
             files_written,
-            agent
+            agent,
+            commit
         )
     return 0,'no files to write'

@@ -37,6 +37,10 @@ def main():
     parser.add_argument('-u', '--user', help='(required for commit) User name')
     parser.add_argument('-m', '--mail', help='(required for commit) User email')
     args = parser.parse_args()
+    if not args.nocommit:
+        if not (args.user and args.mail):
+            logging.debug('You must specify a user and email address! >:-0')
+            sys.exit(1)
 
     logging.debug('-----------------------------------------------')
     logging.debug('Loading collection')
@@ -64,7 +68,8 @@ def main():
         status,msg = signatures.commit_updates(
             collection,
             files_written,
-            args.user, args.mail, agent='ddr-signature'
+            args.user, args.mail, agent='ddr-signature',
+            commit=True
         )
     logging.debug('DONE')
 
