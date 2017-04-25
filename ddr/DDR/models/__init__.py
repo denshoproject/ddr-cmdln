@@ -1239,7 +1239,7 @@ class Entity( object ):
         @param agent: str
         @returns: exit,status int,str
         """
-        collection = identifier.parent().object()
+        collection = identifier.collection().object()
         if not collection:
             raise Exception('Parent collection for %s does not exist.' % identifier)
         entity = Entity.create(identifier.path_abs(), identifier)
