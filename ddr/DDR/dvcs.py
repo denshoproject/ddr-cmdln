@@ -886,21 +886,6 @@ def annex_status(repo):
         return data
     return None
 
-def _annex_parse_whereis( annex_whereis_stdout ):
-    lines = annex_whereis_stdout.strip().split('\n')
-    # chop off anything before whereis line
-    startline = -1
-    for n,line in enumerate(lines):
-        if 'whereis' in line:
-            startline = n
-    lines = lines[startline:]
-    remotes = []
-    if ('whereis' in lines[0]) and ('ok' in lines[-1]):
-        num_copies = int(lines[0].split(' ')[2].replace('(',''))
-        logging.debug('    {} copies'.format(num_copies))
-        remotes = [line.split('--')[1].strip() for line in lines[1:-1]]
-    return remotes
-
 def annex_whereis_file(repo, file_path_rel):
     """Show remotes that the file appears in
     
@@ -910,15 +895,23 @@ def annex_whereis_file(repo, file_path_rel):
             c1b41078-85c9-11e2-bad2-17e365f14d89 -- here
     ok
     
+    {
+        u'command': u'whereis',
+        u'file': u'files/ddr-njpa-4-1/files/ddr-njpa-4-1-master-0c90a8e5c7.tif',
+        u'success': True,
+        u'note': u'...RAW TEXT OUTPUT...',
+        u'whereis': [
+            {u'uuid': u'5d026e8a-f0b8-11e3-b2f2-2f3b74f26f08', u'here': False, u'description': u'qnfs'},
+            ...
+        ],
+        u'untrusted': []
+    }
+
     @param repo: A GitPython Repo object
     @param collection_uid: A valid DDR collection UID
-    @return: List of names of remote repositories.
+    @return: dict
     """
-    stdout = repo.git.annex('whereis', file_path_rel)
-    print('----------')
-    print(stdout)
-    print('----------')
-    return _annex_parse_whereis(stdout)
+    return json.loads(repo.git.annex('whereis', '--json', file_path_rel))
 
 def annex_trim(repo, confirmed=False):
     """Drop full-size binaries from a repository.

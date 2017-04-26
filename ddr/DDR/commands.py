@@ -817,9 +817,11 @@ def annex_push(collection, file_path_rel):
     stdout = repo.git.annex('copy', '-t', config.GIT_REMOTE_NAME, file_path_rel)
     logging.debug('\n{}'.format(stdout))
     # confirm that it worked
-    remotes = dvcs.annex_whereis_file(repo, file_path_rel)
-    logging.debug('    present in remotes {}'.format(remotes))
-    logging.debug('    it worked: {}'.format(config.GIT_REMOTE_NAME in remotes))
+    whereis = dvcs.annex_whereis_file(repo, file_path_rel)
+    if whereis['success']:
+        remotes = [r['description'] for r in whereis['whereis'] if not r['here']]
+        logging.debug('    present in remotes {}'.format(remotes))
+        logging.debug('    it worked: {}'.format(config.GIT_REMOTE_NAME in remotes))
     logging.debug('    DONE')
     return 0,'ok'
 
