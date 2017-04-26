@@ -1,5 +1,6 @@
 # git and git-annex code
 
+from datetime import datetime
 import json
 import logging
 logger = logging.getLogger(__name__)
@@ -886,7 +887,19 @@ def annex_status(repo):
         return data
     return None
 
-def annex_whereis_file(repo, file_path_rel):
+def annex_info(repo):
+    """
+    """
+    data = json.loads(repo.git.annex('info', '--fast', '--json'))
+    data['timestamp'] = datetime.now()
+    all_repos = data['trusted repositories'] \
+                + data['untrusted repositories'] \
+                + data['semitrusted repositories']
+    # might be more than one 'here'?
+    data['here'] = [r['uuid'] for r in all_repos if r['here']]
+    return data
+
+def annex_whereis_file(repo, file_path_rel, info=None):
     """Show remotes that the file appears in
     
     $ git annex whereis files/ddr-testing-201303051120-1/files/20121205.jpg
@@ -911,7 +924,18 @@ def annex_whereis_file(repo, file_path_rel):
     @param collection_uid: A valid DDR collection UID
     @return: dict
     """
-    return json.loads(repo.git.annex('whereis', '--json', file_path_rel))
+    data = json.loads(repo.git.annex('whereis', '--json', file_path_rel))
+    data['timestamp'] = datetime.now()
+    # mark this repo
+    if not info:
+        info = annex_info(repo)
+    for r in data['whereis']:
+        if r['uuid'] in info['here']: r['this'] = True
+        else: r['this'] = False
+    for r in data['untrusted']:
+        if r['uuid'] in info['here']: r['this'] = True
+        else: r['this'] = False
+    return data
 
 def annex_trim(repo, confirmed=False):
     """Drop full-size binaries from a repository.
