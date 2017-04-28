@@ -59,19 +59,6 @@ def render(template, data):
     """
     return Template(template).render(data=data)
 
-def coerce_type(text):
-    """Ensure that text is converted to type (int,datetime)
-    """
-    if isinstance(text, basestring):
-        if text.isdigit():
-            return int(text)
-        try:
-            return text_to_datetime(text)
-        except ValueError:
-            pass
-        return unicode(text.strip())
-    return text
-
 def coerce_text(data):
     """Ensure types (ints,datetimes) are converted to text
     """

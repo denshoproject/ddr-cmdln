@@ -3,6 +3,7 @@
 
 from datetime import datetime
 
+import config
 import converters
 
 
@@ -19,6 +20,18 @@ def test_normalize_string():
     assert converters.normalize_string('ab\n') == u'ab'
     assert converters.normalize_string('ab ') == u'ab'
 
+
+# TODO load_dirty_json
+
+
+STRIP_LIST_DATA = ['a', '']
+STRIP_LIST_EXPECTED = ['a']
+
+def test_strip_list():
+    assert converters.strip_list(STRIP_LIST_DATA) == STRIP_LIST_EXPECTED
+    assert converters.strip_list(STRIP_LIST_EXPECTED) == STRIP_LIST_EXPECTED
+
+
 def test_render():
     template = """<a href="{{ data.url }}">{{ data.label }}</a>"""
     data = {'url':'http://densho.org', 'label':'Densho'}
@@ -26,17 +39,35 @@ def test_render():
     assert converters.render(template,data) == expected
 
 
+COERCE_TEXT_DATA0 = 1
+COERCE_TEXT_EXPECTED0 = u'1'
+COERCE_TEXT_DATA1 = datetime(2017,4,28, 10,51,27, tzinfo=config.TZ)
+COERCE_TEXT_EXPECTED1 = u'2017-04-28T10:51:27LMT-0753'
+
+def test_coerce_text():
+    # int
+    assert converters.coerce_text(COERCE_TEXT_DATA0) == COERCE_TEXT_EXPECTED0
+    assert converters.coerce_text(COERCE_TEXT_EXPECTED0) == COERCE_TEXT_EXPECTED0
+    # datetime
+    assert converters.coerce_text(COERCE_TEXT_DATA1) == COERCE_TEXT_EXPECTED1
+    assert converters.coerce_text(COERCE_TEXT_EXPECTED1) == COERCE_TEXT_EXPECTED1
+    
+
+
 TEXT_DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S'
-TEXT_DATETIME_TEXT = '2016-08-31T15:42:17'
-TEXT_DATETIME_DATA = datetime(2016,8,31,15,42,17)
+TEXT_DATETIME_TEXT0 = '2016-08-31T15:42:17'
+TEXT_DATETIME_TEXT1 = '2016-08-31T15:42:17-07:53'
+TEXT_DATETIME_DATA_NOTZ = datetime(2016,8,31,15,42,17)
+TEXT_DATETIME_DATA_TZ = datetime(2016,8,31,15,42,17,tzinfo=config.TZ)
 
 def test_text_to_datetime():
-    assert converters.text_to_datetime(TEXT_DATETIME_TEXT) == TEXT_DATETIME_DATA
+    assert converters.text_to_datetime(TEXT_DATETIME_TEXT0) == TEXT_DATETIME_DATA_NOTZ
+    assert converters.text_to_datetime(TEXT_DATETIME_TEXT1) == TEXT_DATETIME_DATA_TZ
     # already in target format
-    assert converters.text_to_datetime(TEXT_DATETIME_DATA) == TEXT_DATETIME_DATA
+    assert converters.text_to_datetime(TEXT_DATETIME_DATA_NOTZ) == TEXT_DATETIME_DATA_NOTZ
 
 def test_datetime_to_text():
-    assert converters.datetime_to_text(TEXT_DATETIME_DATA) == TEXT_DATETIME_TEXT
+    assert converters.datetime_to_text(TEXT_DATETIME_DATA_NOTZ) == TEXT_DATETIME_TEXT0
 
 
 TEXTLIST_TEXT = 'thing1; thing2'
@@ -210,6 +241,68 @@ def test_listofdicts_to_text():
     assert converters.listofdicts_to_text(LISTOFDICTS_DATA0, LISTOFDICTS_TERMS0) == LISTOFDICTS_TEXT0
     assert converters.listofdicts_to_text(LISTOFDICTS_DATA1, LISTOFDICTS_TERMS1) == LISTOFDICTS_TEXT1
     assert converters.listofdicts_to_text(LISTOFDICTS_DATA2, LISTOFDICTS_TERMS2) == LISTOFDICTS_TEXT2
+
+
+# Text can contain one key-val pair
+TEXTNOLABELS_LISTOFDICTS_TEXT0 = "ABC:http://abc.org"
+TEXTNOLABELS_LISTOFDICTS_TEXT1 = "ABC:http://abc.org;"
+TEXTNOLABELS_LISTOFDICTS_KEYS0 = ['label','url']
+TEXTNOLABELS_LISTOFDICTS_DATA0 = [
+    {'label': 'ABC', 'url': 'http://abc.org'}
+]
+# or multiple key-val pairs.
+TEXTNOLABELS_LISTOFDICTS_TEXT2a = "ABC:http://abc.org;DEF:http://def.org"
+TEXTNOLABELS_LISTOFDICTS_TEXT2b = "ABC:http://abc.org;DEF:http://def.org;"
+TEXTNOLABELS_LISTOFDICTS_TEXT2c = "ABC:http://abc.org;\n DEF:http://def.org;"
+TEXTNOLABELS_LISTOFDICTS_TEXT2z = "ABC:http://abc.org;\nDEF:http://def.org"
+TEXTNOLABELS_LISTOFDICTS_KEYS2 = ['label','url']
+TEXTNOLABELS_LISTOFDICTS_DATA2 = [
+    {'label': 'ABC', 'url': 'http://abc.org'},
+    {'label': 'DEF', 'url': 'http://def.org'}
+]
+# Old JSON data may be a list of strings rather than dicts.
+TEXTNOLABELS_LISTOFDICTS_TEXT3 = "ABC:http://abc.org;\n DEF:http://def.org;"
+TEXTNOLABELS_LISTOFDICTS_TEXT3a = "ABC:http://abc.org;DEF:http://def.org"
+TEXTNOLABELS_LISTOFDICTS_TEXT3z = "ABC:http://abc.org;\nDEF:http://def.org"
+TEXTNOLABELS_LISTOFDICTS_KEYS3 = ['label','url']
+TEXTNOLABELS_LISTOFDICTS_DATA3 = [
+    'ABC:http://abc.org',
+    'DEF:http://def.org'
+]
+TEXTNOLABELS_LISTOFDICTS_TEXT4 = "term:ABC|id:123; \nterm:DEF|id:456"
+TEXTNOLABELS_LISTOFDICTS_TEXT4z = "term:ABC|id:123;\nterm:DEF|id:456"
+TEXTNOLABELS_LISTOFDICTS_KEYS4 = ['label','url']
+TEXTNOLABELS_LISTOFDICTS_DATA4 = [
+    'ABC [123]',
+    'DEF [456]'
+]
+
+def textnolabels_to_listofdicts():
+    assert converters.textnolabels_to_listofdicts(None) == []
+    assert converters.textnolabels_to_listofdicts('') == []
+    assert converters.textnolabels_to_listofdicts(' ') == []
+    
+    assert converters.textnolabels_to_listofdicts(TEXTNOLABELS_LISTOFDICTS_DATA0) == TEXTNOLABELS_LISTOFDICTS_DATA0
+    assert converters.textnolabels_to_listofdicts(TEXTNOLABELS_LISTOFDICTS_TEXT0) == TEXTNOLABELS_LISTOFDICTS_DATA0
+    assert converters.textnolabels_to_listofdicts(TEXTNOLABELS_LISTOFDICTS_TEXT1) == TEXTNOLABELS_LISTOFDICTS_DATA0
+
+    assert converters.textnolabels_to_listofdicts(TEXTNOLABELS_LISTOFDICTS_DATA2) == TEXTNOLABELS_LISTOFDICTS_DATA2
+    assert converters.textnolabels_to_listofdicts(TEXTNOLABELS_LISTOFDICTS_TEXT2a) == TEXTNOLABELS_LISTOFDICTS_DATA2
+    assert converters.textnolabels_to_listofdicts(TEXTNOLABELS_LISTOFDICTS_TEXT2b) == TEXTNOLABELS_LISTOFDICTS_DATA2
+    assert converters.textnolabels_to_listofdicts(TEXTNOLABELS_LISTOFDICTS_TEXT2c) == TEXTNOLABELS_LISTOFDICTS_DATA2
+
+    assert converters.textnolabels_to_listofdicts(TEXTNOLABELS_LISTOFDICTS_DATA3) == TEXTNOLABELS_LISTOFDICTS_DATA3
+    assert converters.textnolabels_to_listofdicts(TEXTNOLABELS_LISTOFDICTS_TEXT3) == TEXTNOLABELS_LISTOFDICTS_DATA3
+
+    assert converters.textnolabels_to_listofdicts(TEXTNOLABELS_LISTOFDICTS_DATA4) == TEXTNOLABELS_LISTOFDICTS_DATA4
+    assert converters.textnolabels_to_listofdicts(TEXTNOLABELS_LISTOFDICTS_TEXT4) == TEXTNOLABELS_LISTOFDICTS_DATA4
+
+
+def test_listofdicts_to_textnolabels():
+    assert converters.listofdicts_to_textnolabels(TEXTNOLABELS_LISTOFDICTS_DATA0, TEXTNOLABELS_LISTOFDICTS_KEYS0) == TEXTNOLABELS_LISTOFDICTS_TEXT0
+    assert converters.listofdicts_to_textnolabels(TEXTNOLABELS_LISTOFDICTS_DATA2, TEXTNOLABELS_LISTOFDICTS_KEYS2) == TEXTNOLABELS_LISTOFDICTS_TEXT2z
+    assert converters.listofdicts_to_textnolabels(TEXTNOLABELS_LISTOFDICTS_DATA3, TEXTNOLABELS_LISTOFDICTS_KEYS3) == TEXTNOLABELS_LISTOFDICTS_TEXT3z
+    assert converters.listofdicts_to_textnolabels(TEXTNOLABELS_LISTOFDICTS_TEXT4, TEXTNOLABELS_LISTOFDICTS_KEYS4) == TEXTNOLABELS_LISTOFDICTS_TEXT4z
 
 
 TEXTBRACKETIDS_FIELDS = ['term', 'id']

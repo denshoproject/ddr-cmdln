@@ -322,6 +322,8 @@ def test_definitions_additional_paths():
 
 # TODO test_compile_patterns
 
+# TODO test_render_models_digraph
+
 def test_identify_object():
     patterns = (
         (r'^(?P<repo>[\w]+)-(?P<org>[\w]+)-(?P<cid>[\d]+)-(?P<eid>[\d]+)$', 'entity-rel', 'entity'),
@@ -472,16 +474,21 @@ def test_parse_args_kwargs():
     args2 = ['ddr-foo', '/tmp']; kwargs2 = {}
     args3 = ['ddr-foo', '/tmp']; kwargs3 = {'id':'ddr-bar'}
     args4 = ['ddr-foo', '/tmp']; kwargs4 = {'id':'ddr-bar', 'base_path':'/opt'}
+    args5 = ['/ddr-bar-1', '/opt']; kwargs5 = {'url':'/collection/ddr-bar-1', 'base_path':'/opt'}
     expected0 = {'url': None, 'path': None, 'parts': None, 'id': None, 'base_path': None}
     expected1 = {'url': None, 'path': None, 'parts': None, 'id': 'ddr-bar', 'base_path': '/opt'}
     expected2 = {'url': None, 'path': None, 'parts': None, 'id': 'ddr-foo', 'base_path': '/tmp'}
     expected3 = {'url': None, 'path': None, 'parts': None, 'id': 'ddr-bar', 'base_path': '/tmp'}
     expected4 = {'url': None, 'path': None, 'parts': None, 'id': 'ddr-bar', 'base_path': '/opt'}
+    expected5a = {'url': None, 'path': '/ddr-bar-1', 'parts': None, 'id': None, 'base_path': '/opt'}
+    expected5b = {'url': '/collection/ddr-bar-1', 'path': None, 'parts': None, 'id': None, 'base_path': '/opt'}
     assert identifier._parse_args_kwargs(keys, args0, kwargs0) == expected0
     assert identifier._parse_args_kwargs(keys, args1, kwargs1) == expected1
     assert identifier._parse_args_kwargs(keys, args2, kwargs2) == expected2
     assert identifier._parse_args_kwargs(keys, args3, kwargs3) == expected3
     assert identifier._parse_args_kwargs(keys, args4, kwargs4) == expected4
+    assert identifier._parse_args_kwargs(keys, args5, {}) == expected5a
+    assert identifier._parse_args_kwargs(keys, [], kwargs5) == expected5b
 
 # TODO test_module_for_name
 # TODO test_class_for_name
@@ -529,6 +536,55 @@ def test_identifier_max_id():
     out1 = identifier.max_id(model1, identifiers1)
     expected1 = 3
     assert out1 == expected1
+
+ADD_ID_INPUT0 = {
+    'num_new': 5,
+    'model': 'entity',
+    'identifiers': [
+        identifier.Identifier(id='ddr-test-123-1'),
+        identifier.Identifier(id='ddr-test-123-2'),
+        identifier.Identifier(id='ddr-test-123-3'),
+    ],
+    'startwith': 6,
+}
+ADD_ID_INPUT1 = {
+    'num_new': 5,
+    'model': 'entity',
+    'identifiers': [
+        identifier.Identifier(id='ddr-test-123-1'),
+        identifier.Identifier(id='ddr-test-123-2'),
+        identifier.Identifier(id='ddr-test-123-3'),
+    ],
+}
+ADD_ID_INPUT2 = {
+    'num_new': 5,
+    'model': 'segment',
+    'identifiers': [
+        identifier.Identifier(id='ddr-test-123-1-1'),
+        identifier.Identifier(id='ddr-test-123-1-2'),
+        identifier.Identifier(id='ddr-test-123-1-3'),
+    ],
+    'startwith': 6,
+}
+ADD_ID_EXPECTED0 = {
+    'success': True,
+    'taken': [],
+    'new': [6,7,8,9,10],
+    'max_id': 4,
+}
+
+def test_identifier_add_ids():
+    identifier.add_ids(
+        ADD_ID_INPUT0['num_new'],
+        ADD_ID_INPUT0['model'],
+        ADD_ID_INPUT0['identifiers'],
+        ADD_ID_INPUT0['startwith'],
+    ) == ADD_ID_EXPECTED0
+    identifier.add_ids(
+        ADD_ID_INPUT1['num_new'],
+        ADD_ID_INPUT1['model'],
+        ADD_ID_INPUT1['identifiers'],
+    ) == ADD_ID_EXPECTED0
 
 def test_identifier_available():
     a = ['a', 'b', 'c']
@@ -1011,7 +1067,14 @@ def test_parent_id():
     assert rol.parent_id(stubs=1) == PARENT_ENTITY_ID
     assert fil.parent_id(stubs=1) == PARENT_FILEROLE_ID
 
-# TODO test_parent_path
+def test_parent_path():
+    basepath='/tmp/ddr-test-123'
+    fi = identifier.Identifier(id='ddr-test-123-456-master-abcde12345', base_path=basepath)
+    assert fi.parent_path() == '/tmp/ddr-test-123/ddr-test-123/files/ddr-test-123-456'
+    ei = identifier.Identifier(id='ddr-test-123-456', base_path=basepath)
+    assert ei.parent_path() == '/tmp/ddr-test-123/ddr-test-123'
+    ci = identifier.Identifier(id='ddr-test-123', base_path=basepath)
+    assert ci.parent_path() == None
 
 def test_parent():
     i = identifier.Identifier(id='ddr-test-123-456-master-abcde12345')
@@ -1019,6 +1082,25 @@ def test_parent():
     assert i.parent(stubs=1).id == 'ddr-test-123-456-master'
     assert i.parent().__class__ == i.__class__
     assert i.parent(stubs=1).__class__ == i.__class__
+
+# TODO this test relies on ddr-defs, not test data...
+CHILD_MODELS_DATA = [
+    ('ddr', False, []),
+    ('ddr-test', False, []),
+    ('ddr-test-123', False, ['entity']),
+    ('ddr-test-123-456', False, ['segment', 'file']),
+    ('ddr-test-123-456-master', False, []),
+    ('ddr-test-123-456-master-abc123', False, []),
+    ('ddr', True, ['organization']),
+    ('ddr-test', True, ['collection']),
+    ('ddr-test-123', True, ['entity']),
+    ('ddr-test-123-456', True, ['file-role', 'segment']),
+    ('ddr-test-123-456-master', True, ['file']),
+    ('ddr-test-123-456-master-abc123', True, []),
+]
+def test_child_models():
+    for oid,stubs,expected in CHILD_MODELS_DATA:
+        assert identifier.Identifier(id=oid).child_models(stubs) == expected
 
 def test_child():
     i = identifier.Identifier(id='ddr-test-123')

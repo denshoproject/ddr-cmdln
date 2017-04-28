@@ -751,14 +751,16 @@ def add_ids(num_new, model, identifiers, startwith=None):
     
     @param num_new: int
     @param model: str
-    @param identifiers: list
+    @param identifiers: list of Identifiers
     @param startwith: int
     @returns: dict {'success', 'max_id', 'new', 'taken'}
     """
+    # TODO what if there is more than one ID_TEMPLATE???
+    template = ID_TEMPLATES[model][0]
     # Get name of the ID component from the model's ID_TEMPLATE
     # e.g. for Entity we want 'eid'
     # This is the part we will increment
-    component = _field_names(ID_TEMPLATES[model]).pop()
+    component = _field_names(template).pop()
     # then get {component} from each Identifier.parts
     existing = sorted([i.parts[component] for i in identifiers])
     max_id = existing[-1] + 1
