@@ -2,6 +2,7 @@ from datetime import datetime
 import os
 import shutil
 
+import config
 import storage
 
 BASEDIR = '/tmp/ddr-test-storage'
