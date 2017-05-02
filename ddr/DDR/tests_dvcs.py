@@ -102,8 +102,8 @@ def test_parse_cmp_commits():
     assert dvcs._parse_cmp_commits(log, A,B) == {'a':A, 'b':B, 'op':'lt'}
     assert dvcs._parse_cmp_commits(log, A,A) == {'a':A, 'b':A, 'op':'eq'}
     assert dvcs._parse_cmp_commits(log, B,A) == {'a':B, 'b':A, 'op':'gt'}
-    assert_raises(ValueError, dvcs._parse_cmp_commits, log, A,'123')
-    assert_raises(ValueError, dvcs._parse_cmp_commits, log, '123',B)
+    assert dvcs._parse_cmp_commits(log, A,'123') == {'a':A, 'b':'123', 'op':'b!'}
+    assert dvcs._parse_cmp_commits(log, '123',B) == {'a':'123', 'b':B, 'op':'a!'}
 
 # TODO cmp_commits
 
@@ -256,27 +256,6 @@ def test_annex_status():
                     found = True
     assert found
 
-GITANNEX_WHEREIS = """FATAL: ddr-testing-141.git ddr DENIED
-
-Command ssh ["git@mits.densho.org","git-annex-shell 'configlist' '/~/ddr-testing-141.git'
-FATAL: bad git-annex-shell command: git-annex-shell 'configlist' '/~/' at /home/git/gitol
-
-Command ssh ["git@mits.densho.org","git-annex-shell 'configlist' '/~/'"] failed; exit cod
-whereis files/ddr-testing-141-1/files/ddr-testing-141-1-master-96c048001e.pdf (2 copies) 
-  	643935ea-1cbe-11e3-afb5-3fb5a8f2a937 -- WD5000BMV-2
-   	a311a84a-4e48-11e3-ba9f-2fc2ce00326e -- pnr_tmp-ddr
-ok
-"""
-GITANNEX_WHEREIS = """whereis files/ddr-testing-141-1/files/ddr-testing-141-1-master-96c048001e.pdf (2 copies) 
-  	643935ea-1cbe-11e3-afb5-3fb5a8f2a937 -- WD5000BMV-2
-   	a311a84a-4e48-11e3-ba9f-2fc2ce00326e -- pnr_tmp-ddr
-ok
-"""
-GITANNEX_WHEREIS_EXPECTED = ['WD5000BMV-2', 'pnr_tmp-ddr']
-
-def test_annex_parse_whereis():
-    assert dvcs._annex_parse_whereis(GITANNEX_WHEREIS) == GITANNEX_WHEREIS_EXPECTED
-
 # TODO annex_whereis_file
 
 GITOLITE_INFO_OK = """hello ddr, this is git@mits running gitolite3 v3.2-19-gb9bbb78 on git 1.7.2.5
@@ -296,9 +275,9 @@ GITOLITE_REPOS_EXPECTED = ['ddr-densho', 'ddr-densho-1', 'ddr-testing', 'ddr-tes
 def test_gitolite_info_authorized():
     g = dvcs.Gitolite()
     g.info = GITOLITE_INFO_OK
-    assert g.authorized == True
+    assert g._authorized() == True
     g.info = ''
-    assert g.authorized == False
+    assert g._authorized() == False
 
 def test_gitolite_orgs():
     g = dvcs.Gitolite()
