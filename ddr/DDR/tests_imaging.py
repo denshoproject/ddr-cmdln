@@ -45,6 +45,9 @@ def _download_test_images():
         
 def test_analyze_magick():
     _download_test_images()
+    print(TEST_FILES['jpg']['path'])
+    print(TEST_FILES['tif']['path'])
+    print(TEST_FILES['pdf']['path'])
     jpeg = imaging.analyze(TEST_FILES['jpg']['path'])
     tiff = imaging.analyze(TEST_FILES['tif']['path'])
     pdf  = imaging.analyze(TEST_FILES['pdf']['path'])
@@ -108,7 +111,7 @@ def test_thumbnail():
 
 def test_extract_xmp():
     _download_test_images()
-    out0 = imaging.extract_xmp(TEST_FILES['jpg']['path'])
-    expected0 = '<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Exempi + XMP Core 5.1.2"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about=""/></rdf:RDF></x:xmpmeta>'
-    print(out0)
+    expected0 = '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Exempi + XMP Core 5.1.2"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about=""/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>'.strip()
+    out0 = imaging.extract_xmp(TEST_FILES['jpg']['path']).strip()
+    out0 = out0.replace(u'\ufeff', '')
     assert out0 == expected0
