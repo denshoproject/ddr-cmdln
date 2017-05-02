@@ -20,36 +20,36 @@ NOTE: You can disable tests requiring Elasticseach server:
 HOSTS = [{'host':'127.0.0.1', 'port':9200}]
 
 
-@attr('elasticsearch')
-def test_get_connection():
-    d = docstore.Docstore(hosts=HOSTS, index=None)
-    assert d.es
-    assert d.es.cat.client.ping() == True
+#@attr('elasticsearch')
+#def test_get_connection():
+#    d = docstore.Docstore(hosts=HOSTS, index=None)
+#    assert d.es
+#    assert d.es.cat.client.ping() == True
 
 def test_make_index_name():
     assert docstore.make_index_name('abc-def_ghi.jkl/mno\\pqr stu') == 'abc-def_ghi.jkl-mno-pqrstu'
     assert docstore.make_index_name('qnfs/kinkura/gold') == 'qnfs-kinkura-gold'
 
-# index_exists
-# index_names
-# create_index
-# delete_index
-@attr('elasticsearch')
-def test_index():
-    index = 'test%s' % datetime.now(config.TZ).strftime('%Y%m%d%H%M%S')
-    d = docstore.Docstore(HOSTS, index)
-    exists_initial = d.index_exists(index)
-    created = d.create_index()
-    names = d.index_names()
-    exists_created = d.index_exists(index)
-    deleted = d.delete_index(index)
-    exists_deleted = d.index_exists(index)
-    assert exists_initial == False
-    assert created == {u'acknowledged': True}
-    assert index in names
-    assert exists_created == True
-    assert deleted == {u'acknowledged': True}
-    assert exists_deleted == False
+## index_exists
+## index_names
+## create_index
+## delete_index
+#@attr('elasticsearch')
+#def test_index():
+#    index = 'test%s' % datetime.now(config.TZ).strftime('%Y%m%d%H%M%S')
+#    d = docstore.Docstore(HOSTS, index)
+#    exists_initial = d.index_exists(index)
+#    created = d.create_index()
+#    names = d.index_names()
+#    exists_created = d.index_exists(index)
+#    deleted = d.delete_index(index)
+#    exists_deleted = d.index_exists(index)
+#    assert exists_initial == False
+#    assert created == {u'acknowledged': True}
+#    assert index in names
+#    assert exists_created == True
+#    assert deleted == {u'acknowledged': True}
+#    assert exists_deleted == False
 
 # set_alias
 # target_index
@@ -100,14 +100,6 @@ def test_clean_controlled_vocab():
     assert docstore._clean_controlled_vocab(data4) == expected
     assert docstore._clean_controlled_vocab(data5) == expected
 
-def test_clean_parent():
-    data0 = 'ddr-testing-123'
-    data1 = {'href':'', 'uuid':'', 'label':'ddr-testing-123'}
-    expected0 = {'href': '', 'uuid': '', 'label': 'ddr-testing-123'}
-    expected1 = {'href': '', 'uuid': '', 'label': 'ddr-testing-123'}
-    assert docstore._clean_parent(data0) == expected0
-    assert docstore._clean_parent(data1) == expected1
-
 def test_clean_dict():
     d = {'a': 'abc', 'b': 'bcd', 'x':'' }
     docstore._clean_dict(d)
@@ -144,10 +136,11 @@ def test_clean_payload():
 # get
 
 def test_all_list_fields():
-    fields = docstore.all_list_fields()
-    expected = ['id', 'title', 'description', 'url', 'signature_file',
-                'basename_orig', 'label', 'access_rel', 'sort']
-    assert fields == expected
+    expected = [
+        'id', 'title', 'description', 'url',
+        'basename_orig', 'label', 'access_rel', 'sort'
+    ]
+    assert docstore.all_list_fields() == expected
 
 def test_validate_number():
     assert_raises(docstore.PageNotAnInteger, docstore._validate_number, None, 10)
@@ -303,9 +296,9 @@ def test_file_parent_ids():
     i0 = identifier.Identifier('ddr-testing-123')
     i1 = identifier.Identifier('ddr-testing-123-1')
     i2 = identifier.Identifier('ddr-testing-123-1-master-a1')
-    expected0 = []
-    expected1 = ['ddr-testing-123']
-    expected2 = ['ddr-testing-123', 'ddr-testing-123-1']
+    expected0 = [None, 'ddr-testing-123']
+    expected1 = ['ddr-testing-123', 'ddr-testing-123']
+    expected2 = ['ddr-testing-123-1', 'ddr-testing-123']
     assert docstore._file_parent_ids(i0) == expected0
     assert docstore._file_parent_ids(i1) == expected1
     assert docstore._file_parent_ids(i2) == expected2
