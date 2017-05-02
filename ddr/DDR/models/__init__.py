@@ -289,7 +289,7 @@ def apply_timezone(document, module):
         if mf['model_type'] == datetime:
             fieldname = mf['name']
             dt = getattr(document, fieldname)
-            if dt and (not dt.tzinfo):
+            if dt and isinstance(dt, datetime) and (not dt.tzinfo):
                 # Use default timezone unless...
                 if document.identifier.idparts['org'] in config.ALT_TIMEZONES.keys():
                     timezone = config.ALT_TIMEZONES[document.identifier.idparts['org']]
