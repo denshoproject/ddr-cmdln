@@ -48,14 +48,14 @@ def read_old_entry(txt):
              'messages':messages,}
     return entry
 
-SAMPLE_NEW_CHANGELOG = """2013-10-01 14:33:35 -- Geoffrey Jost <geoffrey.jost@densho.org>
+SAMPLE_NEW_CHANGELOG = """2013-10-01T14:33:35 -- Geoffrey Jost <geoffrey.jost@densho.org>
 * Added entity file files/ddr-testing-160-1-master-c703e5ece1-a.jpg
 
-2013-10-02 10:10:45 -- Geoffrey Jost <geoffrey.jost@densho.org>
+2013-10-02T10:10:45 -- Geoffrey Jost <geoffrey.jost@densho.org>
 * Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/entity.json
 * Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/mets.xml
 
-2013-10-02 10:11:08 -- Geoffrey Jost <geoffrey.jost@densho.org>
+2013-10-02T10:11:08 -- Geoffrey Jost <geoffrey.jost@densho.org>
 * Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/files/ddr-testing-160-1-master-c703e5ece1.json
 """
 
@@ -63,7 +63,7 @@ def is_new_entry(txt):
     """Indicate whether this is a new entry.
     
     Sample:
-    2013-10-01 14:33:35 -- Geoffrey Jost <geoffrey.jost@densho.org>
+    2013-10-01T14:33:35 -- Geoffrey Jost <geoffrey.jost@densho.org>
     * Added entity file files/ddr-testing-160-1-master-c703e5ece1-a.jpg
     """
     try:
