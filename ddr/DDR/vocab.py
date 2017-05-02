@@ -518,8 +518,11 @@ class Term( object ):
                 for t in getattr(self, key):
                     val.append(t.id)
             elif (key in ['created', 'modified']):
-                if val:
-                    val = converters.text_to_datetime(val)
+                val_before = val
+                if isinstance(val, datetime):
+                    val = converters.datetime_to_text(val)
+                elif isinstance(val, basestring):
+                    pass
                 else:
                     val = None
             data[key] = val
