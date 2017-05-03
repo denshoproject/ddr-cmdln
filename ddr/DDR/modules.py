@@ -154,7 +154,13 @@ class Module(object):
                 )
                 lv.append( {'label':label, 'value':value,} )
         return lv
-
+    
+    def field_choices(self, field_name):
+        for f in self.module.FIELDS:
+            if (f['name'] == field_name) and (f['form'].get('choices')):
+                return f['form']['choices']
+        return None
+    
     def _parse_commit(self, text):
         return text.strip().split(' ')[0]
     
@@ -176,6 +182,8 @@ class Module(object):
         the results.
         Note: if a document has no defs commit it is considered older
         than the module.
+        NOTE: commit may not be found in log if definitions were on a
+        branch at the time the document was committed.
         
         @param document: A Collection, Entity, or File object.
         @returns: dict See DDR.dvcs.cmp_commits

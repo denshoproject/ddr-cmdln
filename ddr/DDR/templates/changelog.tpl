@@ -1,2 +1,2 @@
 {changes}
--- {user} <{email}>  {date}
+-- {user} <{email}>  {date} 

@@ -2,6 +2,7 @@ from datetime import datetime
 import os
 import shutil
 
+import config
 import util
 
 
@@ -98,7 +99,7 @@ def test_natural_order_string():
     assert util.natural_order_string('ddr-testing-123-15') == '15'
 
 def test_file_hash():
-    path = '/tmp/test-hash-%s' % datetime.now().strftime('%Y%m%dT%H%M%S')
+    path = '/tmp/test-hash-%s' % datetime.now(config.TZ).strftime('%Y%m%dT%H%M%S')
     text = 'hash'
     sha1 = '2346ad27d7568ba9896f1b7da6b5991251debdf2'
     sha256 = 'd04b98f48e8f8bcc15c6ae5ac050801cd6dcfd428fb5f9e65c4e16e7807340fa'

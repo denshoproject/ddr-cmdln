@@ -41,7 +41,6 @@ def test_objects():
     
     music = index.get(id=1)
     assert index._parent(music) == None
-    print('index._siblings(music) %s' % index._siblings(music))
     assert index._siblings(music) == []
     assert len(index._children(music)) == 3
     
@@ -112,16 +111,16 @@ TERMS_CSV = """
 "title","Music"
 "description","genres of music"
 "id","_title","title","parent_id","weight","created","modified","encyc_urls","description"
-"1","music","Music","0","0","2015-10-29T15:52:00","2015-10-29T15:52:00","","descr"
-"2","classical","Classical","1","0","2015-10-29T15:52:00","2015-10-29T15:52:00","","descr"
-"3","jazz","Jazz","1","0","2015-10-29T15:52:00","2015-10-29T15:52:00","","descr"
-"4","electronic","Electronic","1","0","2015-10-29T15:52:00","2015-10-29T15:52:00","","descr"
-"5","romantic","Romantic","2","0","2015-10-29T15:52:00","2015-10-29T15:52:00","","descr"
-"6","modern","Modern","2","0","2015-10-29T15:52:00","2015-10-29T15:52:00","","descr"
-"7","traditional","Traditional","3","0","2015-10-29T15:52:00","2015-10-29T15:52:00","","descr"
-"8","fusion","Fusion","3","0","2015-10-29T15:52:00","2015-10-29T15:52:00","","descr"
-"9","dance","Dance","4","0","2015-10-29T15:52:00","2015-10-29T15:52:00","","descr"
-"10","experimental","Experimental","4","0","2015-10-29T15:52:00","2015-10-29T15:52:00","","descr"
+"1","music","Music","0","0","2015-10-29 15:52:00","2015-10-29 15:52:00","","descr"
+"2","classical","Classical","1","0","2015-10-29 15:52:00","2015-10-29 15:52:00","","descr"
+"3","jazz","Jazz","1","0","2015-10-29 15:52:00","2015-10-29 15:52:00","","descr"
+"4","electronic","Electronic","1","0","2015-10-29 15:52:00","2015-10-29 15:52:00","","descr"
+"5","romantic","Romantic","2","0","2015-10-29 15:52:00","2015-10-29 15:52:00","","descr"
+"6","modern","Modern","2","0","2015-10-29 15:52:00","2015-10-29 15:52:00","","descr"
+"7","traditional","Traditional","3","0","2015-10-29 15:52:00","2015-10-29 15:52:00","","descr"
+"8","fusion","Fusion","3","0","2015-10-29 15:52:00","2015-10-29 15:52:00","","descr"
+"9","dance","Dance","4","0","2015-10-29 15:52:00","2015-10-29 15:52:00","","descr"
+"10","experimental","Experimental","4","0","2015-10-29 15:52:00","2015-10-29 15:52:00","","descr"
 """
 
 TERMS_TEXT = """

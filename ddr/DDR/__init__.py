@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def format_json(data):
+def format_json(data, sort_keys=True):
     """Write JSON using consistent formatting and sorting.
     
     For versioning and history to be useful we need data fields to be written
@@ -23,7 +23,7 @@ def format_json(data):
     ...
     ['{\n', '    "a": 1,\n', '    "b": 2\n', '}']
     """
-    return json.dumps(data, indent=4, separators=(',', ': '), sort_keys=True)
+    return json.dumps(data, indent=4, separators=(',', ': '), sort_keys=sort_keys)
 
 
 class Timer( object ):
@@ -41,7 +41,7 @@ class Timer( object ):
     steps = []
     
     def mark( self, msg ):
-        now = datetime.now()
+        now = datetime.now(config.TZ)
         index = len(self.steps)
         if index:
             delta = now - self.steps[-1]['datetime']

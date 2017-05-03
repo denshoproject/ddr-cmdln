@@ -1,5 +1,6 @@
 # git and git-annex code
 
+from datetime import datetime
 import json
 import logging
 logger = logging.getLogger(__name__)
@@ -94,9 +95,9 @@ def _parse_cmp_commits(gitlog, a, b):
     }
     commits = gitlog.strip().split('\n')
     commits.reverse()
-    if a not in commits: raise ValueError("A (%s) is not in log" % a)
-    elif b not in commits: raise ValueError("B (%s) is not in log" % b)
-    if commits.index(a) < commits.index(b): result['op'] = 'lt'
+    if   a not in commits: result['op'] = 'a!' # App source was on unmerged
+    elif b not in commits: result['op'] = 'b!' # branch when doc committed.
+    elif commits.index(a) < commits.index(b): result['op'] = 'lt'
     elif commits.index(a) == commits.index(b): result['op'] = 'eq'
     elif commits.index(a) > commits.index(b): result['op'] = 'gt'
     else: result['op'] = '--'
@@ -132,6 +133,26 @@ def cmp_commits(repo, a, b, abbrev=False):
     return _parse_cmp_commits(repo.git.log(fmt), a, b)
 
 # git diff
+
+def _parse_list_untracked( text='' ):
+    """Parses output of "git status --short".
+    """
+    return [
+        line.split(' ')[1]
+        for line in text.strip().split('\n')[1:]
+        if ('??' in line)
+    ]
+
+def list_untracked(repo):
+    """Returns list of untracked files
+    
+    Works for git-annex files just like for regular files.
+    
+    @param repo: A Gitpython Repo object
+    @return: List of filenames
+    """
+    stdout = repo_status(repo, short=True)
+    return _parse_list_untracked(stdout)
 
 def _parse_list_modified( diff ):
     """Parses output of "git stage --name-only".
@@ -404,6 +425,30 @@ def commit(repo, msg, agent):
     commit_message = compose_commit_message(msg, agent=agent)
     commit = repo.index.commit(commit_message)
     return commit
+
+def reset(repo):
+    """Resets all staged files in repo."""
+    return repo.git.reset('HEAD')
+
+def revert(repo):
+    """Reverts all modified files in repo."""
+    return repo.git.checkout('--', '.')
+
+def remove_untracked(repo):
+    """Deletes all untracked files in the repo."""
+    out = []
+    untracked_paths = [
+        os.path.join(repo.working_dir, p)
+        for p in list_untracked(repo)
+    ]
+    for untracked in untracked_paths:
+        try:
+            os.remove(untracked)
+            out.append('OK %s' % untracked)
+        except:
+            out.append('FAIL %s' % untracked)
+    return out
+
 
 # git merge ------------------------------------------------------------
 
@@ -763,7 +808,13 @@ def annex_get_description(repo, annex_status):
     @param annex_status: dict Output of dvcs.annex_status.
     @return String description or None
     """
-    return _annex_parse_description(annex_status, repo.git.config('annex.uuid'))
+    # TODO 
+    try:
+        uuid = repo.git.config('annex.uuid')
+    except:
+        uuid = 'unknown-annex-uuid'
+        logging.error('UNKNOWN ANNEX UUID')
+    return _annex_parse_description(annex_status, uuid)
 
 def _annex_make_description( drive_label=None, hostname=None, partner_host=None, mail=None ):
     description = None
@@ -836,22 +887,19 @@ def annex_status(repo):
         return data
     return None
 
-def _annex_parse_whereis( annex_whereis_stdout ):
-    lines = annex_whereis_stdout.strip().split('\n')
-    # chop off anything before whereis line
-    startline = -1
-    for n,line in enumerate(lines):
-        if 'whereis' in line:
-            startline = n
-    lines = lines[startline:]
-    remotes = []
-    if ('whereis' in lines[0]) and ('ok' in lines[-1]):
-        num_copies = int(lines[0].split(' ')[2].replace('(',''))
-        logging.debug('    {} copies'.format(num_copies))
-        remotes = [line.split('--')[1].strip() for line in lines[1:-1]]
-    return remotes
+def annex_info(repo):
+    """
+    """
+    data = json.loads(repo.git.annex('info', '--fast', '--json'))
+    data['timestamp'] = datetime.now()
+    all_repos = data['trusted repositories'] \
+                + data['untrusted repositories'] \
+                + data['semitrusted repositories']
+    # might be more than one 'here'?
+    data['here'] = [r['uuid'] for r in all_repos if r['here']]
+    return data
 
-def annex_whereis_file(repo, file_path_rel):
+def annex_whereis_file(repo, file_path_rel, info=None):
     """Show remotes that the file appears in
     
     $ git annex whereis files/ddr-testing-201303051120-1/files/20121205.jpg
@@ -860,15 +908,34 @@ def annex_whereis_file(repo, file_path_rel):
             c1b41078-85c9-11e2-bad2-17e365f14d89 -- here
     ok
     
+    {
+        u'command': u'whereis',
+        u'file': u'files/ddr-njpa-4-1/files/ddr-njpa-4-1-master-0c90a8e5c7.tif',
+        u'success': True,
+        u'note': u'...RAW TEXT OUTPUT...',
+        u'whereis': [
+            {u'uuid': u'5d026e8a-f0b8-11e3-b2f2-2f3b74f26f08', u'here': False, u'description': u'qnfs'},
+            ...
+        ],
+        u'untrusted': []
+    }
+
     @param repo: A GitPython Repo object
     @param collection_uid: A valid DDR collection UID
-    @return: List of names of remote repositories.
+    @return: dict
     """
-    stdout = repo.git.annex('whereis', file_path_rel)
-    print('----------')
-    print(stdout)
-    print('----------')
-    return _annex_parse_whereis(stdout)
+    data = json.loads(repo.git.annex('whereis', '--json', file_path_rel))
+    data['timestamp'] = datetime.now()
+    # mark this repo
+    if not info:
+        info = annex_info(repo)
+    for r in data['whereis']:
+        if r['uuid'] in info['here']: r['this'] = True
+        else: r['this'] = False
+    for r in data['untrusted']:
+        if r['uuid'] in info['here']: r['this'] = True
+        else: r['this'] = False
+    return data
 
 def annex_trim(repo, confirmed=False):
     """Drop full-size binaries from a repository.
@@ -937,145 +1004,188 @@ def annex_file_targets(repo, relative=False ):
     return paths
 
 
-# cgit -----------------------------------------------------------------
-
-def cgit_collection_title(repo, session, timeout=5):
-    """Gets collection title from CGit
+class Cgit():
+    url = None
     
-    Requests plain blob of collection.json, reads 'title' field.
-    PROBLEM: requires knowledge of repository internals.
+    def __init__(self, cgit_url=config.CGIT_URL):
+        self.url = cgit_url
     
-    @param repo: str Repository name
-    @param session: requests.Session
-    @param timeout: int
-    @returns: str Repository collection title
-    """
-    title = '---'
-    URL_TEMPLATE = '%s/cgit.cgi/%s/plain/collection.json'
-    url = URL_TEMPLATE % (config.CGIT_URL, repo)
-    logging.debug(url)
-    try:
-        r = session.get(url, timeout=timeout)
-        logging.debug(str(r.status_code))
-    except requests.ConnectionError:
-        r = None
-        title = '[ConnectionError]'
-    data = None
-    if r and r.status_code == 200:
+    def collection_title(self, repo, session, timeout=5):
+        """Gets collection title from CGit
+        
+        Requests plain blob of collection.json, reads 'title' field.
+        PROBLEM: requires knowledge of repository internals.
+        
+        @param repo: str Repository name
+        @param session: requests.Session
+        @param timeout: int
+        @returns: str Repository collection title
+        """
+        title = '---'
+        URL_TEMPLATE = '%s/cgit.cgi/%s/plain/collection.json'
+        url = URL_TEMPLATE % (self.url, repo)
+        logging.debug(url)
         try:
-            data = json.loads(r.text)
-        except ValueError:
-            title = '[no data]'
-    if data:
-        for field in data:
-            if field and field.get('title', None) and field['title']:
-                title = field['title']
-    logging.debug('%s: "%s"' % (repo,title))
-    return title
+            r = session.get(url, timeout=timeout)
+            logging.debug(str(r.status_code))
+        except requests.ConnectionError:
+            r = None
+            title = '[ConnectionError]'
+        data = None
+        if r and r.status_code == 200:
+            try:
+                data = json.loads(r.text)
+            except ValueError:
+                title = '[no data]'
+        if data:
+            for field in data:
+                if field and field.get('title', None) and field['title']:
+                    title = field['title']
+        logging.debug('%s: "%s"' % (repo,title))
+        return title
 
 
-# gitolite -------------------------------------------------------------
-
-def _gitolite_info_authorized(gitolite_out):
-    """Parse Gitolite server response, indicate whether user is authorized
+class Gitolite(object):
+    """Access information about Gitolite server
     
-    http://gitolite.com/gitolite/user.html#info
-    "The only command that is always available to every user is the info command
-    (run ssh git@host info -h for help), which tells you what version of gitolite
-    and git are on the server, and what repositories you have access to. The list
-    of repos is very useful if you have doubts about the spelling of some new repo
-    that you know was setup."
-    Sample output:
-        hello gjost, this is git@mits running gitolite3 v3.2-19-gb9bbb78 on git 1.7.2.5
+    >>> gitolite = dvcs.Gitolite(config.GITOLITE)
+    >>> gitolite.initialize()
+    >>> gitolite.connected
+    True
+    >>> gitolite.authorized
+    True
+    >>> gitolite.orgs()
+    ['ddr-densho', 'ddr-testing']
+    >>> gitolite.repos()
+    ['ddr-densho-1', 'ddr-densho-2', 'ddr-densho-3']
+    >>> gitolite.collection_titles(USERNAME, PASSWORD)
+    [('ddr-test-1', 'A Collection'), ('ddr-test-2', 'Another Collection')]
+    """
+    server = None
+    timeout = None
+    info = None
+    connected = None
+    authorized = None
+    
+    def __init__(self, server=config.GITOLITE, timeout=60):
+        """
+        @param server: USERNAME@DOMAIN
+        @param timeout: int Maximum seconds to wait for reponse
+        """
+        self.server = server
+        self.timeout = timeout
+    
+    def __repr__(self):
+        status = []
+        if self.info: status.append('Init')
+        else: status.append('noinit')
+        if self.connected: status.append('Conn')
+        else: status.append('noconn')
+        if self.authorized: status.append('Auth')
+        else: status.append('noauth')
+        return "<%s.%s %s %s>" % (
+            self.__module__, self.__class__.__name__,
+            self.server, ','.join(status)
+        )
+    
+    def initialize(self):
+        """Connect to Gitolite server.
+        """
+        cmd = 'ssh {} info'.format(self.server)
+        logging.debug('        {}'.format(cmd))
+        r = envoy.run(cmd, timeout=int(self.timeout))
+        logging.debug('        {}'.format(r.status_code))
+        self.status = r.status_code
+        if self.status == 0:
+            self.info = r.std_out
+            self.connected = True
+            self.authorized = self._authorized()
+        else:
+            self.connected = False
+    
+    def _authorized(self):
+        """Parse Gitolite server response, indicate whether user is authorized
         
-         R W C  ddr-densho-[0-9]+
-         R W C  ddr-densho-[0-9]+-[0-9]+
-         R W C  ddr-dev-[0-9]+
-        ...
-    
-    @param gitolite_out: raw Gitolite output from SSH
-    @returns: boolean
-    """
-    lines = gitolite_out.split('\n')
-    if lines and len(lines) and ('this is git' in lines[0]) and ('running gitolite' in lines[0]):
-        logging.debug('        OK ')
-        return True
-    logging.debug('        NO CONNECTION')
-    return False
-
-def gitolite_connect_ok(server):
-    """See if we can connect to gitolite server.
-    
-    We should do some lightweight operation, just enough to make sure we can connect.
-    But we can't ping.
+        http://gitolite.com/gitolite/user.html#info
+        "The only command that is always available to every user is the info command
+        (run ssh git@host info -h for help), which tells you what version of gitolite
+        and git are on the server, and what repositories you have access to. The list
+        of repos is very useful if you have doubts about the spelling of some new repo
+        that you know was setup."
+        Sample output:
+            hello gjost, this is git@mits running gitolite3 v3.2-19-gb9bbb78 on git 1.7.2.5
+            
+             R W C  ddr-densho-[0-9]+
+             R W C  ddr-densho-[0-9]+-[0-9]+
+             R W C  ddr-dev-[0-9]+
+            ...
         
-    @param server: USERNAME@DOMAIN
-    @return: True or False
-    """
-    logging.debug('    DDR.commands.gitolite_connect_ok()')
-    return _gitolite_info_authorized(gitolite_info(server))
+        @returns: boolean
+        """
+        lines = self.info.split('\n')
+        if lines and len(lines) and ('this is git' in lines[0]) and ('running gitolite' in lines[0]):
+            logging.debug('        OK ')
+            return True
+        logging.debug('        NO CONNECTION')
+        return False
+    
+    def orgs(self):
+        """Returns list of orgs to which user has access
+        
+        @returns: list of organization IDs
+        """
+        repos_orgs = []
+        for line in self.info.split('\n'):
+            if 'R W C' in line:
+                parts = line.replace('R W C', '').strip().split('-')
+                repo_org = '-'.join([parts[0], parts[1]])
+                if repo_org not in repos_orgs:
+                    repos_orgs.append(repo_org)
+        return repos_orgs
+    
+    def repos(self):
+        """Returns list of repos to which user has access
+        
+        @param gitolite_out: raw output of gitolite_info()
+        @returns: list of repo names
+        """
+        repos = []
+        for line in self.info.split('\n'):
+            if ('R W' in line) and not ('R W C' in line):
+                repo = line.strip().split('\t')[1]
+                if repo not in repos:
+                    repos.append(repo)
+        return repos
 
-def gitolite_orgs( gitolite_out ):
-    """Returns list of orgs to which user has access
-    
-    @param gitolite_out: raw output of gitolite_info()
-    @returns: list of organization IDs
-    """
-    repos_orgs = []
-    for line in gitolite_out.split('\n'):
-        if 'R W C' in line:
-            parts = line.replace('R W C', '').strip().split('-')
-            repo_org = '-'.join([parts[0], parts[1]])
-            if repo_org not in repos_orgs:
-                repos_orgs.append(repo_org)
-    return repos_orgs
+    def collections(self, org_id=''):
+        """List collections, optionally filtering by organization ID
+        
+        @param something: str
+        @returns: list
+        """
+        if org_id:
+            return [
+                repo
+                for repo in self.repos()
+                if org_id in repo
+            ]
+        return self.repos()
 
-def gitolite_repos( gitolite_out ):
-    """Returns list of repos to which user has access
-    
-    @param gitolite_out: raw output of gitolite_info()
-    @returns: list of repo names
-    """
-    repos = []
-    for line in gitolite_out.split('\n'):
-        if ('R W' in line) and not ('R W C' in line):
-            repo = line.strip().split('\t')[1]
-            if repo not in repos:
-                repos.append(repo)
-    return repos
-
-def gitolite_info(server, timeout=60):
-    """
-    @param server: USERNAME@DOMAIN
-    @param timeout: int Maximum seconds to wait for reponse
-    @return: raw Gitolite output from SSH
-    """
-    cmd = 'ssh {} info'.format(server)
-    logging.debug('        {}'.format(cmd))
-    r = envoy.run(cmd, timeout=int(timeout))
-    logging.debug('        {}'.format(r.status_code))
-    status = r.status_code
-    if r.status_code != 0:
-        raise Exception('Bad reply from Gitolite server: %s' % r.std_err)
-    return r.std_out
-
-def gitolite_collection_titles(repos, username=None, password=None, timeout=5):
-    """Returns IDs:titles dict for all collections to which user has access.
-    
-    >>> gitolite_out = dvcs.gitolite_info(SERVER)
-    >>> repos = dvcs.gitolite_repos(gitolite_out)
-    >>> collections = dvcs.cgit_collection_titles(repos, USERNAME, PASSWORD)
-    
-    TODO Page through the Cgit index pages (fewer HTTP requests)?
-    TODO Set REPO/.git/description to collection title, read via Gitolite?
-    
-    @param repos: list of repo names
-    @param username: str [optional] Cgit server HTTP Auth username
-    @param password: str [optional] Cgit server HTTP Auth password
-    @param timeout: int Timeout for getting individual collection info
-    @returns: list of (repo,title) tuples
-    """
-    session = requests.Session()
-    session.auth = (username,password)
-    collections = [(repo,cgit_collection_title(repo,session,timeout)) for repo in repos]
-    return collections
+    def collection_titles(self, username, password, timeout=5):
+        """Returns IDs:titles dict for all collections to which user has access.
+        
+        TODO Page through the Cgit index pages (fewer HTTP requests)?
+        TODO Set REPO/.git/description to collection title, read via Gitolite?
+        
+        @param username: str [optional] Cgit server HTTP Auth username
+        @param password: str [optional] Cgit server HTTP Auth password
+        @param timeout: int Timeout for getting individual collection info
+        @returns: list of (repo,title) tuples
+        """
+        session = requests.Session()
+        session.auth = (username,password)
+        collections = [
+            (repo,Cgit().collection_title(repo,session,timeout))
+            for repo in self.repos()
+        ]
+        return collections

@@ -95,7 +95,6 @@ Example:
     parser_ccre.add_argument('-u', '--user',       required=True, help='User name')
     parser_ccre.add_argument('-m', '--mail',       required=True, help='User e-mail address')
     parser_ccre.add_argument('-c', '--collection', required=True, help='Absolute file path to the collection')
-    parser_ccre.add_argument('-t', '--templates',  required=True, help='List of metadata template files (absolute paths)')
     
     # clone
     clon_descr,clon_epilog = split_docstring(clone)
@@ -290,54 +289,48 @@ Example:
         logging.basicConfig(format=LOGGING_FORMAT, datefmt=LOGGING_DATEFMT, level=logging.DEBUG, filename=args.log)
 
     cidentifier = None
-    collection = None
     if hasattr(args, 'collection'):
         cidentifier = Identifier(args.collection, MEDIA_BASE)
-        collection = Collection.from_identifier(cidentifier)
     elif hasattr(args, 'cid'):
         cidentifier = Identifier(args.cid, MEDIA_BASE)
-        collection = Collection.from_identifier(cidentifier)
     
     eidentifier = None
-    entity = None
     if hasattr(args, 'entity'):
         eidentifier = Identifier(args.entity, MEDIA_BASE)
-        entity = Entity.from_identifier(eidentifier)
     
     # call selected function
     #exit,msg = args.func(args)
     if   args.cmd == 'status':
-        msg = status(collection)
+        msg = status(cidentifier.object())
         exit = 0
         print(msg)
     elif args.cmd == 'astatus':
-        msg = annex_status(collection)
+        msg = annex_status(cidentifier.object())
         exit = 0
         print(msg)
     elif args.cmd == 'create':
-        templates = args.templates.strip().split(',')
-        exit,msg = create(args.user, args.mail, cidentifier, templates, agent=AGENT)
+        exit,msg = Collection.new(cidentifier, args.user, args.mail, agent=AGENT)
     elif args.cmd == 'update':
         files = args.files.strip().split(',')
-        exit,msg = update(args.user, args.mail, collection, files, agent=AGENT)
+        exit,msg = update(args.user, args.mail, cidentifier.object(), files, agent=AGENT)
     elif args.cmd == 'ecreate':
         templates = args.templates.strip().split(',')
         files = args.files.strip().split(',')
-        exit,msg = entity_create(args.user, args.mail, collection, eidentifier, templates, files, agent=AGENT)
+        exit,msg = entity_create(args.user, args.mail, cidentifier.object(), eidentifier, templates, files, agent=AGENT)
     elif args.cmd == 'eupdate':
         files = args.files.strip().split(',')
-        exit,msg = entity_update(args.user, args.mail, collection, entity, files, agent=AGENT)
+        exit,msg = entity_update(args.user, args.mail, cidentifier.object(), eidentifier.object(), files, agent=AGENT)
     elif args.cmd == 'eadd':
         files = args.files.strip().split(',')
         annex = args.annex.strip().split(',')
-        exit,msg = entity_annex_add(args.user,args.mail,collection, entity, files, annex, agent=AGENT)
-    elif args.cmd == 'destroy':  exit,msg = destroy(args.user, args.mail, collection, agent=AGENT)
-    elif args.cmd == 'edestroy': exit,msg = entity_destroy(args.user, args.mail, collection, entity, agent=AGENT)
+        exit,msg = entity_annex_add(args.user,args.mail,cidentifier.object(), eidentifier.object(), files, annex, agent=AGENT)
+    elif args.cmd == 'destroy':  exit,msg = destroy(args.user, args.mail, cidentifier.object(), agent=AGENT)
+    elif args.cmd == 'edestroy': exit,msg = entity_destroy(args.user, args.mail, cidentifier.object(), eidentifier.object(), agent=AGENT)
     elif args.cmd == 'clone':
         exit,msg = clone(args.user, args.mail, cidentifier, args.dest)
-    elif args.cmd == 'sync':     exit,msg = sync(args.user, args.mail, collection)
-    elif args.cmd == 'push':     exit,msg = annex_push(collection, args.file)
-    elif args.cmd == 'pull':     exit,msg = annex_pull(collection, args.file)
+    elif args.cmd == 'sync':     exit,msg = sync(args.user, args.mail, cidentifier.object())
+    elif args.cmd == 'push':     exit,msg = annex_push(cidentifier.object(), args.file)
+    elif args.cmd == 'pull':     exit,msg = annex_pull(cidentifier.object(), args.file)
     elif args.cmd == 'syncgrp':
         exit,msg = sync_group(args.groupfile, args.locbase, args.locname, args.rembase, args.remname)
     elif args.cmd == 'devices':

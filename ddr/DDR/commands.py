@@ -1,4 +1,3 @@
-from datetime import datetime
 from functools import wraps
 import logging
 import os
@@ -26,9 +25,11 @@ def requires_network(f):
     """
     @wraps(f)
     def wrapper(*args, **kwargs):
-        if not dvcs.gitolite_connect_ok(config.GITOLITE):
-            logging.error('Cannot connect to git server {}'.format(config.GITOLITE))
-            return 1,'cannot connect to git server {}'.format(config.GITOLITE)
+        gitolite = dvcs.Gitolite(config.GITOLITE)
+        gitolite.initialize()
+        if not gitolite.connected:
+            logging.error('Cannot connect to git server {}'.format(gitolite.server))
+            return 1,'cannot connect to git server {}'.format(gitolite.server)
         return f(*args, **kwargs)
     return wrapper
 
@@ -221,6 +222,10 @@ def create(user_name, user_mail, identifier, templates, agent=''):
     @param agent: (optional) Name of software making the change.
     @return: message ('ok' if successful)
     """
+    gitolite = dvcs.Gitolite(config.GITOLITE)
+    gitolite.initialize()
+    if identifier.id in gitolite.collections():
+        raise Exception("'%s' already exists -- clone instead." % identifier.id)
     git_url = '{}:{}.git'.format(config.GITOLITE, identifier.id)
     repo = git.Repo.clone_from(git_url, identifier.path_abs())
     logging.debug('    git clone {}'.format(git_url))
@@ -352,7 +357,7 @@ def fetch(collection):
 
 @command
 @local_only
-def update(user_name, user_mail, collection, updated_files, agent=''):
+def update(user_name, user_mail, collection, updated_files, agent='', commit=False):
     """Command-line function for commiting changes to the specified file.
     
     NOTE: Does not push to the workbench server.
@@ -361,6 +366,7 @@ def update(user_name, user_mail, collection, updated_files, agent=''):
     @param collection: Collection
     @param updated_files: List of relative paths to updated file(s).
     @param agent: (optional) Name of software making the change.
+    @param commit: (optional) Commit files after staging them.
     @return: message ('ok' if successful)
     """
     repo = dvcs.repository(collection.path, user_name, user_mail)
@@ -386,8 +392,9 @@ def update(user_name, user_mail, collection, updated_files, agent=''):
     else:
         logging.error('    COULD NOT UPDATE changelog')
     
-    # add files and commit
-    repo = commit_files(repo, commit_message, updated_files, [])
+    if commit:
+        # add files and commit
+        repo = commit_files(repo, commit_message, updated_files, [])
     return 0,'ok'
 
 
@@ -586,7 +593,7 @@ def entity_destroy(user_name, user_mail, collection, entity, agent=''):
 
 @command
 @local_only
-def file_destroy(user_name, user_mail, collection, entity, rm_files, updated_files, agent=''):
+def file_destroy(user_name, user_mail, collection, entity, rm_files, updated_files, agent='', commit=True):
     """Command-line function for creating an entity and adding it to the collection.
     
     - check that paths exist, etc
@@ -602,7 +609,8 @@ def file_destroy(user_name, user_mail, collection, entity, rm_files, updated_fil
     @param rm_files: List of paths to files to delete (relative to entity files dir).
     @param updated_files: List of paths to updated file(s), relative to entitys.
     @param agent: (optional) Name of software making the change.
-    @return: message ('ok' if successful)
+    @param commit: (optional) Commit files after staging them.
+    @return: exit,message,touched_files ('ok' if successful)
     """
     repo = dvcs.repository(collection.path, user_name, user_mail)
     repo.git.checkout('master')
@@ -639,13 +647,14 @@ def file_destroy(user_name, user_mail, collection, entity, rm_files, updated_fil
     
     # add files and commit
     commit_message = dvcs.compose_commit_message('Deleted entity file(s)', agent=agent)
-    repo = commit_files(repo, commit_message, git_files, [])
-    return 0,'ok'
+    if commit:
+        repo = commit_files(repo, commit_message, git_files, [])
+    return 0,'ok',git_files
 
 
 @command
 @local_only
-def entity_update(user_name, user_mail, collection, entity, updated_files, agent=''):
+def entity_update(user_name, user_mail, collection, entity, updated_files, agent='', commit=True):
     """Command-line function for committing changes to the specified entity file.
     
     NOTE: Does not push to the workbench server.
@@ -658,6 +667,7 @@ def entity_update(user_name, user_mail, collection, entity, updated_files, agent
     @param entity: Entity
     @param updated_files: List of paths to updated file(s), relative to entitys.
     @param agent: (optional) Name of software making the change.
+    @param commit: (optional) Commit files after staging them.
     @return: message ('ok' if successful)
     """
     repo = dvcs.repository(collection.path, user_name, user_mail)
@@ -684,8 +694,9 @@ def entity_update(user_name, user_mail, collection, entity, updated_files, agent
                           entity_changelog_messages,
                           user=user_name, email=user_mail)
     git_files.append(entity.changelog_path_rel)
-    # add files and commit
-    repo = commit_files(repo, commit_message, git_files, [])
+    if commit:
+        # add files and commit
+        repo = commit_files(repo, commit_message, git_files, [])
     return 0,'ok'
 
 
@@ -806,9 +817,11 @@ def annex_push(collection, file_path_rel):
     stdout = repo.git.annex('copy', '-t', config.GIT_REMOTE_NAME, file_path_rel)
     logging.debug('\n{}'.format(stdout))
     # confirm that it worked
-    remotes = dvcs.annex_whereis_file(repo, file_path_rel)
-    logging.debug('    present in remotes {}'.format(remotes))
-    logging.debug('    it worked: {}'.format(config.GIT_REMOTE_NAME in remotes))
+    whereis = dvcs.annex_whereis_file(repo, file_path_rel)
+    if whereis['success']:
+        remotes = [r['description'] for r in whereis['whereis'] if not r['here']]
+        logging.debug('    present in remotes {}'.format(remotes))
+        logging.debug('    it worked: {}'.format(config.GIT_REMOTE_NAME in remotes))
     logging.debug('    DONE')
     return 0,'ok'
 

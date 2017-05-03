@@ -2,17 +2,23 @@
 
 # Non-Python dependencies
 # sudo apt-get install imagemagick libexempi3 libxml2-dev python-dev pmount udisks
+# Elasticsearch 2.4.3
 
-                          # LICENSE   DEBIAN PKG (WHEEZY)              (JESSIE)                       Python3
+                          # LICENSE      Python3  PyPy
 
-beautifulsoup4==4.3.2     # MIT       python-beautifulsoup (3.2.1-1)   python-beautifulsoup (3.2.1-1) y
-python-dateutil==2.2      # BSD       python-dateutil (1.5+dfsg-0.1)   python-dateutil (1.5+dfsg-1)   y
-elasticsearch==1.2.0      # Apache    n/a                              n/a                            y
-envoy==0.0.3              # MIT       n/a                              n/a                            y
-GitPython==0.3.2.RC1      # BSD       python-git (0.3.2~RC1-1)         python-git (0.3.2~RC1-3)       NO
-psutil==2.2.1             # BSD                                                                       y
-python-xmp-toolkit==2.0.1 # New BSD   n/a                              (sid) python-libxmp (v?)       y
-lxml==3.3.5               # BSD       python-lxml (2.3.2-1+deb7u1)     python-lxml (3.3.5-1+b1)       y
-pytz==2014.4              # MIT       python-tz (2012c-1)              python-tz (2012c-1)            y
-requests==2.9.0           # Apache    python-requests (0.12.1-1)       python-requests (2.3.0-1)      y
-unicodecsv==0.9.4         # BSD? MIT? python-unicodecsv (0.9.0-1)      python-unicodecsv (0.9.4-1)    ?
+beautifulsoup4==4.5.3     # MIT          y
+elasticsearch>=2.0.0,<3.0.0     # Apache y        y
+elasticsearch-dsl>=2.0.0,<3.0.0 # Apache y        y
+envoy==0.0.3              # MIT          y             TODO replace!
+GitPython==0.3.2.RC1      # BSD          y             TODO upgrade!
+graphviz==0.6             # MIT          y
+Jinja2==2.9.5             # BSD          y
+lxml==3.7.3               # BSD          y        N(?)
+psutil==5.2.1             # BSD          y        y
+python-dateutil==2.6.0    # BSD          y
+python-xmp-toolkit==2.0.1 # New BSD      y
+pytz==2016.10             # MIT          y
+requests==2.13.0          # Apache       y        y
+unicodecsv==0.14.1        # BSD          y        y
+
+bpython==0.16  # TODO upgrade!

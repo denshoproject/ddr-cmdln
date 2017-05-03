@@ -72,11 +72,6 @@ def logprint_nots(filename, msg):
         f.writelines([msg])
     print(msg.strip('\n'))
 
-MODEL_JSON_REGEX = {}
-for pattern in identifier.PATH_PATTERNS_LOOP:
-    key = pattern[-1]
-    MODEL_JSON_REGEX[key] = re.compile(pattern[0])
-
 def find_files(basedir, filetypes):
     """Looks for filenames in the list.
     
@@ -85,7 +80,7 @@ def find_files(basedir, filetypes):
     allpaths = util.find_meta_files(basedir, recursive=True, force_read=True)
     paths = []
     for model in filetypes:
-        prog = MODEL_JSON_REGEX['%s-json' % model]
+        prog = identifier.META_FILENAME_REGEX[model]
         these = [path for path in allpaths if re.search(prog, path)]
         paths.extend(these)
     return paths
@@ -101,7 +96,7 @@ def update_file(json_path, field_name, new_value):
         if fname == field_name:
             field[fname] = new_value
     
-    fileio.write_text(formmat_json(data), json_path)
+    fileio.write_text(format_json(data), json_path)
 
 
 

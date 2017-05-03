@@ -9,15 +9,19 @@ Register newly added EIDs
 """
 
 import codecs
+import csv
 from datetime import datetime
 import json
 import logging
 import os
+import shutil
+import traceback
 
 import requests
 
-from DDR import changelog
 from DDR import config
+from DDR import changelog
+from DDR import commands
 from DDR import csvfile
 from DDR import dvcs
 from DDR import fileio
@@ -158,15 +162,18 @@ class Checker():
         passed = False
         headers,rowds = csvfile.make_rowds(fileio.read_csv(csv_path))
         for rowd in rowds:
-            rowd['identifier'] = identifier.Identifier(rowd['id'])
+            if rowd.get('id'):
+                rowd['identifier'] = identifier.Identifier(rowd['id'])
+            else:
+                rowd['identifier'] = None
         logging.info('%s rows' % len(rowds))
-        model = Checker._guess_model(rowds)
+        model,model_errs = Checker._guess_model(rowds)
         module = Checker._get_module(model)
         vocabs = Checker._get_vocabs(module)
         header_errs,rowds_errs = Checker._validate_csv_file(
             module, vocabs, headers, rowds
         )
-        if (not header_errs) and (not rowds_errs):
+        if (not model_errs) and (not header_errs) and (not rowds_errs):
             passed = True
             logging.info('ok')
         else:
@@ -175,6 +182,7 @@ class Checker():
             'passed': passed,
             'headers': headers,
             'rowds': rowds,
+            'model_errs': model_errs,
             'header_errs': header_errs,
             'rowds_errs': rowds_errs,
         }
@@ -239,20 +247,23 @@ class Checker():
         """
         logging.debug('Guessing model based on %s rows' % len(rowds))
         models = []
-        for rowd in rowds:
+        errors = []
+        for n,rowd in enumerate(rowds):
             if rowd.get('identifier'):
                 if rowd['identifier'].model not in models:
                     models.append(rowd['identifier'].model)
+            else:
+                errors.append('No Identifier for row %s!' % (n))
         if not models:
-            raise Exception('Cannot guess model type!')
+            errors.append('Cannot guess model type!')
         if len(models) > 1:
-            raise Exception('More than one model type in imput file!')
+            errors.append('More than one model type in imput file!')
         model = models[0]
         # TODO should not know model name
         if model == 'file-role':
             model = 'file'
         logging.debug('model: %s' % model)
-        return model
+        return model,errors
 
     @staticmethod
     def _get_module(model):
@@ -418,15 +429,6 @@ class Importer():
         return fidentifier.parent(stubs=is_stub)
 
     @staticmethod
-    def _file_is_new(fidentifier):
-        """Indicate whether file is new (ingest) or not (update)
-        
-        @param fidentifier: Identifier
-        @returns: boolean
-        """
-        return fidentifier.object_class() == models.Stub
-
-    @staticmethod
     def _write_entity_changelog(entity, git_name, git_mail, agent):
         msg = 'Updated entity file {}'
         messages = [
@@ -506,7 +508,7 @@ class Importer():
         
         logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
         logging.info('Importing')
-        start_updates = datetime.now()
+        start_updates = datetime.now(config.TZ)
         git_files = []
         updated = []
         elapsed_rounds = []
@@ -516,7 +518,7 @@ class Importer():
             logging.info('Dry run - no modifications')
         for n,rowd in enumerate(rowds):
             logging.info('%s/%s - %s' % (n+1, len(rowds), rowd['id']))
-            start_round = datetime.now()
+            start_round = datetime.now(config.TZ)
             
             eidentifier = identifier.Identifier(id=rowd['id'], base_path=cidentifier.basepath)
             # if there is an existing object it will be loaded
@@ -539,16 +541,19 @@ class Importer():
                 if not os.path.exists(entity.path_abs):
                     os.makedirs(entity.path_abs)
                 logging.debug('    writing %s' % entity.json_path)
-                entity.write_json(obj_metadata=obj_metadata)
-                # TODO better to write to collection changelog?
-                # TODO write all additions to changelog at one time
-                Importer._write_entity_changelog(entity, git_name, git_mail, agent)
+                
+                exit,status,updated_files = entity.save(
+                    git_name, git_mail, agent,
+                    collection=cidentifier.object(),
+                    #cleaned_data=rowd,
+                    commit=False
+                )
+                
                 # stage
-                git_files.append(entity.json_path_rel)
-                git_files.append(entity.changelog_path_rel)
+                git_files.append(updated_files)
                 updated.append(entity)
             
-            elapsed_round = datetime.now() - start_round
+            elapsed_round = datetime.now(config.TZ) - start_round
             elapsed_rounds.append(elapsed_round)
             logging.debug('| %s (%s)' % (eidentifier, elapsed_round))
     
@@ -556,24 +561,117 @@ class Importer():
             logging.info('Dry run - no modifications')
         elif updated:
             logging.info('Staging %s modified files' % len(git_files))
-            start_stage = datetime.now()
+            start_stage = datetime.now(config.TZ)
             dvcs.stage(repository, git_files)
             for path in util.natural_sort(dvcs.list_staged(repository)):
                 if path in git_files:
                     logging.debug('+ %s' % path)
                 else:
                     logging.debug('| %s' % path)
-            elapsed_stage = datetime.now() - start_stage
+            elapsed_stage = datetime.now(config.TZ) - start_stage
             logging.debug('ok (%s)' % elapsed_stage)
         
-        elapsed_updates = datetime.now() - start_updates
+        elapsed_updates = datetime.now(config.TZ) - start_updates
         logging.debug('%s updated in %s' % (len(elapsed_rounds), elapsed_updates))
         logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
         
         return updated
 
     @staticmethod
-    def import_files(csv_path, cidentifier, vocabs_path, git_name, git_mail, agent, log_path=None, dryrun=False):
+    def _csv_load(module, rowds):
+        return [models.csvload_rowd(module, rowd) for rowd in rowds]
+
+    @staticmethod
+    def _fidentifiers(rowds, cidentifier):
+        """dict of File Identifiers by file ID."""
+        return {
+            rowd['id']: identifier.Identifier(
+                id=rowd['id'],
+                base_path=cidentifier.basepath
+            )
+            for rowd in rowds
+        }
+    
+    @staticmethod
+    def _fid_parents(fidentifiers):
+        """dict of File Identifier parents (entities) by file ID."""
+        return {
+            fi.id: Importer._fidentifier_parent(fi)
+            for fi in fidentifiers.itervalues()
+        }
+    
+    @staticmethod
+    def _eidentifiers(fid_parents):
+        """deduplicated list of Entity Identifiers."""
+        return list(
+            set([
+                e for e in fid_parents.itervalues()
+            ])
+        )
+    
+    @staticmethod
+    def _existing_bad_entities(eidentifiers):
+        """dict of Entity Identifiers by entity ID; list of bad entities.
+        
+        "Bad" entities are those for which no entity.json in filesystem.
+        @returns: (dict, list)
+        """
+        entities = {}
+        bad_entities = []
+        for eidentifier in eidentifiers:
+            if os.path.exists(eidentifier.path_abs()):
+                entities[eidentifier.id] = eidentifier.object()
+            elif eidentifier.id not in bad_entities:
+                bad_entities.append(eidentifier.id)
+        return entities,bad_entities
+    
+    @staticmethod
+    def _file_objects(fidentifiers):
+        """dict of File objects by file ID."""
+        # File objects will be used to determine if the Files "exist"
+        # e.g. whether they are local/normal or external/metadata-only
+        return {
+            # TODO don't hard-code object class!!!
+            fid: fi.object()
+            for fid,fi in fidentifiers.iteritems()
+        }
+    
+    @staticmethod
+    def _rowds_new_existing(rowds, files):
+        """separates rowds into new,existing lists
+        
+        This is more complicated than before because the "files" may actually be
+        Stubs, which don't have .jsons or .exists() methods.
+        """
+        new = []
+        existing = []
+        for n,rowd in enumerate(rowds):
+            # gather facts
+            has_id = rowd.get('id')
+            obj = files.get(rowd['id'], None)
+            obj_is_node = False
+            if obj and (obj.identifier.model in identifier.NODES):
+                obj_is_node = True
+            if obj and obj_is_node:
+                json_exists = obj.exists()
+            else:
+                json_exists = False
+            # decide
+            if has_id and obj and obj_is_node and json_exists:
+                existing.append(rowd)
+            else:
+                new.append(rowd)
+        return new,existing
+
+    @staticmethod
+    def _rowd_is_external(rowd):
+        """indicates whether or not rowd represents an external file."""
+        if int(rowd.get('external', 0)):
+            return True
+        return False
+    
+    @staticmethod
+    def import_files(csv_path, cidentifier, vocabs_path, git_name, git_mail, agent, row_start=0, row_end=9999999, log_path=None, dryrun=False):
         """Adds or updates files from a CSV file
         
         TODO how to handle excluded fields like XMP???
@@ -591,110 +689,111 @@ class Importer():
         
         # TODO hard-coded model name...
         model = 'file'
-        
         csv_dir = os.path.dirname(csv_path)
-        logging.debug('csv_dir %s' % csv_dir)
-    
         # TODO this still knows too much about entities and files...
         entity_class = identifier.class_for_name(
             identifier.MODEL_CLASSES['entity']['module'],
             identifier.MODEL_CLASSES['entity']['class']
         )
+        repository = dvcs.repository(cidentifier.path_abs())
+        logging.debug('csv_dir %s' % csv_dir)
         logging.debug('entity_class %s' % entity_class)
+        logging.debug(repository)
         
         logging.info('Reading %s' % csv_path)
-        headers,rowds = csvfile.make_rowds(fileio.read_csv(csv_path))
+        headers,rowds = csvfile.make_rowds(fileio.read_csv(csv_path), row_start, row_end)
         logging.info('%s rows' % len(rowds))
+        logging.info('csv_load rowds')
+        module = Checker._get_module(model)
+        rowds = Importer._csv_load(module, rowds)
         
-        # check for modified or uncommitted files in repo
-        repository = dvcs.repository(cidentifier.path_abs())
-        logging.debug(repository)
-    
-        fidentifiers = {
-            rowd['id']: identifier.Identifier(
-                id=rowd['id'],
-                base_path=cidentifier.basepath
-            )
-            for rowd in rowds
-        }
-        fidentifier_parents = {
-            fi.id: Importer._fidentifier_parent(fi)
-            for fi in fidentifiers.itervalues()
-        }
-        # eidentifiers, removing duplicates
-        eidentifiers = list(set([e for e in fidentifier_parents.itervalues()]))
-        entities = {}
-        bad_entities = []
-        for eidentifier in eidentifiers:
-            if os.path.exists(eidentifier.path_abs()):
-                entity = eidentifier.object()
-                entities[eidentifier.id] = entity
-            else:
-                if eidentifier.id not in bad_entities:
-                    bad_entities.append(eidentifier.id)
+        # various dicts and lists instantiated here so we don't do it
+        # multiple times later
+        fidentifiers = Importer._fidentifiers(rowds, cidentifier)
+        fid_parents = Importer._fid_parents(fidentifiers)
+        eidentifiers = Importer._eidentifiers(fid_parents)
+        entities,bad_entities = Importer._existing_bad_entities(eidentifiers)
+        files = Importer._file_objects(fidentifiers)
+        rowds_new,rowds_existing = Importer._rowds_new_existing(rowds, files)
         if bad_entities:
             for f in bad_entities:
                 logging.error('    %s missing' % f)
-            raise Exception('%s entities could not be loaded! - IMPORT CANCELLED!' % len(bad_entities))
-    
-        # separate into new and existing lists
-        rowds_new = []
-        rowds_existing = []
-        for n,rowd in enumerate(rowds):
-            if Importer._file_is_new(fidentifiers[rowd['id']]):
-                rowds_new.append(rowd)
-            else:
-                rowds_existing.append(rowd)
+            raise Exception(
+                '%s entities could not be loaded! - IMPORT CANCELLED!' % len(bad_entities)
+            )
         
         logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
         logging.info('Updating existing files')
-        start_updates = datetime.now()
+        git_files = Importer._update_existing_files(
+            rowds_existing,
+            fid_parents, entities, files, models, repository,
+            git_name, git_mail, agent,
+            dryrun
+        )
+        
+        logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
+        logging.info('Adding new files')
+        git_files2 = Importer._add_new_files(
+            rowds_new,
+            fid_parents, entities, files,
+            git_name, git_mail, agent,
+            log_path, dryrun
+        )
+        logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
+        
+        return git_files
+    
+    @staticmethod
+    def _update_existing_files(rowds, fid_parents, entities, files, models, repository, git_name, git_mail, agent, dryrun):
+        start = datetime.now(config.TZ)
+        elapsed_rounds = []
         git_files = []
         updated = []
-        elapsed_rounds_updates = []
         staged = []
         obj_metadata = None
-        for n,rowd in enumerate(rowds_existing):
-            logging.info('+ %s/%s - %s (%s)' % (n+1, len(rowds), rowd['id'], rowd['basename_orig']))
-            start_round = datetime.now()
-            
-            fidentifier = fidentifiers[rowd['id']]
-            eidentifier = fidentifier_parents[fidentifier.id]
-            entity = entities[eidentifier.id]
-            file_ = fidentifier.object()
+        len_rowds = len(rowds)
+        for n,rowd in enumerate(rowds):
+            logging.info('+ %s/%s - %s (%s)' % (
+                n+1, len_rowds, rowd['id'], rowd['basename_orig']
+            ))
+            start_round = datetime.now(config.TZ)
+
+            fid = rowd['id']
+            eid = fid_parents[fid].id
+            entity = entities[eid]
+            file_ = files[fid]
             modified = file_.load_csv(rowd)
             # Getting obj_metadata takes about 1sec each time
             # TODO caching works as long as all objects have same metadata...
             if not obj_metadata:
                 obj_metadata = models.object_metadata(
-                    fidentifier.fields_module(),
+                    file_.identifier.fields_module(),
                     repository.working_dir
                 )
             
-            if dryrun:
-                pass
-            elif modified:
+            if modified and not dryrun:
                 logging.debug('    writing %s' % file_.json_path)
-                file_.write_json(obj_metadata=obj_metadata)
-                # TODO better to write to collection changelog?
-                Importer._write_entity_changelog(entity, git_name, git_mail, agent)
+
+                exit,status,updated_files = file_.save(
+                    git_name, git_mail, agent,
+                    cleaned_data=obj_metadata,
+                    commit=False
+                )
+                
                 # stage
-                git_files.append(file_.json_path_rel)
-                git_files.append(entity.changelog_path_rel)
+                git_files.append(updated_files)
                 updated.append(file_)
             
-            elapsed_round = datetime.now() - start_round
-            elapsed_rounds_updates.append(elapsed_round)
-            logging.debug('| %s (%s)' % (fidentifier, elapsed_round))
+            elapsed_round = datetime.now(config.TZ) - start_round
+            elapsed_rounds.append(elapsed_round)
+            logging.debug('| %s (%s)' % (file_.identifier, elapsed_round))
         
-        elapsed_updates = datetime.now() - start_updates
-        logging.debug('%s updated in %s' % (len(elapsed_rounds_updates), elapsed_updates))
+        elapsed = datetime.now(config.TZ) - start
+        logging.debug('%s updated in %s' % (len(elapsed_rounds), elapsed))
                 
-        if dryrun:
-            pass
-        elif git_files:
+        if git_files and not dryrun:
             logging.info('Staging %s modified files' % len(git_files))
-            start_stage = datetime.now()
+            start_stage = datetime.now(config.TZ)
             dvcs.stage(repository, git_files)
             staged = util.natural_sort(dvcs.list_staged(repository))
             for path in staged:
@@ -702,56 +801,103 @@ class Importer():
                     logging.debug('+ %s' % path)
                 else:
                     logging.debug('| %s' % path)
-            elapsed_stage = datetime.now() - start_stage
+            elapsed_stage = datetime.now(config.TZ) - start_stage
             logging.debug('ok (%s)' % elapsed_stage)
             logging.debug('%s staged in %s' % (len(staged), elapsed_stage))
         
-        logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
-        logging.info('Adding new files')
-        start_adds = datetime.now()
-        elapsed_rounds_adds = []
-        logging.info('Checking source files')
-        for rowd in rowds_new:
-            rowd['src_path'] = os.path.join(csv_dir, rowd['basename_orig'])
-            logging.debug('| %s' % rowd['src_path'])
-            if not os.path.exists(rowd['src_path']):
-                raise Exception('Missing file: %s' % rowd['src_path'])
+        return git_files
+    
+    @staticmethod
+    def _add_new_files(rowds, fid_parents, entities, files, git_name, git_mail, agent, log_path, dryrun):
         if log_path:
             logging.info('addfile logging to %s' % log_path)
-        for n,rowd in enumerate(rowds_new):
-            logging.info('+ %s/%s - %s (%s)' % (n+1, len(rowds), rowd['id'], rowd['basename_orig']))
-            start_round = datetime.now()
+        git_files = []
+        failures = []
+        start = datetime.now(config.TZ)
+        elapsed_rounds = []
+        len_rowds = len(rowds)
+        for n,rowd in enumerate(rowds):
+            logging.info('+ %s/%s - %s (%s)' % (n+1, len_rowds, rowd['id'], rowd['basename_orig']))
+            start_round = datetime.now(config.TZ)
+
+            fid = rowd['id']
+            parent_id = fid_parents[fid].id
+            file_ = files[fid]
+            parent = entities[parent_id]
+            # If the actual file ID is not specified in the rowd
+            # (ex: SHA1 not yet known),
+            # the ID in the CSV will be the ID of the *parent* object.
+            # In this case, file_ and parent vars will likely be wrong.
+            # TODO refactor up the chain somewhere.
+            if file_.identifier.model not in identifier.NODES:
+                parent = file_
             
-            fidentifier = fidentifiers[rowd['id']]
-            eidentifier = fidentifier_parents[fidentifier.id]
-            entity = entities[eidentifier.id]
-            logging.debug('| %s' % (entity))
-    
-            if dryrun:
-                pass
-            elif Importer._file_is_new(fidentifier):
-                # ingest
-                # TODO make sure this updates entity.files
-                file_,repo2,log2 = ingest.add_file(
-                    entity,
-                    rowd['src_path'],
-                    fidentifier.parts['role'],
+            logging.debug('| parent %s' % (parent))
+            
+            # external files (no binary except maybe access file)
+            if Importer._rowd_is_external(rowd) and not dryrun:
+                file_,repo2,log2 = ingest.add_external_file(
+                    parent,
                     rowd,
                     git_name, git_mail, agent,
                     log_path=log_path,
                     show_staged=False
                 )
+                if rowd.get('access_path'):
+                    file_,repo3,log3,status = ingest.add_access(
+                        parent, file_,
+                        rowd['access_path'],
+                        git_name, git_mail, agent,
+                        log_path=log_path,
+                        show_staged=False
+                    )
+                git_files.append(file_)
             
-            elapsed_round = datetime.now() - start_round
-            elapsed_rounds_adds.append(elapsed_round)
-            logging.debug('| %s (%s)' % (file_, elapsed_round))
-        
-        elapsed_adds = datetime.now() - start_adds
-        logging.debug('%s added in %s' % (len(elapsed_rounds_adds), elapsed_adds))
-        logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
-        
-        return git_files
+            # normal files
+            elif not dryrun:
+                # ingest
+                # TODO make sure this updates entity.files
+                
+                # TODO refactor this?
+                # Add role if file.ID doesn't have it
+                # This will happen with e.g. transcript files when file_id is
+                # actually the Entity/Segment ID and contains no role,
+                # and when sha1 field is blank.
+                if rowd.get('role') and not file_.identifier.parts.get('role'):
+                    file_.identifier.parts['role'] = rowd['role']
 
+                try:
+                    file_,repo2,log2 = ingest.add_local_file(
+                        parent,
+                        rowd['basename_orig'],
+                        file_.identifier.parts['role'],
+                        rowd,
+                        git_name, git_mail, agent,
+                        log_path=log_path,
+                        show_staged=False
+                    )
+                    git_files.append(file_)
+                except ingest.FileExistsException as e:
+                    logging.error('ERROR: %s' % e)
+                    failures.append(e)
+                except ingest.FileMissingException as e:
+                    logging.error('ERROR: %s' % e)
+                    failures.append(e)
+            
+            elapsed_round = datetime.now(config.TZ) - start_round
+            elapsed_rounds.append(elapsed_round)
+            logging.debug('|   file %s' % (file_))
+            logging.debug('| %s' % (elapsed_round))
+                  
+        elapsed = datetime.now(config.TZ) - start
+        logging.debug('%s added in %s' % (len(elapsed_rounds), elapsed))
+        if failures:
+            logging.error('************************************************************************')
+            for e in failures:
+                logging.error(e)
+            logging.error('************************************************************************')
+        return git_files,failures
+    
     @staticmethod
     def register_entity_ids(csv_path, cidentifier, idservice_client, dryrun=True):
         """
@@ -792,3 +938,451 @@ class Importer():
             logging.info('%s registered' % len(created))
         
         logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
+
+
+class UpdaterMetrics():
+    cid = None
+    verdict = 'unknown'
+    objects = 0
+    objects_saved = 0
+    updated = {}
+    files_updated = 0
+    load_errs = {}
+    save_errs = {}
+    bad_exits = {}
+    failures = 0
+    fail_rate = 0.0
+    committed = None
+    kept = None
+    elapsed = None
+    per_object = 'n/a'
+    error = ''
+    traceback = ''
+    
+    def headers(self):
+        return [
+            'id',
+            'verdict',
+            'failures',
+            'fail_rate',
+            'objects',
+            'objects_saved',
+            'files_updated',
+            'elapsed',
+            'per_object',
+            'committed',
+            'kept',
+            'error',
+            'traceback',
+            'load_errs',
+            'save_errs',
+            'bad_exits',
+        ]
+    
+    def row(self):
+        load_errs = [':'.join([key,val]) for key,val in self.load_errs.iteritems()]
+        save_errs = [':'.join([key,val]) for key,val in self.save_errs.iteritems()]
+        bad_exits = [':'.join([key,val]) for key,val in self.bad_exits.iteritems()]
+        return [
+            self.cid,
+            self.verdict,
+            self.failures,
+            self.fail_rate,
+            self.objects,
+            self.objects_saved,
+            self.files_updated,
+            self.elapsed,
+            self.per_object,
+            self.committed,
+            self.kept,
+            self.error,
+            self.traceback,
+            '\n'.join(load_errs),
+            '\n'.join(save_errs),
+            '\n'.join(bad_exits),
+        ]
+
+
+class Updater():
+    
+    AGENT = 'ddr-transform'
+    TODO = 'todo'
+    THIS = 'this'
+    DONE = 'done.csv'
+    COLLECTION_LOG = '%s.log'
+
+    @staticmethod
+    def update_collection(cidentifier, user, mail, commit=False):
+        if commit and ((not user) or (not mail)):
+            logging.error('You must specify a user and email address! >:-0')
+            sys.exit(1)
+        else:
+            logging.info('Not committing changes')
+            commit = False
+        
+        start = datetime.now()
+        response = Updater._update_collection_objects(cidentifier, user, mail, commit)
+        end = datetime.now()
+        return Updater._analyze(start, end, response)
+    
+    @staticmethod
+    def update_multi(basedir, source, user, mail, commit=False, keep=False):
+        """
+        @param user: str User name
+        @param mail: str User email
+        @param basedir: str Absolute path to base dir.
+        @param source: str Absolute path to list file.
+        @param commit: boolean
+        @param keep: boolean
+        @return:
+        """
+        logging.info('========================================================================')
+        logging.info('Prepping collections list')
+        cids_path = Updater._prep_todo(basedir, source)
+        cids = Updater._read_todo(cids_path)
+        
+        completed = 0
+        successful = 0
+        total_failures = 0
+        total_load_errs = 0
+        total_save_errs = 0
+        total_bad_exits = 0
+        total_objects_saved = 0
+        total_files_updated = 0
+        per_objects = []
+        while(cids):
+            logging.info('------------------------------------------------------------------------')
+            # rm current cid from TODO, update TODO and THIS
+            cid = cids.pop(0)
+            logging.info(cid)
+            Updater._write_todo(cids, cids_path)
+            Updater._write_this(basedir, cid)
+            
+            collection_log = os.path.join(basedir, Updater.COLLECTION_LOG % cid)
+            collection_path = os.path.join(basedir, cid)
+            cidentifier = identifier.Identifier(cid, base_path=basedir)
+            
+            # clone
+            if os.path.exists(collection_path):
+                logging.info('Removing existing repo: %s' % collection_path)
+                shutil.rmtree(collection_path)
+            logging.info('Cloning %s' % collection_path)
+            try:
+                clone_exit,clone_status = commands.clone(
+                    user, mail,
+                    cidentifier,
+                    collection_path
+                )
+                logging.info('ok')
+            except:
+                metrics = UpdaterMetrics()
+                metrics.cid = cid
+                metrics.verdict = 'FAIL'
+                metrics.error = 'clone failed'
+                metrics.traceback = traceback.format_exc().strip()
+            
+            # transform
+            try:
+                metrics = Updater.update_collection(cidentifier, user, mail, commit=commit)
+            except:
+                metrics = UpdaterMetrics()
+                metrics.cid = cid
+                metrics.verdict = 'FAIL'
+                metrics.error = 'update failed'
+                metrics.traceback = traceback.format_exc().strip()
+                
+            if metrics.verdict == 'ok':
+                logging.info(metrics.verdict)
+                successful += 1
+            else:
+                logging.error(metrics)
+            logging.info('objects_saved: %s' % metrics.objects_saved)
+            logging.info('files_updated: %s' % metrics.files_updated)
+            logging.info('s/object:      %s' % metrics.per_object)
+            logging.info('failures:      %s (%s)' % (metrics.failures, metrics.fail_rate))
+            logging.info('load_errs:     %s' % len(metrics.load_errs))
+            logging.info('save_errs:     %s' % len(metrics.save_errs))
+            logging.info('bad_exits:     %s' % len(metrics.bad_exits))
+            total_objects_saved += metrics.objects_saved
+            total_files_updated += metrics.files_updated
+            total_failures += metrics.failures
+            total_load_errs += len(metrics.load_errs.keys())
+            total_save_errs += len(metrics.save_errs.keys())
+            total_bad_exits += len(metrics.bad_exits.keys())
+            delta = metrics.per_object
+            per_objects.append(delta)
+            
+            if commit:
+                if metrics.load_errs or metrics.save_errs or metrics.bad_exits:
+                    logging.error('We have errors! Cannot commit!')
+                    metrics.committed = False
+                else:
+                    repo = dvcs.repository(
+                        collection_path,
+                        user_name=user, user_mail=mail
+                    )
+                    # stage
+                    stage_these = []
+                    if metrics.updated:
+                        for f in metrics.updated.itervalues():
+                            stage_these.extend(f)
+                    logging.info('%s files changed' % (len(stage_these)))
+                    if stage_these:
+                        logging.info('Staging...')
+                        staged = dvcs.stage(repo, git_files=stage_these)
+                        logging.info('Committing...')
+                        committed = dvcs.commit(
+                            repo,
+                            "Batch updated all objects in collection",
+                            agent=Updater.AGENT
+                        )
+                        logging.info('commit %s' % committed)
+                        metrics.committed = str(committed)[:10]
+                        # remove remotes so you can't sync
+                        # (remotes will return next time it's modded tho)
+                        for name in dvcs.repos_remotes(repo):
+                            repo.remove_remote(remote)
+                        logging.info('ok')
+                    else:
+                        metrics.committed = 'nochanges'
+            else:
+                metrics.committed = 'nocommit'
+            
+            if os.path.exists(collection_path) and not keep:
+                logging.info('Deleting %s' % collection_path)
+                shutil.rmtree(collection_path)
+                logging.info('ok')
+                metrics.kept = 'nokeep'
+            else:
+                logging.info('Keeping %s' % collection_path)
+                metrics.kept = 'kept'
+            
+            Updater._write_done(basedir, metrics)
+            # update THIS, not writing this collection any more
+            Updater._write_this(basedir, '')
+            completed += 1
+            logging.info('')
+
+        return {
+            'collections': completed,
+            'successful': successful,
+            'failures': total_failures,
+            'objects_saved': total_objects_saved,
+            'files_updated': total_files_updated,
+            'per_objects': per_objects,
+        }
+    
+    @staticmethod
+    def _consolidate_paths(updated_files):
+        updated = []
+        for oid,paths in updated_files.iteritems():
+            for path in paths:
+                if path not in updated:
+                    updated.append(path)
+        return updated
+    
+    @staticmethod
+    def _update_collection_objects(cidentifier, git_user, git_mail, commit=False):
+        """Loads and saves each object in collection
+        """
+        logging.info('Loading collection')
+        collection = cidentifier.object()
+        logging.info(collection)
+        
+        logging.info('Finding metadata files %s' % cidentifier.path_abs())
+        paths = util.find_meta_files(
+            cidentifier.path_abs(),
+            recursive=True, force_read=True,
+            testing=True  # otherwise will be excluded if basedir is under /tmp
+        )
+        num = len(paths)
+        logging.info('%s paths' % num)
+        logging.info('Writing')
+        load_errs = {}
+        save_errs = {}
+        bad_exits = {}
+        statuses = {}
+        updated_files = {}
+        for n,path in enumerate(paths):
+            logging.info('%s/%s %s' % (n, num, path))
+            try:
+                o = identifier.Identifier(path).object()
+            except:
+                load_errs[o.identifier.id] = traceback.format_exc().strip().splitlines()[-1]
+                logging.error('ERROR: instantiation')
+                continue
+            try:
+                exit,status,updated = o.save(
+                    git_user, git_mail, agent=Updater.AGENT, commit=False
+                )
+            except:
+                save_errs[o.identifier.id] = traceback.format_exc().strip().splitlines()[-1]
+                logging.error('ERROR: save')
+                continue
+            if exit != 0:
+                bad_exits[o.identifier.id] = exit
+                logging.error('ERROR: bad exit')
+            if status != 'ok':
+                statuses[o.identifier.id] = status
+            updated_files[o.identifier.id] = updated
+        
+        return {
+            'cid': cidentifier.id,    # str collection ID
+            'num': num,               # int raw number of objects
+            'load_errs': load_errs,   # dict load errs by object ID
+            'save_errs': save_errs,   # dict save errs by object ID
+            'bad_exits': bad_exits,   # dict non-zero exits by object ID
+            'statuses': statuses,     # dict non-ok statuses by object ID
+            'updated_files': updated_files, # dict updated files by object ID
+        }
+    
+    @staticmethod
+    def _analyze(start, end, response):
+        """
+        @param start: datetime
+        @param end: datetime
+        @param response: dict
+        @returns: UpdaterMetrics
+        """
+        metrics = UpdaterMetrics()
+        metrics.cid  =  response['cid']
+        metrics.objects  =  response['num']
+        metrics.objects_saved  =  response['num']
+        metrics.load_errs  =  response['load_errs']
+        metrics.save_errs  =  response['save_errs']
+        metrics.bad_exits  =  response['bad_exits']
+        metrics.updated = response['updated_files']
+        metrics.files_updated  =  len(metrics.updated)
+        
+        metrics.failures = len(metrics.load_errs.keys()) + len(metrics.save_errs.keys()) + len(metrics.bad_exits.keys())
+        metrics.fail_rate = (metrics.failures * 1.0) / metrics.objects
+        
+        metrics.elapsed = end - start
+        if metrics.elapsed and response.get('num'):
+            metrics.per_object = metrics.elapsed / response['num']
+        
+        if metrics.load_errs or metrics.save_errs or metrics.bad_exits \
+        or (metrics.objects_saved == 0) \
+        or (metrics.files_updated == 0):
+            metrics.verdict = 'FAIL'
+        else:
+            metrics.verdict = 'ok'
+        
+        return metrics
+    
+    @staticmethod
+    def _prep_todo(basedir, source):
+        """
+        read cids list from SOURCE
+        read cids from DONE
+        remove DONE cids from TODO cids
+        write TODO cids to TODO
+        """
+        path = os.path.join(basedir, Updater.TODO)
+        logging.info('Prepping TODO file: %s' % path)
+        # Read cids list from SOURCE
+        logging.info('Getting collections list from %s' % source)
+        if os.path.exists(source):
+            cids = Updater._read_todo(source)
+        # get list from Gitolite
+        elif '@' in source:
+            pass
+        else:
+            cids = []
+        # Read cids from DONE
+        if not os.path.join(basedir, Updater.DONE):
+            Updater._write_done(basedir, None)
+        done_headers,done_rows = Updater._read_done(basedir)
+        done = [row[0] for row in done_rows]
+        # Remove DONE cids from TODO cids
+        completed = []
+        for cid in done:
+            if cid in cids:
+                completed.append(cid)
+                cids.remove(cid)
+        logging.info('Removed completed collections: %s' % completed)
+        # Write TODO cids to TODO
+        Updater._write_todo(cids, path)
+        return path
+    
+    @staticmethod
+    def _read_todo(path):
+        #logging.debug('_read_todo(%s)' % path)
+        with open(path, 'r') as f:
+            text = f.read()
+        cids = [line.strip() for line in text.strip().split('\n') if line.strip()]
+        return cids
+    
+    @staticmethod
+    def _write_todo(cids, path):
+        #logging.debug('_write_todo(%s, %s)' % (cids, path))
+        with open(path, 'w') as f:
+            f.write('\n'.join(cids))
+    
+    @staticmethod
+    def _read_this(basedir):
+        with open(path, 'r') as f:
+            text = f.read()
+        return text.strip()
+    
+    @staticmethod
+    def _write_this(basedir, cid):
+        path = os.path.join(basedir, Updater.THIS)
+        with open(path, 'w') as f:
+            f.write(cid)
+
+    # NOTE: should use DDR.fileio but quoting/delimiters/etc are hardcoded
+    
+    @staticmethod
+    def _csv_reader(csvfile):
+        return csv.reader(
+            csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL,
+        )
+    
+    @staticmethod
+    def _csv_writer(csvfile):
+        return csv.writer(
+            csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL,
+        )
+    
+    @staticmethod
+    def _read_csv(path):
+        rows = []
+        with open(path, 'rU') as f:  # the 'U' is for universal-newline mode
+            for row in Updater._csv_reader(f):
+                rows.append(row)
+        return rows
+    
+    @staticmethod
+    def _write_csv(path, headers, rows):
+        with open(path, 'wb') as f:
+            writer = Updater._csv_writer(f)
+            writer.writerow(headers)
+            for row in rows:
+                writer.writerow(row)
+    
+    @staticmethod
+    def _read_done(basedir):
+        path = os.path.join(basedir, Updater.DONE)
+        headers = None
+        rows = []
+        if os.path.exists(path):
+            rows = Updater._read_csv(path)
+            if rows:
+                headers = rows.pop(0)
+        return headers,rows
+    
+    @staticmethod
+    def _write_done(basedir, metrics=UpdaterMetrics()):
+        path = os.path.join(basedir, Updater.DONE)
+        headers = []
+        rows = []
+        if os.path.exists(path):
+            rows = Updater._read_csv(path)
+            if rows:
+                headers = rows.pop(0)
+        if not headers:
+            headers = metrics.headers()
+        if metrics.cid:
+            rows.append(metrics.row())
+        Updater._write_csv(path, headers, rows)

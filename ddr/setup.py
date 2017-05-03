@@ -50,7 +50,6 @@ setup(
     ],
     packages = [
         'DDR',
-        'DDR.converters'
     ],
     include_package_data = True,
     package_dir = {
@@ -64,6 +63,7 @@ setup(
     scripts = [
         'bin/ddr',
         'bin/ddr-backup',
+        'bin/ddr-batch',
         'bin/ddr-checkencoding',
         'bin/ddr-checkbinaries',
         'bin/ddr-config',
@@ -75,7 +75,8 @@ setup(
         'bin/ddr-info',
         'bin/ddr-massupdate',
         'bin/ddr-pubcopy',
-        'bin/ddr-report',
+        'bin/ddr-signatures',
+        'bin/ddr-transform',
         'bin/ddr-update',
         'bin/ddrdensho255fix',
     ],

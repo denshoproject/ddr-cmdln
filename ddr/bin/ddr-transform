@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+
+#
+# ddr-transform
+#
+
+description = """Simple: just loads objects and saves them again."""
+
+epilog = """
+This has the effect of updating objects to the latest file format.
+Someday this command could be used to run function from script file
+on each .json file in a repository.
+---"""
+
+
+import argparse
+from datetime import datetime
+import logging
+import sys
+
+from DDR import config
+from DDR import commands
+from DDR import identifier
+from DDR import util
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    stream=sys.stdout,
+)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description=description,
+        epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument('collection', help='Absolute path to Collection.')
+    parser.add_argument('-C', '--commit', help='Commit changes.')
+    parser.add_argument('-u', '--user', help='(required for commit) User name')
+    parser.add_argument('-m', '--mail', help='(required for commit) User email')
+    args = parser.parse_args()
+
+    if args.commit and ((not args.user) or (not args.mail)):
+        logging.error('You must specify a user and email address! >:-0')
+        sys.exit(1)
+    else:
+        logging.info('Not committing changes')
+    
+    start = datetime.now()
+    
+    logging.info('Loading collection')
+    collection = identifier.Identifier(args.collection).object()
+    logging.info(collection)
+    
+    
+    
+    logging.info('Finding metadata files')
+    paths = util.find_meta_files(collection.identifier.path_abs(), recursive=True, force_read=True)
+    logging.info('Writing')
+    num = len(paths)
+    for n,path in enumerate(paths):
+        logging.info('%s/%s %s' % (n, num, path))
+        o = identifier.Identifier(path).object()
+        if o.identifier.model in ['entity', 'segment']:
+            o.children(force_read=True)
+        o.write_json()
+    
+    if args.commit:
+        logging.info('Committing changes')
+        status,msg = commands.update(
+            args.user, args.mail,
+            collection,
+            paths,
+            agent='ddr-transform'
+        )
+        logging.info('ok')
+    else:
+        logging.info('Changes not committed')
+
+    end = datetime.now()
+    elapsed = end - start
+    per = elapsed / num
+    logging.info('DONE (%s elapsed, %s per object)' % (elapsed, per))
+
+
+if __name__ == '__main__':
+    main()

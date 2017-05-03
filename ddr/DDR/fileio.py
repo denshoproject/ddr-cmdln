@@ -1,5 +1,6 @@
 import codecs
 import json
+import os
 import sys
 
 import unicodecsv as csv
@@ -11,6 +12,8 @@ def read_text(path):
     @param path: str Absolute path to file.
     @returns: unicode
     """
+    if not os.path.exists(path):
+        raise IOError('File is missing or unreadable: %s' % path)
     # TODO use codecs.open utf-8
     with open(path, 'r') as f:
         text = f.read()

@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 
+import config
 import locking
 
 
@@ -8,7 +9,7 @@ import locking
 # locking.unlock
 # locking.locked
 def test_locking():
-    lock_path = '/tmp/test-lock-%s' % datetime.now().strftime('%Y%m%dT%H%M%S')
+    lock_path = '/tmp/test-lock-%s' % datetime.now(config.TZ).strftime('%Y%m%dT%H%M%S')
     text = 'we are locked. go away.'
     # before locking
     assert locking.locked(lock_path) == False

@@ -1,0 +1,101 @@
+#!/usr/bin/env python
+#
+# This file is part of ddr-cmdln/ddr
+#
+
+DESCRIPTION = """Run command on all multiple collections"""
+
+EPILOG = """
+
+The SOURCE file should contain a list of collection IDs, one per
+line.
+
+Each collection will be cloned, then each object will be instantiated
+and then saved.  Collections will be committed if requested AND the
+batch run is successful (if even one file fails the commit will be
+cancelled).  Collections will be deleted after the run unless
+requested.
+
+Example:
+    ddr-batch $USER $USER@densho.org /tmp/batch /tmp/batch/source.txt
+
+"""
+
+from datetime import datetime, timedelta
+import argparse
+import logging
+import sys
+
+from DDR import config
+from DDR import batch
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    stream=sys.stdout,
+)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description=DESCRIPTION,
+        epilog=EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument('-C', '--commit', action='store_true', help='Commit collections if successful.')
+    parser.add_argument('-K', '--keep', action='store_true', help='Keep collections after finishing.')
+    parser.add_argument('user', help='User name (used for commits)')
+    parser.add_argument('mail', help='User email (used for commits)')
+    parser.add_argument('basedir', help='Absolute path to base dir.')
+    parser.add_argument('source', help='Absolute path to list file.')
+    args = parser.parse_args()
+
+    start = datetime.now()
+    
+    data = batch.Updater.update_multi(
+        args.basedir,
+        args.source,
+        args.user, args.mail,
+        commit=args.commit,
+        keep=args.keep,
+    )
+    logging.info('collections:   %s' % data['collections'])
+    logging.info('successful:    %s' % data['successful'])
+    logging.info('objects saved: %s' % data['objects_saved'])
+    logging.info('files updated: %s' % data['files_updated'])
+    fail_rate = 0
+    if data.get('failures') and data.get('objects_saved'):
+        fail_rate = (data['failures'] * 1.0) / data['objects_saved']
+    logging.info('failures:      %s (%s)' % (data['failures'], fail_rate))
+
+    def isnumber(x):
+        try:
+            x.isdigit()
+            return x
+        except:
+            return False
+        try:
+            int(x)
+            return x
+        except:
+            return False
+        return False
+    
+    deltas = [
+        delta.total_seconds()
+        for delta in data['per_objects']
+        if delta and isinstance(delta, timedelta)
+    ]
+    if len(deltas) and sum(deltas):
+        avg = sum(deltas) / len(deltas)
+    else:
+        avg = 'n/a'
+    logging.info('avg s/object   %s' % avg)
+    
+    finish = datetime.now()
+    elapsed = finish - start
+    logging.info('DONE - %s elapsed' % elapsed)
+
+
+if __name__ == '__main__':
+    main()
