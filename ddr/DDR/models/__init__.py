@@ -33,6 +33,7 @@ yet must be editable in the editor UI.
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 """
 
+from copy import deepcopy
 from datetime import datetime
 import json
 import logging
@@ -1880,21 +1881,31 @@ class Entity( object ):
                 os.path.join(self.collection_path, f)
             )
         ]
+        logger.debug('rm_files: %s' % rm_files)
         
-        # remove file from entity.file_groups
+        # rm file_ from entity metadata
+        #
+        # entity._file_objects
+        self._file_objects = [
+            f for f in deepcopy(self._file_objects) if f.id != file_.id
+        ]
+        #
+        # entity.file_groups (probably unnecessary)
         files = filegroups_to_files(self.file_groups)
-        # make sure each file dict has an id
         for f in files:
             if f.get('path_rel') and not f.get('id'):
+                # make sure each file dict has an id
                 f['id'] = os.path.basename(os.path.splitext(f['path_rel'])[0])
-        # exclude the file
-        filez = [f for f in files if f['id'] != file_.id]
-        self.file_groups = files_to_filegroups(filez)
-        
+        self.file_groups = files_to_filegroups(
+            # exclude the file
+            [f for f in files if f['id'] != file_.id]
+        )
         self.write_json()
+        
         # list of files to be *updated*
         updated_files = ['entity.json']
         logger.debug('updated_files: %s' % updated_files)
+        
         return rm_files,updated_files
 
 
