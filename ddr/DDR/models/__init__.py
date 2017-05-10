@@ -992,6 +992,35 @@ class Collection( object ):
     def repo_diverged( self ):   return dvcs.diverged(self.repo_status(), self.repo_states())
     def repo_conflicted( self ): return dvcs.conflicted(self.repo_status(), self.repo_states())
 
+    def missing_annex_files(self):
+        """List File objects with missing binaries
+        
+        @returns: list of File objects
+        """
+        def just_id(oid):
+            # some "file IDs" might have config.ACCESS_FILE_APPEND appended.
+            # remove config.ACCESS_FILE_APPEND if present
+            # NOTE: make sure we're not matching some other part of the ID
+            # example: ddr-test-123-456-master-abc123-a
+            #                                 ^^
+            rindex = oid.rfind(config.ACCESS_FILE_APPEND)
+            if rindex > 0:
+                stem = oid[:rindex]
+                suffix = oid[rindex:]
+                if (len(oid) - len(stem)) \
+                and (len(suffix) == len(config.ACCESS_FILE_APPEND)):
+                    return stem
+            return oid
+        def add_id_and_hash(item):
+            item['hash'] = os.path.splitext(item['keyname'])[0]
+            item['id'] = just_id(
+                os.path.splitext(os.path.basename(item['file']))[0]
+            )
+            return item
+        return [
+            add_id_and_hash(item)
+            for item in dvcs.annex_missing_files(dvcs.repository(self.path))
+        ]
 
 
 # "children": [

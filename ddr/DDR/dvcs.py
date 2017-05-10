@@ -937,6 +937,16 @@ def annex_whereis_file(repo, file_path_rel, info=None):
         else: r['this'] = False
     return data
 
+def annex_missing_files(repo):
+    """List git-annex data for binaries absent from repo
+    
+    @returns: list of dicts, one per missing file
+    """
+    return [
+        json.loads(line)
+        for line in repo.git.annex('find','--not','--in=here','--json').splitlines()
+    ]
+
 def annex_trim(repo, confirmed=False):
     """Drop full-size binaries from a repository.
     
