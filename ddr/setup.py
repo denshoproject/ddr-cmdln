@@ -74,6 +74,7 @@ setup(
         'bin/ddr-index',
         'bin/ddr-info',
         'bin/ddr-massupdate',
+        'bin/ddr-missing',
         'bin/ddr-pubcopy',
         'bin/ddr-signatures',
         'bin/ddr-transform',

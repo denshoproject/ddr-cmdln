@@ -422,8 +422,21 @@ def commit(repo, msg, agent):
     @param agent: str
     @returns: GitPython commit object
     """
+    # TODO cancel commit if list of staged doesn't match list of files added?
+    # TODO complain if list of committed files doesn't match list of staged?
+    # log staged files
+    staged = list_staged(repo)
+    staged.sort()
+    logging.debug('STAGED {}'.format(staged))
+    # do the commit
     commit_message = compose_commit_message(msg, agent=agent)
     commit = repo.index.commit(commit_message)
+    logging.debug('COMMIT {}'.format(commit))
+    # log committed files
+    committed = list_committed(repo, commit)
+    committed.sort()
+    logging.debug('COMMITTED {}'.format(committed))
+    # done
     return commit
 
 def reset(repo):
@@ -936,6 +949,16 @@ def annex_whereis_file(repo, file_path_rel, info=None):
         if r['uuid'] in info['here']: r['this'] = True
         else: r['this'] = False
     return data
+
+def annex_missing_files(repo):
+    """List git-annex data for binaries absent from repo
+    
+    @returns: list of dicts, one per missing file
+    """
+    return [
+        json.loads(line)
+        for line in repo.git.annex('find','--not','--in=here','--json').splitlines()
+    ]
 
 def annex_trim(repo, confirmed=False):
     """Drop full-size binaries from a repository.

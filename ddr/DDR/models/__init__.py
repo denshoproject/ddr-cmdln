@@ -33,6 +33,7 @@ yet must be editable in the editor UI.
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 """
 
+from copy import deepcopy
 from datetime import datetime
 import json
 import logging
@@ -992,6 +993,35 @@ class Collection( object ):
     def repo_diverged( self ):   return dvcs.diverged(self.repo_status(), self.repo_states())
     def repo_conflicted( self ): return dvcs.conflicted(self.repo_status(), self.repo_states())
 
+    def missing_annex_files(self):
+        """List File objects with missing binaries
+        
+        @returns: list of File objects
+        """
+        def just_id(oid):
+            # some "file IDs" might have config.ACCESS_FILE_APPEND appended.
+            # remove config.ACCESS_FILE_APPEND if present
+            # NOTE: make sure we're not matching some other part of the ID
+            # example: ddr-test-123-456-master-abc123-a
+            #                                 ^^
+            rindex = oid.rfind(config.ACCESS_FILE_APPEND)
+            if rindex > 0:
+                stem = oid[:rindex]
+                suffix = oid[rindex:]
+                if (len(oid) - len(stem)) \
+                and (len(suffix) == len(config.ACCESS_FILE_APPEND)):
+                    return stem
+            return oid
+        def add_id_and_hash(item):
+            item['hash'] = os.path.splitext(item['keyname'])[0]
+            item['id'] = just_id(
+                os.path.splitext(os.path.basename(item['file']))[0]
+            )
+            return item
+        return [
+            add_id_and_hash(item)
+            for item in dvcs.annex_missing_files(dvcs.repository(self.path))
+        ]
 
 
 # "children": [
@@ -1851,21 +1881,31 @@ class Entity( object ):
                 os.path.join(self.collection_path, f)
             )
         ]
+        logger.debug('rm_files: %s' % rm_files)
         
-        # remove file from entity.file_groups
+        # rm file_ from entity metadata
+        #
+        # entity._file_objects
+        self._file_objects = [
+            f for f in deepcopy(self._file_objects) if f.id != file_.id
+        ]
+        #
+        # entity.file_groups (probably unnecessary)
         files = filegroups_to_files(self.file_groups)
-        # make sure each file dict has an id
         for f in files:
             if f.get('path_rel') and not f.get('id'):
+                # make sure each file dict has an id
                 f['id'] = os.path.basename(os.path.splitext(f['path_rel'])[0])
-        # exclude the file
-        filez = [f for f in files if f['id'] != file_.id]
-        self.file_groups = files_to_filegroups(filez)
-        
+        self.file_groups = files_to_filegroups(
+            # exclude the file
+            [f for f in files if f['id'] != file_.id]
+        )
         self.write_json()
+        
         # list of files to be *updated*
         updated_files = ['entity.json']
         logger.debug('updated_files: %s' % updated_files)
+        
         return rm_files,updated_files
 
 
@@ -2098,8 +2138,14 @@ class File( object ):
         if not collection:
             collection = self.identifier.collection().object()
         
-        # remove file from parent entity.file_groups
+        # metadata jsons (rm this file, modify parent entity)
         rm_files,updated_files = entity.prep_rm_file(self)
+        # binary and access file
+        rm_files.append(self.path_rel)
+        rm_files.append(self.access_rel)
+
+        #IMPORTANT: some files use same binary for master,mezz
+        #we want to be able to e.g. delete mezz w/out deleting master
         
         # write files and commit
         status,message,updated_files = commands.file_destroy(
