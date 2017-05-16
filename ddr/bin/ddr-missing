@@ -151,22 +151,21 @@ def make_basenames_filenames(rowds):
     }
     return basenames_filenames
 
-def make_rids_binaries(replacements_list):
+def make_rids_binaries(replacements):
     """read list of binary files that can be reimported, dict File ID->filename
     
     TODO read a directory instead of a file
     
-    @param replacements_list: str Path to list of replacement files
+    @param replacements_list: list of replacement files
     @returns: dict file-id: filename
     """
     logging.debug('make_rids_binaries()')
     rids_binaries = {}
-    with open(replacements_list, 'r') as f:
-        for filename in [line.strip() for line in f.readlines()]:
-            rid = os.path.splitext(
-                filename
-            )[0].replace('_','-').replace('mezz','mezzanine')
-            rids_binaries[rid] = filename
+    for filename in replacements:
+        rid = os.path.splitext(
+            filename
+        )[0].replace('_','-').replace('mezz','mezzanine')
+        rids_binaries[rid] = filename
     return rids_binaries
 
 def mark_missing(headers, rowds, not_here):
@@ -300,13 +299,16 @@ def find_replacements(collection_path, csv_path, replacements_dir=None, replacem
     rowds = mark_missing(headers, rowds, not_here)
     
     logging.info('Identifying replacement files')
+    replacements = []
     if replacements_file:
-        rowds = add_missing_filenames(
-            headers, rowds,
-            make_rids_binaries(replacements_file)
-        )
+        with open(replacements_file, 'r') as f:
+            replacements = [line.strip() for line in f.readlines()]
     elif replacements_dir:
-        pass
+        replacements = os.listdir(replacements_dir)
+    rowds = add_missing_filenames(
+        headers, rowds,
+        make_rids_binaries(replacements)
+    )
     
     logging.info('Noting missing and replacements in CSV: %s' % csv_path)
     csv_marked = os.path.join(
