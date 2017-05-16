@@ -242,13 +242,17 @@ def delete_files(collection, rowds, git_name, git_mail):
             entity = ffile.parent()
             
             logging.info('%s/%s Removing %s' % (n+1, num, ffile))
-            exit,status,rm_files,updated_files = ffile.delete(
-                git_name=git_name,
-                git_mail=git_mail,
-                agent=AGENT,
-                collection=collection,
-                commit=False,
-            )
+            exit = None; status = None
+            try:
+                exit,status,rm_files,updated_files = ffile.delete(
+                    git_name=git_name,
+                    git_mail=git_mail,
+                    agent=AGENT,
+                    collection=collection,
+                    commit=False,
+                )
+            except dvcs.git.exc.GitCommandError as err:
+                logging.error(err)
             logging.debug('status %s' % status)
 
 def commit_files(collection, message):
