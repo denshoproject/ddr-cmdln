@@ -15,15 +15,33 @@ functions
 - reimport files with missing
 mark progress in CSV
 
-EXAMPLES
+USAGE EXAMPLES
 
-$ ddr-missing /var/www/media/ddr/ddr-densho-315 /tmp/ddr-densho-315-files.csv -B /tmp/ddr-densho-315-binaries
+Mark CSV file with files missing from annex AND reimportable binaries.::
 
-$ ddr-missing /var/www/media/ddr/ddr-densho-315 /tmp/ddr-densho-315-files.csv -B /tmp/ddr-densho-315-binaries -u USERNAME -m USERMAIL -D
-
-$ ddr-missing /var/www/media/ddr/ddr-densho-315 /tmp/ddr-densho-315-files.csv -B /tmp/ddr-densho-315-binaries -u USERNAME -m USERMAIL -D -C "COMMIT MESSAGE HERE"
-
-
+    # Export file data
+    $ ddr-export file \
+          /COLLECTION/DIR/ \
+          /tmp/REPO-ORG-CID-files.csv
+    
+    $ ddr-missing /COLLECTION/DIR/ \
+          /tmp/REPO-ORG-CID-files.csv \
+          -b /DIR/CONTAINING/BINARIES/ \
+          -u USERNAME -m USERMAIL --delete \ # Delete Files w missing bins
+          -C "COMMIT MESSAGE HERE"           # Commit with message
+    
+    # Edit CSV
+    $ cp /tmp/REPO-ORG-CID-files-marked.csv /tmp/REPO-ORG-CID-files-reimport.csv
+    # - Delete rows that do now have (annex) "missing" and binaries.
+    # - Replace contents of "id" field with contents of "parent" column.
+    # - Replace contents of "basename" with contents of "binaries" column.
+    # - Delete "annex" column.
+    
+    # Import new files
+    $ cd /DIR/CONTAINING/BINARIES/
+    $ ddr-import file \
+          /DIR/CONTAINING/BINARIES/REPO-ORG-CID-files-reimport.csv \
+          /COLLECTION/DIR/
 
 --------------------------------------------------------------------------------
 ------------------------------------------------------------------------
