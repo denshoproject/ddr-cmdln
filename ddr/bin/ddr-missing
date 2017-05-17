@@ -169,6 +169,46 @@ def make_basenames_filenames(rowds):
     }
     return basenames_filenames
 
+
+def make_rid_from_filename(filename):
+    """
+import os
+f = 'ddr-densho-296-12-1_master.tif'
+filename,ext = os.path.splitext(f)
+parts = filename.split('-')
+oid = '-'.join(parts[:4])
+'ddr-densho-296-12'
+
+f = 'ddr-densho-296-11_mezz.pdf'
+filename,ext = os.path.splitext(f)
+parts = filename.split('-')
+parts[3] = parts[3].split('_')[0]
+
+    """
+    # old method
+    #oid = os.path.splitext(
+    #    filename
+    #)[0].replace('_','-').replace('mezz','mezzanine')
+    
+    # new method (ONLY WORKS WITH entities, no segments!)
+    master = False; mezzanine = False
+    filename,ext = os.path.splitext(filename)
+    parts = filename.split('-')
+    if len(parts) == 4:
+        # ddr-densho-296-11_mezz.pdf
+        parts[3] = parts[3].split('_')[0]
+    elif len(parts) == 5:
+        # ddr-densho-296-12-1_master.tif
+        parts = parts[:4]
+    
+    if 'master' in filename:
+        parts.append('master')
+    elif 'mezz' in filename:
+        parts.append('mezzanine')
+    
+    oid = '-'.join(parts)
+    return oid
+
 def make_rids_binaries(replacements):
     """read list of binary files that can be reimported, dict File ID->filename
     
@@ -179,11 +219,11 @@ def make_rids_binaries(replacements):
     """
     logging.debug('make_rids_binaries()')
     rids_binaries = {}
-    for filename in replacements:
-        rid = os.path.splitext(
-            filename
-        )[0].replace('_','-').replace('mezz','mezzanine')
+    num = len(replacements)
+    for n,filename in enumerate(replacements):
+        rid = make_rid_from_filename(filename)
         rids_binaries[rid] = filename
+        logging.debug('%s/%s filename %s -> id %s' % (n+1, num, filename, rid))
     return rids_binaries
 
 def mark_missing(headers, rowds, not_here):
