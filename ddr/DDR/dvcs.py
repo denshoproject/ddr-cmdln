@@ -1089,6 +1089,7 @@ class Gitolite(object):
     info = None
     connected = None
     authorized = None
+    initialized = None
     
     def __init__(self, server=config.GITOLITE, timeout=60):
         """
@@ -1125,6 +1126,7 @@ class Gitolite(object):
             self.authorized = self._authorized()
         else:
             self.connected = False
+        self.initialized = True
     
     def _authorized(self):
         """Parse Gitolite server response, indicate whether user is authorized

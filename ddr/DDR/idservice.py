@@ -38,6 +38,7 @@ class IDServiceClient():
     >>> ic.resume('gjost', u'9b68187429be07506dae2d1a493b74afd4ef7c35')
     >>> ic.logout()
     """
+    url = config.IDSERVICE_API_BASE
     debug = False
     username = None
     token = None
@@ -118,6 +119,34 @@ class IDServiceClient():
             objectid = r.json()['id']
             logging.debug(objectid)
         return r.status_code,r.reason,objectid
+    
+    @staticmethod
+    def check_object_id(object_id):
+        url = '%s/objectids/%s/' % (config.IDSERVICE_API_BASE, object_id)
+        try:
+            r = requests.get(url)
+            status = r.status_code
+        except:
+            status = 500
+        return {
+            'id':object_id,
+            'status':status,
+            'registered': status == 200
+        }
+    
+    @staticmethod
+    def check_object_ids(object_ids):
+        """Given list of IDs, indicate whether they are registered
+        
+        TODO multiprocessing
+        
+        @param object_ids: list
+        @returns: dict of 
+        """
+        return {
+            r['id']: r['registered']
+            for r in [check_object_id(oid) for oid in object_ids]
+        }
     
     def check_eids(self, cidentifier, entity_ids):
         """Given list of EIDs, indicates which are registered,unregistered.

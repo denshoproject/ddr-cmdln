@@ -624,6 +624,59 @@ class Collection( object ):
         return "<%s.%s %s:%s>" % (
             self.__module__, self.__class__.__name__, self.identifier.model, self.id
         )
+
+    @staticmethod
+    def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
+        """Indicates whether Identifier exists in filesystem, gitolite, or idservice
+        
+        from DDR import dvcs
+        from DDR import identifier
+        from DDR import idservice
+        from DDR import models
+        ci = identifier.Identifier(id='ddr-test-123', '/var/www/media/ddr')
+        g = dvcs.Gitolite()
+        g.initialize()
+        i = idservice.IDServiceClient()
+        i.login('USERNAME','PASSWORD')
+        Collection.exists(ci, basepath=ci.basepath, gitolite=g, idservice=i)
+        
+        @param oidentifier: Identifier
+        @param basepath: str Absolute path
+        @param gitolite: dvcs.Gitolite (initialized)
+        @param idservice: idservice.IDServiceClient (initialized)
+        @returns: 
+        """
+        data = {
+            'filesystem': None,
+            'gitolite': None,
+            'idservice': None,
+        }
+        
+        if basepath:
+            logging.debug('Checking for %s in %s' % (oidentifier.id, oidentifier.path_abs()))
+            if os.path.exists(oidentifier.path_abs()) and os.path.exists(oidentifier.path_abs('json')):
+                data['filesystem'] = True
+            else:
+                data['filesystem'] = False
+        
+        if gitolite:
+            logging.debug('Checking for %s in %s' % (oidentifier.id, gitolite))
+            if not gitolite.initialized:
+                raise Exception('%s is not initialized' % gitolite)
+            if oidentifier.id in gitolite.repos():
+                data['gitolite'] = True
+            else:
+                data['gitolite'] = False
+        
+        if idservice:
+            logging.debug('Checking for %s in %s' % (oidentifier.id, idservice))
+            if not idservice.token:
+                raise Exception('%s is not initialized' % idservice)
+            result = idservice.check_object_id(oidentifier.id)
+            data['idservice'] = result['registered']
+        
+        logging.debug(data)
+        return data
     
     @staticmethod
     def create(path_abs, identifier=None):
@@ -1279,6 +1332,47 @@ class Entity( object ):
         return "<%s.%s %s:%s>" % (
             self.__module__, self.__class__.__name__, self.identifier.model, self.id
         )
+
+    @staticmethod
+    def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
+        """Indicates whether Identifier exists in filesystem and/or idservice
+        
+        from DDR import dvcs
+        from DDR import identifier
+        from DDR import idservice
+        from DDR import models
+        ei = identifier.Identifier(id='ddr-test-123-456', '/var/www/media/ddr')
+        i = idservice.IDServiceClient()
+        i.login('USERNAME','PASSWORD')
+        Entity.exists(ci, basepath=ci.basepath, idservice=i)
+        
+        @param oidentifier: Identifier
+        @param basepath: str Absolute path
+        @param gitolite: dvcs.Gitolite (ignored)
+        @param idservice: idservice.IDServiceClient (initialized)
+        @returns: 
+        """
+        data = {
+            'filesystem': None,
+            'idservice': None,
+        }
+        
+        if basepath:
+            logging.debug('Checking for %s in %s' % (oidentifier.id, oidentifier.path_abs()))
+            if os.path.exists(oidentifier.path_abs()) and os.path.exists(oidentifier.path_abs('json')):
+                data['filesystem'] = True
+            else:
+                data['filesystem'] = False
+        
+        if idservice:
+            logging.debug('Checking for %s in %s' % (oidentifier.id, idservice))
+            if not idservice.token:
+                raise Exception('%s is not initialized' % idservice)
+            result = idservice.check_object_id(oidentifier.id)
+            data['idservice'] = result['registered']
+        
+        logging.debug(data)
+        return data
     
     @staticmethod
     def create(path_abs, identifier=None):
