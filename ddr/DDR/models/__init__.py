@@ -480,6 +480,19 @@ def prep_xml():
 def from_xml():
     pass
 
+def signature_abs(obj, basepath):
+    """Absolute path to signature image file, if signature_id present.
+    """
+    if isinstance(obj, dict):
+        sid = obj.get('signature_id')
+    else:
+        sid = getattr(obj, 'signature_id', None)
+    if sid:
+        oi = Identifier(sid, basepath)
+        if oi and oi.model == 'file':
+            return oi.path_abs('access')
+    return None
+
 
 class Path( object ):
     pass
@@ -708,7 +721,7 @@ class Collection( object ):
         """
         return self.identifier.parent().object()
     
-    def children( self, quick=None ):
+    def children( self, quick=False, dicts=False ):
         """Returns list of the Collection's Entity objects.
         
         >>> c = Collection.from_json('/tmp/ddr-testing-123')
@@ -718,11 +731,9 @@ class Collection( object ):
         TODO use util.find_meta_files()
         
         @param quick: Boolean List only titles and IDs
+        @param dicts: Boolean List only titles and IDs (dicts)
+        @returns: list of Entities, ListEntities, or dicts
         """
-        # empty class used for quick view
-        class ListEntity( object ):
-            def __repr__(self):
-                return "<DDRListEntity %s>" % (self.id)
         entity_paths = []
         if os.path.exists(self.files_path):
             # TODO use cached list if available
@@ -736,16 +747,39 @@ class Collection( object ):
                 # fake Entity with just enough info for lists
                 entity_json_path = os.path.join(path,'entity.json')
                 if os.path.exists(entity_json_path):
+                    e = ListEntity()
+                    e.id = Identifier(path=path).id
+                    e.model = 'entity'
                     for line in fileio.read_text(entity_json_path).split('\n'):
                         if '"title":' in line:
-                            e = ListEntity()
-                            e.id = Identifier(path=path).id
-                            # make a miniature JSON doc out of just title line
                             e.title = json.loads('{%s}' % line)['title']
-                            entities.append(e)
-                            # stop once we hit 'title' so we don't waste time
+                        elif '"signature_id":' in line:
+                            e.signature_id = json.loads('{%s}' % line)['signature_id']
+                            e.signature_abs = signature_abs(e, self.identifier.basepath)
+                        if e.title and e.signature_id:
+                            # stop once we have what we need so we don't waste time
                             # and have entity.children as separate ghost entities
                             break
+                    entities.append(e)
+            elif dicts:
+                # fake Entity with just enough info for lists
+                entity_json_path = os.path.join(path,'entity.json')
+                if os.path.exists(entity_json_path):
+                    e = {
+                        'id': Identifier(path=path).id,
+                        'model': 'entity',
+                    }
+                    for line in fileio.read_text(entity_json_path).split('\n'):
+                        if '"title":' in line:
+                            e['title'] = json.loads('{%s}' % line)['title']
+                        elif '"signature_id":' in line:
+                            e['signature_id'] = json.loads('{%s}' % line)['signature_id']
+                            e['signature_abs'] = signature_abs(e, self.identifier.basepath)
+                        if e.get('title') and e.get('signature_id'):
+                            # stop once we have what we need so we don't waste time
+                            # and have entity.children as separate ghost entities
+                            break
+                    entities.append(e)
             else:
                 entity = Entity.from_identifier(Identifier(path=path))
                 for lv in entity.labels_values():
@@ -757,11 +791,7 @@ class Collection( object ):
     def signature_abs(self):
         """Absolute path to signature image file, if signature_id present.
         """
-        if self.signature_id:
-            oi = Identifier(self.signature_id, self.identifier.basepath)
-            if oi and oi.model == 'file':
-                return File.from_identifier(oi).access_abs
-        return None
+        return signature_abs(self, self.identifier.basepath)
     
     def identifiers(self, model=None, force_read=False):
         """Lists Identifiers for all or subset of Collection's descendents.
@@ -1023,6 +1053,11 @@ class Collection( object ):
             for item in dvcs.annex_missing_files(dvcs.repository(self.path))
         ]
 
+
+class ListEntity( object ):
+    # empty class used for quick view
+    def __repr__(self):
+        return "<DDRListEntity %s>" % (self.id)
 
 # "children": [
 #   {
@@ -1410,11 +1445,7 @@ class Entity( object ):
     def signature_abs(self):
         """Absolute path to signature image file, if signature_id present.
         """
-        if self.signature_id:
-            oi = Identifier(self.signature_id, self.identifier.basepath)
-            if oi and oi.model == 'file':
-                return File.from_identifier(oi).access_abs
-        return None
+        return signature_abs(self, self.identifier.basepath)
     
     def labels_values(self):
         """Apply display_{field} functions to prep object data for the UI.
