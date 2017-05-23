@@ -774,7 +774,7 @@ class Collection( object ):
         """
         return self.identifier.parent().object()
     
-    def children( self, quick=False, dicts=False ):
+    def children( self, quick=False ):
         """Returns list of the Collection's Entity objects.
         
         >>> c = Collection.from_json('/tmp/ddr-testing-123')
@@ -785,7 +785,7 @@ class Collection( object ):
         
         @param quick: Boolean List only titles and IDs
         @param dicts: Boolean List only titles and IDs (dicts)
-        @returns: list of Entities, ListEntities, or dicts
+        @returns: list of Entities or ListEntity
         """
         entity_paths = []
         if os.path.exists(self.files_path):
@@ -801,8 +801,8 @@ class Collection( object ):
                 entity_json_path = os.path.join(path,'entity.json')
                 if os.path.exists(entity_json_path):
                     e = ListEntity()
-                    e.id = Identifier(path=path).id
-                    e.model = 'entity'
+                    e.identifier = Identifier(path=path)
+                    e.id = e.identifier.id
                     for line in fileio.read_text(entity_json_path).split('\n'):
                         if '"title":' in line:
                             e.title = json.loads('{%s}' % line)['title']
@@ -810,25 +810,6 @@ class Collection( object ):
                             e.signature_id = json.loads('{%s}' % line)['signature_id']
                             e.signature_abs = signature_abs(e, self.identifier.basepath)
                         if e.title and e.signature_id:
-                            # stop once we have what we need so we don't waste time
-                            # and have entity.children as separate ghost entities
-                            break
-                    entities.append(e)
-            elif dicts:
-                # fake Entity with just enough info for lists
-                entity_json_path = os.path.join(path,'entity.json')
-                if os.path.exists(entity_json_path):
-                    e = {
-                        'id': Identifier(path=path).id,
-                        'model': 'entity',
-                    }
-                    for line in fileio.read_text(entity_json_path).split('\n'):
-                        if '"title":' in line:
-                            e['title'] = json.loads('{%s}' % line)['title']
-                        elif '"signature_id":' in line:
-                            e['signature_id'] = json.loads('{%s}' % line)['signature_id']
-                            e['signature_abs'] = signature_abs(e, self.identifier.basepath)
-                        if e.get('title') and e.get('signature_id'):
                             # stop once we have what we need so we don't waste time
                             # and have entity.children as separate ghost entities
                             break
@@ -1108,6 +1089,12 @@ class Collection( object ):
 
 
 class ListEntity( object ):
+    identifier = None
+    id = None
+    model = 'entity'
+    title=''
+    signature_id=''
+    signature_abs=''
     # empty class used for quick view
     def __repr__(self):
         return "<DDRListEntity %s>" % (self.id)
