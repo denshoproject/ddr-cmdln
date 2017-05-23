@@ -102,18 +102,25 @@ class IDServiceClient():
             data = {}
         return r.status_code,r.reason,data
     
-    def next_object_id(self, oidentifier, model):
-        """Get the next object ID of the specified type
+    def next_object_id(self, oidentifier, model, register=False):
+        """GET or POST the next object ID of the specified type
         
         @param oidentifier: identifier.Identifier
         @param model: str
+        @param register: boolean If True, register the ID
         @return: int,str,str (status code, reason, object ID string)
         """
         logging.debug('idservice.IDServiceClient.next_object_id(%s, %s)' % (oidentifier, model))
-        r = requests.post(
-            config.IDSERVICE_NEXT_OBJECT_URL.format(objectid=oidentifier.id, model=model),
-            headers=self._auth_headers(),
+        url = config.IDSERVICE_NEXT_OBJECT_URL.format(
+            model=model,
+            objectid=oidentifier.id,
         )
+        if register:
+            # POST - register new ID
+            r = requests.post(url, headers=self._auth_headers())
+        else:
+            # GET - just find out what next ID is
+            r = requests.get(url, headers=self._auth_headers())
         objectid = None
         if r.status_code == 201:
             objectid = r.json()['id']
