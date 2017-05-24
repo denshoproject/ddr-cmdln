@@ -140,6 +140,20 @@ class IDServiceClient():
             'status':status,
             'registered': status == 200
         }
+
+    @staticmethod
+    def child_ids(object_id):
+        """Returns all object IDs that contain the parent
+        
+        @param object_id: str
+        @returns: (status_code,reason,object_ids)
+        """
+        url = '%s/objectids/%s/children/' % (config.IDSERVICE_API_BASE, object_id)
+        r = requests.get(url)
+        oids = []
+        if r.status_code == 200:
+            oids = [o['id'] for o in json.loads(r.text)]
+        return r.status_code,r.reason,oids
     
     @staticmethod
     def check_object_ids(object_ids):
