@@ -122,7 +122,7 @@ class IDServiceClient():
             # GET - just find out what next ID is
             r = requests.get(url, headers=self._auth_headers())
         objectid = None
-        if r.status_code == 201:
+        if r.status_code in [200,201]:
             objectid = r.json()['id']
             logging.debug(objectid)
         return r.status_code,r.reason,objectid
