@@ -522,7 +522,10 @@ class Importer():
             
             eidentifier = identifier.Identifier(id=rowd['id'], base_path=cidentifier.basepath)
             # if there is an existing object it will be loaded
-            entity = eidentifier.object()
+            try:
+                entity = eidentifier.object()
+            except IOError:
+                entity = None
             if not entity:
                 entity = models.Entity.create(eidentifier.path_abs(), eidentifier)
             modified = entity.load_csv(rowd)
