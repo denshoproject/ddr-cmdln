@@ -263,9 +263,10 @@ TEXT_BRACKETID_TEMPLATE = '{term} [{id}]'
 TEXT_BRACKETID_REGEX = re.compile(r'(?P<term>[\w\d ()_,:-]+)\s\[(?P<id>\d+)\]')
 
 def _is_text_bracketid(text):
-    m = re.search(TEXT_BRACKETID_REGEX, text)
-    if m and (len(m.groups()) == 2) and m.groups()[1].isdigit():
-        return m
+    if text:
+        m = re.search(TEXT_BRACKETID_REGEX, text)
+        if m and (len(m.groups()) == 2) and m.groups()[1].isdigit():
+            return m
     return False
 
 def textbracketid_to_dict(text, keys=['term', 'id'], pattern=TEXT_BRACKETID_REGEX, match=None):
@@ -716,30 +717,34 @@ def _parse_rolepeople_text(texts):
     for text in texts:
         txt = text.strip()
         if txt:
-            # separate namepart and role
-            if ':' in txt:
-                try:
-                    name,role = txt.split(':')
-                except:
-                    print(text)
-                    print(type(text))
-                    raise Exception('text_to_rolepeople could not parse "%s"' % text)
+            item = {'namepart':None, 'role':'author',}
+            
+            if ('|' in txt) and (':' in txt):
+                # ex: "namepart:Sadako Kashiwagi|role:narrator|id:856"
+                for chunk in txt.split('|'):
+                    key,val = chunk.split(':')
+                    item[key] = val.strip()
+                if item.get('name') and not item.get('namepart'):
+                    item['namepart'] = item.pop('name')
+            
+            elif ':' in txt:
+                # ex: "Sadako Kashiwagi:narrator"
+                name,role = txt.split(':')
+                item['namepart'] = name.strip()
+                item['role'] = role.strip()
+            
             else:
-                name = txt; role = 'author'
+                # ex: "Sadako Kashiwagi"
+                item['namepart'] = txt
+            
             # extract person ID if present
-            match = _is_text_bracketid(text)
+            match = _is_text_bracketid(item.get('namepart',''))
             if match:
-                item = {
-                    'namepart': match.groupdict()['term'].strip(),
-                    'id': int(match.groupdict()['id'].strip()),
-                    'role': role.strip(),
-                }
-            # no person ID
-            else:
-                item = {
-                    'namepart': name.strip(),
-                    'role': role.strip(),
-                }
+                item['namepart'] = match.groupdict()['term'].strip()
+                item['id'] = match.groupdict()['id'].strip()
+            if item.get('id') and item['id'].isdigit():
+                item['id'] = int(item['id'])
+            
             data.append(item)
     return data
 
@@ -758,19 +763,23 @@ def text_to_rolepeople(text):
     text = normalize_string(text)
     
     # or it might be JSON
-    try:
-        data = json.loads(text)
-    except ValueError:
+    if ('{' in text) or ('[' in text):
         try:
-            data = load_dirty_json(text)
+            data = json.loads(text)
         except ValueError:
-            data = []
-    if data:
-        return _filter_rolepeople(data)
+            try:
+                data = load_dirty_json(text)
+            except ValueError:
+                data = []
+        if data:
+            return _filter_rolepeople(data)
     
     # looks like it's raw text
-    data = _parse_rolepeople_text(text.split(';'))
-    return _filter_rolepeople(data)
+    return _filter_rolepeople(
+        _parse_rolepeople_text(
+            text.split(';')
+        )
+    )
 
 ROLEPEOPLE_TEXT_TEMPLATE_W_ID = '{{ data.namepart }} [{{ data.id }}]:{{ data.role }}'
 ROLEPEOPLE_TEXT_TEMPLATE_NOID = '{{ data.namepart }}:{{ data.role }}'
