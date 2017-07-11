@@ -100,19 +100,19 @@ def test_text_to_list():
 def test_list_to_text():
     assert converters.list_to_text(TEXTLIST_DATA) == TEXTLIST_TEXT
 
-TEXT_DICT_TEXT_LABELS    = 'term:ABC|id:123'
-TEXT_DICT_TEXT_NOLABELS  = 'ABC:123'
-TEXT_DICT_TEXT_BRACKETID = 'ABC [123]'
-TEXT_DICT_TEXT_BRACKETID_NL = 'ABC\n[123]'
-TEXT_DICT_TEXT_BRACKETID_QUOTES = '"ABC" [123]'
+TEXT_DICT_TEXT_LABELS    = "term:Hawai'i|id:123"
+TEXT_DICT_TEXT_NOLABELS  = "Hawai'i:123"
+TEXT_DICT_TEXT_BRACKETID = "Hawai'i [123]"
+TEXT_DICT_TEXT_BRACKETID_NL = "Hawai'i\n[123]"
+TEXT_DICT_TEXT_BRACKETID_QUOTES = "Hawai'i [123]"
 TEXT_DICT_KEYS = ['term', 'id']
 TEXT_DICT_SEPARATORS = ':|'
 TEXT_DICT_SEPARATOR = ':'
-TEXT_DICT_DATA = {'term': u'ABC', 'id': '123'}
+TEXT_DICT_DATA = {'term': u"Hawai'i", 'id': '123'}
 
 TEXT_DICT_KEYS_DATE = ['term', 'startdate']
-TEXT_DICT_TEXT_NOLABELS_DATE = 'ABC:1970-01-01 00:00:00'
-TEXT_DICT_DATA_DATE = {'term': u'ABC', 'startdate': '1970-01-01 00:00:00'}
+TEXT_DICT_TEXT_NOLABELS_DATE = "Hawai'i:1970-01-01 00:00:00"
+TEXT_DICT_DATA_DATE = {'term': u"Hawai'i", 'startdate': '1970-01-01 00:00:00'}
 
 def test_is_text_labels():
     assert converters._is_text_labels(TEXT_DICT_TEXT_LABELS)
@@ -317,14 +317,16 @@ def test_listofdicts_to_textnolabels():
 
 
 TEXTBRACKETIDS_FIELDS = ['term', 'id']
-TEXTBRACKETIDS_MULTI_TEXT = "ABC: DEF [123]; ABC: XYZ [456]"
+TEXTBRACKETIDS_MULTI_TEXT = "ABC: DEF [123]; ABC: Hawai'i [456]; ABC: Hawai`i [456]"
 TEXTBRACKETIDS_MULTI_LIST = [
     "ABC: DEF [123]",
-    "ABC: XYZ [456]",
+    "ABC: Hawai'i [456]",
+    "ABC: Hawai`i [456]",
 ]
 TEXTBRACKETIDS_MULTI_DATA = [
     {"term": "ABC: DEF", "id": '123'},
-    {"term": "ABC: XYZ", "id": '456'},
+    {"term": "ABC: Hawai'i", "id": '456'},
+    {"term": "ABC: Hawai`i", "id": '456'},
 ]
 
 def test_text_to_bracketids():
