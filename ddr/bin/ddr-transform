@@ -15,7 +15,9 @@ on each .json file in a repository.
 
 import argparse
 from datetime import datetime
+import fnmatch
 import logging
+import os
 import sys
 
 from DDR import config
@@ -37,6 +39,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument('collection', help='Absolute path to Collection.')
+    parser.add_argument('-f', '--filter', help='Only transform objects with matching ID (simple wildcard)')
+    parser.add_argument('-M', '--models', help='Only transform specified models (comma-separated list)')
     parser.add_argument('-C', '--commit', help='Commit changes.')
     parser.add_argument('-u', '--user', help='(required for commit) User name')
     parser.add_argument('-m', '--mail', help='(required for commit) User email')
@@ -49,9 +53,16 @@ def main():
         logging.info('Not committing changes')
     
     start = datetime.now()
+
+    if args.filter:
+        logging.info('FILTER: "%s"' % args.filter)
+    ONLY_THESE = []
+    if args.models:
+        logging.info('MODELS: "%s"' % args.models)
+        ONLY_THESE = args.models.split(',')
     
     logging.info('Loading collection')
-    collection = identifier.Identifier(args.collection).object()
+    collection = identifier.Identifier(os.path.normpath(args.collection)).object()
     logging.info(collection)
     
     
@@ -63,6 +74,14 @@ def main():
     for n,path in enumerate(paths):
         logging.info('%s/%s %s' % (n, num, path))
         o = identifier.Identifier(path).object()
+        
+        if args.filter and (not fnmatch.fnmatch(o.id, args.filter)):
+            logging.info('skipping (no match)')
+            continue
+        if args.models and (o.identifier.model not in ONLY_THESE):
+            logging.info('skipping (%s not in %s' % (o.identifier.model, ONLY_THESE))
+            continue
+        
         if o.identifier.model in ['entity', 'segment']:
             o.children(force_read=True)
         o.write_json()
