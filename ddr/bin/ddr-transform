@@ -15,14 +15,16 @@ on each .json file in a repository.
 
 import argparse
 from datetime import datetime
+import fnmatch
 import logging
+import os
 import sys
 
 from DDR import config
 from DDR import commands
 from DDR import identifier
-from DDR import util
 from DDR import vocab
+from DDR import util
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,7 +33,7 @@ logging.basicConfig(
 )
 
 
-def transform(collection, topics=None, commit=None, user=None, mail=None):
+def transform(collection, filter=None, models=None, topics=None, commit=None, user=None, mail=None):
     if commit and ((not user) or (not mail)):
         logging.error('You must specify a user and email address! >:-0')
         sys.exit(1)
@@ -39,25 +41,50 @@ def transform(collection, topics=None, commit=None, user=None, mail=None):
         logging.info('Not committing changes')
     
     start = datetime.now()
+
+    if filter:
+        logging.info('FILTER: "%s"' % filter)
+    ONLY_THESE = []
+    if models:
+        logging.info('MODELS: "%s"' % models)
+        ONLY_THESE = models.split(',')
     
     logging.info('Loading collection')
-    collection = identifier.Identifier(collection).object()
+    collection = identifier.Identifier(os.path.normpath(collection)).object()
     logging.info(collection)
     
     logging.info('Finding metadata files')
     paths = util.find_meta_files(collection.identifier.path_abs(), recursive=True, force_read=True)
+    logging.info('%s paths' % len(paths))
+    
+    # filter out paths
+    these_paths = []
+    for path in paths:
+        oi = identifier.Identifier(path)
+        if filter and (not fnmatch.fnmatch(oi.id, filter)):
+            continue
+        if models and (oi.model not in ONLY_THESE):
+            continue
+        these_paths.append(path)
+    if len(these_paths) != len(paths):
+        logging.info('%s after filters' % len(these_paths))
+    
     logging.info('Writing')
-    num = len(paths)
-    for n,path in enumerate(paths):
-        logging.info('%s/%s %s' % (n, num, path))
+    num = len(these_paths)
+    for n,path in enumerate(these_paths):
         o = identifier.Identifier(path).object()
+        if filter and (not fnmatch.fnmatch(o.id, filter)):
+            continue
+        if models and (o.identifier.model not in ONLY_THESE):
+            continue
+        logging.info('%s/%s %s' % (n, num, path))
         
         if o.identifier.model in ['entity', 'segment']:
             o.children(force_read=True)
         
         if topics and o.identifier.model in ['entity', 'segment']:
             before = o.topics
-            after = vocab.scrub_topicdata(o.topics)
+            after = vocab.repair_topicdata(o.topics)
             o.topics = after
             
         o.write_json()
@@ -88,6 +115,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument('collection', help='Absolute path to Collection.')
+    parser.add_argument('-f', '--filter', help='Only transform objects with matching ID (simple wildcard)')
+    parser.add_argument('-M', '--models', help='Only transform specified models (comma-separated list)')
     parser.add_argument('-t', '--topics', action='store_true', help='Fix damaged topics data.')
     parser.add_argument('-C', '--commit', action='store_true', help='Commit changes.')
     parser.add_argument('-u', '--user', help='(required for commit) User name')
@@ -96,6 +125,8 @@ def main():
     
     transform(
         collection=args.collection,
+        filter=args.filter,
+        models=args.models,
         topics=args.topics,
         commit=args.commit,
         user=args.user,
