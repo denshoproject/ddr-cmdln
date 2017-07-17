@@ -22,6 +22,7 @@ from DDR import config
 from DDR import commands
 from DDR import identifier
 from DDR import util
+from DDR import vocab
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,7 +31,7 @@ logging.basicConfig(
 )
 
 
-def transform(collection, commit=None, user=None, mail=None):
+def transform(collection, topics=None, commit=None, user=None, mail=None):
     if commit and ((not user) or (not mail)):
         logging.error('You must specify a user and email address! >:-0')
         sys.exit(1)
@@ -53,6 +54,11 @@ def transform(collection, commit=None, user=None, mail=None):
         
         if o.identifier.model in ['entity', 'segment']:
             o.children(force_read=True)
+        
+        if topics and o.identifier.model in ['entity', 'segment']:
+            before = o.topics
+            after = vocab.scrub_topicdata(o.topics)
+            o.topics = after
             
         o.write_json()
     
@@ -82,6 +88,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument('collection', help='Absolute path to Collection.')
+    parser.add_argument('-t', '--topics', action='store_true', help='Fix damaged topics data.')
     parser.add_argument('-C', '--commit', action='store_true', help='Commit changes.')
     parser.add_argument('-u', '--user', help='(required for commit) User name')
     parser.add_argument('-m', '--mail', help='(required for commit) User email')
@@ -89,6 +96,7 @@ def main():
     
     transform(
         collection=args.collection,
+        topics=args.topics,
         commit=args.commit,
         user=args.user,
         mail=args.mail,
