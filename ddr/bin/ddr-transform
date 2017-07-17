@@ -30,19 +30,8 @@ logging.basicConfig(
 )
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description=description,
-        epilog=epilog,
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-    parser.add_argument('collection', help='Absolute path to Collection.')
-    parser.add_argument('-C', '--commit', help='Commit changes.')
-    parser.add_argument('-u', '--user', help='(required for commit) User name')
-    parser.add_argument('-m', '--mail', help='(required for commit) User email')
-    args = parser.parse_args()
-
-    if args.commit and ((not args.user) or (not args.mail)):
+def transform(collection, commit=None, user=None, mail=None):
+    if commit and ((not user) or (not mail)):
         logging.error('You must specify a user and email address! >:-0')
         sys.exit(1)
     else:
@@ -51,10 +40,8 @@ def main():
     start = datetime.now()
     
     logging.info('Loading collection')
-    collection = identifier.Identifier(args.collection).object()
+    collection = identifier.Identifier(collection).object()
     logging.info(collection)
-    
-    
     
     logging.info('Finding metadata files')
     paths = util.find_meta_files(collection.identifier.path_abs(), recursive=True, force_read=True)
@@ -63,14 +50,16 @@ def main():
     for n,path in enumerate(paths):
         logging.info('%s/%s %s' % (n, num, path))
         o = identifier.Identifier(path).object()
+        
         if o.identifier.model in ['entity', 'segment']:
             o.children(force_read=True)
+            
         o.write_json()
     
-    if args.commit:
+    if commit:
         logging.info('Committing changes')
         status,msg = commands.update(
-            args.user, args.mail,
+            user, mail,
             collection,
             paths,
             agent='ddr-transform'
@@ -83,6 +72,27 @@ def main():
     elapsed = end - start
     per = elapsed / num
     logging.info('DONE (%s elapsed, %s per object)' % (elapsed, per))
+
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description=description,
+        epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument('collection', help='Absolute path to Collection.')
+    parser.add_argument('-C', '--commit', action='store_true', help='Commit changes.')
+    parser.add_argument('-u', '--user', help='(required for commit) User name')
+    parser.add_argument('-m', '--mail', help='(required for commit) User email')
+    args = parser.parse_args()
+    
+    transform(
+        collection=args.collection,
+        commit=args.commit,
+        user=args.user,
+        mail=args.mail,
+    )
 
 
 if __name__ == '__main__':
