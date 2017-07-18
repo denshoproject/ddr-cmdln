@@ -22,6 +22,7 @@ import sys
 
 from DDR import config
 from DDR import commands
+from DDR import dvcs
 from DDR import identifier
 from DDR import vocab
 from DDR import util
@@ -33,7 +34,7 @@ logging.basicConfig(
 )
 
 
-def transform(collection, filter=None, models=None, topics=None, commit=None, user=None, mail=None):
+def transform(collection, filter=None, models=None, topics=None, created=None, commit=None, user=None, mail=None):
     if commit and ((not user) or (not mail)):
         logging.error('You must specify a user and email address! >:-0')
         sys.exit(1)
@@ -86,7 +87,15 @@ def transform(collection, filter=None, models=None, topics=None, commit=None, us
             before = o.topics
             after = vocab.repair_topicdata(o.topics)
             o.topics = after
-            
+
+        if created and hasattr(o, 'record_created'):
+            record_created_before = o.record_created
+            commit = dvcs.earliest_commit(path, parsed=True)
+            o.record_created = commit['ts']
+            logging.info('     record_created: %s -> %s' % (
+                record_created_before, o.record_created
+            ))
+        
         o.write_json()
     
     if commit:
@@ -118,6 +127,7 @@ def main():
     parser.add_argument('-f', '--filter', help='Only transform objects with matching ID (simple wildcard)')
     parser.add_argument('-M', '--models', help='Only transform specified models (comma-separated list)')
     parser.add_argument('-t', '--topics', action='store_true', help='Fix damaged topics data.')
+    parser.add_argument('-R', '--created', action='store_true', help='Replace entity.record_created w ts of first commit.')
     parser.add_argument('-C', '--commit', action='store_true', help='Commit changes.')
     parser.add_argument('-u', '--user', help='(required for commit) User name')
     parser.add_argument('-m', '--mail', help='(required for commit) User email')
@@ -128,6 +138,7 @@ def main():
         filter=args.filter,
         models=args.models,
         topics=args.topics,
+        created=args.created,
         commit=args.commit,
         user=args.user,
         mail=args.mail,
