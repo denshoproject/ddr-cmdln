@@ -260,7 +260,7 @@ def dict_to_textnolabels(data, keys, separator):
 # data = {'term':'ABC', 'id':123}
 
 TEXT_BRACKETID_TEMPLATE = '{term} [{id}]'
-TEXT_BRACKETID_REGEX = re.compile(r'(?P<term>[\w\d ()_,:-`\']+)\s\[(?P<id>\d+)\]')
+TEXT_BRACKETID_REGEX = re.compile(r'(?P<term>[\w\d -:()_,`\'"]+)\s\[(?P<id>\d+)\]')
 
 def _is_text_bracketid(text):
     if text:
@@ -277,7 +277,7 @@ def textbracketid_to_dict(text, keys=['term', 'id'], pattern=TEXT_BRACKETID_REGE
     @param match: re.MatchObject
     @returns: dict
     """
-    text = normalize_string(text).replace('\n',' ').replace('"','')
+    text = normalize_string(text).replace('\n',' ')
     if not text:
         return {}
     if match:
@@ -313,7 +313,7 @@ def text_to_dict(text, keys):
     @param keys: list
     @returns: dict
     """
-    text = normalize_string(text).replace('\n',' ').replace('"','')
+    text = normalize_string(text).replace('\n',' ')
     if not text:
         return {}
     match = _is_text_bracketid(text)
