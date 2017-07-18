@@ -154,6 +154,7 @@ def object_metadata(module, repo_path):
         'application': 'https://github.com/densho/ddr-cmdln.git',
         'app_commit': dvcs.latest_commit(config.INSTALL_PATH),
         'app_release': VERSION,
+        'defs_path': modules.Module(module).path,
         'models_commit': dvcs.latest_commit(modules.Module(module).path),
         'git_version': gitversion,
     }
