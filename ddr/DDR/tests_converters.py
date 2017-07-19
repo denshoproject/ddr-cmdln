@@ -159,17 +159,19 @@ def test_text_to_dict():
     assert converters.text_to_dict(TEXT_DICT_TEXT_NOLABELS, TEXT_DICT_KEYS) == TEXT_DICT_DATA
     assert converters.text_to_dict(TEXT_DICT_TEXT_BRACKETID, TEXT_DICT_KEYS) == TEXT_DICT_DATA
     
-    TEXT0 = 'Abc: Def: Ghi [123]';    DATA0 = {'id':'123', 'term':'Abc: Def: Ghi'}
-    TEXT1 = 'Parent-Child [123]';     DATA1 = {'id':'123', 'term':'Parent-Child'}
-    TEXT2 = "Hawai'i [123]";          DATA2 = {'id':'123', 'term':"Hawai'i"}
-    TEXT3 = 'Hawai`i [123]';          DATA3 = {'id':'123', 'term':'Hawai`i'}
-    TEXT4 = 'and/or [123]';           DATA4 = {'id':'123', 'term':'and/or'}
-    TEXT5 = '"double" [123]';         DATA5 = {'id':'123', 'term':'"double"'}
-    TEXT6 = "'single' [123]";         DATA6 = {'id':'123', 'term':"'single'"}
-    TEXT7 = 'outside (inside) [123]'; DATA7 = {'id':'123', 'term':'outside (inside)'}
-    
+    TEXT0 = "Geographic communities: Hawai`i [277]"; DATA0 = {'id':'277', 'term':"Geographic communities: Hawai`i"}
+    TEXT1 = "Geographic communities: Hawai'i [277]"; DATA1 = {'id':'277', 'term':"Geographic communities: Hawai'i"}
+    TEXT2 = 'Race and racism: "Yellow Peril" [185]'; DATA2 = {'id':'185', 'term':'Race and racism: "Yellow Peril"'}
+    TEXT3 = 'Painting: Ink painting (sumi-e) [266]'; DATA3 = {'id':'266', 'term':'Painting: Ink painting (sumi-e)'}
+    TEXT4 = 'Reflections: September 11, 2001 [169]'; DATA4 = {'id':'169', 'term':'Reflections: September 11, 2001'}
+    TEXT5 = 'Oregon: Gresham/Troutdale [285]';       DATA5 = {'id':'285', 'term':'Oregon: Gresham/Troutdale'}
+
     def testit(text, keys, data):
-        assert converters.text_to_dict(text, keys) == data
+        print(text)
+        print(data)
+        output = converters.text_to_dict(text, keys)
+        print(output)
+        assert output == data
     
     testit(TEXT0, ['term', 'id'], DATA0)
     testit(TEXT1, ['term', 'id'], DATA1)
@@ -177,8 +179,6 @@ def test_text_to_dict():
     testit(TEXT3, ['term', 'id'], DATA3)
     testit(TEXT4, ['term', 'id'], DATA4)
     testit(TEXT5, ['term', 'id'], DATA5)
-    testit(TEXT6, ['term', 'id'], DATA6)
-    testit(TEXT7, ['term', 'id'], DATA7)
 
 def test_dict_to_text():
     assert converters.dict_to_text({}, []) == ''
