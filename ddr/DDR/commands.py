@@ -594,7 +594,7 @@ def entity_destroy(user_name, user_mail, collection, entity, agent=''):
 @command
 @local_only
 def file_destroy(user_name, user_mail, collection, entity, rm_files, updated_files, agent='', commit=True):
-    """Command-line function for creating an entity and adding it to the collection.
+    """Remove file and metadata
     
     - check that paths exist, etc
     - intantiate collection, repo objects
@@ -619,16 +619,11 @@ def file_destroy(user_name, user_mail, collection, entity, rm_files, updated_fil
     # updated file paths are relative to collection root
     git_files = [os.path.join('files', entity.id, f) for f in updated_files]
     
-    # Only list the original file in changelog
-    # TODO use a models.File function to ID the original file
-    changelog_files = [f for f in rm_files if ('-a.jpg' not in f) and ('.json' not in f)]
-    
     # remove the files
-    # NOTE: entity files must be removed at this point so the entity will be
-    # properly removed from the control file
-    git = repo.git
+    # NOTE: File must be removed from filesystem at this point
+    # so the File will be properly removed from the control file
     for f in rm_files:
-        git.rm('-rf', f)
+        repo.git.rm('-rf', f)
     
     # update entity control
     econtrol = entity.control()
@@ -637,18 +632,28 @@ def file_destroy(user_name, user_mail, collection, entity, rm_files, updated_fil
     git_files.append(econtrol.path_rel)
     
     # update entity changelog
-    changelog_messages = ['Deleted entity file {}'.format(f) for f in changelog_files]
+    changelog_files = [
+        # dont list access files in changelog
+        # TODO use a models.File function to ID the original file
+        f for f in rm_files
+        if ('-a.jpg' not in f) and ('.json' not in f)
+    ]
+    changelog_messages = [
+        'Deleted entity file {}'.format(f)
+        for f in changelog_files
+    ]
     if agent:
         changelog_messages.append('@agent: %s' % agent)
-    write_changelog_entry(entity.changelog_path,
-                          changelog_messages,
-                          user_name, user_mail)
-    git_files.append(entity.changelog_path_rel)
+    write_changelog_entry(
+        entity.changelog_path,
+        changelog_messages,
+        user_name, user_mail
+    )
     
-    # add files and commit
-    commit_message = dvcs.compose_commit_message('Deleted entity file(s)', agent=agent)
+    git_files.append(entity.changelog_path_rel)
+    dvcs.stage(repo, git_files)
     if commit:
-        repo = commit_files(repo, commit_message, git_files, [])
+        commit_obj = dvcs.commit(repo, commit_message, agent)
     return 0,'ok',git_files
 
 

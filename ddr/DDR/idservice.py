@@ -38,6 +38,7 @@ class IDServiceClient():
     >>> ic.resume('gjost', u'9b68187429be07506dae2d1a493b74afd4ef7c35')
     >>> ic.logout()
     """
+    url = config.IDSERVICE_API_BASE
     debug = False
     username = None
     token = None
@@ -101,23 +102,72 @@ class IDServiceClient():
             data = {}
         return r.status_code,r.reason,data
     
-    def next_object_id(self, oidentifier, model):
-        """Get the next object ID of the specified type
+    def next_object_id(self, oidentifier, model, register=False):
+        """GET or POST the next object ID of the specified type
         
         @param oidentifier: identifier.Identifier
         @param model: str
+        @param register: boolean If True, register the ID
         @return: int,str,str (status code, reason, object ID string)
         """
         logging.debug('idservice.IDServiceClient.next_object_id(%s, %s)' % (oidentifier, model))
-        r = requests.post(
-            config.IDSERVICE_NEXT_OBJECT_URL.format(objectid=oidentifier.id, model=model),
-            headers=self._auth_headers(),
+        url = config.IDSERVICE_NEXT_OBJECT_URL.format(
+            model=model,
+            objectid=oidentifier.id,
         )
+        if register:
+            # POST - register new ID
+            r = requests.post(url, headers=self._auth_headers())
+        else:
+            # GET - just find out what next ID is
+            r = requests.get(url, headers=self._auth_headers())
         objectid = None
-        if r.status_code == 201:
+        if r.status_code in [200,201]:
             objectid = r.json()['id']
             logging.debug(objectid)
         return r.status_code,r.reason,objectid
+    
+    @staticmethod
+    def check_object_id(object_id):
+        url = '%s/objectids/%s/' % (config.IDSERVICE_API_BASE, object_id)
+        try:
+            r = requests.get(url)
+            status = r.status_code
+        except:
+            status = 500
+        return {
+            'id':object_id,
+            'status':status,
+            'registered': status == 200
+        }
+
+    @staticmethod
+    def child_ids(object_id):
+        """Returns all object IDs that contain the parent
+        
+        @param object_id: str
+        @returns: (status_code,reason,object_ids)
+        """
+        url = '%s/objectids/%s/children/' % (config.IDSERVICE_API_BASE, object_id)
+        r = requests.get(url)
+        oids = []
+        if r.status_code == 200:
+            oids = [o['id'] for o in json.loads(r.text)]
+        return r.status_code,r.reason,oids
+    
+    @staticmethod
+    def check_object_ids(object_ids):
+        """Given list of IDs, indicate whether they are registered
+        
+        TODO multiprocessing
+        
+        @param object_ids: list
+        @returns: dict of 
+        """
+        return {
+            r['id']: r['registered']
+            for r in [check_object_id(oid) for oid in object_ids]
+        }
     
     def check_eids(self, cidentifier, entity_ids):
         """Given list of EIDs, indicates which are registered,unregistered.

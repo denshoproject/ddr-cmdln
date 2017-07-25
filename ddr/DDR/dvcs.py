@@ -8,6 +8,7 @@ import os
 import re
 import socket
 
+from dateutil import parser
 import envoy
 import git
 import requests
@@ -75,6 +76,39 @@ def latest_commit(path):
     else:
         return repo.git.log('--pretty=format:%H %d %ad', '--date=iso', '-1')
     return None
+
+def earliest_commit(path, parsed=False):
+    """Returns earliest commit for the specified repository/path
+    
+    TODO pass repo object instead of path
+    
+    One of several arguments must be provided:
+    - Absolute path to a repository.
+    - Absolute path to file within a repository. In this case the log
+      will be specific to the file.
+    
+    >>> path = '/path/to/repo'
+    >>> earliest_commit(path=path)
+    'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2 (HEAD, master) 1970-01-01 00:00:00 -0000'
+    
+    @param path: Absolute path to repo or file within.
+    @param parsed: boolean
+    @return: str or dict {'commit', 'branch', 'ts'}
+    """
+    if parsed:
+        fmt = '{"commit":"%H","branch":"%d","ts":"%ad"}'
+    else:
+        fmt = "%H %d %ad"
+    repo = git.Repo(path)
+    if os.path.isfile(path):
+        text = repo.git.log('--pretty=format:%s' % fmt, '--date=iso', path).splitlines()[-1]
+    else:
+        text = repo.git.log('--pretty=format:%s' % fmt, '--date=iso').splitlines()[-1]
+    if parsed:
+        data = json.loads(text)
+        data['ts'] = parser.parse(data['ts'])
+        return data
+    return text
 
 def _parse_cmp_commits(gitlog, a, b):
     """
@@ -422,8 +456,21 @@ def commit(repo, msg, agent):
     @param agent: str
     @returns: GitPython commit object
     """
+    # TODO cancel commit if list of staged doesn't match list of files added?
+    # TODO complain if list of committed files doesn't match list of staged?
+    # log staged files
+    staged = list_staged(repo)
+    staged.sort()
+    logging.debug('STAGED {}'.format(staged))
+    # do the commit
     commit_message = compose_commit_message(msg, agent=agent)
     commit = repo.index.commit(commit_message)
+    logging.debug('COMMIT {}'.format(commit))
+    # log committed files
+    committed = list_committed(repo, commit)
+    committed.sort()
+    logging.debug('COMMITTED {}'.format(committed))
+    # done
     return commit
 
 def reset(repo):
@@ -937,6 +984,16 @@ def annex_whereis_file(repo, file_path_rel, info=None):
         else: r['this'] = False
     return data
 
+def annex_missing_files(repo):
+    """List git-annex data for binaries absent from repo
+    
+    @returns: list of dicts, one per missing file
+    """
+    return [
+        json.loads(line)
+        for line in repo.git.annex('find','--not','--in=here','--json').splitlines()
+    ]
+
 def annex_trim(repo, confirmed=False):
     """Drop full-size binaries from a repository.
     
@@ -1066,6 +1123,7 @@ class Gitolite(object):
     info = None
     connected = None
     authorized = None
+    initialized = None
     
     def __init__(self, server=config.GITOLITE, timeout=60):
         """
@@ -1102,6 +1160,7 @@ class Gitolite(object):
             self.authorized = self._authorized()
         else:
             self.connected = False
+        self.initialized = True
     
     def _authorized(self):
         """Parse Gitolite server response, indicate whether user is authorized

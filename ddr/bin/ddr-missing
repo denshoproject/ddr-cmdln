@@ -1,0 +1,435 @@
+#!/usr/bin/env python
+
+#
+# ddr-missing
+#
+
+description = """Identify missing files in a collection and mark possible replacements."""
+
+epilog = """
+
+functions
+- mark missing in files export CSV
+- identify new files in binaries dir
+- delete Files with missing
+- reimport files with missing
+mark progress in CSV
+
+USAGE EXAMPLES
+
+Mark CSV file with files missing from annex AND reimportable binaries.::
+
+    # Export file data
+    $ ddr-export file \
+          /COLLECTION/DIR/ \
+          /tmp/REPO-ORG-CID-files.csv
+    
+    $ ddr-missing /COLLECTION/DIR/ \
+          /tmp/REPO-ORG-CID-files.csv \
+          -b /DIR/CONTAINING/BINARIES/ \
+          -u USERNAME -m USERMAIL --delete \ # Delete Files w missing bins
+          -C "COMMIT MESSAGE HERE"           # Commit with message
+    
+    # Edit CSV
+    $ cp /tmp/REPO-ORG-CID-files-marked.csv /tmp/REPO-ORG-CID-files-reimport.csv
+    # - Delete rows that do now have (annex) "missing" and binaries.
+    # - Replace contents of "id" field with contents of "parent" column.
+    # - Replace contents of "basename" with contents of "binaries" column.
+    # - Delete "annex" column.
+    
+    # Import new files
+    $ cd /DIR/CONTAINING/BINARIES/
+    $ ddr-import file \
+          /DIR/CONTAINING/BINARIES/REPO-ORG-CID-files-reimport.csv \
+          /COLLECTION/DIR/
+
+--------------------------------------------------------------------------------
+------------------------------------------------------------------------
+
+- List file IDs which are absent from repo
+- Read files export CSV (i know), make dict of originalfilename: file ID
+- Read list of binary files that can be reimported, dict File ID->filename
+- Add two columns to files export CSV:
+  - missing (boolean): File is missing
+  - replacement (str): Filename of reimportable binary
+---"""
+
+import argparse
+from copy import deepcopy
+import logging
+import sys
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    stream=sys.stdout,
+)
+
+# ----------------------------------------------------------------------
+
+import json
+import os
+
+from DDR import config
+from DDR import csvfile
+from DDR import dvcs
+from DDR import fileio
+from DDR import identifier
+
+AGENT = 'ddr-missing'
+
+
+def missing_file_ids(collection):
+    logging.debug('missing_file_ids %s' % collection)
+    not_here = [item['id'] for item in collection.missing_annex_files()]
+    logging.debug('%s missing' % len(not_here))
+    return not_here
+            
+def read_missingfiles_file(files_nothere):
+    """list of file IDs which are absent from repo
+    
+    TODO get using collection.missing_files()
+    
+    # output of git annex find --not --in=here --json
+    # JSONs with filename and annex path
+    
+    @param missing_files: list of dicts
+    @returns: list
+    """
+    logging.debug('read_missingfiles_file %s' % files_nothere)
+    not_here = []
+    with open(files_nothere, 'r') as f:
+        not_here = [
+            os.path.splitext(
+                os.path.basename(
+                    json.loads(
+                        row.strip()
+                    )['file']
+                )
+            )[0]
+            for row in f.readlines()
+            if row.strip()
+        ]
+    logging.debug('%s missing' % len(not_here))
+    return not_here
+
+def load_csv(csv_path):
+    """
+    @param csv_path: str
+    @returns: (headers, rowds)
+    """
+    logging.debug('load_csv %s' % csv_path)
+    headers,rowds = csvfile.make_rowds(fileio.read_csv(csv_path))
+    logging.debug('%s rows' % len(rowds))
+    return headers,rowds
+
+def write_csv(headers, rowds, csv_path):
+    """
+    # rowds is an OrderedDict, have to output
+    @param headers: list
+    @param rowds: list of dicts
+    @param csv_path: str
+    @returns: out
+    """
+    logging.debug('write_csv %s' % csv_path)
+    return fileio.write_csv(
+        path=csv_path,
+        headers=headers,
+        rows=[rowd.values() for rowd in rowds]
+    )
+
+def read_replacements_dir(path):
+    """
+    Assumes that every file in dir is a binary
+    @param path: str
+    @return: list
+    """
+    logging.debug('read_replacements_dir %s' % path)
+    filenames = os.listdir(path)
+    logging.debug('%s filenames' % len(filenames))
+    return filenames
+
+def read_replacements_file(path):
+    logging.debug('read_replacements_file %s' % path)
+    with open(path, 'r') as f:
+        filenames = [line.split() for line in f.readlines()]
+        logging.debug('%s filenames' % len(filenames))
+        return filenames
+
+def make_basenames_filenames(rowds):
+    """read files export, make dict of originalfilename: file ID
+    
+    @param rowds: list of dicts
+    @returns: dict
+    """
+    logging.debug('make_basenames_filenames()')
+    basenames_filenames = {
+        rowd['basename_orig']: rowd['id']
+        for rowd in rowds
+    }
+    return basenames_filenames
+
+
+def make_rid_from_filename(filename):
+    """
+import os
+f = 'ddr-densho-296-12-1_master.tif'
+filename,ext = os.path.splitext(f)
+parts = filename.split('-')
+oid = '-'.join(parts[:4])
+'ddr-densho-296-12'
+
+f = 'ddr-densho-296-11_mezz.pdf'
+filename,ext = os.path.splitext(f)
+parts = filename.split('-')
+parts[3] = parts[3].split('_')[0]
+
+    """
+    # old method
+    #oid = os.path.splitext(
+    #    filename
+    #)[0].replace('_','-').replace('mezz','mezzanine')
+    
+    # new method (ONLY WORKS WITH entities, no segments!)
+    master = False; mezzanine = False
+    filename,ext = os.path.splitext(filename)
+    parts = filename.split('-')
+    if len(parts) == 4:
+        # ddr-densho-296-11_mezz.pdf
+        parts[3] = parts[3].split('_')[0]
+    elif len(parts) == 5:
+        # ddr-densho-296-12-1_master.tif
+        parts = parts[:4]
+    
+    if 'master' in filename:
+        parts.append('master')
+    elif 'mezz' in filename:
+        parts.append('mezzanine')
+    
+    oid = '-'.join(parts)
+    return oid
+
+def make_rids_binaries(replacements):
+    """read list of binary files that can be reimported, dict File ID->filename
+    
+    TODO read a directory instead of a file
+    
+    @param replacements_list: list of replacement files
+    @returns: dict file-id: filename
+    """
+    logging.debug('make_rids_binaries()')
+    rids_binaries = {}
+    num = len(replacements)
+    for n,filename in enumerate(replacements):
+        rid = make_rid_from_filename(filename)
+        rids_binaries[rid] = filename
+        logging.debug('%s/%s filename %s -> id %s' % (n+1, num, filename, rid))
+    return rids_binaries
+
+def mark_missing(headers, rowds, not_here):
+    """mark missing files in file export CSV
+    
+    @param headers: list
+    @param rowds: list of dicts
+    @param not_here: list
+    @returns: rowds
+    """
+    logging.debug('mark_missing()')
+    colname = 'annex'
+    headers.append(colname)
+    for rowd in rowds:
+        csv_id = rowd['id']
+        rowd[colname] = ''
+        for nothere_id in not_here:
+            if csv_id in nothere_id:
+                rowd[colname] = 'missing'
+    return rowds
+
+def add_missing_filenames(headers, rowds, rids_binaries):
+    """
+    # for each row in csv
+    # make fid
+    # if rid in rids_binaries
+    # add filename to csv
+    """
+    logging.debug('add_missing_filenames()')
+    colname = 'binaries'
+    headers.append(colname)
+    for rowd in rowds:
+        csv_id = rowd['id']
+        rid = identifier.Identifier(csv_id).parent_id(stubs=1)
+        rowd[colname] = rids_binaries.get(rid, '')
+    return rowds
+
+def reimport_rowds(headers, rowds):
+    """Prepare a new CSV for reimporting files
+    
+    - convert File ID to (parent) Entity ID
+    - replace old basename_orig with contents of 'binaries' column
+    - remove 'missing' marker column
+    - remove 'binaries' column
+    """
+    headers_new = deepcopy(headers)
+    headers_new.remove('annex')
+    headers_new.remove('binaries')
+    rowds_new = []
+    for rowd in rowds:
+        if rowd.get('annex') and rowd.get('binaries'):
+            rowd_new = deepcopy(rowd)
+            # values for importing as new files
+            rowd_new['id'] = identifier.Identifier(rowd['id']).parent_id()
+            rowd_new['basename_orig'] = rowd_new['binaries']
+            # rm *-marked.csv columns
+            rowd_new.pop('binaries')
+            rowd_new.pop('annex')
+            rowds_new.append(rowd_new)
+    return headers_new,rowds_new
+
+def delete_files(collection, rowds, git_name, git_mail):
+    """delete file objects where binary is missing
+    """
+    logging.debug('delete_files(%s, %s rows, %s, %s)' % (collection, len(rowds), git_name, git_mail))
+    num = len(rowds)
+    for n,rowd in enumerate(rowds):
+        if rowd['annex']:
+            fileext = os.path.splitext(rowd['basename_orig'])[1]
+            ffile = identifier.Identifier(
+                id=rowd['id'],
+                base_path=collection.identifier.basepath
+            ).object()
+            entity = ffile.parent()
+            
+            logging.info('%s/%s Removing %s' % (n+1, num, ffile))
+            exit = None; status = None
+            try:
+                exit,status,rm_files,updated_files = ffile.delete(
+                    git_name=git_name,
+                    git_mail=git_mail,
+                    agent=AGENT,
+                    collection=collection,
+                    commit=False,
+                )
+            except dvcs.git.exc.GitCommandError as err:
+                logging.error(err)
+            logging.debug('status %s' % status)
+
+def commit_files(collection, message):
+    """Commit changes with specified message
+    """
+    return dvcs.commit(
+        dvcs.repository(collection.path_abs),
+        message,
+        AGENT
+    )
+
+def find_replacements(collection_path, csv_path, replacements_dir=None, replacements_file=None, git_name=None, git_mail=None, delete=False, commit=''):
+    """
+    @param collection_path: str
+    @param csv_path: str
+    @param replacements_dir: str
+    @param replacements_file: str
+    @param git_name: str
+    @param git_mail: str
+    @param delete: boolean
+    @param commit: str
+    """
+    base_path, cid = os.path.split(collection_path)
+    collection = identifier.Identifier(
+        id=cid,
+        base_path=base_path
+    ).object()
+    logging.info(collection)
+    
+    logging.info('Looking for missing files...')
+    #not_here = read_missingfiles_file(FILE_NOTHERE)
+    not_here = missing_file_ids(collection)
+    logging.info('%s missing files' % len(not_here))
+    
+    logging.info('Reading CSV %s' % csv_path)
+    headers,rowds = load_csv(csv_path)  #FILE_CSV)
+    logging.info('%s rows' % len(rowds))
+    
+    logging.info('Linking file IDs to original filenames')
+    basenames_filenames = make_basenames_filenames(rowds)
+
+    # add parent ID
+    headers.append('parent')
+    for rowd in rowds:
+        rowd['parent'] = identifier.Identifier(rowd['id']).parent_id()
+    
+    logging.info('Marking missing files')
+    rowds = mark_missing(headers, rowds, not_here)
+    
+    logging.info('Identifying replacement files')
+    replacements = []
+    if replacements_file:
+        with open(replacements_file, 'r') as f:
+            replacements = [line.strip() for line in f.readlines()]
+    elif replacements_dir:
+        replacements = os.listdir(replacements_dir)
+    rowds = add_missing_filenames(
+        headers, rowds,
+        make_rids_binaries(replacements)
+    )
+    
+    logging.info('Noting missing and replacements in CSV: %s' % csv_path)
+    csv_marked = os.path.join(
+        os.path.dirname(csv_path),
+        '%s-marked.csv' % os.path.splitext(os.path.basename(csv_path))[0]
+    )
+    status = write_csv(
+        headers,
+        rowds,
+        csv_marked
+    )
+    
+    if delete and git_name and git_mail:
+        logging.info('Deleting files from %s!' % collection)
+        delete_files(collection, rowds, git_name, git_mail)
+    
+    if commit:
+        logging.info('Committing changes')
+        logging.info('"%s"' % commit)
+        result = commit_files(
+            collection,
+            message=commit,
+        )
+        logging.info(result)
+
+    logging.info('NOTE: %s' % csv_marked)
+
+# ----------------------------------------------------------------------
+
+def main():
+
+    parser = argparse.ArgumentParser(
+        description=description,
+        epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument('collection', help='Absolute path to collection repository')
+    parser.add_argument('csv', help='Absolute path to export files CSV')
+    parser.add_argument('-b', '--binsdir', help='dir of replacement binaries')
+    parser.add_argument('-B', '--binsfile', help='file listing replacement binaries')
+    parser.add_argument('-u', '--user', help='Git user name (required if modifying repo)')
+    parser.add_argument('-m', '--mail', help='Git user e-mail address (required if modifying repo)')
+    parser.add_argument('-D', '--delete', action='store_true', help='Delete missing files from repo')
+    parser.add_argument('-C', '--commit', help='Commit with message')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Lots more output')
+    #parser.add_argument('-b', '--bbb', help='Flarg')
+    args = parser.parse_args()
+
+    find_replacements(
+        args.collection,
+        args.csv,
+        replacements_dir=args.binsdir,
+        replacements_file=args.binsfile,
+        git_name=args.user,
+        git_mail=args.mail,
+        delete=args.delete,
+        commit=args.commit,
+    )
+
+
+if __name__ == '__main__':
+    main()

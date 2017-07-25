@@ -33,6 +33,7 @@ yet must be editable in the editor UI.
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 """
 
+from copy import deepcopy
 from datetime import datetime
 import json
 import logging
@@ -153,6 +154,7 @@ def object_metadata(module, repo_path):
         'application': 'https://github.com/densho/ddr-cmdln.git',
         'app_commit': dvcs.latest_commit(config.INSTALL_PATH),
         'app_release': VERSION,
+        'defs_path': modules.Module(module).path,
         'models_commit': dvcs.latest_commit(modules.Module(module).path),
         'git_version': gitversion,
     }
@@ -479,6 +481,19 @@ def prep_xml():
 def from_xml():
     pass
 
+def signature_abs(obj, basepath):
+    """Absolute path to signature image file, if signature_id present.
+    """
+    if isinstance(obj, dict):
+        sid = obj.get('signature_id')
+    else:
+        sid = getattr(obj, 'signature_id', None)
+    if sid:
+        oi = Identifier(sid, basepath)
+        if oi and oi.model == 'file':
+            return oi.path_abs('access')
+    return None
+
 
 class Path( object ):
     pass
@@ -610,6 +625,59 @@ class Collection( object ):
         return "<%s.%s %s:%s>" % (
             self.__module__, self.__class__.__name__, self.identifier.model, self.id
         )
+
+    @staticmethod
+    def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
+        """Indicates whether Identifier exists in filesystem, gitolite, or idservice
+        
+        from DDR import dvcs
+        from DDR import identifier
+        from DDR import idservice
+        from DDR import models
+        ci = identifier.Identifier(id='ddr-test-123', '/var/www/media/ddr')
+        g = dvcs.Gitolite()
+        g.initialize()
+        i = idservice.IDServiceClient()
+        i.login('USERNAME','PASSWORD')
+        Collection.exists(ci, basepath=ci.basepath, gitolite=g, idservice=i)
+        
+        @param oidentifier: Identifier
+        @param basepath: str Absolute path
+        @param gitolite: dvcs.Gitolite (initialized)
+        @param idservice: idservice.IDServiceClient (initialized)
+        @returns: 
+        """
+        data = {
+            'filesystem': None,
+            'gitolite': None,
+            'idservice': None,
+        }
+        
+        if basepath:
+            logging.debug('Checking for %s in %s' % (oidentifier.id, oidentifier.path_abs()))
+            if os.path.exists(oidentifier.path_abs()) and os.path.exists(oidentifier.path_abs('json')):
+                data['filesystem'] = True
+            else:
+                data['filesystem'] = False
+        
+        if gitolite:
+            logging.debug('Checking for %s in %s' % (oidentifier.id, gitolite))
+            if not gitolite.initialized:
+                raise Exception('%s is not initialized' % gitolite)
+            if oidentifier.id in gitolite.repos():
+                data['gitolite'] = True
+            else:
+                data['gitolite'] = False
+        
+        if idservice:
+            logging.debug('Checking for %s in %s' % (oidentifier.id, idservice))
+            if not idservice.token:
+                raise Exception('%s is not initialized' % idservice)
+            result = idservice.check_object_id(oidentifier.id)
+            data['idservice'] = result['registered']
+        
+        logging.debug(data)
+        return data
     
     @staticmethod
     def create(path_abs, identifier=None):
@@ -707,7 +775,7 @@ class Collection( object ):
         """
         return self.identifier.parent().object()
     
-    def children( self, quick=None ):
+    def children( self, quick=False ):
         """Returns list of the Collection's Entity objects.
         
         >>> c = Collection.from_json('/tmp/ddr-testing-123')
@@ -717,11 +785,9 @@ class Collection( object ):
         TODO use util.find_meta_files()
         
         @param quick: Boolean List only titles and IDs
+        @param dicts: Boolean List only titles and IDs (dicts)
+        @returns: list of Entities or ListEntity
         """
-        # empty class used for quick view
-        class ListEntity( object ):
-            def __repr__(self):
-                return "<DDRListEntity %s>" % (self.id)
         entity_paths = []
         if os.path.exists(self.files_path):
             # TODO use cached list if available
@@ -735,16 +801,20 @@ class Collection( object ):
                 # fake Entity with just enough info for lists
                 entity_json_path = os.path.join(path,'entity.json')
                 if os.path.exists(entity_json_path):
+                    e = ListEntity()
+                    e.identifier = Identifier(path=path)
+                    e.id = e.identifier.id
                     for line in fileio.read_text(entity_json_path).split('\n'):
                         if '"title":' in line:
-                            e = ListEntity()
-                            e.id = Identifier(path=path).id
-                            # make a miniature JSON doc out of just title line
                             e.title = json.loads('{%s}' % line)['title']
-                            entities.append(e)
-                            # stop once we hit 'title' so we don't waste time
+                        elif '"signature_id":' in line:
+                            e.signature_id = json.loads('{%s}' % line)['signature_id']
+                            e.signature_abs = signature_abs(e, self.identifier.basepath)
+                        if e.title and e.signature_id:
+                            # stop once we have what we need so we don't waste time
                             # and have entity.children as separate ghost entities
                             break
+                    entities.append(e)
             else:
                 entity = Entity.from_identifier(Identifier(path=path))
                 for lv in entity.labels_values():
@@ -756,11 +826,7 @@ class Collection( object ):
     def signature_abs(self):
         """Absolute path to signature image file, if signature_id present.
         """
-        if self.signature_id:
-            oi = Identifier(self.signature_id, self.identifier.basepath)
-            if oi and oi.model == 'file':
-                return File.from_identifier(oi).access_abs
-        return None
+        return signature_abs(self, self.identifier.basepath)
     
     def identifiers(self, model=None, force_read=False):
         """Lists Identifiers for all or subset of Collection's descendents.
@@ -992,7 +1058,47 @@ class Collection( object ):
     def repo_diverged( self ):   return dvcs.diverged(self.repo_status(), self.repo_states())
     def repo_conflicted( self ): return dvcs.conflicted(self.repo_status(), self.repo_states())
 
+    def missing_annex_files(self):
+        """List File objects with missing binaries
+        
+        @returns: list of File objects
+        """
+        def just_id(oid):
+            # some "file IDs" might have config.ACCESS_FILE_APPEND appended.
+            # remove config.ACCESS_FILE_APPEND if present
+            # NOTE: make sure we're not matching some other part of the ID
+            # example: ddr-test-123-456-master-abc123-a
+            #                                 ^^
+            rindex = oid.rfind(config.ACCESS_FILE_APPEND)
+            if rindex > 0:
+                stem = oid[:rindex]
+                suffix = oid[rindex:]
+                if (len(oid) - len(stem)) \
+                and (len(suffix) == len(config.ACCESS_FILE_APPEND)):
+                    return stem
+            return oid
+        def add_id_and_hash(item):
+            item['hash'] = os.path.splitext(item['keyname'])[0]
+            item['id'] = just_id(
+                os.path.splitext(os.path.basename(item['file']))[0]
+            )
+            return item
+        return [
+            add_id_and_hash(item)
+            for item in dvcs.annex_missing_files(dvcs.repository(self.path))
+        ]
 
+
+class ListEntity( object ):
+    identifier = None
+    id = None
+    model = 'entity'
+    title=''
+    signature_id=''
+    signature_abs=''
+    # empty class used for quick view
+    def __repr__(self):
+        return "<DDRListEntity %s>" % (self.id)
 
 # "children": [
 #   {
@@ -1214,6 +1320,47 @@ class Entity( object ):
         return "<%s.%s %s:%s>" % (
             self.__module__, self.__class__.__name__, self.identifier.model, self.id
         )
+
+    @staticmethod
+    def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
+        """Indicates whether Identifier exists in filesystem and/or idservice
+        
+        from DDR import dvcs
+        from DDR import identifier
+        from DDR import idservice
+        from DDR import models
+        ei = identifier.Identifier(id='ddr-test-123-456', '/var/www/media/ddr')
+        i = idservice.IDServiceClient()
+        i.login('USERNAME','PASSWORD')
+        Entity.exists(ci, basepath=ci.basepath, idservice=i)
+        
+        @param oidentifier: Identifier
+        @param basepath: str Absolute path
+        @param gitolite: dvcs.Gitolite (ignored)
+        @param idservice: idservice.IDServiceClient (initialized)
+        @returns: 
+        """
+        data = {
+            'filesystem': None,
+            'idservice': None,
+        }
+        
+        if basepath:
+            logging.debug('Checking for %s in %s' % (oidentifier.id, oidentifier.path_abs()))
+            if os.path.exists(oidentifier.path_abs()) and os.path.exists(oidentifier.path_abs('json')):
+                data['filesystem'] = True
+            else:
+                data['filesystem'] = False
+        
+        if idservice:
+            logging.debug('Checking for %s in %s' % (oidentifier.id, idservice))
+            if not idservice.token:
+                raise Exception('%s is not initialized' % idservice)
+            result = idservice.check_object_id(oidentifier.id)
+            data['idservice'] = result['registered']
+        
+        logging.debug(data)
+        return data
     
     @staticmethod
     def create(path_abs, identifier=None):
@@ -1380,11 +1527,7 @@ class Entity( object ):
     def signature_abs(self):
         """Absolute path to signature image file, if signature_id present.
         """
-        if self.signature_id:
-            oi = Identifier(self.signature_id, self.identifier.basepath)
-            if oi and oi.model == 'file':
-                return File.from_identifier(oi).access_abs
-        return None
+        return signature_abs(self, self.identifier.basepath)
     
     def labels_values(self):
         """Apply display_{field} functions to prep object data for the UI.
@@ -1851,21 +1994,31 @@ class Entity( object ):
                 os.path.join(self.collection_path, f)
             )
         ]
+        logger.debug('rm_files: %s' % rm_files)
         
-        # remove file from entity.file_groups
+        # rm file_ from entity metadata
+        #
+        # entity._file_objects
+        self._file_objects = [
+            f for f in deepcopy(self._file_objects) if f.id != file_.id
+        ]
+        #
+        # entity.file_groups (probably unnecessary)
         files = filegroups_to_files(self.file_groups)
-        # make sure each file dict has an id
         for f in files:
             if f.get('path_rel') and not f.get('id'):
+                # make sure each file dict has an id
                 f['id'] = os.path.basename(os.path.splitext(f['path_rel'])[0])
-        # exclude the file
-        filez = [f for f in files if f['id'] != file_.id]
-        self.file_groups = files_to_filegroups(filez)
-        
+        self.file_groups = files_to_filegroups(
+            # exclude the file
+            [f for f in files if f['id'] != file_.id]
+        )
         self.write_json()
+        
         # list of files to be *updated*
         updated_files = ['entity.json']
         logger.debug('updated_files: %s' % updated_files)
+        
         return rm_files,updated_files
 
 
@@ -2098,8 +2251,14 @@ class File( object ):
         if not collection:
             collection = self.identifier.collection().object()
         
-        # remove file from parent entity.file_groups
+        # metadata jsons (rm this file, modify parent entity)
         rm_files,updated_files = entity.prep_rm_file(self)
+        # binary and access file
+        rm_files.append(self.path_rel)
+        rm_files.append(self.access_rel)
+
+        #IMPORTANT: some files use same binary for master,mezz
+        #we want to be able to e.g. delete mezz w/out deleting master
         
         # write files and commit
         status,message,updated_files = commands.file_destroy(
