@@ -503,15 +503,15 @@ def test_field_names():
 
 def test_identifier_first_id():
     out0 = identifier.first_id(
+        'collection',
         identifier.Identifier('ddr-testing'),
-        'collection'
     )
     expected0 = identifier.Identifier('ddr-testing-1')
     assert out0.id == expected0.id
     
     out1 = identifier.first_id(
+        'entity',
         identifier.Identifier('ddr-testing-123'),
-        'entity'
     )
     expected1 = identifier.Identifier('ddr-testing-123-1')
     assert out1.id == expected1.id
@@ -524,8 +524,8 @@ def test_identifier_max_id():
         identifier.Identifier('ddr-testing-123-3'),
     ]
     out0 = identifier.max_id(model0, identifiers0)
-    expected0 = 3
-    assert out0 == expected0
+    expected0 = identifier.Identifier('ddr-testing-123-3')
+    assert out0.id == expected0.id
     
     model1 = 'entity'
     identifiers1 = [
@@ -534,8 +534,40 @@ def test_identifier_max_id():
         identifier.Identifier('ddr-testing-123-2'),
     ]
     out1 = identifier.max_id(model1, identifiers1)
-    expected1 = 3
-    assert out1 == expected1
+    expected1 = identifier.Identifier('ddr-testing-123-3')
+    assert out1.id == expected1.id
+
+    # different parent
+    model2 = 'entity'
+    identifiers2 = [
+        identifier.Identifier('ddr-testing-124-3'),
+        identifier.Identifier('ddr-testing-123-1'),
+        identifier.Identifier('ddr-testing-123-2'),
+    ]
+    assert_raises(
+        Exception,
+        identifier.max_id, model2, identifiers2
+    )
+
+    # different model
+    model3 = 'entity'
+    identifiers3 = [
+        identifier.Identifier('ddr-testing-123-1'),
+        identifier.Identifier('ddr-testing-123-2'),
+        identifier.Identifier('ddr-testing-124'),
+    ]
+    assert_raises(
+        Exception,
+        identifier.max_id, model3, identifiers3
+    )
+
+    # empty list
+    model4 = 'entity'
+    identifiers4 = []
+    assert_raises(
+        Exception,
+        identifier.max_id, model4, identifiers4
+    )
 
 ADD_ID_INPUT0 = {
     'num_new': 5,
