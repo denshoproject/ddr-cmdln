@@ -757,10 +757,7 @@ def max_id(model, identifiers):
     # but currently no way to make ID from parts outside of constructor
     parts = identifiers[0].idparts
     parts[component] = max_component
-    oi = Identifier(parts=parts)
-    if oi.id not in [i.id for i in identifiers]:
-        raise Exception('New id not in given list: %s' % oi)
-    return oi
+    return Identifier(parts=parts)
 
 def add_ids(num_new, model, identifiers, startwith=None):
     """Add {num} {model} IDs to {list} starting with {n}; complain if duplicates
