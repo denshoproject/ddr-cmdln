@@ -129,6 +129,7 @@ def create_object(identifier):
     @returns: object
     """
     object_class = identifier.object_class()
+    # instantiate a raw object
     obj = object_class(
         identifier.path_abs(),
         identifier=identifier
@@ -136,7 +137,20 @@ def create_object(identifier):
     # set default values
     for f in identifier.fields_module().FIELDS:
         if f['default'] != None:
-            setattr(obj, f['name'], f['default'])
+            # some defaults are functions (e.g. datetime.now)
+            if callable(f['default']):
+                setattr(
+                    obj,
+                    f['name'],
+                    f['default']()  # call function with no args
+                )
+            # most are just values (e.g. 'unknown', -1)
+            else:
+                setattr(
+                    obj,
+                    f['name'],
+                    f['default']  # just the default value
+                )
         elif hasattr(f, 'name') and hasattr(f, 'initial'):
             setattr(obj, f['name'], f['initial'])
     return obj
