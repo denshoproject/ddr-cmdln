@@ -712,13 +712,13 @@ def _field_names(template):
     """
     return [v[1] for v in string.Formatter().parse(template)]
 
-def first_id(i, model):
+def first_id(model, i):
     """Returns first child Identifier in series
     
     No guarantee that it's a legal Identifier...
     
+    @param model: str Model of desired Identifier
     @param i: Identifier
-    @param model: str
     @returns: Identifier
     """
     parts = {k:v for k,v in i.parts.iteritems()}
@@ -733,12 +733,34 @@ def max_id(model, identifiers):
     
     @param model: str
     @param i: Identifier
-    @returns: int
+    @returns: Identifier
     """
+    if not identifiers:
+        raise Exception('Cannot pick max if list is empty')
+    for i in identifiers:
+        if not isinstance(i, Identifier):
+            raise Exception('List must consist of Identifiers.')
+    list_models = [i.model for i in identifiers]
+    if len(set(list_models)) > 1:
+        raise Exception('All identifiers must be of same type.')
+    list_parents = [i.parent_id() for i in identifiers]
+    if len(set(list_parents)) > 1:
+        raise Exception('All identifiers must have same parent.')
+    
+    # name of desired ID component ('eid' for entity)
     component = _field_names(ID_TEMPLATES[model][0]).pop()
-    existing = [i.parts[component] for i in identifiers]
-    existing.sort()
-    return existing[-1]
+    # list of just these ID components, sorted
+    existing = sorted([i.parts[component] for i in identifiers])
+    max_component = existing[-1]
+    # construct new Identifier with max_component
+    # seems better to pick the matching one from identifiers list
+    # but currently no way to make ID from parts outside of constructor
+    parts = identifiers[0].idparts
+    parts[component] = max_component
+    oi = Identifier(parts=parts)
+    if oi.id not in [i.id for i in identifiers]:
+        raise Exception('New id not in given list: %s' % oi)
+    return oi
 
 def add_ids(num_new, model, identifiers, startwith=None):
     """Add {num} {model} IDs to {list} starting with {n}; complain if duplicates
