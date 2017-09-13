@@ -50,6 +50,31 @@ def split_docstring(func):
         epilog = lines[2:]
     return description, '\n'.join(epilog)
 
+def add_default_args(parser, args=[]):
+    """Add default arguments to parser
+    """
+    if 'log' in args:
+        parser.add_argument(
+            '-l', '--log',
+            help='Log file..'
+        )
+    if 'debug' in args:
+        parser.add_argument(
+            '-d', '--debug', action='store_true',
+            help='Debug; prints lots of debug info.'
+        )
+    if 'user' in args:
+        parser.add_argument(
+            '-u', '--user', required=True,
+            help='User name'
+        )
+    if 'mail' in args:
+        parser.add_argument(
+            '-m', '--mail', required=True,
+            help='User e-mail address'
+        )
+
+
 def main():
     
     formatter = argparse.RawDescriptionHelpFormatter
@@ -66,65 +91,60 @@ Example:
     
     # create
     ccre_descr,ccre_epilog = split_docstring(create)
-    parser_ccre = subparsers.add_parser('create',
-                                        description=ccre_descr, epilog=ccre_epilog,
-                                        formatter_class=formatter,)
+    parser_ccre = subparsers.add_parser(
+        'create',
+        description=ccre_descr, epilog=ccre_epilog,
+        formatter_class=formatter,
+    )
     parser_ccre.set_defaults(func=create)
-    parser_ccre.add_argument('-l', '--log', help='Log file..')
-    parser_ccre.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
-    parser_ccre.add_argument('-u', '--user',       required=True, help='User name')
-    parser_ccre.add_argument('-m', '--mail',       required=True, help='User e-mail address')
+    add_default_args(parser_ccre, ['log','debug','user','mail'])
     parser_ccre.add_argument('-c', '--collection', required=True, help='Absolute file path to the collection')
     
     # clone
     clon_descr,clon_epilog = split_docstring(clone)
-    parser_clon = subparsers.add_parser('clone',
-                                        description=clon_descr, epilog=clon_epilog,
-                                        formatter_class=formatter,)
+    parser_clon = subparsers.add_parser(
+        'clone',
+        description=clon_descr, epilog=clon_epilog,
+        formatter_class=formatter,
+    )
     parser_clon.set_defaults(func=clone)
-    parser_clon.add_argument('-l', '--log', help='Log file..')
-    parser_clon.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
-    parser_clon.add_argument('-u', '--user',       required=True, help='User name')
-    parser_clon.add_argument('-m', '--mail',       required=True, help='User e-mail address')
+    add_default_args(parser_clon, ['log','debug','user','mail'])
     parser_clon.add_argument('-i', '--cid',        required=True, help='Collection UID (for clone)')
     parser_clon.add_argument('--dest',             required=True, help='Destination path')
     
     # update
     cupd_descr,cupd_epilog = split_docstring(update)
-    parser_cupd = subparsers.add_parser('update',
-                                        description=cupd_descr, epilog=cupd_epilog,
-                                        formatter_class=formatter,)
+    parser_cupd = subparsers.add_parser(
+        'update',
+        description=cupd_descr, epilog=cupd_epilog,
+        formatter_class=formatter,
+    )
     parser_cupd.set_defaults(func=update)
-    parser_cupd.add_argument('-l', '--log', help='Log file..')
-    parser_cupd.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
-    parser_cupd.add_argument('-u', '--user',       required=True, help='User name')
-    parser_cupd.add_argument('-m', '--mail',       required=True, help='User e-mail address')
+    add_default_args(parser_cupd, ['log','debug','user','mail'])
     parser_cupd.add_argument('-c', '--collection', required=True, help='Absolute file path to the collection')
     parser_cupd.add_argument('-f', '--files',      required=True, help='List of updated files (relative to collection)')
     
     # destroy
     cdel_descr,cdel_epilog = split_docstring(destroy)
-    parser_cdel = subparsers.add_parser('delete',
-                                        description=cdel_descr, epilog=cdel_epilog,
-                                        formatter_class=formatter,)
+    parser_cdel = subparsers.add_parser(
+        'delete',
+        description=cdel_descr, epilog=cdel_epilog,
+        formatter_class=formatter,
+    )
     parser_cdel.set_defaults(func=destroy)
-    parser_cdel.add_argument('-l', '--log', help='Log file..')
-    parser_cdel.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
-    parser_cdel.add_argument('-u', '--user',       required=True, help='User name')
-    parser_cdel.add_argument('-m', '--mail',       required=True, help='User e-mail address')
+    add_default_args(parser_cdel, ['log','debug','user','mail'])
     parser_cdel.add_argument('-c', '--collection', required=True, help='Absolute file path to the collection')
 
 
     # entity_create
     ecre_descr,ecre_epilog = split_docstring(entity_create)
-    parser_ecre = subparsers.add_parser('ecreate',
-                                        description=ecre_descr, epilog=ecre_epilog,
-                                        formatter_class=formatter,)
+    parser_ecre = subparsers.add_parser(
+        'ecreate',
+        description=ecre_descr, epilog=ecre_epilog,
+        formatter_class=formatter,
+    )
     parser_ecre.set_defaults(func=entity_create)
-    parser_ecre.add_argument('-l', '--log', help='Log file..')
-    parser_ecre.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
-    parser_ecre.add_argument('-u', '--user',       required=True, help='User name')
-    parser_ecre.add_argument('-m', '--mail',       required=True, help='User e-mail address')
+    add_default_args(parser_ecre, ['log','debug','user','mail'])
     parser_ecre.add_argument('-c', '--collection', required=True, help='Absolute file path to the collection')
     parser_ecre.add_argument('-e', '--entity',     required=True, help='UID of entity to be added to collection.')
     parser_ecre.add_argument('-f', '--files',      required=True, help='List of updated files (relative to collection)')
@@ -132,42 +152,39 @@ Example:
     
     # entity_update
     eupd_descr,eupd_epilog = split_docstring(entity_update)
-    parser_eupd = subparsers.add_parser('eupdate',
-                                        description=eupd_descr, epilog=eupd_epilog,
-                                        formatter_class=formatter,)
+    parser_eupd = subparsers.add_parser(
+        'eupdate',
+        description=eupd_descr, epilog=eupd_epilog,
+        formatter_class=formatter,
+    )
     parser_eupd.set_defaults(func=entity_update)
-    parser_eupd.add_argument('-l', '--log', help='Log file..')
-    parser_eupd.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
-    parser_eupd.add_argument('-u', '--user',       required=True, help='User name')
-    parser_eupd.add_argument('-m', '--mail',       required=True, help='User e-mail address')
+    add_default_args(parser_eupd, ['log','debug','user','mail'])
     parser_eupd.add_argument('-c', '--collection', required=True, help='Absolute file path to the collection')
     parser_eupd.add_argument('-e', '--entity',     required=True, help='UID of entity to be added to collection.')
     parser_eupd.add_argument('-f', '--files',      required=True, help='List of updated files (relative to collection)')
     
     # entity_destroy
     edel_descr,edel_epilog = split_docstring(entity_destroy)
-    parser_edel = subparsers.add_parser('edelete',
-                                        description=edel_descr, epilog=edel_epilog,
-                                        formatter_class=formatter,)
+    parser_edel = subparsers.add_parser(
+        'edelete',
+        description=edel_descr, epilog=edel_epilog,
+        formatter_class=formatter,
+    )
     parser_edel.set_defaults(func=entity_destroy)
-    parser_edel.add_argument('-l', '--log', help='Log file..')
-    parser_edel.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
-    parser_edel.add_argument('-u', '--user',       required=True, help='User name')
-    parser_edel.add_argument('-m', '--mail',       required=True, help='User e-mail address')
+    add_default_args(parser_edel, ['log','debug','user','mail'])
     parser_edel.add_argument('-c', '--collection', required=True, help='Absolute file path to the collection')
     parser_edel.add_argument('-e', '--entity',     required=True, help='UID of entity to be removed from collection.')
 
 
     # entity_annex_add
     eadd_descr,eadd_epilog = split_docstring(entity_annex_add)
-    parser_eadd = subparsers.add_parser('eadd',
-                                        description=eadd_descr, epilog=eadd_epilog,
-                                        formatter_class=formatter,)
+    parser_eadd = subparsers.add_parser(
+        'eadd',
+        description=eadd_descr, epilog=eadd_epilog,
+        formatter_class=formatter,
+    )
     parser_eadd.set_defaults(func=entity_annex_add)
-    parser_eadd.add_argument('-l', '--log', help='Log file..')
-    parser_eadd.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
-    parser_eadd.add_argument('-u', '--user',       required=True, help='User name')
-    parser_eadd.add_argument('-m', '--mail',       required=True, help='User e-mail address')
+    add_default_args(parser_eadd, ['log','debug','user','mail'])
     parser_eadd.add_argument('-c', '--collection', required=True, help='Absolute file path to the collection')
     parser_eadd.add_argument('-e', '--entity',     required=True, help='UID of entity to be added to collection.')
     parser_eadd.add_argument('-f', '--files',      required=True, help='List of updated files (relative to collection)')
@@ -176,44 +193,46 @@ Example:
 
     # status
     stat_descr,stat_epilog = split_docstring(status)
-    parser_stat = subparsers.add_parser('status',
-                                        description=stat_descr, epilog=stat_epilog,
-                                        formatter_class=formatter,)
+    parser_stat = subparsers.add_parser(
+        'status',
+        description=stat_descr, epilog=stat_epilog,
+        formatter_class=formatter,
+    )
     parser_stat.set_defaults(func=status)
-    parser_stat.add_argument('-l', '--log', help='Log file..')
-    parser_stat.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    add_default_args(parser_stat, ['log','debug'])
     parser_stat.add_argument('-c', '--collection', required=True, help='Absolute file path to the collection')
     
     # annex_status
     asta_descr,asta_epilog = split_docstring(annex_status)
-    parser_asta = subparsers.add_parser('astatus',
-                                        description=asta_descr, epilog=asta_epilog,
-                                        formatter_class=formatter,)
+    parser_asta = subparsers.add_parser(
+        'astatus',
+        description=asta_descr, epilog=asta_epilog,
+        formatter_class=formatter,
+    )
     parser_asta.set_defaults(func=annex_status)
-    parser_asta.add_argument('-l', '--log', help='Log file..')
-    parser_asta.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    add_default_args(parser_asta, ['log','debug'])
     parser_asta.add_argument('-c', '--collection', required=True, help='Absolute file path to the collection')
     
     # sync
     sync_descr,sync_epilog = split_docstring(sync)
-    parser_sync = subparsers.add_parser('sync',
-                                        description=sync_descr, epilog=sync_epilog,
-                                        formatter_class=formatter,)
+    parser_sync = subparsers.add_parser(
+        'sync',
+        description=sync_descr, epilog=sync_epilog,
+        formatter_class=formatter,
+    )
     parser_sync.set_defaults(func=sync)
-    parser_sync.add_argument('-l', '--log', help='Log file..')
-    parser_sync.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
-    parser_sync.add_argument('-u', '--user',       required=True, help='User name')
-    parser_sync.add_argument('-m', '--mail',       required=True, help='User e-mail address')
+    add_default_args(parser_sync, ['log','debug','user','mail'])
     parser_sync.add_argument('-c', '--collection', required=True, help='Absolute file path to the collection')
 
     # sync_group
     syncgrp_descr,syncgrp_epilog = split_docstring(sync_group)
-    parser_syncgrp = subparsers.add_parser('syncgrp',
-                                           description=syncgrp_descr, epilog=syncgrp_epilog,
-                                           formatter_class=formatter,)
+    parser_syncgrp = subparsers.add_parser(
+        'syncgrp',
+        description=syncgrp_descr, epilog=syncgrp_epilog,
+        formatter_class=formatter,
+    )
     parser_syncgrp.set_defaults(func=sync_group)
-    parser_syncgrp.add_argument('-l', '--log', help='Log file..')
-    parser_syncgrp.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    add_default_args(parser_syncgrp, ['log','debug'])
     parser_syncgrp.add_argument('-g', '--groupfile', required=True, help='Absolute path to group file.')
     parser_syncgrp.add_argument('-b', '--locbase', required=True, help='Absolute path to local base dir, in which repos will be stored.')
     parser_syncgrp.add_argument('-n', '--locname', required=True, help='Local name.')
@@ -222,23 +241,25 @@ Example:
 
     # annex_push
     push_descr,push_epilog = split_docstring(annex_push)
-    parser_push = subparsers.add_parser('push',
-                                        description=push_descr, epilog=push_epilog,
-                                        formatter_class=formatter,)
+    parser_push = subparsers.add_parser(
+        'push',
+        description=push_descr, epilog=push_epilog,
+        formatter_class=formatter,
+    )
     parser_push.set_defaults(func=annex_push)
-    parser_push.add_argument('-l', '--log', help='Log file..')
-    parser_push.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    add_default_args(parser_push, ['log','debug'])
     parser_push.add_argument('-c', '--collection', required=True, help='Absolute file path to the collection')
     parser_push.add_argument('-f', '--file',       required=True, help='Relative path to updated file.')
     
     # annex_pull
     pull_descr,pull_epilog = split_docstring(annex_pull)
-    parser_pull = subparsers.add_parser('pull',
-                                        description=pull_descr, epilog=pull_epilog,
-                                        formatter_class=formatter,)
+    parser_pull = subparsers.add_parser(
+        'pull',
+        description=pull_descr, epilog=pull_epilog,
+        formatter_class=formatter,
+    )
     parser_pull.set_defaults(func=annex_pull)
-    parser_pull.add_argument('-l', '--log', help='Log file..')
-    parser_pull.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    add_default_args(parser_pull, ['log','debug'])
     parser_pull.add_argument('-c', '--collection', required=True, help='Absolute file path to the collection')
     parser_pull.add_argument('-f', '--file',       required=True, help='Relative path to updated file.')
 
@@ -246,42 +267,36 @@ Example:
     # devices
     parser_remo = subparsers.add_parser('devices', formatter_class=formatter,)
     parser_remo.set_defaults(func=devices)
-    parser_remo.add_argument('-l', '--log', help='Log file..')
-    parser_remo.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    add_default_args(parser_remo, ['log','debug'])
 
     # mounted
     parser_mntd = subparsers.add_parser('mounted', formatter_class=formatter,)
     parser_mntd.set_defaults(func=mounted_devices)
-    parser_mntd.add_argument('-l', '--log', help='Log file..')
-    parser_mntd.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    add_default_args(parser_mntd, ['log','debug'])
 
     # mountpoint
     parser_mtpt = subparsers.add_parser('mountpoint', formatter_class=formatter,)
     parser_mtpt.set_defaults(func=mount_point)
-    parser_mtpt.add_argument('-l', '--log', help='Log file..')
-    parser_mtpt.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    add_default_args(parser_mtpt, ['log','debug'])
     parser_mtpt.add_argument('-p', '--path',       required=True, help='The path you want a mount point for.')
 
     # mount
     parser_mont = subparsers.add_parser('mount', formatter_class=formatter,)
     parser_mont.set_defaults(func=mount)
-    parser_mont.add_argument('-l', '--log', help='Log file..')
-    parser_mont.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    add_default_args(parser_mont, ['log','debug'])
     parser_mont.add_argument('-f', '--device',     required=True, help='The device file you want to mount.')
     parser_mont.add_argument('-m', '--label',      required=True, help='The label you want to use.')
 
     # umount
     parser_umnt = subparsers.add_parser('umount', formatter_class=formatter,)
     parser_umnt.set_defaults(func=umount)
-    parser_umnt.add_argument('-l', '--log', help='Log file..')
-    parser_umnt.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    add_default_args(parser_umnt, ['log','debug'])
     parser_umnt.add_argument('-f', '--device',     required=True, help='The device file you want to unmount.')
 
     # storage_status
     parser_mtpt = subparsers.add_parser('sstatus', formatter_class=formatter,)
     parser_mtpt.set_defaults(func=storage_status)
-    parser_mtpt.add_argument('-l', '--log', help='Log file..')
-    parser_mtpt.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
+    add_default_args(parser_mtpt, ['log','debug'])
     parser_mtpt.add_argument('-p', '--path',       required=True, help='The path you want to check.')
 
 
@@ -317,28 +332,50 @@ Example:
         files = args.files.strip().split(',')
         exit,msg = update(args.user, args.mail, cidentifier.object(), files, agent=AGENT)
 
-    elif args.cmd == 'destroy':  exit,msg = destroy(args.user, args.mail, cidentifier.object(), agent=AGENT)
+    elif args.cmd == 'delete':
+        exit,msg = destroy(args.user, args.mail, cidentifier.object(), agent=AGENT)
 
 
     elif args.cmd == 'ecreate':
         templates = args.templates.strip().split(',')
         files = args.files.strip().split(',')
-        exit,msg = entity_create(args.user, args.mail, cidentifier.object(), eidentifier, templates, files, agent=AGENT)
+        exit,msg = entity_create(
+            args.user, args.mail,
+            cidentifier.object(), eidentifier,
+            templates, files,
+            agent=AGENT
+        )
 
     elif args.cmd == 'eupdate':
         files = args.files.strip().split(',')
-        exit,msg = entity_update(args.user, args.mail, cidentifier.object(), eidentifier.object(), files, agent=AGENT)
+        exit,msg = entity_update(
+            args.user, args.mail,
+            cidentifier.object(), eidentifier.object(),
+            files,
+            agent=AGENT
+        )
 
-    elif args.cmd == 'edestroy': exit,msg = entity_destroy(args.user, args.mail, cidentifier.object(), eidentifier.object(), agent=AGENT)
+    elif args.cmd == 'edelete':
+        exit,msg = entity_destroy(
+            args.user, args.mail,
+            cidentifier.object(), eidentifier.object(),
+            agent=AGENT
+        )
 
 
     elif args.cmd == 'eadd':
         files = args.files.strip().split(',')
         annex = args.annex.strip().split(',')
-        exit,msg = entity_annex_add(args.user,args.mail,cidentifier.object(), eidentifier.object(), files, annex, agent=AGENT)
+        exit,msg = entity_annex_add(
+            args.user,args.mail,
+            cidentifier.object(), eidentifier.object(),
+            files, annex,
+            agent=AGENT
+        )
 
 
-    elif   args.cmd == 'status':
+
+    elif args.cmd == 'status':
         msg = status(cidentifier.object())
         exit = 0
         print(msg)
@@ -348,14 +385,19 @@ Example:
         exit = 0
         print(msg)
 
-    elif args.cmd == 'sync':     exit,msg = sync(args.user, args.mail, cidentifier.object())
+    elif args.cmd == 'sync':
+        exit,msg = sync(args.user, args.mail, cidentifier.object())
 
     elif args.cmd == 'syncgrp':
-        exit,msg = sync_group(args.groupfile, args.locbase, args.locname, args.rembase, args.remname)
+        exit,msg = sync_group(
+            args.groupfile, args.locbase, args.locname, args.rembase, args.remname
+        )
 
-    elif args.cmd == 'push':     exit,msg = annex_push(cidentifier.object(), args.file)
+    elif args.cmd == 'push':
+        exit,msg = annex_push(cidentifier.object(), args.file)
 
-    elif args.cmd == 'pull':     exit,msg = annex_pull(cidentifier.object(), args.file)
+    elif args.cmd == 'pull':
+        exit,msg = annex_pull(cidentifier.object(), args.file)
 
 
     elif args.cmd == 'devices':
