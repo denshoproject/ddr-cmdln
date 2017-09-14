@@ -639,7 +639,7 @@ def file_destroy(user_name, user_mail, collection, entity, rm_files, updated_fil
         if ('-a.jpg' not in f) and ('.json' not in f)
     ]
     changelog_messages = [
-        'Deleted entity file {}'.format(f)
+        'Deleted file {}'.format(os.path.basename(f))
         for f in changelog_files
     ]
     if agent:
@@ -653,7 +653,7 @@ def file_destroy(user_name, user_mail, collection, entity, rm_files, updated_fil
     git_files.append(entity.changelog_path_rel)
     dvcs.stage(repo, git_files)
     if commit:
-        commit_obj = dvcs.commit(repo, commit_message, agent)
+        commit_obj = dvcs.commit(repo, 'Deleted file(s)', agent)
     return 0,'ok',git_files
 
 
