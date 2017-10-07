@@ -63,7 +63,7 @@ def csv_writer(csvfile):
     return writer
 
 def read_csv(path):
-    """Read specified file, return list of rows.
+    """Read specified file, returns list of rows.
     
     >>> path = '/tmp/batch-test_write_csv.csv'
     >>> csv_file = '"id","title","description"\r\n"ddr-test-123","thing 1","nothing here"\r\n"ddr-test-124","thing 2","still nothing"\r\n'
@@ -76,14 +76,28 @@ def read_csv(path):
         ['ddr-test-124', 'thing 2', 'still nothing']
     ]
     
+    Throws Exception if file contains text that can't be decoded to UTF-8.
+    
     @param path: Absolute path to CSV file
     @returns list of rows
     """
     rows = []
-    with codecs.open(path, 'rU', 'utf-8') as f:  # the 'U' is for universal-newline mode
-        reader = csv_reader(f)
-        for row in reader:
-            rows.append(row)
+    try:
+        with codecs.open(path, 'rU', 'utf-8') as f:  # the 'U' is for universal-newline mode
+            reader = csv_reader(f)
+            for row in reader:
+                rows.append(row)
+    except UnicodeDecodeError:
+        bad = []
+        with open(path, 'r') as f:
+            for n,line in enumerate(f.readlines()):
+                try:
+                    utf8 = line.decode('utf8', 'strict')
+                except UnicodeDecodeError:
+                    bad.append(str(n))
+        raise Exception(
+            'Unicode decoding errors in line(s) %s.' % ','.join(bad)
+        )
     return rows
 
 def write_csv(path, headers, rows):
