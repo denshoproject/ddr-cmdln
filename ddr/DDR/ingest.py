@@ -153,7 +153,7 @@ def copy_to_workdir(src_path, tmp_path, tmp_path_renamed, log):
         os.path.basename(tmp_path),
         os.path.basename(tmp_path_renamed)
     ))
-    os.rename(tmp_path, tmp_path_renamed)
+    shutil.move(tmp_path, tmp_path_renamed)
     if not os.path.exists(tmp_path_renamed) and not os.path.exists(tmp_path):
         log.crash('File rename failed: %s -> %s' % (tmp_path, tmp_path_renamed))
 
@@ -206,7 +206,7 @@ def move_files(files, log):
     failures = []
     for tmp,dest in files:
         log.ok('| mv %s %s' % (tmp,dest))
-        os.rename(tmp,dest)
+        shutil.move(tmp,dest)
         if not os.path.exists(dest):
             log.not_ok('FAIL')
             failures.append(tmp)
@@ -238,7 +238,7 @@ def move_new_files_back(files, failures, log):
 def move_existing_files_back(files, log):
     # these are files that already exist in repo
     log.ok('| mv %s %s' % (tmp_entity_json, entity.json_path))
-    os.rename(tmp_entity_json, entity.json_path)
+    shutil.move(tmp_entity_json, entity.json_path)
     if not os.path.exists(entity.json_path):
         log.crash('Failed to place entity.json in destination repo')
 
@@ -314,7 +314,7 @@ def stage_files(entity, git_files, annex_files, new_files, log, show_staged=True
                     log.not_ok('| link (not moving) %s' % dest)
                 else:
                     log.not_ok('| mv %s %s' % (dest,tmp))
-                    os.rename(dest,tmp)
+                    shutil.move(dest,tmp)
             log.not_ok('finished cleanup. good luck...')
             log.crash('Add file aborted, see log file for details: %s' % log.logpath)
     return repo
