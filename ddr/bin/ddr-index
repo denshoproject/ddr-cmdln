@@ -53,7 +53,7 @@ Maintenance tasks:
     $ ddr-index create -H localhost:9200 -i documents
     
     # Add/update mappings to existing index.
-    $ ddr-index mappings -H localhost:9200 -i documents /var/www/media/ddr/ddr
+    $ ddr-index mappings -H localhost:9200 -i documents
     
     # Add/update facets to existing index.
     $ ddr-index facets -H localhost:9200 -i documents /var/www/media/ddr/ddr
@@ -244,7 +244,7 @@ def main():
     index_descr,index_epilog = split_docstring(docstore.Docstore.index)
     reindex_descr,reindex_epilog = split_docstring(docstore.Docstore.reindex)
     alias_descr,alias_epilog = split_docstring(docstore.Docstore.set_alias)
-    mappings_descr,mappings_epilog = split_docstring(docstore.Docstore.put_mappings)
+    mappings_descr,mappings_epilog = split_docstring(docstore.Docstore.init_mappings)
     facets_descr,facets_epilog = split_docstring(docstore.Docstore.put_facets)
     exists_descr,exists_epilog = split_docstring(docstore.Docstore.exists)
     status_descr,status_epilog = split_docstring(docstore.Docstore.status)
@@ -281,7 +281,7 @@ def main():
     index_parser.set_defaults(func=docstore.Docstore.index)
     reindex_parser.set_defaults(func=docstore.Docstore.reindex)
     alias_parser.set_defaults(func=docstore.Docstore.set_alias)
-    mappings_parser.set_defaults(func=docstore.Docstore.put_mappings)
+    mappings_parser.set_defaults(func=docstore.Docstore.init_mappings)
     facets_parser.set_defaults(func=docstore.Docstore.put_facets)
     exists_parser.set_defaults(func=docstore.Docstore.exists)
     status_parser.set_defaults(func=docstore.Docstore.status)
@@ -359,7 +359,6 @@ def main():
     mappings_parser.add_argument('-l', '--log', help='Log file..')
     mappings_parser.add_argument('-H', '--host', help='Hostname and port (HOST:PORT).', **hostsarg)
     mappings_parser.add_argument('-i', '--index', help='index.', **indexarg)
-    mappings_parser.add_argument('path', help='Absolute path to "ddr repo".')
     
     facets_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
     facets_parser.add_argument('-l', '--log', help='Log file..')
@@ -487,9 +486,10 @@ def main():
             msg = d.set_alias(args.alias, args.index)
         print(msg)
     elif args.cmd == 'mappings':
-        mpath = d.mappings_path(args.path)
-        msg = d.put_mappings(mpath)
-        print(msg)
+        statuses = d.init_mappings()
+        for status in statuses:
+            if status['status']:
+                print('%s: %s' % (status['doctype'], s))
     elif args.cmd == 'facets':
         fpath = d.facets_path(args.path)
         msg = d.put_facets(fpath)

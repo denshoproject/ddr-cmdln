@@ -22,7 +22,7 @@ d.delete_index()
 
 d.create_index()
 
-d.put_mappings(docstore.MAPPINGS_PATH)
+d.init_mappings(INDEX)
 d.put_facets(docstore.FACETS_PATH)
 
 # Delete a collection
@@ -52,6 +52,7 @@ from elasticsearch import Elasticsearch, TransportError
 from DDR import config
 from DDR import converters
 from DDR.identifier import Identifier, MODULES, InvalidInputException
+from DDR.identifier import ELASTICSEARCH_CLASSES
 from DDR import util
 
 MAX_SIZE = 10000
@@ -136,7 +137,6 @@ class EmptyPage(InvalidPage):
 class Docstore():
     hosts = None
     indexname = None
-    mappings = None
     facets = None
     es = None
 
@@ -261,7 +261,7 @@ class Docstore():
         logger.debug('init_index(%s)' % (path))
         statuses = {}
         statuses['create'] = self.create_index(self.indexname)
-        statuses['mappings'] = self.put_mappings(self.indexname, self.mappings_path(path))
+        statuses['mappings'] = self.init_mappings(self.indexname)
         statuses['facets'] = self.put_facets(self.indexname, self.facets_path(path))
         return statuses
      
@@ -342,32 +342,18 @@ class Docstore():
             )
         return results
     
-    def mappings_path(self, path):
-        return os.path.join(path, 'docstore/mappings.json')
-    
-    def put_mappings(self, mappings_path):
-        """Puts mappings from file into ES.
+    def init_mappings(self):
+        """Initializes mappings for Elasticsearch objects
         
-        @param path: Absolute path to dir containing facet files.
-        @param mappings_path: Absolute path to mappings JSON.
+        Mappings for objects in (ddr-defs)repo_models.elastic.ELASTICSEARCH_CLASSES
+        
         @returns: JSON dict with status code and response
         """
-        logger.debug('put_mappings(%s, %s)' % (self.indexname, mappings_path))
-        with open(mappings_path, 'r') as f:
-            mappings = json.loads(f.read())
-        mappings_list = _make_mappings(mappings)['documents']
+        logger.debug('init_mappings()')
         statuses = []
-        for mapping in mappings_list:
-            model = mapping.keys()[0]
-            logger.debug(model)
-            logger.debug(
-                json.dumps(mapping, indent=4, separators=(',', ': '), sort_keys=True)
-            )
-            status = self.es.indices.put_mapping(
-                index=self.indexname, doc_type=model, body=mapping
-            )
-            statuses.append( {'model':model, 'status':status} )
-        self.mappings = mappings_list
+        for class_ in ELASTICSEARCH_CLASSES['all']:
+            status = class_['class'].init(index=self.indexname, using=self.es)
+            statuses.append( {'doctype':class_['doctype'], 'status':status} )
         return statuses
     
     def get_mappings(self):
@@ -375,9 +361,8 @@ class Docstore():
         
         @returns: str JSON
         """
-        self.mappings = self.es.indices.get_mapping(self.indexname)
-        return self.mappings
-     
+        return self.es.indices.get_mapping(self.indexname)
+
     def facets_path(self, path):
         return os.path.join(path, 'vocab')
 
