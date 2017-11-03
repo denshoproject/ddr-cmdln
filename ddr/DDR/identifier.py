@@ -425,6 +425,10 @@ except ImportError:
 MODELS = Definitions.models(IDENTIFIERS)
 MODULES = Definitions.import_modules(IDENTIFIERS, Definitions.modules(IDENTIFIERS))
 MODEL_CLASSES = Definitions.model_classes(IDENTIFIERS)
+ELASTICSEARCH_CLASSES_BY_MODEL = {
+    dt['doctype']: dt['class']
+    for dt in ELASTICSEARCH_CLASSES['all']
+}
 MODEL_REPO_MODELS = Definitions.models_modules(MODULES)
 COLLECTION_MODELS = Definitions.collection_models(IDENTIFIERS)
 CONTAINERS = Definitions.containers(IDENTIFIERS)

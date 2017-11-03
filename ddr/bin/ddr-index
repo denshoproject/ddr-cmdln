@@ -447,8 +447,11 @@ def main():
             raw=args.raw
         )
     elif args.cmd == 'get':
-        msg = d.get(args.model, args.id)
-        print(format_json(msg, sort_keys=False))
+        document = d.get(args.model, args.id)
+        if document:
+            print(format_json(document.to_dict(), sort_keys=False))
+        else:
+            print('ERROR: %s not found' % args.id)
     elif args.cmd == 'init':
         statuses = d.init_index(args.path)
         for key,val in statuses.iteritems():

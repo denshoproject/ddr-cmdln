@@ -53,6 +53,8 @@ from DDR import config
 from DDR import converters
 from DDR.identifier import Identifier, MODULES, InvalidInputException
 from DDR.identifier import ELASTICSEARCH_CLASSES
+from DDR.identifier import ELASTICSEARCH_CLASSES_BY_MODEL
+from DDR import modules
 from DDR import util
 from DDR import vocab
 
@@ -549,76 +551,54 @@ class Docstore():
         
         curl -XPUT 'http://localhost:9200/ddr/collection/ddr-testing-141' -d '{ ... }'
         
-        @param document: The object to post.
-        @param public_fields: List of field names; if present, fields not in list will be removed.
-        @param additional_fields: dict of fields added during indexing process
+        @param document: Collection,Entity,File The object to post.
         @param private_ok: boolean Publish even if not "publishable".
         @returns: JSON dict with status code and response
         """
-        logger.debug('post(%s, %s, %s, %s, %s)' % (
-            self.indexname, document, public_fields, additional_fields, private_ok
+        logger.debug('post(%s, %s, %s)' % (
+            self.indexname, document, private_ok
         ))
-        
-        document_id = None
-        for field in document:
-            for k,v in field.iteritems():
-                if k == 'id':
-                    document_id = v
-                elif k == 'path_rel':
-                    # old-skool file.jsons with no 'id' field
-                    fid = os.path.basename(os.path.splitext(v)[0])
-                    document_id = fid
-        try:
-            identifier = Identifier(document_id)
-        except InvalidInputException:
-            return {
-                'status':4,
-                'response':'Could not get Identifier for "%s".' % document_id
-            }
         
         # die if document is public=False or status=incomplete
         if (not _is_publishable(document)) and (not private_ok):
             return {'status':403, 'response':'object not publishable'}
-        # remove non-public fields
-        _filter_payload(document, public_fields)
-        # normalize field contents
-        _clean_payload(document)
-        
-        # restructure from list-of-fields dict to straight dict used by ddr-public
-        data = {}
-        for field in document:
-            for k,v in field.iteritems():
-                data[k] = v
-        
-        # make sure Files have id,title
-        # TODO do this elsewhere, like in File object
-        if data and data.get('path_rel', None):
-            basename_orig = data.get('basename_orig', None)
-            label = data.get('label', None)
-            filename,extension = os.path.splitext(os.path.basename(data['path_rel']))
-            if basename_orig and not label:
-                label = basename_orig
-            elif filename and not label:
-                label = filename
-            data['title'] = label
+
+        # instantiate appropriate subclass of ESObject / DocType
+        ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[document.identifier.model]
+        d = ES_Class()
+        d.meta.id = document.identifier.id
+        for fieldname in doctype_fields(ES_Class):
+            
+            # index_* for complex fields
+            if hasattr(document.identifier.fields_module(), 'index_%s' % fieldname):
+                field_data = modules.Module(
+                    document.identifier.fields_module()
+                ).function(
+                    'index_%s' % fieldname,
+                    getattr(document, fieldname),
+                )
+            
+            # everything else
+            else:
+                try:
+                    field_data = getattr(document, fieldname)
+                except AttributeError as err:
+                    field_data = None
+            
+            if field_data:
+                setattr(d, fieldname, field_data)
         
         # Add parts of id (e.g. repo, org, cid) to document as separate fields.
         for key in ['repo', 'org', 'cid', 'eid', 'sid', 'role', 'sha1']:
-            data[key] = identifier.parts.get(key, '')
-        # additional_fields
-        for key,val in additional_fields.iteritems():
-            data[key] = val
-        logger.debug('identifier.id %s' % identifier.id)
+            setattr(d, key, document.identifier.parts.get(key, ''))
         
-        # format datetimes for ES
-        _format_datetimes(data)
+        d.parent_id = document.identifier.parent_id()
+        d.collection_id = document.identifier.collection_id()
         
-        if identifier.id:
-            return self.es.index(
-                index=self.indexname,
-                doc_type=identifier.model, id=identifier.id, body=data
-            )
-        return {'status':4, 'response':'unknown problem'}
+        logger.debug('saving')
+        status = d.save(using=self.es, index=self.indexname)
+        logger.debug(str(status))
+        return status
     
     def post_json(self, doc_type, document_id, json_text):
         """POST the specified JSON document as-is.
@@ -642,19 +622,24 @@ class Docstore():
         """
         return self.es.exists(index=self.indexname, doc_type=model, id=document_id)
      
-    def get(self, model, document_id, fields=None):
+    def get(self, model, document_id, fields=None, json=False):
         """
         @param model:
         @param document_id:
+        @param fields: boolean Only return these fields
+        @param json: boolean
         """
         if self.exists(model, document_id):
-            if fields is not None:
+            if json:
+                if fields is not None:
+                    return self.es.get(
+                        index=self.indexname, doc_type=model, id=document_id, fields=fields
+                    )
                 return self.es.get(
-                    index=self.indexname, doc_type=model, id=document_id, fields=fields
+                    index=self.indexname, doc_type=model, id=document_id
                 )
-            return self.es.get(
-                index=self.indexname, doc_type=model, id=document_id
-            )
+            ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[model]
+            return ES_Class.get(document_id, using=self.es, index=self.indexname)
         return None
 
     def count(self, doctypes=[], query={}):
@@ -872,6 +857,13 @@ def _parse_cataliases( cataliases ):
             indices_aliases.append( (i,a) )
     return indices_aliases
 
+def doctype_fields(es_class):
+    """List content fields in DocType subclass (i.e. appear in _source).
+    
+    TODO move to ddr-cmdln
+    """
+    return es_class._doc_type.mapping.to_dict()[es_class._doc_type.name]['properties'].keys()
+
 # Each item in this list is a mapping dict in the format ElasticSearch requires.
 # Mappings for each type have to be uploaded individually (I think).
 def _make_mappings(mappings):
@@ -943,7 +935,7 @@ def _make_mappings(mappings):
             mapping[model]['properties']['entity_id'] = ID_PROPERTIES
     return mappings
 
-def _is_publishable(data):
+def _is_publishable(document):
     """Determines if object is publishable
     
     TODO not specific to elasticsearch - move this function so other modules can use
@@ -967,16 +959,22 @@ def _is_publishable(data):
     >>> _is_publishable(data)
     True
     
-    @param data: Standard DDR list-of-dicts data structure.
+    @param document: DDR object or DDR list-of-dicts data structure.
     @returns: True/False
     """
     publishable = False
     status = None
     public = None
-    for field in data:
-        fieldname = field.keys()[0]
-        if   fieldname == 'status': status = field['status']
-        elif fieldname == 'public': public = field['public']
+    if isinstance(document, list):
+        for field in document:
+            fieldname = field.keys()[0]
+            if   fieldname == 'status': status = field['status']
+            elif fieldname == 'public': public = field['public']
+    else:
+        if hasattr(document, 'status'):
+            status = getattr(document, 'status')
+        if hasattr(document, 'public'):
+            public = getattr(document, 'public')
     # collections, entities
     if status and public and (status in STATUS_OK) and (public in PUBLIC_OK):
         return True
