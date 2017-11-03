@@ -56,7 +56,7 @@ Maintenance tasks:
     $ ddr-index mappings -H localhost:9200 -i documents
     
     # Add/update facets to existing index.
-    $ ddr-index facets -H localhost:9200 -i documents /var/www/media/ddr/ddr
+    $ ddr-index facets -H localhost:9200 -i documents -p /opt/ddr-vocab
 
     # Remove organization metadata:
     $ ddr-index org -H localhost:9200 -i documents --remove /var/www/media/ddr/REPO-ORG/organization.json
@@ -364,7 +364,7 @@ def main():
     facets_parser.add_argument('-l', '--log', help='Log file..')
     facets_parser.add_argument('-H', '--host', help='Hostname and port (HOST:PORT).', **hostsarg)
     facets_parser.add_argument('-i', '--index', help='index.', **indexarg)
-    facets_parser.add_argument('path', help='Absolute path to "ddr repo".')
+    facets_parser.add_argument('-p', '--path', help='Absolute path to "ddr-vocabs".')
     
     exists_parser.add_argument('-d', '--debug', action='store_true', help='Debug; prints lots of debug info.')
     exists_parser.add_argument('-l', '--log', help='Log file..')
@@ -491,8 +491,7 @@ def main():
             if status['status']:
                 print('%s: %s' % (status['doctype'], s))
     elif args.cmd == 'facets':
-        fpath = d.facets_path(args.path)
-        msg = d.put_facets(fpath)
+        msg = d.put_facets(args.path)
         print(msg)
     elif args.cmd == 'exists':
         msg = d.exists(args.model, args.id)

@@ -23,7 +23,7 @@ d.delete_index()
 d.create_index()
 
 d.init_mappings(INDEX)
-d.put_facets(docstore.FACETS_PATH)
+d.put_facets(docstore.VOCABS_PATH)
 
 # Delete a collection
 d.delete(os.path.basename(PATH), recursive=True)
@@ -262,7 +262,7 @@ class Docstore():
         statuses = {}
         statuses['create'] = self.create_index(self.indexname)
         statuses['mappings'] = self.init_mappings(self.indexname)
-        statuses['facets'] = self.put_facets(self.indexname, self.facets_path(path))
+        statuses['facets'] = self.put_facets(self.indexname, config.VOCABS_PATH)
         return statuses
      
     def create_index(self, index=None):
@@ -362,48 +362,14 @@ class Docstore():
         @returns: str JSON
         """
         return self.es.indices.get_mapping(self.indexname)
-
-    def facets_path(self, path):
-        return os.path.join(path, 'vocab')
-
-    def put_facet(self, data):
-        FACET_DOCTYPE = 'facet'
-        TERM_DOCTYPE = 'facetterm'
-        statuses = []
-        facet = {
-            'id': data['id'],
-            'title': data['title'],
-            'description': data['description'],
-        }
-        status = self.es.index(
-            index=self.indexname,
-            doc_type=FACET_DOCTYPE,
-            id=facet['id'],
-            body=facet,
-        )
-        statuses.append(status)
-        for term in data['terms']:
-            term_id = '%s-%s' % (facet['id'], term['id'])
-            term['facet'] = facet['id']
-            term['parent_id'] = str(term.get('parent_id', ''))
-            if term.get('created'): term.pop('created')
-            if term.get('modified'): term.pop('modified')
-            status = self.es.index(
-                index=self.indexname,
-                doc_type=TERM_DOCTYPE,
-                id=term_id,
-                body=term,
-            )
-            statuses.append(status)
-        return statuses
     
-    def put_facets(self, path=config.FACETS_PATH):
+    def put_facets(self, path=config.VOCABS_PATH):
         """PUTs facets from file into ES.
         
         curl -XPUT 'http://localhost:9200/meta/facet/format' -d '{ ... }'
         >>> elasticsearch.put_facets(
             '192.168.56.120:9200', 'meta',
-            '/usr/local/src/ddr-cmdln/ddr/DDR/models/facets.json'
+            '/opt/ddr-local/ddr-vocabs'
             )
         
         @param path: Absolute path to dir containing facet files.
@@ -412,15 +378,17 @@ class Docstore():
         logger.debug('index_facets(%s, %s)' % (self.indexname, path))
         statuses = []
         for facet_json in os.listdir(path):
+            if ('index.json' in facet_json) or (not '.json' in facet_json):
+                continue
             facet = facet_json.split('.')[0]
-            srcpath = os.path.join(path, facet_json)
+            srcpath = os.path.normpath(os.path.join(path, facet_json))
             with open(srcpath, 'r') as f:
                 data = json.loads(f.read().strip())
                 fstatuses = self.put_facet(data)
                 statuses.extend(fstatuses)
         return statuses
      
-    def get_facets(self, path=config.FACETS_PATH):
+    def get_facets(self, path=config.VOCABS_PATH):
         facets = []
         for filename in os.listdir(path):
             fn,ext = os.path.splitext(filename)
