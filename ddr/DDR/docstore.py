@@ -48,6 +48,7 @@ logger = logging.getLogger(__name__)
 import os
 
 from elasticsearch import Elasticsearch, TransportError
+import elasticsearch_dsl
 
 from DDR import config
 from DDR import converters
@@ -359,12 +360,22 @@ class Docstore():
             statuses.append( {'doctype':class_['doctype'], 'status':status} )
         return statuses
     
-    def get_mappings(self):
-        """Gets mappings from ES.
+    def get_mappings(self, raw=False):
+        """Get mappings for ESObjects
         
+        @param raw: boolean Use lower-level function to get all mappings
         @returns: str JSON
         """
-        return self.es.indices.get_mapping(self.indexname)
+        if raw:
+            return self.es.indices.get_mapping(self.indexname)
+        return {
+            class_['doctype']: elasticsearch_dsl.Mapping.from_es(
+                index=self.indexname,
+                doc_type=class_['doctype'],
+                using=self.es,
+            ).to_dict()
+            for class_ in ELASTICSEARCH_CLASSES['all']
+        }
     
     def post_facets(self, path=config.VOCABS_PATH):
         """PUTs facets from ddr-vocab into ES.
