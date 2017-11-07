@@ -23,7 +23,7 @@ d.delete_index()
 d.create_index()
 
 d.init_mappings(INDEX)
-d.put_facets(docstore.VOCABS_PATH)
+d.post_facets(docstore.VOCABS_PATH)
 
 # Delete a collection
 d.delete(os.path.basename(PATH), recursive=True)
@@ -54,6 +54,7 @@ from DDR import converters
 from DDR.identifier import Identifier, MODULES, InvalidInputException
 from DDR.identifier import ELASTICSEARCH_CLASSES
 from DDR import util
+from DDR import vocab
 
 MAX_SIZE = 10000
 DEFAULT_PAGE_SIZE = 20
@@ -262,7 +263,7 @@ class Docstore():
         statuses = {}
         statuses['create'] = self.create_index(self.indexname)
         statuses['mappings'] = self.init_mappings(self.indexname)
-        statuses['facets'] = self.put_facets(self.indexname, config.VOCABS_PATH)
+        statuses['facets'] = self.post_facets(self.indexname, config.VOCABS_PATH)
         return statuses
      
     def create_index(self, index=None):
@@ -363,38 +364,54 @@ class Docstore():
         """
         return self.es.indices.get_mapping(self.indexname)
     
-    def put_facets(self, path=config.VOCABS_PATH):
-        """PUTs facets from file into ES.
+    def post_facets(self, path=config.VOCABS_PATH):
+        """PUTs facets from ddr-vocab into ES.
         
         curl -XPUT 'http://localhost:9200/meta/facet/format' -d '{ ... }'
-        >>> elasticsearch.put_facets(
+        >>> elasticsearch.post_facets(
             '192.168.56.120:9200', 'meta',
-            '/opt/ddr-local/ddr-vocabs'
+            '/opt/ddr-local/ddr-vocab'
             )
         
         @param path: Absolute path to dir containing facet files.
         @returns: JSON dict with status code and response
         """
         logger.debug('index_facets(%s, %s)' % (self.indexname, path))
+        vocabs = vocab.get_vocabs_all(path)
+        
+        # get classes from ddr-defs
+        Facet = ELASTICSEARCH_CLASSES_BY_MODEL['facet']
+        FacetTerm = ELASTICSEARCH_CLASSES_BY_MODEL['facetterm']
+        
+        # push facet data
         statuses = []
-        for facet_json in os.listdir(path):
-            if ('index.json' in facet_json) or (not '.json' in facet_json):
-                continue
-            facet = facet_json.split('.')[0]
-            srcpath = os.path.normpath(os.path.join(path, facet_json))
-            with open(srcpath, 'r') as f:
-                data = json.loads(f.read().strip())
-                fstatuses = self.put_facet(data)
-                statuses.extend(fstatuses)
+        for v in vocabs.keys():
+            facet = Facet()
+            facet.meta.id = vocabs[v]['id']
+            id = vocabs[v]['id']
+            title = vocabs[v]['title']
+            description = vocabs[v]['description']
+            logging.debug(facet)
+            status = facet.save(using=self.es, index=self.indexname)
+            statuses.append(status)
+            
+            for t in vocabs[v]['terms']:
+                term = FacetTerm()
+                term_id = '-'.join([
+                    str(facet.meta.id),
+                    str(t.pop('id')),
+                ])
+                term.meta.id = term_id
+                term.id = term_id
+                for field in FacetTerm._doc_type.mapping.to_dict()[
+                        FacetTerm._doc_type.name]['properties'].keys():
+                    if t.get(field):
+                        setattr(term, field, t[field])
+                logging.debug(term)
+                status = term.save(using=self.es, index=self.indexname)
+                statuses.append(status)
+                
         return statuses
-     
-    def get_facets(self, path=config.VOCABS_PATH):
-        facets = []
-        for filename in os.listdir(path):
-            fn,ext = os.path.splitext(filename)
-            if ext and (ext == '.json'):
-                facets.append(fn)
-        return facets
     
     def facet_terms(self, facet, order='term', all_terms=True, model=None):
         """Gets list of terms for the facet.

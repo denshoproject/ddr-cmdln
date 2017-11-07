@@ -245,7 +245,7 @@ def main():
     reindex_descr,reindex_epilog = split_docstring(docstore.Docstore.reindex)
     alias_descr,alias_epilog = split_docstring(docstore.Docstore.set_alias)
     mappings_descr,mappings_epilog = split_docstring(docstore.Docstore.init_mappings)
-    facets_descr,facets_epilog = split_docstring(docstore.Docstore.put_facets)
+    facets_descr,facets_epilog = split_docstring(docstore.Docstore.post_facets)
     exists_descr,exists_epilog = split_docstring(docstore.Docstore.exists)
     status_descr,status_epilog = split_docstring(docstore.Docstore.status)
     repo_descr,repo_epilog = split_docstring(docstore.Docstore.repo)
@@ -282,7 +282,7 @@ def main():
     reindex_parser.set_defaults(func=docstore.Docstore.reindex)
     alias_parser.set_defaults(func=docstore.Docstore.set_alias)
     mappings_parser.set_defaults(func=docstore.Docstore.init_mappings)
-    facets_parser.set_defaults(func=docstore.Docstore.put_facets)
+    facets_parser.set_defaults(func=docstore.Docstore.post_facets)
     exists_parser.set_defaults(func=docstore.Docstore.exists)
     status_parser.set_defaults(func=docstore.Docstore.status)
     repo_parser.set_defaults(func=docstore.Docstore.repo)
@@ -491,8 +491,7 @@ def main():
             if status['status']:
                 print('%s: %s' % (status['doctype'], s))
     elif args.cmd == 'facets':
-        msg = d.put_facets(args.path)
-        print(msg)
+        statuses = d.post_facets(args.path)
     elif args.cmd == 'exists':
         msg = d.exists(args.model, args.id)
         print(msg)

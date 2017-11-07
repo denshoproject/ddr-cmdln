@@ -63,7 +63,7 @@ def test_parse_cataliases():
 
 # put_mappings
 
-# put_facets
+# post_facets
 # list_facets
 # facet_terms
 
