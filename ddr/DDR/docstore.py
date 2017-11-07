@@ -770,47 +770,39 @@ class Docstore():
         successful = 0
         num = len(successful_paths)
         for n,path in enumerate(successful_paths):
-            identifier = Identifier(path=path)
-            parent_id = identifier.parent_id()
+            oi = Identifier(path=path)
+            if not oi:
+                bad_paths.append((path, 'No identifier'))
+                continue
+            document = oi.object()
+            if not document:
+                bad_paths.append((path, 'No document'))
+                continue
+
+            existing_v = None
+            d = self.get(oi.model, oi.id)
+            if d: existing_v = d.meta.version
+
+            # post document
+            created = self.post(document)
             
-            document_pub_fields = []
-            if public and identifier.model:
-                document_pub_fields = publicfields[identifier.model]
-            
-            additional_fields = {'parent_id': parent_id}
-            ## TODO no hard-coded models!
-            #if identifier.model == 'collection': additional_fields['organization_id'] = parent_id
-            #if identifier.model == 'entity': additional_fields['collection_id'] = parent_id
-            #if identifier.model == 'file': additional_fields['entity_id'] = parent_id
-            
-            # HERE WE GO!
-            document = json.loads(identifier.object().dump_json())
-            try:
-                existing = self.get(identifier.model, identifier.id, fields=[])
-            except:
-                existing = None
-            result = self.post(document, document_pub_fields, additional_fields)
+            posted_v = None
+            d = self.get(oi.model, oi.id)
+            if d: posted_v = d.meta.version
+
             # success: created, or version number incremented
             status = 'ERROR - unspecified'
-            if result.get('_id', None):
-                if existing:
-                    existing_version = existing.get('version', None)
-                    if not existing_version:
-                        existing_version = existing.get('_version', None)
-                else:
-                    existing_version = None
-                result_version = result.get('version', None)
-                if not result_version:
-                    result_version = result.get('_version', None)
-                if result['created'] \
-                or (existing_version and (result_version > existing_version)):
-                    successful += 1
-                status = ''
-            else:
-                bad_paths.append((path, result['status'], result['response']))
-                status = '   %s %s' % (result['status'], result['response'])
-            print('%s | %s/%s %s%s' % (
-                datetime.now(config.TZ), n, num, identifier.id, status)
+            if posted_v and not existing_v:
+                status = 'CREATED'
+            elif (existing_v and posted_v) and (existing_v < posted_v):
+                status = 'UPDATED'
+            elif not posted_v:
+                status = 'ERROR: not created'
+                bad_paths.append((path, status))
+            
+            # TODO write logs instead of print
+            print('%s | %s/%s %s %s' % (
+                datetime.now(config.TZ), n, num, oi.id, status)
             )
         logger.debug('INDEXING COMPLETED')
         return {'total':len(paths), 'successful':successful, 'bad':bad_paths}
