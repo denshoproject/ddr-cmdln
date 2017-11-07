@@ -677,43 +677,6 @@ class Docstore():
             doc_type=doctypes,
             body=query,
         )
-
-    def search(self, doctypes=[], query={}, sort=[], fields=[], from_=0, size=MAX_SIZE):
-        """Executes a query, get a list of zero or more hits.
-        
-        The "query" arg must be a dict that conforms to the Elasticsearch query DSL.
-        See docstore.search_query for more info.
-        
-        @param doctypes: list Type of object ('collection', 'entity', 'file')
-        @param query: dict The search definition using Elasticsearch Query DSL
-        @param sort: list of (fieldname,direction) tuples
-        @param fields: str
-        @param from_: int Index of document from which to start results
-        @param size: int Number of results to return
-        @returns raw ElasticSearch query output
-        """
-        logger.debug('search(index=%s, doctypes=%s, query=%s, sort=%s, fields=%s, from_=%s, size=%s' % (
-            self.indexname, doctypes, query, sort, fields, from_, size
-        ))
-        if not query:
-            raise Exception("Can't do an empty search. Give me something to work with here.")
-        
-        doctypes = ','.join(doctypes)
-        logger.debug(json.dumps(query))
-        _clean_dict(sort)
-        sort_cleaned = _clean_sort(sort)
-        fields = ','.join(fields)
-        
-        results = self.es.search(
-            index=self.indexname,
-            doc_type=doctypes,
-            body=query,
-            sort=sort_cleaned,
-            from_=from_,
-            size=size,
-            _source_include=fields,
-        )
-        return results
     
     def delete(self, document_id, recursive=False):
         """Delete a document and optionally its children.
@@ -817,6 +780,43 @@ class Docstore():
             )
         logger.debug('INDEXING COMPLETED')
         return {'total':len(paths), 'successful':successful, 'bad':bad_paths}
+
+    def search(self, doctypes=[], query={}, sort=[], fields=[], from_=0, size=MAX_SIZE):
+        """Executes a query, get a list of zero or more hits.
+        
+        The "query" arg must be a dict that conforms to the Elasticsearch query DSL.
+        See docstore.search_query for more info.
+        
+        @param doctypes: list Type of object ('collection', 'entity', 'file')
+        @param query: dict The search definition using Elasticsearch Query DSL
+        @param sort: list of (fieldname,direction) tuples
+        @param fields: str
+        @param from_: int Index of document from which to start results
+        @param size: int Number of results to return
+        @returns raw ElasticSearch query output
+        """
+        logger.debug('search(index=%s, doctypes=%s, query=%s, sort=%s, fields=%s, from_=%s, size=%s' % (
+            self.indexname, doctypes, query, sort, fields, from_, size
+        ))
+        if not query:
+            raise Exception("Can't do an empty search. Give me something to work with here.")
+        
+        doctypes = ','.join(doctypes)
+        logger.debug(json.dumps(query))
+        _clean_dict(sort)
+        sort_cleaned = _clean_sort(sort)
+        fields = ','.join(fields)
+        
+        results = self.es.search(
+            index=self.indexname,
+            doc_type=doctypes,
+            body=query,
+            sort=sort_cleaned,
+            from_=from_,
+            size=size,
+            _source_include=fields,
+        )
+        return results
 
 
 def make_index_name(text):
