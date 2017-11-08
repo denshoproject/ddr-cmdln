@@ -296,56 +296,6 @@ class Docstore():
             return status
         return '{"status":500, "message":"Index does not exist"}'
     
-    def reindex(self, source, dest):
-        """Copy documents from one index to another.
-        
-        @param source: str Name of source index.
-        @param dest: str Name of destination index.
-        @returns: number successful,list of paths that didn't work out
-        """
-        logger.debug('reindex(%s, %s)' % (source, dest))
-        
-        if self.index_exists(source):
-            logger.info('Source index exists: %s' % source)
-        else:
-            return '{"status":500, "message":"Source index does not exist"}'
-        
-        if self.index_exists(dest):
-            logger.info('Destination index exists: %s' % dest)
-        else:
-            return '{"status":500, "message":"Destination index does not exist"}'
-        
-        version = self.es.info()['version']['number']
-        logger.debug('Elasticsearch version %s' % version)
-        
-        if version >= '2.3':
-            logger.debug('new API')
-            body = {
-                "source": {"index": source},
-                "dest": {"index": dest}
-            }
-            results = self.es.reindex(
-                body=json.dumps(body),
-                refresh=None,
-                requests_per_second=0,
-                timeout='1m',
-                wait_for_active_shards=1,
-                wait_for_completion=False,
-            )
-        else:
-            logger.debug('pre-2.3 legacy API')
-            from elasticsearch import helpers
-            results = helpers.reindex(
-                self.es, source, dest,
-                #query=None,
-                #target_client=None,
-                #chunk_size=500,
-                #scroll=5m,
-                #scan_kwargs={},
-                #bulk_kwargs={}
-            )
-        return results
-    
     def init_mappings(self):
         """Initializes mappings for Elasticsearch objects
         
@@ -816,6 +766,56 @@ class Docstore():
             size=size,
             _source_include=fields,
         )
+        return results
+    
+    def reindex(self, source, dest):
+        """Copy documents from one index to another.
+        
+        @param source: str Name of source index.
+        @param dest: str Name of destination index.
+        @returns: number successful,list of paths that didn't work out
+        """
+        logger.debug('reindex(%s, %s)' % (source, dest))
+        
+        if self.index_exists(source):
+            logger.info('Source index exists: %s' % source)
+        else:
+            return '{"status":500, "message":"Source index does not exist"}'
+        
+        if self.index_exists(dest):
+            logger.info('Destination index exists: %s' % dest)
+        else:
+            return '{"status":500, "message":"Destination index does not exist"}'
+        
+        version = self.es.info()['version']['number']
+        logger.debug('Elasticsearch version %s' % version)
+        
+        if version >= '2.3':
+            logger.debug('new API')
+            body = {
+                "source": {"index": source},
+                "dest": {"index": dest}
+            }
+            results = self.es.reindex(
+                body=json.dumps(body),
+                refresh=None,
+                requests_per_second=0,
+                timeout='1m',
+                wait_for_active_shards=1,
+                wait_for_completion=False,
+            )
+        else:
+            logger.debug('pre-2.3 legacy API')
+            from elasticsearch import helpers
+            results = helpers.reindex(
+                self.es, source, dest,
+                #query=None,
+                #target_client=None,
+                #chunk_size=500,
+                #scroll=5m,
+                #scan_kwargs={},
+                #bulk_kwargs={}
+            )
         return results
 
 
