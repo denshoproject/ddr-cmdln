@@ -157,6 +157,13 @@ class Docstore():
             self.__module__, self.__class__.__name__, self.hosts, self.indexname
         )
     
+    def print_configs(self):
+        print('CONFIG_FILES:           %s' % config.CONFIG_FILES)
+        print('')
+        print('DOCSTORE_HOST:          %s' % config.DOCSTORE_HOST)
+        print('DOCSTORE_INDEX:         %s' % config.DOCSTORE_INDEX)
+        print('')
+    
     def index_exists(self, index):
         """
         """
@@ -202,18 +209,24 @@ class Docstore():
             self.es.cat.aliases(h=['index','alias'])
         )
     
-    def rm_alias(self, alias, index):
+    def delete_alias(self, alias, index):
         """Remove specified alias.
         
         @param alias: Name of the alias
         @param index: Name of the alias' target index.
         """
-        logger.debug('rm_alias(%s, %s, %s)' % (self.hosts, alias, index))
+        logger.debug('deleting alias %s -> %s' % (alias, index))
         alias = make_index_name(alias)
         index = make_index_name(index)
-        return self.es.indices.delete_alias(index=index, name=alias)
+        if alias not in [alias for index,alias in self.aliases()]:
+            logger.error('Alias does not exist: "%s".' % alias)
+            return
+        result = self.es.indices.delete_alias(index=index, name=alias)
+        logger.debug(result)
+        logger.debug('DONE')
+        return result
     
-    def set_alias(self, alias, index):
+    def create_alias(self, alias, index):
         """Point alias at specified index; create index if doesn't exist.
         
         IMPORTANT: There should only ever be ONE alias per index.
@@ -222,7 +235,7 @@ class Docstore():
         @param alias: Name of the alias
         @param index: Name of the alias' target index.
         """
-        logger.debug('set_alias(%s, %s, %s)' % (self.hosts, alias, index))
+        logger.debug('creating alias %s -> %s' % (alias, index))
         alias = make_index_name(alias)
         index = make_index_name(index)
         # delete existing alias
@@ -237,7 +250,10 @@ class Docstore():
                 )
                 removed = ' (removed)'
             print('%s -> %s%s' % (a,i,removed))
-        return self.es.indices.put_alias(index=index, name=alias, body='')
+        result = self.es.indices.put_alias(index=index, name=alias, body='')
+        logger.debug(result)
+        logger.debug('DONE')
+        return result
      
     def target_index(self, alias):
         """Get the name of the index to which the alias points
@@ -255,20 +271,6 @@ class Docstore():
                 target = i
         return target
      
-    def init_index(self, path):
-        """Creates specified index, adds mappings and facets.
-        
-        @param index: Name of the target index.
-        @param path: Absolute path to "ddr repo".
-        @returns: JSON dict with status codes and responses
-        """
-        logger.debug('init_index(%s)' % (path))
-        statuses = {}
-        statuses['create'] = self.create_index(self.indexname)
-        statuses['mappings'] = self.init_mappings(self.indexname)
-        statuses['facets'] = self.post_facets(self.indexname, config.VOCABS_PATH)
-        return statuses
-     
     def create_index(self, index=None):
         """Creates the specified index if it does not already exist.
         
@@ -276,12 +278,15 @@ class Docstore():
         """
         if not index:
             index = self.indexname
-        logger.debug('create_index(%s)' % (index))
+        logger.debug('creating new index: %s' % index)
         body = {
             'settings': {},
             'mappings': {}
             }
-        return self.es.indices.create(index=index, body=body)
+        status = self.es.indices.create(index=index, body=body)
+        logger.debug(status)
+        statuses = self.init_mappings()
+        logger.debug('DONE')
      
     def delete_index(self, index=None):
         """Delete the specified index.
@@ -290,11 +295,13 @@ class Docstore():
         """
         if not index:
             index = self.indexname
-        logger.debug('delete_index(%s)' % (index))
+        logger.debug('deleting index: %s' % index)
         if self.index_exists(index):
             status = self.es.indices.delete(index=index)
-            return status
-        return '{"status":500, "message":"Index does not exist"}'
+        else:
+            status = '{"status":500, "message":"Index does not exist"}'
+        logger.debug(status)
+        return status
     
     def init_mappings(self):
         """Initializes mappings for Elasticsearch objects
@@ -303,9 +310,10 @@ class Docstore():
         
         @returns: JSON dict with status code and response
         """
-        logger.debug('init_mappings()')
+        logger.debug('registering doc types')
         statuses = []
         for class_ in ELASTICSEARCH_CLASSES['all']:
+            logger.debug('- %s' % class_['doctype'])
             status = class_['class'].init(index=self.indexname, using=self.es)
             statuses.append( {'doctype':class_['doctype'], 'status':status} )
         return statuses
@@ -327,8 +335,8 @@ class Docstore():
             for class_ in ELASTICSEARCH_CLASSES['all']
         }
     
-    def post_facets(self, path=config.VOCABS_PATH):
-        """PUTs facets from ddr-vocab into ES.
+    def post_vocabs(self, path=config.VOCABS_PATH):
+        """Posts ddr-vocab facets,terms to ES.
         
         curl -XPUT 'http://localhost:9200/meta/facet/format' -d '{ ... }'
         >>> elasticsearch.post_facets(
@@ -583,22 +591,13 @@ class Docstore():
         """
         return self.es.exists(index=self.indexname, doc_type=model, id=document_id)
      
-    def get(self, model, document_id, fields=None, json=False):
+    def get(self, model, document_id, fields=None):
         """
         @param model:
         @param document_id:
         @param fields: boolean Only return these fields
-        @param json: boolean
         """
         if self.exists(model, document_id):
-            if json:
-                if fields is not None:
-                    return self.es.get(
-                        index=self.indexname, doc_type=model, id=document_id, fields=fields
-                    )
-                return self.es.get(
-                    index=self.indexname, doc_type=model, id=document_id
-                )
             ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[model]
             return ES_Class.get(document_id, using=self.es, index=self.indexname)
         return None

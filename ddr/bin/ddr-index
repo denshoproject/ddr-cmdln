@@ -243,9 +243,9 @@ def main():
     remove_descr,remove_epilog = split_docstring(docstore.Docstore.index)
     index_descr,index_epilog = split_docstring(docstore.Docstore.index)
     reindex_descr,reindex_epilog = split_docstring(docstore.Docstore.reindex)
-    alias_descr,alias_epilog = split_docstring(docstore.Docstore.set_alias)
+    alias_descr,alias_epilog = split_docstring(docstore.Docstore.create_alias)
     mappings_descr,mappings_epilog = split_docstring(docstore.Docstore.init_mappings)
-    facets_descr,facets_epilog = split_docstring(docstore.Docstore.post_facets)
+    facets_descr,facets_epilog = split_docstring(docstore.Docstore.post_vocabs)
     exists_descr,exists_epilog = split_docstring(docstore.Docstore.exists)
     status_descr,status_epilog = split_docstring(docstore.Docstore.status)
     repo_descr,repo_epilog = split_docstring(docstore.Docstore.repo)
@@ -275,14 +275,14 @@ def main():
     post_parser.set_defaults(func=docstore.Docstore.post)
     search_parser.set_defaults(func=docstore.Docstore.search)
     get_parser.set_defaults(func=docstore.Docstore.get)
-    init_parser.set_defaults(func=docstore.Docstore.init_index)
+    init_parser.set_defaults(func=docstore.Docstore.create_index)
     create_parser.set_defaults(func=docstore.Docstore.create_index)
     remove_parser.set_defaults(func=docstore.Docstore.delete_index)
     index_parser.set_defaults(func=docstore.Docstore.index)
     reindex_parser.set_defaults(func=docstore.Docstore.reindex)
-    alias_parser.set_defaults(func=docstore.Docstore.set_alias)
+    alias_parser.set_defaults(func=docstore.Docstore.create_alias)
     mappings_parser.set_defaults(func=docstore.Docstore.init_mappings)
-    facets_parser.set_defaults(func=docstore.Docstore.post_facets)
+    facets_parser.set_defaults(func=docstore.Docstore.post_vocabs)
     exists_parser.set_defaults(func=docstore.Docstore.exists)
     status_parser.set_defaults(func=docstore.Docstore.status)
     repo_parser.set_defaults(func=docstore.Docstore.repo)
@@ -453,7 +453,7 @@ def main():
         else:
             print('ERROR: %s not found' % args.id)
     elif args.cmd == 'init':
-        statuses = d.init_index(args.path)
+        statuses = d.create_index(args.path)
         for key,val in statuses.iteritems():
             print('%s: %s' % (key,val))
     elif args.cmd == 'create':
@@ -484,9 +484,9 @@ def main():
         print(results)
     elif args.cmd == 'alias':
         if args.remove:
-            msg = d.rm_alias(args.alias, args.index)
+            msg = d.delete_alias(args.alias, args.index)
         else:
-            msg = d.set_alias(args.alias, args.index)
+            msg = d.create_alias(args.alias, args.index)
         print(msg)
     elif args.cmd == 'mappings':
         statuses = d.init_mappings()
@@ -494,7 +494,7 @@ def main():
             if status['status']:
                 print('%s: %s' % (status['doctype'], s))
     elif args.cmd == 'facets':
-        statuses = d.post_facets(args.path)
+        statuses = d.post_vocabs(args.path)
     elif args.cmd == 'exists':
         msg = d.exists(args.model, args.id)
         print(msg)
