@@ -5,8 +5,11 @@ Index Management: create, destroy, alias, mappings, status, reindex
 Publishing:       vocabs, post, postjson, index
 Debugging:        config, get, exists, search
 
-By default the command uses DOCSTORE_HOSTS and DOCSTORE_INDEX from the config
-file.  Use the --hosts and --index options to override these values.
+By default the command uses DOCSTORE_HOSTS and DOCSTORE_INDEX from the
+config file.  Override these values using the --hosts and --index options
+or with environment variables:
+  $ export DOCSTORE_HOSTS=192.168.56.1:9200
+  $ export DOCSTORE_INDEX=ddrlocal-YYYYMMDDa
 
 EXAMPLES
 
@@ -103,10 +106,14 @@ def ddrindex(debug):
     """ddrindex - publish DDR content to Elasticsearch; debug Elasticsearch
     
     \b
-    By default the command uses DOCSTORE_HOSTS and DOCSTORE_INDEX from the config
-    file.  Use the --hosts and --index options to override these values.
+    By default the command uses DOCSTORE_HOSTS and DOCSTORE_INDEX from the
+    config file.  Override these values using the --hosts and --index options
+    or with environment variables:
+      $ export DOCSTORE_HOSTS=192.168.56.1:9200
+      $ export DOCSTORE_INDEX=ddrlocal-YYYYMMDDa
     """
-    click.echo('Debug mode is %s' % ('on' if debug else 'off'))
+    if debug:
+        click.echo('Debug mode is on')
 
 
 @ddrindex.command()
@@ -227,7 +234,7 @@ def mappings(hosts, index):
 #              help='Forcibly update records whether they need it or not.')
 @click.argument('path')
 def vocabs(hosts, index, path):
-    """Index DDR vocabulary facets and terms.
+    """Post DDR vocabulary facets and terms.
     
     \b
     Example:
@@ -246,10 +253,14 @@ def vocabs(hosts, index, path):
 @click.option('--all','-a', is_flag=True, help='Include nonpublic documents (private,inprogress).')
 @click.argument('path')
 def post(hosts, index, all, path):
-    """Post the document to Elasticsearch
+    """Post DDR object to Elasticsearch
+    
+    This command is for posting JSON files recognizable by DDR as repository objects.
+    Raw JSON files can be posted using "ddrindex postjson".
     """
     oi = identifier.Identifier(path)
     document = oi.object()
+    
     status = docstore.Docstore(hosts, index).post(document, private_ok=all)
     click.echo(status)
 
@@ -266,6 +277,9 @@ def post(hosts, index, all, path):
 @click.argument('path')
 def postjson(hosts, index, doctype, object_id, path):
     """Post raw JSON file to Elasticsearch (YMMV)
+    
+    This command is for posting raw JSON files.  If the file you wish to post
+    is a DDR object, please use "ddrindex post".
     """
     with open(path, 'r') as f:
         text = f.read()
