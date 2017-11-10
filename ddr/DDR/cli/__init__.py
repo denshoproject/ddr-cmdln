@@ -117,8 +117,12 @@ def help():
 
 
 @ddrindex.command()
-@click.option('--hosts','-h', default=config.DOCSTORE_HOST, help='Elasticsearch hosts.')
-@click.option('--index','-i', default=config.DOCSTORE_INDEX, help='Elasticsearch index.')
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
 def conf(hosts, index):
     """Print configuration settings.
     
@@ -128,8 +132,12 @@ def conf(hosts, index):
 
 
 @ddrindex.command()
-@click.option('--hosts','-h', default=config.DOCSTORE_HOST, help='Elasticsearch hosts.')
-@click.option('--index','-i', default=config.DOCSTORE_INDEX, help='Elasticsearch index.')
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
 def create(hosts, index):
     """Create new index.
     """
@@ -140,8 +148,12 @@ def create(hosts, index):
 
 
 @ddrindex.command()
-@click.option('--hosts','-h', default=config.DOCSTORE_HOST, help='Elasticsearch hosts.')
-@click.option('--index','-i', default=config.DOCSTORE_INDEX, help='Elasticsearch index.')
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
 @click.option('--confirm', is_flag=True,
               help='Yes I really want to delete this index.')
 def destroy(hosts, index, confirm):
@@ -161,8 +173,12 @@ def destroy(hosts, index, confirm):
 
 
 @ddrindex.command()
-@click.option('--hosts','-h', default=config.DOCSTORE_HOST, help='Elasticsearch hosts.')
-@click.option('--index','-i', default=config.DOCSTORE_INDEX, help='Elasticsearch index.')
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
 @click.option('--alias','-a', help='Alias to create.')
 @click.option('--delete','-D', is_flag=True, help='Delete specified alias.')
 def alias(hosts, index, alias, delete):
@@ -184,8 +200,12 @@ def alias(hosts, index, alias, delete):
 
 
 @ddrindex.command()
-@click.option('--hosts','-h', default=config.DOCSTORE_HOST, help='Elasticsearch hosts.')
-@click.option('--index','-i', default=config.DOCSTORE_INDEX, help='Elasticsearch index.')
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
 def mappings(hosts, index):
     """Push mappings to the specified index.
     """
@@ -193,8 +213,12 @@ def mappings(hosts, index):
 
 
 @ddrindex.command()
-@click.option('--hosts','-h', default=config.DOCSTORE_HOST, help='Elasticsearch hosts.')
-@click.option('--index','-i', default=config.DOCSTORE_INDEX, help='Elasticsearch index.')
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
 #@click.option('--report', is_flag=True,
 #              help='Report number of records existing, to be indexed/updated.')
 #@click.option('--dryrun', is_flag=True,
@@ -213,8 +237,12 @@ def vocabs(hosts, index, path):
 
 
 @ddrindex.command()
-@click.option('--hosts','-h', default=config.DOCSTORE_HOST, help='Elasticsearch hosts.')
-@click.option('--index','-i', default=config.DOCSTORE_INDEX, help='Elasticsearch index.')
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
 @click.option('--all','-a', is_flag=True, help='Include nonpublic documents (private,inprogress).')
 @click.argument('path')
 def post(hosts, index, all, path):
@@ -227,8 +255,12 @@ def post(hosts, index, all, path):
 
 
 @ddrindex.command()
-@click.option('--hosts','-h', default=config.DOCSTORE_HOST, help='Elasticsearch hosts.')
-@click.option('--index','-i', default=config.DOCSTORE_INDEX, help='Elasticsearch index.')
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
 @click.argument('doctype')
 @click.argument('object_id')
 @click.argument('path')
@@ -242,8 +274,12 @@ def postjson(hosts, index, doctype, object_id, path):
 
 
 @ddrindex.command()
-@click.option('--hosts','-h', default=config.DOCSTORE_HOST, help='Elasticsearch hosts.')
-@click.option('--index','-i', default=config.DOCSTORE_INDEX, help='Elasticsearch index.')
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
 @click.option('--all','-a', is_flag=True, help='Include nonpublic documents (private,inprogress).')
 @click.argument('path')
 def index(hosts, index, all, path):
@@ -258,8 +294,12 @@ def index(hosts, index, all, path):
 
 
 @ddrindex.command()
-@click.option('--hosts','-h', default=config.DOCSTORE_HOST, help='Elasticsearch hosts.')
-@click.option('--index','-i', default=config.DOCSTORE_INDEX, help='Elasticsearch index.')
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
 @click.option('--recurse', is_flag=True, help='Delete documents under this one.')
 @click.option('--confirm', is_flag=True, help='Yes I really want to delete these objects.')
 @click.argument('doctype')
@@ -274,8 +314,12 @@ def delete(hosts, index, recurse, confirm, doctype, object_id):
 
 
 @ddrindex.command()
-@click.option('--hosts','-h', default=config.DOCSTORE_HOST, help='Elasticsearch hosts.')
-@click.option('--index','-i', default=config.DOCSTORE_INDEX, help='Elasticsearch index.')
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
 @click.argument('doctype')
 @click.argument('object_id')
 def exists(hosts, index, doctype, object_id):
@@ -286,8 +330,12 @@ def exists(hosts, index, doctype, object_id):
 
 
 @ddrindex.command()
-@click.option('--hosts','-h', default=config.DOCSTORE_HOST, help='Elasticsearch hosts.')
-@click.option('--index','-i', default=config.DOCSTORE_INDEX, help='Elasticsearch index.')
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
 @click.option('--json','-j', is_flag=True, help='Print as JSON')
 @click.option('--pretty','-p', is_flag=True, help='Nicely formated JSON')
 @click.argument('doctype')
@@ -303,8 +351,12 @@ def get(hosts, index, json, pretty, doctype, object_id):
 
 
 @ddrindex.command()
-@click.option('--hosts','-h', default=config.DOCSTORE_HOST, help='Elasticsearch hosts.')
-@click.option('--index','-i', default=config.DOCSTORE_INDEX, help='Elasticsearch index.')
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
 def status(hosts, index):
     """Print status info.
     
@@ -365,8 +417,12 @@ def status(hosts, index):
 
 
 @ddrindex.command()
-@click.option('--hosts','-h', default=config.DOCSTORE_HOST, help='Elasticsearch hosts.')
-@click.option('--index','-i', default=config.DOCSTORE_INDEX, help='Elasticsearch index.')
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
 @click.option('--doctypes','-t', help='One or more doctypes (comma-separated).')
 @click.option('--query','-q', help='Query string, in double or single quotes.')
 @click.option('--must','-m', help='AND arg(s) (e.g. "language:eng,jpn!creators.role:author").')
