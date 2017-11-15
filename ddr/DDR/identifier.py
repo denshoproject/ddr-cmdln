@@ -416,6 +416,7 @@ class Definitions():
 try:
     from repo_models.identifier import IDENTIFIERS
     from repo_models.elastic import ELASTICSEARCH_CLASSES
+    from repo_models.elastic import ELASTICSEARCH_LIST_FIELDS
 except ImportError:
     raise Exception(
         'Could not import Identifier definitions! ' \
