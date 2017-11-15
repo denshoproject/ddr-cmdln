@@ -535,14 +535,13 @@ class Docstore():
         # instantiate appropriate subclass of ESObject / DocType
         ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[document.identifier.model]
         d = ES_Class()
+        fields_module = document.identifier.fields_module()
         d.meta.id = document.identifier.id
         for fieldname in doctype_fields(ES_Class):
             
             # index_* for complex fields
-            if hasattr(document.identifier.fields_module(), 'index_%s' % fieldname):
-                field_data = modules.Module(
-                    document.identifier.fields_module()
-                ).function(
+            if hasattr(fields_module, 'index_%s' % fieldname):
+                field_data = modules.Module(fields_module).function(
                     'index_%s' % fieldname,
                     getattr(document, fieldname),
                 )
