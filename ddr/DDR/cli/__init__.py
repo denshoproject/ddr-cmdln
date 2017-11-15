@@ -28,8 +28,8 @@ Set or remove an alias
   $ ddrindex alias --index ddrpublic-20171108c --alias ddrpublic-dev --delete --confirm
 
 Post repository and organization:
-  $ ddrindex post /var/www/media/ddr/REPO/
-  $ ddrindex post /var/www/media/ddr/REPO-ORG/
+  $ ddrindex postjson repository /var/www/media/ddr/REPO/repository.json
+  $ ddrindex postjson organization /var/www/media/ddr/REPO-ORG/organization.json
 
 Post arbitrary JSON documents:
   $ ddrindex postjson narrators DOCUMENTID /etc/ddr/ddr-defs/vocab/narrators.json
