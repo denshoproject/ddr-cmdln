@@ -560,8 +560,13 @@ class Docstore():
         for key in ['repo', 'org', 'cid', 'eid', 'sid', 'role', 'sha1']:
             setattr(d, key, document.identifier.parts.get(key, ''))
         
-        d.parent_id = document.identifier.parent_id()
         d.collection_id = document.identifier.collection_id()
+        if d.collection_id and (d.collection_id != document.identifier.id):
+            # we don't want file-role (a stub) as parent
+            d.parent_id = document.identifier.parent_id(stubs=0)
+        else:
+            # but we do want repository,organization (both stubs)
+            d.parent_id = document.identifier.parent_id(stubs=1)
         
         logger.debug('saving')
         status = d.save(using=self.es, index=self.indexname)
