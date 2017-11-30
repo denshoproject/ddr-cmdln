@@ -74,9 +74,12 @@ from DDR import docstore
 from DDR import identifier
 
 
-def logprint(level, msg):
+def logprint(level, msg, ts=True):
     try:
-        click.echo('%s %s' % (datetime.now(), msg))
+        if ts:
+            click.echo('%s %s' % (datetime.now(), msg))
+        else:
+            click.echo(msg)
     except UnicodeEncodeError:
         click.echo('ERROR: UnicodeEncodeError')
     if   level == 'debug': logging.debug(msg)
@@ -379,55 +382,55 @@ def status(hosts, index):
     ds = docstore.Docstore(hosts, index)
     s = ds.status()
     
-    logprint('debug', '------------------------------------------------------------------------')
-    logprint('debug', 'Elasticsearch')
+    logprint('debug', '------------------------------------------------------------------------',0)
+    logprint('debug', 'Elasticsearch',0)
     # config file
-    logprint('debug', 'DOCSTORE_HOST  (default): %s' % config.DOCSTORE_HOST)
-    logprint('debug', 'DOCSTORE_INDEX (default): %s' % config.DOCSTORE_INDEX)
+    logprint('debug', 'DOCSTORE_HOST  (default): %s' % config.DOCSTORE_HOST, 0)
+    logprint('debug', 'DOCSTORE_INDEX (default): %s' % config.DOCSTORE_INDEX, 0)
     # overrides
     if hosts != config.DOCSTORE_HOST:
-        logprint('debug', 'docstore_hosts: %s' % hosts)
+        logprint('debug', 'docstore_hosts: %s' % hosts, 0)
     if index != config.DOCSTORE_INDEX:
-        logprint('debug', 'docstore_index: %s' % index)
+        logprint('debug', 'docstore_index: %s' % index, 0)
     
     try:
         pingable = ds.es.ping()
         if not pingable:
-            logprint('error', "Can't ping the cluster!")
+            logprint('error', "Can't ping the cluster!", 0)
             return
     except elasticsearch.exceptions.ConnectionError:
-        logprint('error', "Connection error when trying to ping the cluster!")
+        logprint('error', "Connection error when trying to ping the cluster!", 0)
         return
-    logprint('debug', 'ping ok')
+    logprint('debug', 'ping ok', 0)
     
-    logprint('debug', 'Indexes')
+    logprint('debug', 'Indexes', 0)
     index_names = ds.es.indices.stats()['indices'].keys()
     for i in index_names:
         if i == index:
-            logprint('debug', '* %s *' % i)
+            logprint('debug', '* %s *' % i, 0)
         else:
-            logprint('debug', '- %s' % i)
+            logprint('debug', '- %s' % i, 0)
     
-    logprint('debug', 'Aliases')
+    logprint('debug', 'Aliases', 0)
     aliases = ds.aliases()
     if aliases:
         for index,alias in aliases:
-            logprint('debug', '- %s -> %s' % (alias, index))
+            logprint('debug', '- %s -> %s' % (alias, index), 0)
     else:
-        logprint('debug', 'No aliases')
+        logprint('debug', 'No aliases', 0)
     
     if ds.es.indices.exists(index=index):
-        logprint('debug', 'Index %s present' % index)
+        logprint('debug', 'Index %s present' % index, 0)
     else:
-        logprint('error', "Index '%s' doesn't exist!" % index)
+        logprint('error', "Index '%s' doesn't exist!" % index, 0)
         return
 
-    logprint('debug', 'Models')
+    logprint('debug', 'Models', 0)
     for doctype_class in identifier.ELASTICSEARCH_CLASSES['all']:
         #status = doctype_class['class'].init(index=self.indexname, using=self.es)
         #statuses.append( {'doctype':doctype_class['doctype'], 'status':status} )
         num = 0  #len(Page.pages())
-        logprint('debug', '- {:>6} {}'.format(num, doctype_class['doctype']))
+        logprint('debug', '- {:>6} {}'.format(num, doctype_class['doctype']), 0)
 
 
 @ddrindex.command()
