@@ -446,13 +446,13 @@ def status(hosts, index):
 @click.option('--should','-s',  help ='OR arg(s) (e.g. "language:eng,jpn!creators.role:author").')
 @click.option('--mustnot','-n', help='NOT arg(s) (e.g. "language:eng,jpn!creators.role:author").')
 @click.option('--raw','-r', is_flag=True, help='Print raw Elasticsearch DSL and output.')
-def search(hosts, index, doctypes, text, must, should, mustnot, raw):
+def search(hosts, index, doctypes, query, must, should, mustnot, raw):
     """
     """
     click.echo(search_results(
-        docstore.Docstore(hosts, index),
-        doctypes,
-        text,
+        d=docstore.Docstore(hosts, index),
+        doctype=doctypes,
+        text=query,
         must=must,
         should=should,
         mustnot=mustnot,
@@ -460,10 +460,13 @@ def search(hosts, index, doctypes, text, must, should, mustnot, raw):
     ))
 
 def search_results(d, doctype, text, must=None, should=None, mustnot=None, raw=False):
-    if doctype in ['*', 'all', 'all_', '_all']:
-        doctypes = []
+    if doctype:
+        if doctype in ['*', 'all', 'all_', '_all']:
+            doctypes = []
+        else:
+            doctypes = doctype.strip().split(',')
     else:
-        doctypes = doctype.strip().split(',')
+        doctypes = []
     
     def make_terms(arg):
         # "language:eng,jpn!creators.role:author"
@@ -484,7 +487,7 @@ def search_results(d, doctype, text, must=None, should=None, mustnot=None, raw=F
         mustnot=make_terms(mustnot),
     )
     if raw:
-        click.echo(format_json(q, sort_keys=False))
+        click.echo(format_json(q))
     
     data = d.search(
         doctypes=doctypes,
@@ -492,15 +495,24 @@ def search_results(d, doctype, text, must=None, should=None, mustnot=None, raw=F
         fields=['id','title'],
     )
     if raw:
-        click.echo(format_json(data, sort_keys=False))
+        click.echo(format_json(data))
     else:
         try:
+            # find longest IDs and types
+            len_id = 0
             for item in data['hits']['hits']:
-                chunks = (
-                    item['_id'],
-                    item['_type'],
-                    item['_source'].get('title', ''),
-                )
-                click.echo(chunks)
+                if len(item['_id']) > len_id:
+                    len_id = len(item['_id'])
+            len_type = 0
+            for item in data['hits']['hits']:
+                if len(item['_type']) > len_type:
+                    len_type = len(item['_type'])
+            
+            for item in data['hits']['hits']:
+                # format nicely, with padding
+                _id   = item['_id']   + ' ' * ((len_id   - len(item['_id']  )) + 2)
+                _type = item['_type'] + ' ' * ((len_type - len(item['_type'])) + 2)
+                # TODO all objects should have title
+                click.echo(_id + _type + item['_source']['title'])
         except:
-            click.echo(format_json(data, sort_keys=False))
+            click.echo(format_json(data))
