@@ -77,7 +77,6 @@ setup(
         'bin/ddr-filter',
         'bin/ddr-idexport',
         'bin/ddr-import',
-        'bin/ddr-index',
         'bin/ddr-info',
         'bin/ddr-massupdate',
         'bin/ddr-missing',
