@@ -36,7 +36,7 @@ d.org(path='%s/REPO-ORG/organization.json' % PATH, remove=False)
 # Narrators metadata
 d.narrators(NARRATORS_PATH)
 
-d.index(PATH, recursive=True, public=True )
+d.publish(PATH, recursive=True, public=True )
 
 ------------------------------------------------------------------------
 """
@@ -657,8 +657,8 @@ class Docstore():
             except TransportError:
                 pass
     
-    def index(self, path, recursive=False, public=True):
-        """(Re)index with data from the specified directory.
+    def publish(self, path, recursive=False, public=True):
+        """Publish (index) specified document and (optionally) its children.
         
         After receiving a list of metadata files, index() iterates through the
         list several times.  The first pass weeds out paths to objects that can

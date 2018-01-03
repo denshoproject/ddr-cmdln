@@ -297,16 +297,17 @@ def postjson(hosts, index, doctype, object_id, path):
 @click.option('--index','-i',
               default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
               help='Elasticsearch index.')
+@click.option('--recurse','-r', is_flag=True, help='Publish documents under this one.')
 @click.option('--all','-a', is_flag=True, help='Include nonpublic documents (private,inprogress).')
 @click.argument('path')
-def index(hosts, index, all, path):
+def publish(hosts, index, recurse, all, path):
     """Post the document and its children to Elasticsearch
     """
     if all:
         public = False
     else:
         public = True
-    status = docstore.Docstore(hosts, index).index(path, recursive=True, public=public)
+    status = docstore.Docstore(hosts, index).publish(path, recursive=recurse, public=public)
     click.echo(status)
 
 
