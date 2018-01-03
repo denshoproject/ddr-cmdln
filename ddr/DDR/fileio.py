@@ -6,7 +6,7 @@ import sys
 import unicodecsv as csv
 
 
-def read_text(path):
+def read_text(path, utf8_strict=False):
     """Read text file; make sure text is in UTF-8.
     
     @param path: str Absolute path to file.
@@ -14,10 +14,24 @@ def read_text(path):
     """
     if not os.path.exists(path):
         raise IOError('File is missing or unreadable: %s' % path)
-    # TODO use codecs.open utf-8
-    with open(path, 'r') as f:
-        text = f.read()
-    return text
+    if utf8_strict:
+        try:
+            with codecs.open(path, 'rU', 'utf-8') as f:
+                return f.read()
+        except UnicodeDecodeError:
+            bad = []
+            with open(path, 'r') as f:
+                for n,line in enumerate(f.readlines()):
+                    try:
+                        utf8 = line.decode('utf8', 'strict')
+                    except UnicodeDecodeError:
+                        bad.append(str(n))
+            raise Exception(
+                'Unicode decoding errors in line(s) %s.' % ','.join(bad)
+            )
+    else:
+        with open(path, 'r') as f:
+            return f.read()
 
 def write_text(text, path):
     """Write text to UTF-8 file.
