@@ -692,47 +692,60 @@ class Docstore():
         parents = _parents_status(paths)
         
         # Determine if paths are publishable or not
-        successful_paths,bad_paths = _publishable_or_not(paths, parents)
+        paths = _publishable_or_not(paths, parents, public=public)
         
+        skipped = 0
         successful = 0
-        num = len(successful_paths)
-        for n,path in enumerate(successful_paths):
-            oi = Identifier(path=path)
+        bad_paths = [p for p in paths if p['action'] != 'POST']
+        
+        num = len(paths)
+        for n,path in enumerate(paths):
+            oi = path.get('identifier')
+            # TODO write logs instead of print
+            print('%s | %s/%s %s %s %s' % (
+                datetime.now(config.TZ), n+1, num, path['action'], oi.id, path['note'])
+            )
+            if not path['action'] == 'POST':
+                skipped += 1
+                continue
+            
             if not oi:
-                bad_paths.append((path, 'No identifier'))
+                path['note'] = 'No identifier'
+                bad_paths.append(path)
                 continue
             document = oi.object()
             if not document:
-                bad_paths.append((path, 'No document'))
+                path['note'] = 'No document'
+                bad_paths.append(path)
                 continue
-
-            existing_v = None
-            d = self.get(oi.model, oi.id)
-            if d: existing_v = d.meta.version
-
+            
             # post document
             created = self.post(document)
             
+            # document versions
+            existing_v = None
+            d = self.get(oi.model, oi.id)
+            if d:
+                existing_v = d.meta.version
             posted_v = None
             d = self.get(oi.model, oi.id)
-            if d: posted_v = d.meta.version
+            if d:
+                posted_v = d.meta.version
 
             # success: created, or version number incremented
             status = 'ERROR - unspecified'
             if posted_v and not existing_v:
                 status = 'CREATED'
+                successful += 1
             elif (existing_v and posted_v) and (existing_v < posted_v):
                 status = 'UPDATED'
+                successful += 1
             elif not posted_v:
                 status = 'ERROR: not created'
-                bad_paths.append((path, status))
+                print(status)
             
-            # TODO write logs instead of print
-            print('%s | %s/%s %s %s' % (
-                datetime.now(config.TZ), n, num, oi.id, status)
-            )
         logger.debug('INDEXING COMPLETED')
-        return {'total':len(paths), 'successful':successful, 'bad':bad_paths}
+        return {'total':len(paths), 'skipped':skipped, 'successful':successful, 'bad':bad_paths}
 
     def search(self, doctypes=[], query={}, sort=[], fields=[], from_=0, size=MAX_SIZE):
         """Executes a query, get a list of zero or more hits.
@@ -1274,36 +1287,51 @@ def _file_parent_ids(identifier):
         identifier.collection_id(),
     ]
 
-def _publishable_or_not( paths, parents ):
+def _publishable_or_not(paths, parents, public=True):
     """Determines which paths represent publishable paths and which do not.
     
     @param paths
     @param parents
-    @returns successful_paths,bad_paths
+    @param public: boolean If true: omit incomplete,nonpublic objects.
+    @returns list of dicts, e.g. [{'path':'/PATH/TO/OBJECT', 'action':'publish'}]
     """
-    successful_paths = []
-    bad_paths = []
+    path_dicts = []
     for path in paths:
-        identifier = Identifier(path=path)
+        d = {
+            'path': path,
+            'identifier': Identifier(path=path),
+            'action': 'UNSPECIFIED',
+            'note': '',
+        }
+        
+        # 
+        if not public:
+            d['action'] = 'POST'
+            path_dicts.append(d)
+            continue
+        
+        # see if item incomplete or nonpublic
+        
         # see if item's parents are incomplete or nonpublic
         # TODO Bad! Bad! Generalize this...
         UNPUBLISHABLE = []
-        parent_ids = _file_parent_ids(identifier)
-        for parent_id in parent_ids:
+        for parent_id in _file_parent_ids(d['identifier']):
             parent = parents.get(parent_id, {})
             for x in parent.itervalues():
                 if (x not in STATUS_OK) and (x not in PUBLIC_OK):
                     if parent_id not in UNPUBLISHABLE:
                         UNPUBLISHABLE.append(parent_id)
         if UNPUBLISHABLE:
-            response = 'parent unpublishable: %s' % UNPUBLISHABLE
-            bad_paths.append((path,403,response))
-        if not UNPUBLISHABLE:
-            if path and identifier.model:
-                successful_paths.append(path)
-            else:
-                logger.error('missing information!: %s' % path)
-    return successful_paths,bad_paths
+            d['action'] = 'SKIP'
+            d['note'] = 'parent unpublishable'
+            path_dicts.append(d)
+            continue
+        
+        if path and d['identifier'].model:
+            d['action'] = 'POST'
+        path_dicts.append(d)
+    
+    return path_dicts
 
 def _has_access_file( identifier ):
     """Determines whether the path has a corresponding access file.
