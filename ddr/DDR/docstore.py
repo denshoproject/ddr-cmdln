@@ -696,7 +696,7 @@ class Docstore():
         
         skipped = 0
         successful = 0
-        bad_paths = [p for p in paths if p['action'] != 'POST']
+        bad_paths = []
         
         num = len(paths)
         for n,path in enumerate(paths):
@@ -705,9 +705,6 @@ class Docstore():
             print('%s | %s/%s %s %s %s' % (
                 datetime.now(config.TZ), n+1, num, path['action'], oi.id, path['note'])
             )
-            if not path['action'] == 'POST':
-                skipped += 1
-                continue
             
             if not oi:
                 path['note'] = 'No identifier'
@@ -719,14 +716,25 @@ class Docstore():
                 bad_paths.append(path)
                 continue
             
-            # post document
-            created = self.post(document)
-            
-            # document versions
+            # see if document exists
             existing_v = None
             d = self.get(oi.model, oi.id)
             if d:
                 existing_v = d.meta.version
+            
+            # post document
+            if path['action'] == 'POST':
+                created = self.post(document)
+            # delete previously published items now marked incomplete/private
+            elif existing_v and (path['action'] == 'SKIP'):
+                print('%s | %s/%s DELETE' % (datetime.now(config.TZ), n+1, num))
+                self.delete(oi.id)
+            
+            if path['action'] == 'SKIP':
+                skipped += 1
+                continue
+            
+            # version is incremented with each updated
             posted_v = None
             d = self.get(oi.model, oi.id)
             if d:
@@ -742,6 +750,7 @@ class Docstore():
                 successful += 1
             elif not posted_v:
                 status = 'ERROR: not created'
+                bad_paths.append(path)
                 print(status)
             
         logger.debug('INDEXING COMPLETED')
