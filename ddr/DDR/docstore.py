@@ -22,8 +22,8 @@ d.delete_index()
 
 d.create_index()
 
-d.put_mappings(docstore.MAPPINGS_PATH)
-d.put_facets(docstore.FACETS_PATH)
+d.init_mappings(INDEX)
+d.post_facets(docstore.VOCABS_PATH)
 
 # Delete a collection
 d.delete(os.path.basename(PATH), recursive=True)
@@ -36,7 +36,7 @@ d.org(path='%s/REPO-ORG/organization.json' % PATH, remove=False)
 # Narrators metadata
 d.narrators(NARRATORS_PATH)
 
-d.index(PATH, recursive=True, public=True )
+d.publish(PATH, recursive=True, public=True )
 
 ------------------------------------------------------------------------
 """
@@ -48,11 +48,16 @@ logger = logging.getLogger(__name__)
 import os
 
 from elasticsearch import Elasticsearch, TransportError
+import elasticsearch_dsl
 
 from DDR import config
 from DDR import converters
 from DDR.identifier import Identifier, MODULES, InvalidInputException
+from DDR.identifier import ELASTICSEARCH_CLASSES
+from DDR.identifier import ELASTICSEARCH_CLASSES_BY_MODEL
+from DDR import modules
 from DDR import util
+from DDR import vocab
 
 MAX_SIZE = 10000
 DEFAULT_PAGE_SIZE = 20
@@ -136,7 +141,6 @@ class EmptyPage(InvalidPage):
 class Docstore():
     hosts = None
     indexname = None
-    mappings = None
     facets = None
     es = None
 
@@ -152,6 +156,13 @@ class Docstore():
         return "<%s.%s %s:%s>" % (
             self.__module__, self.__class__.__name__, self.hosts, self.indexname
         )
+    
+    def print_configs(self):
+        print('CONFIG_FILES:           %s' % config.CONFIG_FILES)
+        print('')
+        print('DOCSTORE_HOST:          %s' % config.DOCSTORE_HOST)
+        print('DOCSTORE_INDEX:         %s' % config.DOCSTORE_INDEX)
+        print('')
     
     def index_exists(self, index):
         """
@@ -198,18 +209,24 @@ class Docstore():
             self.es.cat.aliases(h=['index','alias'])
         )
     
-    def rm_alias(self, alias, index):
+    def delete_alias(self, alias, index):
         """Remove specified alias.
         
         @param alias: Name of the alias
         @param index: Name of the alias' target index.
         """
-        logger.debug('rm_alias(%s, %s, %s)' % (self.hosts, alias, index))
+        logger.debug('deleting alias %s -> %s' % (alias, index))
         alias = make_index_name(alias)
         index = make_index_name(index)
-        return self.es.indices.delete_alias(index=index, name=alias)
+        if alias not in [alias for index,alias in self.aliases()]:
+            logger.error('Alias does not exist: "%s".' % alias)
+            return
+        result = self.es.indices.delete_alias(index=index, name=alias)
+        logger.debug(result)
+        logger.debug('DONE')
+        return result
     
-    def set_alias(self, alias, index):
+    def create_alias(self, alias, index):
         """Point alias at specified index; create index if doesn't exist.
         
         IMPORTANT: There should only ever be ONE alias per index.
@@ -218,7 +235,7 @@ class Docstore():
         @param alias: Name of the alias
         @param index: Name of the alias' target index.
         """
-        logger.debug('set_alias(%s, %s, %s)' % (self.hosts, alias, index))
+        logger.debug('creating alias %s -> %s' % (alias, index))
         alias = make_index_name(alias)
         index = make_index_name(index)
         # delete existing alias
@@ -233,7 +250,10 @@ class Docstore():
                 )
                 removed = ' (removed)'
             print('%s -> %s%s' % (a,i,removed))
-        return self.es.indices.put_alias(index=index, name=alias, body='')
+        result = self.es.indices.put_alias(index=index, name=alias, body='')
+        logger.debug(result)
+        logger.debug('DONE')
+        return result
      
     def target_index(self, alias):
         """Get the name of the index to which the alias points
@@ -251,20 +271,6 @@ class Docstore():
                 target = i
         return target
      
-    def init_index(self, path):
-        """Creates specified index, adds mappings and facets.
-        
-        @param index: Name of the target index.
-        @param path: Absolute path to "ddr repo".
-        @returns: JSON dict with status codes and responses
-        """
-        logger.debug('init_index(%s)' % (path))
-        statuses = {}
-        statuses['create'] = self.create_index(self.indexname)
-        statuses['mappings'] = self.put_mappings(self.indexname, self.mappings_path(path))
-        statuses['facets'] = self.put_facets(self.indexname, self.facets_path(path))
-        return statuses
-     
     def create_index(self, index=None):
         """Creates the specified index if it does not already exist.
         
@@ -272,12 +278,15 @@ class Docstore():
         """
         if not index:
             index = self.indexname
-        logger.debug('create_index(%s)' % (index))
+        logger.debug('creating new index: %s' % index)
         body = {
             'settings': {},
             'mappings': {}
             }
-        return self.es.indices.create(index=index, body=body)
+        status = self.es.indices.create(index=index, body=body)
+        logger.debug(status)
+        statuses = self.init_mappings()
+        logger.debug('DONE')
      
     def delete_index(self, index=None):
         """Delete the specified index.
@@ -286,162 +295,94 @@ class Docstore():
         """
         if not index:
             index = self.indexname
-        logger.debug('delete_index(%s)' % (index))
+        logger.debug('deleting index: %s' % index)
         if self.index_exists(index):
             status = self.es.indices.delete(index=index)
-            return status
-        return '{"status":500, "message":"Index does not exist"}'
-    
-    def reindex(self, source, dest):
-        """Copy documents from one index to another.
-        
-        @param source: str Name of source index.
-        @param dest: str Name of destination index.
-        @returns: number successful,list of paths that didn't work out
-        """
-        logger.debug('reindex(%s, %s)' % (source, dest))
-        
-        if self.index_exists(source):
-            logger.info('Source index exists: %s' % source)
         else:
-            return '{"status":500, "message":"Source index does not exist"}'
-        
-        if self.index_exists(dest):
-            logger.info('Destination index exists: %s' % dest)
-        else:
-            return '{"status":500, "message":"Destination index does not exist"}'
-        
-        version = self.es.info()['version']['number']
-        logger.debug('Elasticsearch version %s' % version)
-        
-        if version >= '2.3':
-            logger.debug('new API')
-            body = {
-                "source": {"index": source},
-                "dest": {"index": dest}
-            }
-            results = self.es.reindex(
-                body=json.dumps(body),
-                refresh=None,
-                requests_per_second=0,
-                timeout='1m',
-                wait_for_active_shards=1,
-                wait_for_completion=False,
-            )
-        else:
-            logger.debug('pre-2.3 legacy API')
-            from elasticsearch import helpers
-            results = helpers.reindex(
-                self.es, source, dest,
-                #query=None,
-                #target_client=None,
-                #chunk_size=500,
-                #scroll=5m,
-                #scan_kwargs={},
-                #bulk_kwargs={}
-            )
-        return results
+            status = '{"status":500, "message":"Index does not exist"}'
+        logger.debug(status)
+        return status
     
-    def mappings_path(self, path):
-        return os.path.join(path, 'docstore/mappings.json')
-    
-    def put_mappings(self, mappings_path):
-        """Puts mappings from file into ES.
+    def init_mappings(self):
+        """Initializes mappings for Elasticsearch objects
         
-        @param path: Absolute path to dir containing facet files.
-        @param mappings_path: Absolute path to mappings JSON.
+        Mappings for objects in (ddr-defs)repo_models.elastic.ELASTICSEARCH_CLASSES
+        
         @returns: JSON dict with status code and response
         """
-        logger.debug('put_mappings(%s, %s)' % (self.indexname, mappings_path))
-        with open(mappings_path, 'r') as f:
-            mappings = json.loads(f.read())
-        mappings_list = _make_mappings(mappings)['documents']
+        logger.debug('registering doc types')
         statuses = []
-        for mapping in mappings_list:
-            model = mapping.keys()[0]
-            logger.debug(model)
-            logger.debug(
-                json.dumps(mapping, indent=4, separators=(',', ': '), sort_keys=True)
-            )
-            status = self.es.indices.put_mapping(
-                index=self.indexname, doc_type=model, body=mapping
-            )
-            statuses.append( {'model':model, 'status':status} )
-        self.mappings = mappings_list
+        for class_ in ELASTICSEARCH_CLASSES['all']:
+            logger.debug('- %s' % class_['doctype'])
+            status = class_['class'].init(index=self.indexname, using=self.es)
+            statuses.append( {'doctype':class_['doctype'], 'status':status} )
         return statuses
     
-    def get_mappings(self):
-        """Gets mappings from ES.
+    def get_mappings(self, raw=False):
+        """Get mappings for ESObjects
         
+        @param raw: boolean Use lower-level function to get all mappings
         @returns: str JSON
         """
-        self.mappings = self.es.indices.get_mapping(self.indexname)
-        return self.mappings
-     
-    def facets_path(self, path):
-        return os.path.join(path, 'vocab')
-
-    def put_facet(self, data):
-        FACET_DOCTYPE = 'facet'
-        TERM_DOCTYPE = 'facetterm'
-        statuses = []
-        facet = {
-            'id': data['id'],
-            'title': data['title'],
-            'description': data['description'],
-        }
-        status = self.es.index(
-            index=self.indexname,
-            doc_type=FACET_DOCTYPE,
-            id=facet['id'],
-            body=facet,
-        )
-        statuses.append(status)
-        for term in data['terms']:
-            term_id = '%s-%s' % (facet['id'], term['id'])
-            term['facet'] = facet['id']
-            term['parent_id'] = str(term.get('parent_id', ''))
-            if term.get('created'): term.pop('created')
-            if term.get('modified'): term.pop('modified')
-            status = self.es.index(
+        if raw:
+            return self.es.indices.get_mapping(self.indexname)
+        return {
+            class_['doctype']: elasticsearch_dsl.Mapping.from_es(
                 index=self.indexname,
-                doc_type=TERM_DOCTYPE,
-                id=term_id,
-                body=term,
-            )
-            statuses.append(status)
-        return statuses
+                doc_type=class_['doctype'],
+                using=self.es,
+            ).to_dict()
+            for class_ in ELASTICSEARCH_CLASSES['all']
+        }
     
-    def put_facets(self, path=config.FACETS_PATH):
-        """PUTs facets from file into ES.
+    def post_vocabs(self, path=config.VOCABS_PATH):
+        """Posts ddr-vocab facets,terms to ES.
         
         curl -XPUT 'http://localhost:9200/meta/facet/format' -d '{ ... }'
-        >>> elasticsearch.put_facets(
+        >>> elasticsearch.post_facets(
             '192.168.56.120:9200', 'meta',
-            '/usr/local/src/ddr-cmdln/ddr/DDR/models/facets.json'
+            '/opt/ddr-local/ddr-vocab'
             )
         
         @param path: Absolute path to dir containing facet files.
         @returns: JSON dict with status code and response
         """
         logger.debug('index_facets(%s, %s)' % (self.indexname, path))
+        vocabs = vocab.get_vocabs_all(path)
+        
+        # get classes from ddr-defs
+        Facet = ELASTICSEARCH_CLASSES_BY_MODEL['facet']
+        FacetTerm = ELASTICSEARCH_CLASSES_BY_MODEL['facetterm']
+        
+        # push facet data
         statuses = []
-        for facet_json in os.listdir(path):
-            facet = facet_json.split('.')[0]
-            srcpath = os.path.join(path, facet_json)
-            with open(srcpath, 'r') as f:
-                data = json.loads(f.read().strip())
-                fstatuses = self.put_facet(data)
-                statuses.extend(fstatuses)
+        for v in vocabs.keys():
+            facet = Facet()
+            facet.meta.id = vocabs[v]['id']
+            id = vocabs[v]['id']
+            title = vocabs[v]['title']
+            description = vocabs[v]['description']
+            logging.debug(facet)
+            status = facet.save(using=self.es, index=self.indexname)
+            statuses.append(status)
+            
+            for t in vocabs[v]['terms']:
+                term = FacetTerm()
+                term_id = '-'.join([
+                    str(facet.meta.id),
+                    str(t.pop('id')),
+                ])
+                term.meta.id = term_id
+                term.id = term_id
+                for field in FacetTerm._doc_type.mapping.to_dict()[
+                        FacetTerm._doc_type.name]['properties'].keys():
+                    if t.get(field):
+                        setattr(term, field, t[field])
+                logging.debug(term)
+                status = term.save(using=self.es, index=self.indexname)
+                statuses.append(status)
+                
         return statuses
-     
-    def get_facets(self, path=config.FACETS_PATH):
-        facets = []
-        for filename in os.listdir(path):
-            fn,ext = os.path.splitext(filename)
-            if ext and (ext == '.json'):
-                facets.append(fn)
-        return facets
     
     def facet_terms(self, facet, order='term', all_terms=True, model=None):
         """Gets list of terms for the facet.
@@ -579,76 +520,58 @@ class Docstore():
         
         curl -XPUT 'http://localhost:9200/ddr/collection/ddr-testing-141' -d '{ ... }'
         
-        @param document: The object to post.
-        @param public_fields: List of field names; if present, fields not in list will be removed.
-        @param additional_fields: dict of fields added during indexing process
+        @param document: Collection,Entity,File The object to post.
         @param private_ok: boolean Publish even if not "publishable".
         @returns: JSON dict with status code and response
         """
-        logger.debug('post(%s, %s, %s, %s, %s)' % (
-            self.indexname, document, public_fields, additional_fields, private_ok
+        logger.debug('post(%s, %s, %s)' % (
+            self.indexname, document, private_ok
         ))
-        
-        document_id = None
-        for field in document:
-            for k,v in field.iteritems():
-                if k == 'id':
-                    document_id = v
-                elif k == 'path_rel':
-                    # old-skool file.jsons with no 'id' field
-                    fid = os.path.basename(os.path.splitext(v)[0])
-                    document_id = fid
-        try:
-            identifier = Identifier(document_id)
-        except InvalidInputException:
-            return {
-                'status':4,
-                'response':'Could not get Identifier for "%s".' % document_id
-            }
         
         # die if document is public=False or status=incomplete
         if (not _is_publishable(document)) and (not private_ok):
             return {'status':403, 'response':'object not publishable'}
-        # remove non-public fields
-        _filter_payload(document, public_fields)
-        # normalize field contents
-        _clean_payload(document)
-        
-        # restructure from list-of-fields dict to straight dict used by ddr-public
-        data = {}
-        for field in document:
-            for k,v in field.iteritems():
-                data[k] = v
-        
-        # make sure Files have id,title
-        # TODO do this elsewhere, like in File object
-        if data and data.get('path_rel', None):
-            basename_orig = data.get('basename_orig', None)
-            label = data.get('label', None)
-            filename,extension = os.path.splitext(os.path.basename(data['path_rel']))
-            if basename_orig and not label:
-                label = basename_orig
-            elif filename and not label:
-                label = filename
-            data['title'] = label
+
+        # instantiate appropriate subclass of ESObject / DocType
+        ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[document.identifier.model]
+        d = ES_Class()
+        fields_module = document.identifier.fields_module()
+        d.meta.id = document.identifier.id
+        for fieldname in doctype_fields(ES_Class):
+            
+            # index_* for complex fields
+            if hasattr(fields_module, 'index_%s' % fieldname):
+                field_data = modules.Module(fields_module).function(
+                    'index_%s' % fieldname,
+                    getattr(document, fieldname),
+                )
+            
+            # everything else
+            else:
+                try:
+                    field_data = getattr(document, fieldname)
+                except AttributeError as err:
+                    field_data = None
+            
+            if field_data:
+                setattr(d, fieldname, field_data)
         
         # Add parts of id (e.g. repo, org, cid) to document as separate fields.
         for key in ['repo', 'org', 'cid', 'eid', 'sid', 'role', 'sha1']:
-            data[key] = identifier.parts.get(key, '')
-        # additional_fields
-        for key,val in additional_fields.iteritems():
-            data[key] = val
-        logger.debug('identifier.id %s' % identifier.id)
+            setattr(d, key, document.identifier.parts.get(key, ''))
         
-        # format datetimes for ES
-        _format_datetimes(data)
+        d.collection_id = document.identifier.collection_id()
+        if d.collection_id and (d.collection_id != document.identifier.id):
+            # we don't want file-role (a stub) as parent
+            d.parent_id = document.identifier.parent_id(stubs=0)
+        else:
+            # but we do want repository,organization (both stubs)
+            d.parent_id = document.identifier.parent_id(stubs=1)
         
-        if identifier.id:
-            return self.es.index(
-                index=self.indexname,
-                doc_type=identifier.model, id=identifier.id, body=data
-            )
-        return {'status':4, 'response':'unknown problem'}
+        logger.debug('saving')
+        status = d.save(using=self.es, index=self.indexname)
+        logger.debug(str(status))
+        return status
     
     def post_json(self, doc_type, document_id, json_text):
         """POST the specified JSON document as-is.
@@ -676,15 +599,11 @@ class Docstore():
         """
         @param model:
         @param document_id:
+        @param fields: boolean Only return these fields
         """
         if self.exists(model, document_id):
-            if fields is not None:
-                return self.es.get(
-                    index=self.indexname, doc_type=model, id=document_id, fields=fields
-                )
-            return self.es.get(
-                index=self.indexname, doc_type=model, id=document_id
-            )
+            ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[model]
+            return ES_Class.get(document_id, using=self.es, index=self.indexname)
         return None
 
     def count(self, doctypes=[], query={}):
@@ -711,6 +630,131 @@ class Docstore():
             doc_type=doctypes,
             body=query,
         )
+    
+    def delete(self, document_id, recursive=False):
+        """Delete a document and optionally its children.
+        
+        @param document_id:
+        @param recursive: True or False
+        """
+        identifier = Identifier(id=document_id)
+        if recursive:
+            if identifier.model == 'collection': doc_type = 'collection,entity,file'
+            elif identifier.model == 'entity': doc_type = 'entity,file'
+            elif identifier.model == 'file': doc_type = 'file'
+            query = 'id:"%s"' % identifier.id
+            try:
+                return self.es.delete_by_query(
+                    index=self.indexname, doc_type=doc_type, q=query
+                )
+            except TransportError:
+                pass
+        else:
+            try:
+                return self.es.delete(
+                    index=self.indexname, doc_type=identifier.model, id=identifier.id
+                )
+            except TransportError:
+                pass
+    
+    def publish(self, path, recursive=False, public=True):
+        """Publish (index) specified document and (optionally) its children.
+        
+        After receiving a list of metadata files, index() iterates through the
+        list several times.  The first pass weeds out paths to objects that can
+        not be published (e.g. object or its parent is unpublished).
+        
+        In the final pass, a list of public/publishable fields is chosen based
+        on the model.  Additional fields not in the model (e.g. parent ID, parent
+        organization/collection/entity ID) are packaged.  Then everything is sent
+        off to post().
+        
+        @param path: Absolute path to directory containing object metadata files.
+        @param recursive: Whether or not to recurse into subdirectories.
+        @param public: For publication (fields not marked public will be ommitted).
+        @param paths: Absolute paths to directory containing collections.
+        @returns: number successful,list of paths that didn't work out
+        """
+        logger.debug('index(%s, %s)' % (self.indexname, path))
+        
+        publicfields = _public_fields()
+        
+        # process a single file if requested
+        if os.path.isfile(path):
+            paths = [path]
+        else:
+            # files listed first, then entities, then collections
+            paths = util.find_meta_files(path, recursive, files_first=1)
+        
+        # Store value of public,status for each collection,entity.
+        # Values will be used by entities and files to inherit these values
+        # from their parent.
+        parents = _parents_status(paths)
+        
+        # Determine if paths are publishable or not
+        paths = _publishable_or_not(paths, parents, public=public)
+        
+        skipped = 0
+        successful = 0
+        bad_paths = []
+        
+        num = len(paths)
+        for n,path in enumerate(paths):
+            oi = path.get('identifier')
+            # TODO write logs instead of print
+            print('%s | %s/%s %s %s %s' % (
+                datetime.now(config.TZ), n+1, num, path['action'], oi.id, path['note'])
+            )
+            
+            if not oi:
+                path['note'] = 'No identifier'
+                bad_paths.append(path)
+                continue
+            document = oi.object()
+            if not document:
+                path['note'] = 'No document'
+                bad_paths.append(path)
+                continue
+            
+            # see if document exists
+            existing_v = None
+            d = self.get(oi.model, oi.id)
+            if d:
+                existing_v = d.meta.version
+            
+            # post document
+            if path['action'] == 'POST':
+                created = self.post(document)
+            # delete previously published items now marked incomplete/private
+            elif existing_v and (path['action'] == 'SKIP'):
+                print('%s | %s/%s DELETE' % (datetime.now(config.TZ), n+1, num))
+                self.delete(oi.id)
+            
+            if path['action'] == 'SKIP':
+                skipped += 1
+                continue
+            
+            # version is incremented with each updated
+            posted_v = None
+            d = self.get(oi.model, oi.id)
+            if d:
+                posted_v = d.meta.version
+
+            # success: created, or version number incremented
+            status = 'ERROR - unspecified'
+            if posted_v and not existing_v:
+                status = 'CREATED'
+                successful += 1
+            elif (existing_v and posted_v) and (existing_v < posted_v):
+                status = 'UPDATED'
+                successful += 1
+            elif not posted_v:
+                status = 'ERROR: not created'
+                bad_paths.append(path)
+                print(status)
+            
+        logger.debug('INDEXING COMPLETED')
+        return {'total':len(paths), 'skipped':skipped, 'successful':successful, 'bad':bad_paths}
 
     def search(self, doctypes=[], query={}, sort=[], fields=[], from_=0, size=MAX_SIZE):
         """Executes a query, get a list of zero or more hits.
@@ -749,116 +793,55 @@ class Docstore():
         )
         return results
     
-    def delete(self, document_id, recursive=False):
-        """Delete a document and optionally its children.
+    def reindex(self, source, dest):
+        """Copy documents from one index to another.
         
-        @param document_id:
-        @param recursive: True or False
-        """
-        identifier = Identifier(id=document_id)
-        if recursive:
-            if identifier.model == 'collection': doc_type = 'collection,entity,file'
-            elif identifier.model == 'entity': doc_type = 'entity,file'
-            elif identifier.model == 'file': doc_type = 'file'
-            query = 'id:"%s"' % identifier.id
-            try:
-                return self.es.delete_by_query(
-                    index=self.indexname, doc_type=doc_type, q=query
-                )
-            except TransportError:
-                pass
-        else:
-            try:
-                return self.es.delete(
-                    index=self.indexname, doc_type=identifier.model, id=identifier.id
-                )
-            except TransportError:
-                pass
-    
-    def index(self, path, recursive=False, public=True):
-        """(Re)index with data from the specified directory.
-        
-        After receiving a list of metadata files, index() iterates through the
-        list several times.  The first pass weeds out paths to objects that can
-        not be published (e.g. object or its parent is unpublished).
-        
-        In the final pass, a list of public/publishable fields is chosen based
-        on the model.  Additional fields not in the model (e.g. parent ID, parent
-        organization/collection/entity ID) are packaged.  Then everything is sent
-        off to post().
-        
-        @param path: Absolute path to directory containing object metadata files.
-        @param recursive: Whether or not to recurse into subdirectories.
-        @param public: For publication (fields not marked public will be ommitted).
-        @param paths: Absolute paths to directory containing collections.
+        @param source: str Name of source index.
+        @param dest: str Name of destination index.
         @returns: number successful,list of paths that didn't work out
         """
-        logger.debug('index(%s, %s)' % (self.indexname, path))
+        logger.debug('reindex(%s, %s)' % (source, dest))
         
-        publicfields = _public_fields()
-        
-        # process a single file if requested
-        if os.path.isfile(path):
-            paths = [path]
+        if self.index_exists(source):
+            logger.info('Source index exists: %s' % source)
         else:
-            # files listed first, then entities, then collections
-            paths = util.find_meta_files(path, recursive, files_first=1)
+            return '{"status":500, "message":"Source index does not exist"}'
         
-        # Store value of public,status for each collection,entity.
-        # Values will be used by entities and files to inherit these values
-        # from their parent.
-        parents = _parents_status(paths)
+        if self.index_exists(dest):
+            logger.info('Destination index exists: %s' % dest)
+        else:
+            return '{"status":500, "message":"Destination index does not exist"}'
         
-        # Determine if paths are publishable or not
-        successful_paths,bad_paths = _publishable_or_not(paths, parents)
+        version = self.es.info()['version']['number']
+        logger.debug('Elasticsearch version %s' % version)
         
-        successful = 0
-        num = len(successful_paths)
-        for n,path in enumerate(successful_paths):
-            identifier = Identifier(path=path)
-            parent_id = identifier.parent_id()
-            
-            document_pub_fields = []
-            if public and identifier.model:
-                document_pub_fields = publicfields[identifier.model]
-            
-            additional_fields = {'parent_id': parent_id}
-            ## TODO no hard-coded models!
-            #if identifier.model == 'collection': additional_fields['organization_id'] = parent_id
-            #if identifier.model == 'entity': additional_fields['collection_id'] = parent_id
-            #if identifier.model == 'file': additional_fields['entity_id'] = parent_id
-            
-            # HERE WE GO!
-            document = json.loads(identifier.object().dump_json())
-            try:
-                existing = self.get(identifier.model, identifier.id, fields=[])
-            except:
-                existing = None
-            result = self.post(document, document_pub_fields, additional_fields)
-            # success: created, or version number incremented
-            status = 'ERROR - unspecified'
-            if result.get('_id', None):
-                if existing:
-                    existing_version = existing.get('version', None)
-                    if not existing_version:
-                        existing_version = existing.get('_version', None)
-                else:
-                    existing_version = None
-                result_version = result.get('version', None)
-                if not result_version:
-                    result_version = result.get('_version', None)
-                if result['created'] \
-                or (existing_version and (result_version > existing_version)):
-                    successful += 1
-                status = ''
-            else:
-                bad_paths.append((path, result['status'], result['response']))
-                status = '   %s %s' % (result['status'], result['response'])
-            print('%s | %s/%s %s%s' % (
-                datetime.now(config.TZ), n, num, identifier.id, status)
+        if version >= '2.3':
+            logger.debug('new API')
+            body = {
+                "source": {"index": source},
+                "dest": {"index": dest}
+            }
+            results = self.es.reindex(
+                body=json.dumps(body),
+                refresh=None,
+                requests_per_second=0,
+                timeout='1m',
+                wait_for_active_shards=1,
+                wait_for_completion=False,
             )
-        logger.debug('INDEXING COMPLETED')
-        return {'total':len(paths), 'successful':successful, 'bad':bad_paths}
+        else:
+            logger.debug('pre-2.3 legacy API')
+            from elasticsearch import helpers
+            results = helpers.reindex(
+                self.es, source, dest,
+                #query=None,
+                #target_client=None,
+                #chunk_size=500,
+                #scroll=5m,
+                #scan_kwargs={},
+                #bulk_kwargs={}
+            )
+        return results
 
 
 def make_index_name(text):
@@ -901,6 +884,13 @@ def _parse_cataliases( cataliases ):
             i,a = line.strip().split(' ')
             indices_aliases.append( (i,a) )
     return indices_aliases
+
+def doctype_fields(es_class):
+    """List content fields in DocType subclass (i.e. appear in _source).
+    
+    TODO move to ddr-cmdln
+    """
+    return es_class._doc_type.mapping.to_dict()[es_class._doc_type.name]['properties'].keys()
 
 # Each item in this list is a mapping dict in the format ElasticSearch requires.
 # Mappings for each type have to be uploaded individually (I think).
@@ -973,7 +963,7 @@ def _make_mappings(mappings):
             mapping[model]['properties']['entity_id'] = ID_PROPERTIES
     return mappings
 
-def _is_publishable(data):
+def _is_publishable(document):
     """Determines if object is publishable
     
     TODO not specific to elasticsearch - move this function so other modules can use
@@ -997,16 +987,22 @@ def _is_publishable(data):
     >>> _is_publishable(data)
     True
     
-    @param data: Standard DDR list-of-dicts data structure.
+    @param document: DDR object or DDR list-of-dicts data structure.
     @returns: True/False
     """
     publishable = False
     status = None
     public = None
-    for field in data:
-        fieldname = field.keys()[0]
-        if   fieldname == 'status': status = field['status']
-        elif fieldname == 'public': public = field['public']
+    if isinstance(document, list):
+        for field in document:
+            fieldname = field.keys()[0]
+            if   fieldname == 'status': status = field['status']
+            elif fieldname == 'public': public = field['public']
+    else:
+        if hasattr(document, 'status'):
+            status = getattr(document, 'status')
+        if hasattr(document, 'public'):
+            public = getattr(document, 'public')
     # collections, entities
     if status and public and (status in STATUS_OK) and (public in PUBLIC_OK):
         return True
@@ -1300,36 +1296,51 @@ def _file_parent_ids(identifier):
         identifier.collection_id(),
     ]
 
-def _publishable_or_not( paths, parents ):
+def _publishable_or_not(paths, parents, public=True):
     """Determines which paths represent publishable paths and which do not.
     
     @param paths
     @param parents
-    @returns successful_paths,bad_paths
+    @param public: boolean If true: omit incomplete,nonpublic objects.
+    @returns list of dicts, e.g. [{'path':'/PATH/TO/OBJECT', 'action':'publish'}]
     """
-    successful_paths = []
-    bad_paths = []
+    path_dicts = []
     for path in paths:
-        identifier = Identifier(path=path)
+        d = {
+            'path': path,
+            'identifier': Identifier(path=path),
+            'action': 'UNSPECIFIED',
+            'note': '',
+        }
+        
+        # 
+        if not public:
+            d['action'] = 'POST'
+            path_dicts.append(d)
+            continue
+        
+        # see if item incomplete or nonpublic
+        
         # see if item's parents are incomplete or nonpublic
         # TODO Bad! Bad! Generalize this...
         UNPUBLISHABLE = []
-        parent_ids = _file_parent_ids(identifier)
-        for parent_id in parent_ids:
+        for parent_id in _file_parent_ids(d['identifier']):
             parent = parents.get(parent_id, {})
             for x in parent.itervalues():
                 if (x not in STATUS_OK) and (x not in PUBLIC_OK):
                     if parent_id not in UNPUBLISHABLE:
                         UNPUBLISHABLE.append(parent_id)
         if UNPUBLISHABLE:
-            response = 'parent unpublishable: %s' % UNPUBLISHABLE
-            bad_paths.append((path,403,response))
-        if not UNPUBLISHABLE:
-            if path and identifier.model:
-                successful_paths.append(path)
-            else:
-                logger.error('missing information!: %s' % path)
-    return successful_paths,bad_paths
+            d['action'] = 'SKIP'
+            d['note'] = 'parent unpublishable'
+            path_dicts.append(d)
+            continue
+        
+        if path and d['identifier'].model:
+            d['action'] = 'POST'
+        path_dicts.append(d)
+    
+    return path_dicts
 
 def _has_access_file( identifier ):
     """Determines whether the path has a corresponding access file.

@@ -78,8 +78,6 @@ ELASTICSEARCH_DATETIME_FORMAT  = "%Y-%m-%dT%H:%M:%S"
 ACCESS_FILE_APPEND = config.get('cmdln','access_file_append')
 ACCESS_FILE_EXTENSION = config.get('cmdln','access_file_extension')
 ACCESS_FILE_GEOMETRY = config.get('cmdln','access_file_geometry')
-FACETS_PATH = os.path.join(REPO_MODELS_PATH, 'vocab')
-MAPPINGS_PATH = os.path.join(REPO_MODELS_PATH, 'docstore', 'mappings.json')
 TEMPLATE_EAD = os.path.join(REPO_MODELS_PATH, 'templates', 'ead.xml')
 TEMPLATE_METS = os.path.join(REPO_MODELS_PATH, 'templates', 'mets.xml')
 TEMPLATE_EAD_JINJA2 = os.path.join(REPO_MODELS_PATH, 'templates', 'ead.xml.j2')
@@ -107,7 +105,10 @@ IDSERVICE_NEXT_OBJECT_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/next/{mo
 IDSERVICE_CHECKIDS_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/check/'
 IDSERVICE_REGISTERIDS_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/create/'
 
+DOCSTORE_HOST_LOCAL = config.get('local','docstore_host')
+DOCSTORE_INDEX_LOCAL = config.get('local','docstore_index')
 DOCSTORE_HOST = config.get('public','docstore_host')
 DOCSTORE_INDEX = config.get('public','docstore_index')
 
+VOCABS_PATH = config.get('cmdln','vocabs_path')
 VOCAB_TERMS_URL = config.get('local', 'vocab_terms_url')

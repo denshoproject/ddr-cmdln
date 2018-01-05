@@ -5,7 +5,15 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 
+from DDR import config
 
+
+def _json_handler(obj):
+    if hasattr(obj, 'isoformat'):
+        return obj.strftime(config.DATETIME_FORMAT)
+    else:
+        raise TypeError, 'Object of type %s with value of %s is not JSON serializable' % (type(obj), repr(obj))
+    
 def format_json(data, sort_keys=True):
     """Write JSON using consistent formatting and sorting.
     
@@ -23,7 +31,11 @@ def format_json(data, sort_keys=True):
     ...
     ['{\n', '    "a": 1,\n', '    "b": 2\n', '}']
     """
-    return json.dumps(data, indent=4, separators=(',', ': '), sort_keys=sort_keys)
+    return json.dumps(
+        data,
+        indent=4, separators=(',', ': '), sort_keys=sort_keys,
+        default=_json_handler,
+    )
 
 
 class Timer( object ):

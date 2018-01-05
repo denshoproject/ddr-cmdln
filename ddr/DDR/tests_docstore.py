@@ -63,7 +63,7 @@ def test_parse_cataliases():
 
 # put_mappings
 
-# put_facets
+# post_facets
 # list_facets
 # facet_terms
 
@@ -349,9 +349,9 @@ def test_publishable_or_not():
 # _choose_signatures
 # load_document_json
 
-def test_indexer():
+def test_publish():
     hosts = [{'host': '127.0.0.1', 'port': 9999}]
     index = 'fakeindex'
-    results = docstore.Docstore(hosts, index).index('/tmp', recursive=True, public=True)
+    results = docstore.Docstore(hosts, index).publish('/tmp', recursive=True, public=True)
     assert results == {'successful': 0, 'bad': [], 'total': 0}
                        
