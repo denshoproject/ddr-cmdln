@@ -35,10 +35,10 @@ Post arbitrary JSON documents:
   $ ddrindex postjson narrators DOCUMENTID /etc/ddr/ddr-defs/vocab/narrators.json
 
 Post a collection to public site (only public and completed)
-  $ ddrindex index /var/www/media/ddr/ddr-testing-123
+  $ ddrindex publish --recurse /var/www/media/ddr/ddr-testing-123
 
 Post a collection locally (all documents)
-  $ ddrindex index /var/www/media/ddr/ddr-testing-123 --all
+  $ ddrindex publish --recurse --all /var/www/media/ddr/ddr-testing-123
 
 Check status
   $ ddrindex status
