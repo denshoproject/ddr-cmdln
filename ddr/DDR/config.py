@@ -52,6 +52,8 @@ LOG_DIR = config.get('local', 'log_dir')
 LOG_FILE = config.get('local','log_file')
 LOG_LEVEL = config.get('local', 'log_level')
 
+UTF8_STRICT = config.getboolean('cmdln','utf8_strict')
+
 try:
     DEFAULT_TIMEZONE = config.get('cmdln','default_timezone')
 except:
