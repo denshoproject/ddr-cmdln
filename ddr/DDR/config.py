@@ -105,6 +105,7 @@ IDSERVICE_NEXT_OBJECT_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/next/{mo
 IDSERVICE_CHECKIDS_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/check/'
 IDSERVICE_REGISTERIDS_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/create/'
 
+DOCSTORE_ENABLED = config.getboolean('local','docstore_enabled')
 DOCSTORE_HOST_LOCAL = config.get('local','docstore_host')
 DOCSTORE_INDEX_LOCAL = config.get('local','docstore_index')
 DOCSTORE_HOST = config.get('public','docstore_host')
