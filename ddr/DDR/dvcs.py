@@ -924,9 +924,19 @@ def annex_status(repo):
     """
     version_data = annex_parse_version(annex_version(repo))
     text = None
-    if version_data['major version'] == '3':
+    major_version = version_data['major version']
+    if major_version:
+        if isinstance(major_version, int):
+            pass
+        elif isinstance(major_version, basestring) and major_version.isdigit():
+            major_version = int(major_version)
+        else:
+            raise Exception(
+                'Cannot parse git-annex version: "%s" (%s)' % (major_version, type(major_version))
+            )
+    if major_version == 3:
         text = repo.git.annex('status', '--json')
-    elif version_data['major version'] == '5':
+    elif major_version >= 5:
         text = repo.git.annex('info', '--json')
     if text:
         data = json.loads(text)
