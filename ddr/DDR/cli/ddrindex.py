@@ -11,28 +11,16 @@ or with environment variables:
   $ export DOCSTORE_HOSTS=192.168.56.1:9200
   $ export DOCSTORE_INDEX=ddrlocal-YYYYMMDDa
 
-EXAMPLES
+CORE COMMANDS
 
 Initialize index (creates index and adds mappings)
   $ ddrindex create
 Create a bare index (no mappings)
   $ ddrindex create --bare --index INDEXNAME
-Add/update mappings
-  $ ddrindex mappings
-
-Publish vocabularies
-  $ ddrindex vocabs /opt/ddr-vocab/api/0.2
-
-Set or remove an alias
-  $ ddrindex alias --index ddrpublic-20171108c --alias ddrpublic-dev
-  $ ddrindex alias --index ddrpublic-20171108c --alias ddrpublic-dev --delete --confirm
 
 Post repository and organization:
   $ ddrindex postjson repository REPO /var/www/media/ddr/REPO/repository.json
   $ ddrindex postjson organization REPO-ORG /var/www/media/ddr/REPO-ORG/organization.json
-
-Post arbitrary JSON documents:
-  $ ddrindex postjson narrators DOCUMENTID /etc/ddr/ddr-defs/vocab/narrators.json
 
 Post a collection to public site (only public and completed)
   $ ddrindex publish --recurse /var/www/media/ddr/ddr-testing-123
@@ -40,16 +28,31 @@ Post a collection to public site (only public and completed)
 Post a collection locally (all documents)
   $ ddrindex publish --recurse --all /var/www/media/ddr/ddr-testing-123
 
+Publish vocabularies (used for topics, facility fields)
+  $ ddrindex vocabs /opt/ddr-vocab/api/0.2
+
+MANAGEMENT COMMANDS
+
+View current settings
+  $ ddrindex conf
+
 Check status
   $ ddrindex status
 
-Get document
-  $ ddrindex get collection ddr-testing-123
-See if document exists
-  $ ddrindex exists collection ddr-testing-123
+Set or remove an index alias
+  $ ddrindex alias --index ddrpublic-20171108c --alias ddrpublic-dev
+  $ ddrindex alias --index ddrpublic-20171108c --alias ddrpublic-dev --delete --confirm
+
+Post arbitrary JSON documents:
+  $ ddrindex postjson DOCTYPE DOCUMENTID /PATH/TO/DOCUMENT.json
 
 Search
   $ ddrindex search collection,entity Minidoka
+
+See if document exists
+  $ ddrindex exists collection ddr-testing-123
+Get document
+  $ ddrindex get collection ddr-testing-123
 
 Remove document
   $ ddrindex delete DOCTYPE DOCUMENTID
@@ -59,6 +62,9 @@ Delete existing index
 
 Reindex
   $ ddrindex reindex --index source --target dest
+
+Update mappings (or add to a bare index).
+  $ ddrindex mappings
 """
 
 from datetime import datetime
