@@ -432,12 +432,14 @@ def status(hosts, index):
         logprint('error', "Index '%s' doesn't exist!" % index, 0)
         return
 
-    logprint('debug', 'Models', 0)
-    for doctype_class in identifier.ELASTICSEARCH_CLASSES['all']:
-        #status = doctype_class['class'].init(index=self.indexname, using=self.es)
-        #statuses.append( {'doctype':doctype_class['doctype'], 'status':status} )
-        num = 0  #len(Page.pages())
-        logprint('debug', '- {:>6} {}'.format(num, doctype_class['doctype']), 0)
+    # TODO get ddrindex status model counts to work
+    logprint('debug', '(Object counts are currently unavailable)', 0)
+    #logprint('debug', 'Models', 0)
+    #for doctype_class in identifier.ELASTICSEARCH_CLASSES['all']:
+    #    #status = doctype_class['class'].init(index=self.indexname, using=self.es)
+    #    #statuses.append( {'doctype':doctype_class['doctype'], 'status':status} )
+    #    num = 0  #len(Page.pages())
+    #    logprint('debug', '- {:>6} {}'.format(num, doctype_class['doctype']), 0)
 
 
 @ddrindex.command()
