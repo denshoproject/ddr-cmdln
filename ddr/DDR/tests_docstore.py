@@ -58,9 +58,6 @@ def test_parse_cataliases():
     expected = [('ddrworkstation','documents0'), ('wd5000bmv-2','documents0')]
     assert docstore._parse_cataliases(cataliases) == expected
 
-#def test_make_mappings():
-#    assert False
-
 # put_mappings
 
 # post_facets
