@@ -503,7 +503,7 @@ class Docstore():
                 if self.get(DOC_TYPE, document['id'], fields=[]):
                     self.delete(document['id'])
 
-    def post(self, document, public_fields=[], additional_fields={}, private_ok=False):
+    def post(self, document, public_fields=[], additional_fields={}, parents={}, force=False):
         """Add a new document to an index or update an existing one.
         
         This function can produce ElasticSearch documents in two formats:
@@ -521,18 +521,25 @@ class Docstore():
         curl -XPUT 'http://localhost:9200/ddr/collection/ddr-testing-141' -d '{ ... }'
         
         @param document: Collection,Entity,File The object to post.
-        @param private_ok: boolean Publish even if not "publishable".
+        @param parents: dict Basic metadata for parent documents.
+        @param force: boolean Bypass status and public checks.
         @returns: JSON dict with status code and response
         """
         logger.debug('post(%s, %s, %s)' % (
-            self.indexname, document, private_ok
+            self.indexname, document, force
         ))
-        
-        # die if document is public=False or status=incomplete
-        if (not _is_publishable(document)) and (not private_ok):
+
+        if force:
+            publishable = True
+        else:
+            if not parents:
+                parents = _parents_status([document.identifier.path_abs()])
+            publishable = _publishable([document.identifier.path_abs()], parents)
+        if not publishable:
             return {'status':403, 'response':'object not publishable'}
 
         # instantiate appropriate subclass of ESObject / DocType
+        # TODO Devil's advocate: why are we doing this? We already have the object.
         ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[document.identifier.model]
         d = ES_Class()
         fields_module = document.identifier.fields_module()
@@ -657,7 +664,7 @@ class Docstore():
             except TransportError:
                 pass
     
-    def publish(self, path, recursive=False, public=True):
+    def post_multi(self, path, recursive=False, force=False):
         """Publish (index) specified document and (optionally) its children.
         
         After receiving a list of metadata files, index() iterates through the
@@ -671,11 +678,10 @@ class Docstore():
         
         @param path: Absolute path to directory containing object metadata files.
         @param recursive: Whether or not to recurse into subdirectories.
-        @param public: For publication (fields not marked public will be ommitted).
-        @param paths: Absolute paths to directory containing collections.
+        @param force: boolean Just publish the damn collection already.
         @returns: number successful,list of paths that didn't work out
         """
-        logger.debug('index(%s, %s)' % (self.indexname, path))
+        logger.debug('index(%s, %s, %s, %s)' % (self.indexname, path, recursive, force))
         
         publicfields = _public_fields()
         
@@ -692,7 +698,7 @@ class Docstore():
         parents = _parents_status(paths)
         
         # Determine if paths are publishable or not
-        paths = _publishable_or_not(paths, parents, public=public)
+        paths = _publishable(paths, parents, force=force)
         
         skipped = 0
         successful = 0
@@ -724,7 +730,7 @@ class Docstore():
             
             # post document
             if path['action'] == 'POST':
-                created = self.post(document)
+                created = self.post(document, parents=parents, force=force)
             # delete previously published items now marked incomplete/private
             elif existing_v and (path['action'] == 'SKIP'):
                 print('%s | %s/%s DELETE' % (datetime.now(config.TZ), n+1, num))
@@ -891,54 +897,6 @@ def doctype_fields(es_class):
     TODO move to ddr-cmdln
     """
     return es_class._doc_type.mapping.to_dict()[es_class._doc_type.name]['properties'].keys()
-
-def _is_publishable(document):
-    """Determines if object is publishable
-    
-    TODO not specific to elasticsearch - move this function so other modules can use
-    
-    TODO Does not inherit status/public of parent(s)!
-    TODO This function assumes model contains 'public' and 'status' fields.
-    
-    >>> data = [{'id': 'ddr-testing-123-1'}]
-    >>> _is_publishable(data)
-    False
-    >>> data = [{'id': 'ddr-testing-123-1'}, {'public':0}, {'status':'inprogress'}]
-    >>> _is_publishable(data)
-    False
-    >>> data = [{'id': 'ddr-testing-123-1'}, {'public':0}, {'status':'completed'}]
-    >>> _is_publishable(data)
-    False
-    >>> data = [{'id': 'ddr-testing-123-1'}, {'public':1}, {'status':'inprogress'}]
-    >>> _is_publishable(data)
-    False
-    >>> data = [{'id': 'ddr-testing-123-1'}, {'public':1}, {'status':'completed'}]
-    >>> _is_publishable(data)
-    True
-    
-    @param document: DDR object or DDR list-of-dicts data structure.
-    @returns: True/False
-    """
-    publishable = False
-    status = None
-    public = None
-    if isinstance(document, list):
-        for field in document:
-            fieldname = field.keys()[0]
-            if   fieldname == 'status': status = field['status']
-            elif fieldname == 'public': public = field['public']
-    else:
-        if hasattr(document, 'status'):
-            status = getattr(document, 'status')
-        if hasattr(document, 'public'):
-            public = getattr(document, 'public')
-    # collections, entities
-    if status and public and (status in STATUS_OK) and (public in PUBLIC_OK):
-        return True
-    # files
-    elif (status == None) and public and (public in PUBLIC_OK):
-        return True
-    return False
 
 def _filter_payload(data, public_fields):
     """If requested, removes non-public fields from document before sending to ElasticSearch.
@@ -1225,12 +1183,12 @@ def _file_parent_ids(identifier):
         identifier.collection_id(),
     ]
 
-def _publishable_or_not(paths, parents, public=True):
+def _publishable(paths, parents, force=False):
     """Determines which paths represent publishable paths and which do not.
     
     @param paths
     @param parents
-    @param public: boolean If true: omit incomplete,nonpublic objects.
+    @param force: boolean Just publish the damn collection already.
     @returns list of dicts, e.g. [{'path':'/PATH/TO/OBJECT', 'action':'publish'}]
     """
     path_dicts = []
@@ -1242,8 +1200,7 @@ def _publishable_or_not(paths, parents, public=True):
             'note': '',
         }
         
-        # 
-        if not public:
+        if force:
             d['action'] = 'POST'
             path_dicts.append(d)
             continue

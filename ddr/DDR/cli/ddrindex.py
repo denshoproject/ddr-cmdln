@@ -18,18 +18,15 @@ Initialize index (creates index and adds mappings)
 Create a bare index (no mappings)
   $ ddrindex create --bare --index INDEXNAME
 
+Publish vocabularies (used for topics, facility fields)
+  $ ddrindex vocabs /opt/ddr-vocab/api/0.2
+
 Post repository and organization:
   $ ddrindex postjson repository REPO /var/www/media/ddr/REPO/repository.json
   $ ddrindex postjson organization REPO-ORG /var/www/media/ddr/REPO-ORG/organization.json
 
-Post a collection to public site (only public and completed)
-  $ ddrindex publish --recurse /var/www/media/ddr/ddr-testing-123
-
-Post a collection locally (all documents)
-  $ ddrindex publish --recurse --all /var/www/media/ddr/ddr-testing-123
-
-Publish vocabularies (used for topics, facility fields)
-  $ ddrindex vocabs /opt/ddr-vocab/api/0.2
+Post an object. Optionally, publish its child objects and/or ignore publication status.
+  $ ddrindex publish [--recurse] [--force] /var/www/media/ddr/ddr-testing-123
 
 MANAGEMENT COMMANDS
 
@@ -259,28 +256,6 @@ def vocabs(hosts, index, path):
 @click.option('--index','-i',
               default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
               help='Elasticsearch index.')
-@click.option('--all','-a', is_flag=True, help='Include nonpublic documents (private,inprogress).')
-@click.argument('path')
-def post(hosts, index, all, path):
-    """Post DDR object to Elasticsearch
-    
-    This command is for posting JSON files recognizable by DDR as repository objects.
-    Raw JSON files can be posted using "ddrindex postjson".
-    """
-    oi = identifier.Identifier(path)
-    document = oi.object()
-    
-    status = docstore.Docstore(hosts, index).post(document, private_ok=all)
-    click.echo(status)
-
-
-@ddrindex.command()
-@click.option('--hosts','-h',
-              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
-              help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.argument('doctype')
 @click.argument('object_id')
 @click.argument('path')
@@ -304,16 +279,12 @@ def postjson(hosts, index, doctype, object_id, path):
               default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
               help='Elasticsearch index.')
 @click.option('--recurse','-r', is_flag=True, help='Publish documents under this one.')
-@click.option('--all','-a', is_flag=True, help='Include nonpublic documents (private,inprogress).')
+@click.option('--force','-f', is_flag=True, help='Publish regardless of status.')
 @click.argument('path')
-def publish(hosts, index, recurse, all, path):
+def publish(hosts, index, recurse, force, path):
     """Post the document and its children to Elasticsearch
     """
-    if all:
-        public = False
-    else:
-        public = True
-    status = docstore.Docstore(hosts, index).publish(path, recursive=recurse, public=public)
+    status = docstore.Docstore(hosts, index).post_multi(path, recursive=recurse, force=force)
     click.echo(status)
 
 
