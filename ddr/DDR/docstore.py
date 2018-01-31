@@ -580,90 +580,6 @@ class Docstore():
         logger.debug(str(status))
         return status
     
-    def post_json(self, doc_type, document_id, json_text):
-        """POST the specified JSON document as-is.
-        
-        @param doc_type: str
-        @param document_id: str
-        @param json_text: str JSON-formatted string
-        @returns: dict Status info.
-        """
-        logger.debug('post_json(%s, %s, %s)' % (
-            self.indexname, doc_type, document_id
-        ))
-        return self.es.index(
-            index=self.indexname, doc_type=doc_type, id=document_id, body=json_text
-        )
-     
-    def exists(self, model, document_id):
-        """
-        @param model:
-        @param document_id:
-        """
-        return self.es.exists(index=self.indexname, doc_type=model, id=document_id)
-     
-    def get(self, model, document_id, fields=None):
-        """
-        @param model:
-        @param document_id:
-        @param fields: boolean Only return these fields
-        """
-        if self.exists(model, document_id):
-            ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[model]
-            return ES_Class.get(document_id, using=self.es, index=self.indexname)
-        return None
-
-    def count(self, doctypes=[], query={}):
-        """Executes a query and returns number of hits.
-        
-        The "query" arg must be a dict that conforms to the Elasticsearch query DSL.
-        See docstore.search_query for more info.
-        
-        @param doctypes: list Type of object ('collection', 'entity', 'file')
-        @param query: dict The search definition using Elasticsearch Query DSL
-        @returns raw ElasticSearch query output
-        """
-        logger.debug('count(index=%s, doctypes=%s, query=%s' % (
-            self.indexname, doctypes, query
-        ))
-        if not query:
-            raise Exception("Can't do an empty search. Give me something to work with here.")
-        
-        doctypes = ','.join(doctypes)
-        logger.debug(json.dumps(query))
-        
-        return self.es.count(
-            index=self.indexname,
-            doc_type=doctypes,
-            body=query,
-        )
-    
-    def delete(self, document_id, recursive=False):
-        """Delete a document and optionally its children.
-        
-        @param document_id:
-        @param recursive: True or False
-        """
-        identifier = Identifier(id=document_id)
-        if recursive:
-            if identifier.model == 'collection': doc_type = 'collection,entity,file'
-            elif identifier.model == 'entity': doc_type = 'entity,file'
-            elif identifier.model == 'file': doc_type = 'file'
-            query = 'id:"%s"' % identifier.id
-            try:
-                return self.es.delete_by_query(
-                    index=self.indexname, doc_type=doc_type, q=query
-                )
-            except TransportError:
-                pass
-        else:
-            try:
-                return self.es.delete(
-                    index=self.indexname, doc_type=identifier.model, id=identifier.id
-                )
-            except TransportError:
-                pass
-    
     def post_multi(self, path, recursive=False, force=False):
         """Publish (index) specified document and (optionally) its children.
         
@@ -761,6 +677,90 @@ class Docstore():
             
         logger.debug('INDEXING COMPLETED')
         return {'total':len(paths), 'skipped':skipped, 'successful':successful, 'bad':bad_paths}
+    
+    def post_json(self, doc_type, document_id, json_text):
+        """POST the specified JSON document as-is.
+        
+        @param doc_type: str
+        @param document_id: str
+        @param json_text: str JSON-formatted string
+        @returns: dict Status info.
+        """
+        logger.debug('post_json(%s, %s, %s)' % (
+            self.indexname, doc_type, document_id
+        ))
+        return self.es.index(
+            index=self.indexname, doc_type=doc_type, id=document_id, body=json_text
+        )
+     
+    def exists(self, model, document_id):
+        """
+        @param model:
+        @param document_id:
+        """
+        return self.es.exists(index=self.indexname, doc_type=model, id=document_id)
+     
+    def get(self, model, document_id, fields=None):
+        """
+        @param model:
+        @param document_id:
+        @param fields: boolean Only return these fields
+        """
+        if self.exists(model, document_id):
+            ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[model]
+            return ES_Class.get(document_id, using=self.es, index=self.indexname)
+        return None
+
+    def count(self, doctypes=[], query={}):
+        """Executes a query and returns number of hits.
+        
+        The "query" arg must be a dict that conforms to the Elasticsearch query DSL.
+        See docstore.search_query for more info.
+        
+        @param doctypes: list Type of object ('collection', 'entity', 'file')
+        @param query: dict The search definition using Elasticsearch Query DSL
+        @returns raw ElasticSearch query output
+        """
+        logger.debug('count(index=%s, doctypes=%s, query=%s' % (
+            self.indexname, doctypes, query
+        ))
+        if not query:
+            raise Exception("Can't do an empty search. Give me something to work with here.")
+        
+        doctypes = ','.join(doctypes)
+        logger.debug(json.dumps(query))
+        
+        return self.es.count(
+            index=self.indexname,
+            doc_type=doctypes,
+            body=query,
+        )
+    
+    def delete(self, document_id, recursive=False):
+        """Delete a document and optionally its children.
+        
+        @param document_id:
+        @param recursive: True or False
+        """
+        identifier = Identifier(id=document_id)
+        if recursive:
+            if identifier.model == 'collection': doc_type = 'collection,entity,file'
+            elif identifier.model == 'entity': doc_type = 'entity,file'
+            elif identifier.model == 'file': doc_type = 'file'
+            query = 'id:"%s"' % identifier.id
+            try:
+                return self.es.delete_by_query(
+                    index=self.indexname, doc_type=doc_type, q=query
+                )
+            except TransportError:
+                pass
+        else:
+            try:
+                return self.es.delete(
+                    index=self.indexname, doc_type=identifier.model, id=identifier.id
+                )
+            except TransportError:
+                pass
 
     def search(self, doctypes=[], query={}, sort=[], fields=[], from_=0, size=MAX_SIZE):
         """Executes a query, get a list of zero or more hits.
