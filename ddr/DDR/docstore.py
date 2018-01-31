@@ -502,6 +502,21 @@ class Docstore():
                 logging.debug('%s not published' % document['id'])
                 if self.get(DOC_TYPE, document['id'], fields=[]):
                     self.delete(document['id'])
+    
+    def post_json(self, doc_type, document_id, json_text):
+        """POST the specified JSON document as-is.
+        
+        @param doc_type: str
+        @param document_id: str
+        @param json_text: str JSON-formatted string
+        @returns: dict Status info.
+        """
+        logger.debug('post_json(%s, %s, %s)' % (
+            self.indexname, doc_type, document_id
+        ))
+        return self.es.index(
+            index=self.indexname, doc_type=doc_type, id=document_id, body=json_text
+        )
 
     def post(self, document, public_fields=[], additional_fields={}, parents={}, force=False):
         """Add a new document to an index or update an existing one.
@@ -677,21 +692,6 @@ class Docstore():
             
         logger.debug('INDEXING COMPLETED')
         return {'total':len(paths), 'skipped':skipped, 'successful':successful, 'bad':bad_paths}
-    
-    def post_json(self, doc_type, document_id, json_text):
-        """POST the specified JSON document as-is.
-        
-        @param doc_type: str
-        @param document_id: str
-        @param json_text: str JSON-formatted string
-        @returns: dict Status info.
-        """
-        logger.debug('post_json(%s, %s, %s)' % (
-            self.indexname, doc_type, document_id
-        ))
-        return self.es.index(
-            index=self.indexname, doc_type=doc_type, id=document_id, body=json_text
-        )
      
     def exists(self, model, document_id):
         """
