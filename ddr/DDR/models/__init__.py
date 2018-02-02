@@ -959,12 +959,11 @@ class Collection( object ):
         )
     
     def post_json(self):
-        # NOTE: this is same basic code as Docstore.index
         return docstore.Docstore().post(
-            load_json_lite(self.json_path, self.identifier.model, self.id),
+            self,
             docstore._public_fields().get(self.identifier.model, []),
             {
-                'parent_id': self.identifier.parent_id(),
+                #'parent_id': self.identifier.parent_id(),
             }
         )
     
@@ -1680,10 +1679,10 @@ class Entity( object ):
     def post_json(self):
         # NOTE: this is same basic code as docstore.index
         return docstore.Docstore().post(
-            load_json_lite(self.json_path, self.identifier.model, self.id),
+            self,
             docstore._public_fields().get(self.identifier.model, []),
             {
-                'parent_id': self.parent_id,
+                self.parent_id: self.identifier.parent(),
             }
         )
 
@@ -2458,13 +2457,11 @@ class File( object ):
         )
     
     def post_json(self, public=False):
-        # NOTE: this is same basic code as docstore.index
         return docstore.Docstore().post(
-            load_json_lite(self.json_path, self.identifier.model, self.id),
+            self,
             docstore._public_fields().get(self.identifier.model, []),
             {
-                'parent_id': self.parent_id,
-                'entity_id': self.parent_id,
+                self.parent_id: self.identifier.parent(),
             }
         )
     
