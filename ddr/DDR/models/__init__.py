@@ -746,6 +746,8 @@ class Collection( object ):
         if cleaned_data:
             self.form_post(cleaned_data)
         
+        self.set_repo_description()
+        
         self.write_json()
         self.write_ead()
         updated_files = [self.json_path, self.ead_path,]
@@ -1072,6 +1074,14 @@ class Collection( object ):
     def repo_diverged( self ):   return dvcs.diverged(self.repo_status(), self.repo_states())
     def repo_conflicted( self ): return dvcs.conflicted(self.repo_status(), self.repo_states())
 
+    def set_repo_description(self):
+        """Set COLLECTION/.git/description based on self.title
+        """
+        desc_path = os.path.join(self.git_path, 'description')
+        if self.title and os.path.exists(self.git_path) and os.access(desc_path, os.W_OK):
+            repo = dvcs.repository(self.path)
+            repo.description = self.title
+    
     def missing_annex_files(self):
         """List File objects with missing binaries
         

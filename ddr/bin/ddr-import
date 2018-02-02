@@ -51,7 +51,7 @@ from DDR import dvcs
 from DDR import identifier
 from DDR import idservice
 
-VOCABS_PATH = os.path.join(config.REPO_MODELS_PATH, 'vocab')
+VOCABS_PATH = config.VOCABS_PATH
 AGENT = 'ddr-import'
 
 logging.basicConfig(

@@ -46,10 +46,12 @@ setup(
         'Topic :: Sociology :: History',
     ],
     install_requires = [
-        'nose'
+        'nose',
+        'Click',
     ],
     packages = [
         'DDR',
+        'DDR.cli',
     ],
     include_package_data = True,
     package_dir = {
@@ -60,6 +62,10 @@ setup(
         'models/*',
         'templates/*',
     ]},
+    entry_points='''
+        [console_scripts]
+        ddrindex=DDR.cli.ddrindex:ddrindex
+    ''',
     scripts = [
         'bin/ddr',
         'bin/ddr-backup',
@@ -71,7 +77,6 @@ setup(
         'bin/ddr-filter',
         'bin/ddr-idexport',
         'bin/ddr-import',
-        'bin/ddr-index',
         'bin/ddr-info',
         'bin/ddr-massupdate',
         'bin/ddr-missing',
