@@ -959,11 +959,13 @@ class Collection( object ):
         )
     
     def post_json(self):
+        """Post Collection to Elasticsearch.
+        """
         return docstore.Docstore().post(
-            self,
-            docstore._public_fields().get(self.identifier.model, []),
-            {
-                #'parent_id': self.identifier.parent_id(),
+            document=self,
+            public_fields=docstore._public_fields().get(self.identifier.model, []),
+            parents={
+                'parent_id': self.identifier.parent_id(),
             }
         )
     
@@ -1677,12 +1679,14 @@ class Entity( object ):
         )
     
     def post_json(self):
+        """Post Entity to Elasticsearch.
+        """
         # NOTE: this is same basic code as docstore.index
         return docstore.Docstore().post(
-            self,
-            docstore._public_fields().get(self.identifier.model, []),
-            {
-                self.parent_id: self.identifier.parent(),
+            document=self,
+            public_fields=docstore._public_fields().get(self.identifier.model, []),
+            parents={
+                'parent_id': self.parent_id,
             }
         )
 
@@ -2457,11 +2461,14 @@ class File( object ):
         )
     
     def post_json(self, public=False):
+        """Post File to Elasticsearch.
+        """
         return docstore.Docstore().post(
-            self,
-            docstore._public_fields().get(self.identifier.model, []),
-            {
-                self.parent_id: self.identifier.parent(),
+            document=self,
+            public_fields=docstore._public_fields().get(self.identifier.model, []),
+            parents={
+                'parent_id': self.parent_id,
+                'entity_id': self.parent_id,
             }
         )
     

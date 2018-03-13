@@ -536,6 +536,8 @@ class Docstore():
         curl -XPUT 'http://localhost:9200/ddr/collection/ddr-testing-141' -d '{ ... }'
         
         @param document: Collection,Entity,File The object to post.
+        @param public_fields: list
+        @param additional_fields: dict
         @param parents: dict Basic metadata for parent documents.
         @param force: boolean Bypass status and public checks.
         @returns: JSON dict with status code and response
