@@ -150,7 +150,7 @@ class Docstore():
         if connection:
             self.es = connection
         else:
-            self.es = Elasticsearch(hosts)
+            self.es = Elasticsearch(hosts, timeout=config.DOCSTORE_TIMEOUT_LOCAL)
     
     def __repr__(self):
         return "<%s.%s %s:%s>" % (
@@ -163,6 +163,9 @@ class Docstore():
         print('DOCSTORE_HOST:          %s' % config.DOCSTORE_HOST)
         print('DOCSTORE_INDEX:         %s' % config.DOCSTORE_INDEX)
         print('')
+    
+    def health(self):
+        return self.es.cluster.health()
     
     def index_exists(self, index):
         """
