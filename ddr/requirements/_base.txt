@@ -11,7 +11,7 @@ click==6.7
 elasticsearch>=2.0.0,<3.0.0     # Apache y        y
 elasticsearch-dsl>=2.0.0,<3.0.0 # Apache y        y
 envoy==0.0.3              # MIT          y             TODO replace!
-GitPython==0.3.2.RC1      # BSD          y             TODO upgrade!
+GitPython==1.0.0          # BSD          y
 graphviz==0.6             # MIT          y
 Jinja2==2.9.5             # BSD          y
 markupsafe                # BSD          y             required by jinja2 but absent

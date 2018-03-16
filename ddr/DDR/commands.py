@@ -911,9 +911,9 @@ def sync_group(groupfile, local_base, local_name, remote_base, remote_name):
         
         remote_path = os.path.join(remote_base, r['id'])
         # local -> remote
-        dvcs.remote_add(git.Repo(repo_path), remote_path, remote_name)
+        dvcs.remote_add(git.Repo(repo_path, search_parent_directories=True), remote_path, remote_name)
         # remote -> local
-        dvcs.remote_add(git.Repo(remote_path), repo_path, local_name)
+        dvcs.remote_add(git.Repo(remote_path, search_parent_directories=True), repo_path, local_name)
         
         # annex sync
         logging.debug('annex sync')

@@ -115,7 +115,7 @@ def repo_level( repo_path, level=None ):
     @returns level
     """
     logging.debug('repo_level(%s, %s)' % (repo_path,level))
-    repo = git.Repo(repo_path)
+    repo = git.Repo(repo_path, search_parent_directories=True)
     if level:
         logging.debug('level -> %s' % level)
         repo.git.config('--local', 'ddr.level', level)
@@ -180,7 +180,7 @@ def repo_annex_get(repo_path, level):
     ACCESS_SUFFIX = '-a.jpg'
     #level = repo_level(repo_path)
     logger.debug('level: %s' % level)
-    repo = git.Repo(repo_path)
+    repo = git.Repo(repo_path, search_parent_directories=True)
     if level == 'access':
         r = envoy.run('find . -name "*%s" -print' % ACCESS_SUFFIX)
         for accessfile in r.std_out.strip().split('\n'):
