@@ -968,6 +968,23 @@ class Collection( object ):
                 'parent_id': self.identifier.parent_id(),
             }
         )
+
+    def reindex(self):
+        """Reindex Collection objects to Elasticsearch
+        """
+        ds = docstore.Docstore(config.DOCSTORE_HOST, config.DOCSTORE_INDEX)
+        
+        # check for ES connection before going to all the trouble
+        health = ds.health()
+        index_exists = ds.index_exists(config.DOCSTORE_INDEX)
+        if not index_exists:
+            return {
+                'error':'Missing Elasticsearch index "%s"' % config.DOCSTORE_INDEX
+            }
+        
+        return ds.post_multi(
+            self.identifier.path_abs, recursive=True, force=True
+        )
     
     def lock( self, text ): return locking.lock(self.lock_path, text)
     def unlock( self, text ): return locking.unlock(self.lock_path, text)
