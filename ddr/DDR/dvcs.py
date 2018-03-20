@@ -740,11 +740,15 @@ def remotes(repo, paths=None, clone_log_n=1):
     @param clone_log_n: 
     @returns: list of remotes
     """
+    reader = repo.config_reader()
     remotes = []
     for remote in repo.remotes:
-        r = {'name':remote.name}
-        for key,val in repo.config_reader().items('remote "%s"' % remote.name):
-            r[key] = val
+        section_name = 'remote "%s"' % remote.name
+        # next line must be present or this doesn't work - WTF???
+        section_exists = section_name in reader.sections()
+        section_items = reader.items(section_name)
+        r = {key: val for key,val in section_items}
+        r['name'] = remote.name
         # handle regular remotes and git-annex special remotes
         if r.get('url'):
             r['target'] = r['url']
