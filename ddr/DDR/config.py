@@ -110,10 +110,8 @@ IDSERVICE_REGISTERIDS_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/create/'
 DOCSTORE_ENABLED = config.getboolean('local','docstore_enabled')
 DOCSTORE_HOST_LOCAL = config.get('local','docstore_host')
 DOCSTORE_INDEX_LOCAL = config.get('local','docstore_index')
-DOCSTORE_TIMEOUT_LOCAL = int(config.get('local','docstore_timeout'))
 DOCSTORE_HOST = config.get('public','docstore_host')
 DOCSTORE_INDEX = config.get('public','docstore_index')
-DOCSTORE_TIMEOUT = int(config.get('public','docstore_timeout'))
 
 VOCABS_PATH = config.get('cmdln','vocabs_path')
 VOCAB_TERMS_URL = config.get('local', 'vocab_terms_url')

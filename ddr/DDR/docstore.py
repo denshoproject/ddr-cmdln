@@ -150,7 +150,7 @@ class Docstore():
         if connection:
             self.es = connection
         else:
-            self.es = Elasticsearch(hosts, timeout=config.DOCSTORE_TIMEOUT_LOCAL)
+            self.es = Elasticsearch(hosts, timeout=config.DOCSTORE_TIMEOUT)
     
     def __repr__(self):
         return "<%s.%s %s:%s>" % (
