@@ -22,7 +22,7 @@ def repository(path, user_name=None, user_mail=None):
     @param collection_path: Absolute path to collection repo.
     @return: GitPython repo object
     """
-    repo = git.Repo(path)
+    repo = git.Repo(path, search_parent_directories=True)
     if user_name and user_mail:
         git_set_configs(repo, user_name, user_mail)
         annex_set_configs(repo, user_name, user_mail)
@@ -70,7 +70,7 @@ def latest_commit(path):
     
     @param path: Absolute path to repo or file within.
     """
-    repo = git.Repo(path)
+    repo = git.Repo(path, search_parent_directories=True)
     if os.path.isfile(path):
         return repo.git.log('--pretty=format:%H %d %ad', '--date=iso', '-1', path)
     else:
@@ -99,7 +99,7 @@ def earliest_commit(path, parsed=False):
         fmt = '{"commit":"%H","branch":"%d","ts":"%ad"}'
     else:
         fmt = "%H %d %ad"
-    repo = git.Repo(path)
+    repo = git.Repo(path, search_parent_directories=True)
     if os.path.isfile(path):
         text = repo.git.log('--pretty=format:%s' % fmt, '--date=iso', path).splitlines()[-1]
     else:
@@ -682,7 +682,7 @@ def is_clone(path1, path2, n=5):
     if is_local(path2):
         def get(path):
             try:
-                repo = git.Repo(path)
+                repo = git.Repo(path, search_parent_directories=True)
             except:
                 repo = None
             if repo:
@@ -724,7 +724,7 @@ def remotes(repo, paths=None, clone_log_n=1):
     wd5000bmv-2	/media/WD5000BMV-2/music/ (push)
     
     >>> import git
-    >>> repo = git.Repo(path)
+    >>> repo = git.Repo(path, search_parent_directories=True)
     >>> remotes(repo)
     [<git.Remote "origin">, <git.Remote "serenity">, <git.Remote "wd5000bmv-2">, <git.Remote "memex">, <git.Remote "seagate596-2010">]
     >>> cr = repo.config_reader()
@@ -740,11 +740,15 @@ def remotes(repo, paths=None, clone_log_n=1):
     @param clone_log_n: 
     @returns: list of remotes
     """
+    reader = repo.config_reader()
     remotes = []
     for remote in repo.remotes:
-        r = {'name':remote.name}
-        for key,val in repo.config_reader().items('remote "%s"' % remote.name):
-            r[key] = val
+        section_name = 'remote "%s"' % remote.name
+        # next line must be present or this doesn't work - WTF???
+        section_exists = section_name in reader.sections()
+        section_items = reader.items(section_name)
+        r = {key: val for key,val in section_items}
+        r['name'] = remote.name
         # handle regular remotes and git-annex special remotes
         if r.get('url'):
             r['target'] = r['url']

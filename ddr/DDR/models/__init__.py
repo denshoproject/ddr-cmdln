@@ -959,13 +959,31 @@ class Collection( object ):
         )
     
     def post_json(self):
-        # NOTE: this is same basic code as Docstore.index
+        """Post Collection to Elasticsearch.
+        """
         return docstore.Docstore().post(
-            load_json_lite(self.json_path, self.identifier.model, self.id),
-            docstore._public_fields().get(self.identifier.model, []),
-            {
+            document=self,
+            public_fields=docstore._public_fields().get(self.identifier.model, []),
+            parents={
                 'parent_id': self.identifier.parent_id(),
             }
+        )
+
+    def reindex(self):
+        """Reindex Collection objects to Elasticsearch
+        """
+        ds = docstore.Docstore(config.DOCSTORE_HOST, config.DOCSTORE_INDEX)
+        
+        # check for ES connection before going to all the trouble
+        health = ds.health()
+        index_exists = ds.index_exists(config.DOCSTORE_INDEX)
+        if not index_exists:
+            return {
+                'error':'Missing Elasticsearch index "%s"' % config.DOCSTORE_INDEX
+            }
+        
+        return ds.post_multi(
+            self.identifier.path_abs(), recursive=True, force=True
         )
     
     def lock( self, text ): return locking.lock(self.lock_path, text)
@@ -1678,11 +1696,13 @@ class Entity( object ):
         )
     
     def post_json(self):
+        """Post Entity to Elasticsearch.
+        """
         # NOTE: this is same basic code as docstore.index
         return docstore.Docstore().post(
-            load_json_lite(self.json_path, self.identifier.model, self.id),
-            docstore._public_fields().get(self.identifier.model, []),
-            {
+            document=self,
+            public_fields=docstore._public_fields().get(self.identifier.model, []),
+            parents={
                 'parent_id': self.parent_id,
             }
         )
@@ -2458,11 +2478,12 @@ class File( object ):
         )
     
     def post_json(self, public=False):
-        # NOTE: this is same basic code as docstore.index
+        """Post File to Elasticsearch.
+        """
         return docstore.Docstore().post(
-            load_json_lite(self.json_path, self.identifier.model, self.id),
-            docstore._public_fields().get(self.identifier.model, []),
-            {
+            document=self,
+            public_fields=docstore._public_fields().get(self.identifier.model, []),
+            parents={
                 'parent_id': self.parent_id,
                 'entity_id': self.parent_id,
             }

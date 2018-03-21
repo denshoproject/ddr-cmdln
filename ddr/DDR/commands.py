@@ -432,22 +432,10 @@ def sync(user_name, user_mail, collection):
     logging.debug('remotes')
     for remote in dvcs.remotes(repo):
         logging.debug('- %s %s' % (remote['name'], remote['target']))
-    # pull
-    logging.debug('git pull %s master' % config.GIT_REMOTE_NAME)
-    repo.git.checkout('master')
-    repo.git.pull(config.GIT_REMOTE_NAME, 'master')
-    logging.debug('git pull %s git-annex' % config.GIT_REMOTE_NAME)
-    repo.git.checkout('git-annex')
-    repo.git.pull(config.GIT_REMOTE_NAME, 'git-annex')
-    #logging.debug('OK')
-    # push
-    logging.debug('git pull %s git-annex' % config.GIT_REMOTE_NAME)
-    repo.git.checkout('git-annex')
-    repo.git.push(config.GIT_REMOTE_NAME, 'git-annex')
-    logging.debug('git pull %s master' % config.GIT_REMOTE_NAME)
-    repo.git.checkout('master')
-    repo.git.push(config.GIT_REMOTE_NAME, 'master')
-    logging.debug('OK')
+    # sync
+    logging.debug('git annex sync')
+    out = repo.git.annex('sync')
+    logging.debug(out)
     return 0,'ok'
 
 
@@ -911,9 +899,9 @@ def sync_group(groupfile, local_base, local_name, remote_base, remote_name):
         
         remote_path = os.path.join(remote_base, r['id'])
         # local -> remote
-        dvcs.remote_add(git.Repo(repo_path), remote_path, remote_name)
+        dvcs.remote_add(git.Repo(repo_path, search_parent_directories=True), remote_path, remote_name)
         # remote -> local
-        dvcs.remote_add(git.Repo(remote_path), repo_path, local_name)
+        dvcs.remote_add(git.Repo(remote_path, search_parent_directories=True), repo_path, local_name)
         
         # annex sync
         logging.debug('annex sync')

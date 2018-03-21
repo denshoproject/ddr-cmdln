@@ -108,6 +108,7 @@ IDSERVICE_CHECKIDS_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/check/'
 IDSERVICE_REGISTERIDS_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/create/'
 
 DOCSTORE_ENABLED = config.getboolean('local','docstore_enabled')
+DOCSTORE_TIMEOUT = int(config.get('local','docstore_timeout'))
 DOCSTORE_HOST_LOCAL = config.get('local','docstore_host')
 DOCSTORE_INDEX_LOCAL = config.get('local','docstore_index')
 DOCSTORE_HOST = config.get('public','docstore_host')
