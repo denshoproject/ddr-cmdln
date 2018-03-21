@@ -983,7 +983,7 @@ class Collection( object ):
             }
         
         return ds.post_multi(
-            self.identifier.path_abs, recursive=True, force=True
+            self.identifier.path_abs(), recursive=True, force=True
         )
     
     def lock( self, text ): return locking.lock(self.lock_path, text)
