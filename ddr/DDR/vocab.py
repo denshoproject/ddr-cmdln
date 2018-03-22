@@ -646,9 +646,11 @@ def repair_topicdata(data):
     # get topics so we can repair topic term (path) field
     # keep it so we only retrieve it once
     if not THIS_MODULE.TOPICS:
+        topics_path_url = '/'.join([config.VOCAB_TERMS_URL, 'topics.json'])
+        topics = get_vocab(topics_path_url)
         THIS_MODULE.TOPICS = {
             str(term['id']): term['path']
-            for term in get_vocabs(config.VOCAB_TERMS_URL, 'topics')['terms']
+            for term in topics['terms']
         }
     for item in data:
         if isinstance(item, dict) and item.get('id'):
