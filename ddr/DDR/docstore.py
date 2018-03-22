@@ -678,7 +678,9 @@ class Docstore():
             
             # version is incremented with each updated
             posted_v = None
-            d = self.get(oi.model, oi.id)
+            # for e.g. segment the ES doc_type will be 'entity' but oi.model is 'segment'
+            es_model = ELASTICSEARCH_CLASSES_BY_MODEL[oi.model]._doc_type.name
+            d = self.get(es_model, oi.id)
             if d:
                 posted_v = d.meta.version
 
