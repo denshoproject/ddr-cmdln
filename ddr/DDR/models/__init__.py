@@ -639,6 +639,11 @@ class Collection( object ):
         return "<%s.%s %s:%s>" % (
             self.__module__, self.__class__.__name__, self.identifier.model, self.id
         )
+    
+    def fields(self):
+        """Returns a list of Collection fields
+        """
+        return modules.Module(self.identifier.fields_module()).field_names()
 
     @staticmethod
     def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
@@ -1362,6 +1367,11 @@ class Entity( object ):
         return "<%s.%s %s:%s>" % (
             self.__module__, self.__class__.__name__, self.identifier.model, self.id
         )
+    
+    def fields(self):
+        """Returns a list of Entity fields
+        """
+        return modules.Module(self.identifier.fields_module()).field_names()
 
     @staticmethod
     def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
@@ -2183,6 +2193,14 @@ class File( object ):
         return "<%s.%s %s:%s>" % (
             self.__module__, self.__class__.__name__, self.identifier.model, self.id
         )
+    
+    def fields(self):
+        """Returns a list of File fields
+        """
+        fieldnames = modules.Module(self.identifier.fields_module()).field_names()
+        if 'id' not in fieldnames:
+            fieldnames.insert(0, 'id')
+        return fieldnames
     
     @staticmethod
     def create(path_abs, identifier=None):
