@@ -11,13 +11,13 @@ Register newly added EIDs
 import codecs
 import csv
 from datetime import datetime
-import json
 import logging
 import os
 import shutil
 import traceback
 
 import requests
+import simplejson as json
 
 from DDR import config
 from DDR import changelog

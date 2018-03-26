@@ -1,7 +1,6 @@
 # git and git-annex code
 
 from datetime import datetime
-import json
 import logging
 logger = logging.getLogger(__name__)
 import os
@@ -12,6 +11,7 @@ from dateutil import parser
 import envoy
 import git
 import requests
+import simplejson as json
 
 from DDR import config
 from DDR import storage
