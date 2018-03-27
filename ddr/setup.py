@@ -65,6 +65,7 @@ setup(
     entry_points='''
         [console_scripts]
         ddrindex=DDR.cli.ddrindex:ddrindex
+        ddrcheck=DDR.cli.ddrcheck:ddrcheck
     ''',
     scripts = [
         'bin/ddr',
