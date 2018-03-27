@@ -15,9 +15,10 @@ ddr-info /PATH/TO/REPO
 
 import argparse
 from datetime import datetime
-import json
 import logging
 import sys
+
+import simplejson as json
 
 from DDR import dvcs
 from DDR import identifier

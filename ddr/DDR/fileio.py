@@ -1,8 +1,8 @@
 import codecs
-import json
 import os
 import sys
 
+import simplejson as json
 import unicodecsv as csv
 
 

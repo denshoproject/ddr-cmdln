@@ -11,13 +11,13 @@ Register newly added EIDs
 import codecs
 import csv
 from datetime import datetime
-import json
 import logging
 import os
 import shutil
 import traceback
 
 import requests
+import simplejson as json
 
 from DDR import config
 from DDR import changelog
@@ -92,7 +92,7 @@ class Exporter():
                 logging.info('%s/%s - %s' % (n+1, json_paths_len, i.id))
                 obj = object_class.from_identifier(i)
                 if obj:
-                    writer.writerow(obj.dump_csv(headers=headers))
+                    writer.writerow(obj.dump_csv(fields=headers))
         
         return csv_path
 

@@ -9,13 +9,13 @@
 
 import copy
 from datetime import datetime
-import json
 import logging
 logger = logging.getLogger(__name__)
 import re
 
 from dateutil import parser
 from jinja2 import Template
+import simplejson as json
 
 from DDR import config
 
@@ -514,7 +514,7 @@ def text_to_listofdicts(text, separators=LISTOFDICTS_SEPARATORS, split1x=LISTOFD
             dicts.append(d)
     return dicts
 
-def listofdicts_to_text(data, terms=[], separators=LISTOFDICTS_SEPARATORS):
+def listofdicts_to_text(data, terms=[], separators=LISTOFDICTS_SEPARATORS, newlines=True):
     if not data:
         return ''
     if isinstance(data, basestring):
@@ -534,7 +534,10 @@ def listofdicts_to_text(data, terms=[], separators=LISTOFDICTS_SEPARATORS):
             ]
         line = separators[1].join(items)
         lines.append(line)
-    separators2 = '%s\n' % separators[2]
+    if newlines:
+        separators2 = '%s\n' % separators[2]
+    else:
+        separators2 = separators[2]
     return separators2.join(lines)
 
 

@@ -152,3 +152,17 @@ def normalize_text(text):
     if isinstance(text, basestring):
         return process(text)
     return text
+
+def validate_paths(paths):
+    """Tests whether a list of paths can be instantiated without errors
+
+    @param paths: list
+    @returns: list of (n, path, Exception)
+    """
+    bad = []
+    for n,path in enumerate(paths):
+        try:
+            identifier.Identifier(path=path).object()
+        except Exception as err:
+            bad.append((n, path, err))
+    return bad

@@ -42,13 +42,13 @@ d.publish(PATH, recursive=True, public=True )
 """
 from __future__ import print_function
 from datetime import datetime
-import json
 import logging
 logger = logging.getLogger(__name__)
 import os
 
 from elasticsearch import Elasticsearch, TransportError
 import elasticsearch_dsl
+import simplejson as json
 
 from DDR import config
 from DDR import converters
@@ -150,7 +150,7 @@ class Docstore():
         if connection:
             self.es = connection
         else:
-            self.es = Elasticsearch(hosts, timeout=config.DOCSTORE_TIMEOUT_LOCAL)
+            self.es = Elasticsearch(hosts, timeout=config.DOCSTORE_TIMEOUT)
     
     def __repr__(self):
         return "<%s.%s %s:%s>" % (
@@ -678,7 +678,9 @@ class Docstore():
             
             # version is incremented with each updated
             posted_v = None
-            d = self.get(oi.model, oi.id)
+            # for e.g. segment the ES doc_type will be 'entity' but oi.model is 'segment'
+            es_model = ELASTICSEARCH_CLASSES_BY_MODEL[oi.model]._doc_type.name
+            d = self.get(es_model, oi.id)
             if d:
                 posted_v = d.meta.version
 

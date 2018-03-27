@@ -60,7 +60,6 @@ At the end the following files will be present in the destination directory:
 import argparse
 import ConfigParser
 from datetime import datetime
-import json
 import logging
 import os
 import re
@@ -68,6 +67,7 @@ import sys
 
 import envoy
 import git
+import simplejson as json
 
 from DDR import config
 from DDR import identifier

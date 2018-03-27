@@ -73,12 +73,12 @@ def transform(collection, filter=None, models=None, topics=None, created=None, c
     logging.info('Writing')
     num = len(these_paths)
     for n,path in enumerate(these_paths):
+        logging.info('%s/%s %s' % (n, num, path))
         o = identifier.Identifier(path).object()
         if filter and (not fnmatch.fnmatch(o.id, filter)):
             continue
         if models and (o.identifier.model not in ONLY_THESE):
             continue
-        logging.info('%s/%s %s' % (n, num, path))
         
         if o.identifier.model in ['entity', 'segment']:
             o.children(force_read=True)
@@ -92,9 +92,6 @@ def transform(collection, filter=None, models=None, topics=None, created=None, c
             record_created_before = o.record_created
             commit = dvcs.earliest_commit(path, parsed=True)
             o.record_created = commit['ts']
-            logging.info('     record_created: %s -> %s' % (
-                record_created_before, o.record_created
-            ))
         
         o.write_json()
     
