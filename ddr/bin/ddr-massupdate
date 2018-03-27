@@ -32,13 +32,13 @@ ddr-public - ddr-massupdate"""
 
 import argparse
 from datetime import datetime
-import json
 import logging
 import os
 import re
 import sys
 
 import envoy
+import simplejson as json
 
 from DDR import format_json
 from DDR import fileio

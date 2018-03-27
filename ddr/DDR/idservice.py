@@ -1,8 +1,8 @@
-import json
 import logging
 logger = logging.getLogger(__name__)
 
 import requests
+import simplejson as json
 
 from DDR import config
 from DDR import identifier

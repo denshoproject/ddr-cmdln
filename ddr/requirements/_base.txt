@@ -21,6 +21,7 @@ python-dateutil==2.6.0    # BSD          y
 python-xmp-toolkit==2.0.1 # New BSD      y
 pytz==2016.10             # MIT          y
 requests==2.13.0          # Apache       y        y
+simplejson                # MIT          y        y
 unicodecsv==0.14.1        # BSD          y        y
 
 bpython==0.16  # TODO upgrade!

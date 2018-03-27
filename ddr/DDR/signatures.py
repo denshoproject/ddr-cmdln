@@ -15,10 +15,11 @@ identifiers = signatures.signatures(paths, basepath)
 """
 
 from datetime import datetime
-import json
 import logging
 logger = logging.getLogger(__name__)
 import os
+
+import simplejson as json
 
 from DDR import config
 from DDR import commands

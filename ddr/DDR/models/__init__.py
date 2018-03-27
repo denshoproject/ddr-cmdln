@@ -35,7 +35,6 @@ yet must be editable in the editor UI.
 
 from copy import deepcopy
 from datetime import datetime
-import json
 import logging
 logger = logging.getLogger(__name__)
 import mimetypes
@@ -46,6 +45,7 @@ from StringIO import StringIO
 
 import envoy
 from jinja2 import Template
+import simplejson as json
 
 from DDR import VERSION
 from DDR import format_json
@@ -260,13 +260,7 @@ def load_json(document, module, json_text):
     @param json_text: JSON-formatted text
     @returns: dict
     """
-    try:
-        json_data = json.loads(json_text)
-    except ValueError:
-        json_data = [
-            {'title': 'ERROR: COULD NOT READ DATA (.JSON) FILE!'},
-            {'_error': 'Error: ValueError during read load_json.'},
-        ]
+    json_data = json.loads(json_text)
     # software and commit metadata
     for field in json_data:
         if is_object_metadata(field):

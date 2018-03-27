@@ -42,13 +42,13 @@ d.publish(PATH, recursive=True, public=True )
 """
 from __future__ import print_function
 from datetime import datetime
-import json
 import logging
 logger = logging.getLogger(__name__)
 import os
 
 from elasticsearch import Elasticsearch, TransportError
 import elasticsearch_dsl
+import simplejson as json
 
 from DDR import config
 from DDR import converters

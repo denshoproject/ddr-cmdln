@@ -92,9 +92,6 @@ def transform(collection, filter=None, models=None, topics=None, created=None, c
             record_created_before = o.record_created
             commit = dvcs.earliest_commit(path, parsed=True)
             o.record_created = commit['ts']
-            logging.info('     record_created: %s -> %s' % (
-                record_created_before, o.record_created
-            ))
         
         o.write_json()
     

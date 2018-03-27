@@ -67,8 +67,9 @@ logging.basicConfig(
 
 # ----------------------------------------------------------------------
 
-import json
 import os
+
+import simplejson as json
 
 from DDR import config
 from DDR import csvfile
