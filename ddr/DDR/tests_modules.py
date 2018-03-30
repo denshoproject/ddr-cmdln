@@ -122,7 +122,7 @@ def test_Module_labels_values():
         {'modified': '2015-10-20T15:42:26'},
         {'title': 'labels_values'},
     ]
-    json_data = models.load_json(document, module, json.dumps(data))
+    json_data = models.common.load_json(document, module, json.dumps(data))
     expected = [
         {'value': u'ddr-test-123', 'label': 'Object ID'},
         {'value': u'2015-10-20T15:42:26', 'label': 'Last Modified'},

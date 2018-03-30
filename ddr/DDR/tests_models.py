@@ -84,7 +84,7 @@ def test_load_json():
     
     document = Document()
     module = TestModule()
-    models.load_json(document, module, TEST_DOCUMENT)
+    models.common.load_json(document, module, TEST_DOCUMENT)
     assert document.id == 'ddr-test-123'
     assert document.timestamp == u'2014-09-19T03:14:59'
     assert document.status == 1
@@ -261,18 +261,18 @@ FILES_OBJECTS = [
 ]
 
 def test_filegroups_to_files():
-    out0 = models.filegroups_to_files(FILEGROUPS_META)
-    out1 = models.filegroups_to_files(FILEGROUPS_OBJECTS)
+    out0 = models.entity.filegroups_to_files(FILEGROUPS_META)
+    out1 = models.entity.filegroups_to_files(FILEGROUPS_OBJECTS)
     assert out0 == FILES_META
     assert out1 == FILES_OBJECTS
 
 def test_files_to_filegroups():
-    out0 = models.files_to_filegroups(FILES_META)
+    out0 = models.entity.files_to_filegroups(FILES_META)
     print('FILES_META\n%s' % FILES_META)
     print('FILEGROUPS_META\n%s' % FILEGROUPS_META)
     print('out0\n%s' % out0)
     assert out0 == FILEGROUPS_META
-    out1 = models.files_to_filegroups(FILES_OBJECTS)
+    out1 = models.entity.files_to_filegroups(FILES_OBJECTS)
     print('FILEGROUPS_OBJECTS\n%s' % FILEGROUPS_OBJECTS)
     print('out1\n%s' % out1)
     assert out1 == FILEGROUPS_OBJECTS

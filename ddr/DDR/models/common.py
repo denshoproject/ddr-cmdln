@@ -1,0 +1,474 @@
+from datetime import datetime
+import os
+
+import simplejson as json
+
+from DDR import config
+from DDR import dvcs
+from DDR import fileio
+from DDR.identifier import Identifier
+from DDR import locking
+from DDR import modules
+from DDR import util
+
+
+class Path( object ):
+    pass
+
+class Stub(object):
+    id = None
+    idparts = None
+    identifier = None
+
+    def __init__(self, identifier):
+        self.identifier = identifier
+        self.id = self.identifier.id
+        self.idparts = self.identifier.parts
+    
+    @staticmethod
+    def from_identifier(identifier):
+        return Stub(identifier)
+    
+    def __repr__(self):
+        return "<%s.%s %s:%s>" % (
+            self.__module__,
+            self.__class__.__name__,
+            self.identifier.model, self.id
+        )
+    
+    def parent(self, stubs=False):
+        return self.identifier.parent(stubs).object()
+
+    def children(self):
+        return []
+
+
+def sort_file_paths(json_paths, rank='role-eid-sort'):
+    """Sort file JSON paths in human-friendly order.
+    
+    TODO this belongs in DDR.identifier
+    
+    @param json_paths: 
+    @param rank: 'role-eid-sort' or 'eid-sort-role'
+    """
+    paths = {}
+    keys = []
+    while json_paths:
+        path = json_paths.pop()
+        identifier = Identifier(path=path)
+        eid = identifier.parts.get('eid',None)
+        role = identifier.parts.get('role',None)
+        sha1 = identifier.parts.get('sha1',None)
+        sort = 0
+        with open(path, 'r') as f:
+            for line in f.readlines():
+                if 'sort' in line:
+                    sort = line.split(':')[1].replace('"','').strip()
+        eid = str(eid)
+        sha1 = str(sha1)
+        sort = str(sort)
+        if rank == 'eid-sort-role':
+            key = '-'.join([str(eid),sort,role,sha1])
+        elif rank == 'role-eid-sort':
+            key = '-'.join([role,eid,sort,sha1])
+        paths[key] = path
+        keys.append(key)
+    keys_sorted = [key for key in util.natural_sort(keys)]
+    paths_sorted = []
+    while keys_sorted:
+        val = paths.pop(keys_sorted.pop(), None)
+        if val:
+            paths_sorted.append(val)
+    return paths_sorted
+
+def create_object(identifier):
+    """Creates a new object initial values from module.FIELDS.
+    
+    If identifier.fields_module().FIELDS.field['default'] is non-None
+    it is used as the value.
+    Use "None" for things like Object.id, which should already be set
+    in the object constructor, and which you do not want to overwrite
+    with a default value. Ahem.
+    
+    @param identifier: Identifier
+    @returns: object
+    """
+    object_class = identifier.object_class()
+    # instantiate a raw object
+    obj = object_class(
+        identifier.path_abs(),
+        identifier=identifier
+    )
+    # set default values
+    for f in identifier.fields_module().FIELDS:
+        if f['default'] != None:
+            # some defaults are functions (e.g. datetime.now)
+            if callable(f['default']):
+                setattr(
+                    obj,
+                    f['name'],
+                    f['default']()  # call function with no args
+                )
+            # most are just values (e.g. 'unknown', -1)
+            else:
+                setattr(
+                    obj,
+                    f['name'],
+                    f['default']  # just the default value
+                )
+        elif hasattr(f, 'name') and hasattr(f, 'initial'):
+            setattr(obj, f['name'], f['initial'])
+    return obj
+
+def object_metadata(module, repo_path):
+    """Metadata for the ddrlocal/ddrcmdln and models definitions used.
+    
+    @param module: collection, entity, files model definitions module
+    @param repo_path: Absolute path to root of object's repo
+    @returns: dict
+    """
+    repo = dvcs.repository(repo_path)
+    gitversion = '; '.join([dvcs.git_version(repo), dvcs.annex_version(repo)])
+    data = {
+        'application': 'https://github.com/densho/ddr-cmdln.git',
+        'app_commit': dvcs.latest_commit(config.INSTALL_PATH),
+        'app_release': VERSION,
+        'defs_path': modules.Module(module).path,
+        'models_commit': dvcs.latest_commit(modules.Module(module).path),
+        'git_version': gitversion,
+    }
+    return data
+
+def is_object_metadata(data):
+    """Indicate whether json_data field is the object_metadata field.
+    
+    @param data: list of dicts
+    @returns: boolean
+    """
+    for key in ['app_commit', 'app_release']:
+        if key in data.keys():
+            return True
+    return False
+
+def form_prep(document, module):
+    """Apply formprep_{field} functions to prep data dict to pass into DDRForm object.
+    
+    Certain fields require special processing.  Data may need to be massaged
+    and prepared for insertion into particular Django form objects.
+    If a "formprep_{field}" function is present in the collectionmodule
+    it will be executed.
+    
+    @param document: Collection, Entity, File document object
+    @param module: collection, entity, files model definitions module
+    @returns data: dict object as used by Django Form object.
+    """
+    data = {}
+    for f in module.FIELDS:
+        if hasattr(document, f['name']) and f.get('form',None):
+            fieldname = f['name']
+            # run formprep_* functions on field data if present
+            field_data = modules.Module(module).function(
+                'formprep_%s' % fieldname,
+                getattr(document, f['name'])
+            )
+            data[fieldname] = field_data
+    return data
+    
+def form_post(document, module, cleaned_data):
+    """Apply formpost_{field} functions to process cleaned_data from CollectionForm
+    
+    Certain fields require special processing.
+    If a "formpost_{field}" function is present in the entitymodule
+    it will be executed.
+    NOTE: cleaned_data must contain items for all module.FIELDS.
+    
+    @param document: Collection, Entity, File document object
+    @param module: collection, entity, files model definitions module
+    @param cleaned_data: dict cleaned_data from DDRForm
+    """
+    for f in module.FIELDS:
+        if hasattr(document, f['name']) and f.get('form',None):
+            fieldname = f['name']
+            # run formpost_* functions on field data if present
+            field_data = modules.Module(module).function(
+                'formpost_%s' % fieldname,
+                cleaned_data[fieldname]
+            )
+            setattr(document, fieldname, field_data)
+    # update record_lastmod
+    if hasattr(document, 'record_lastmod'):
+        document.record_lastmod = datetime.now(config.TZ)
+
+def load_json_lite(json_path, model, object_id):
+    """Simply reads JSON file and adds object_id if it's a file
+    
+    @param json_path: str
+    @param model: str
+    @param object_id: str
+    @returns: list of dicts
+    """
+    with open(json_path, 'r') as f:
+        document = json.loads(f.read())
+    if model == 'file':
+        document.append( {'id':object_id} )
+    return document
+
+def load_json(document, module, json_text):
+    """Populates object from JSON-formatted text; applies jsonload_{field} functions.
+    
+    Goes through module.FIELDS turning data in the JSON file into
+    object attributes.
+    TODO content fields really should into OBJECT.data OrderedDict or subobject.
+    
+    @param document: Collection/Entity/File object.
+    @param module: collection/entity/file module from 'ddr' repo.
+    @param json_text: JSON-formatted text
+    @returns: dict
+    """
+    try:
+        json_data = json.loads(json_text)
+    except ValueError:
+        json_data = [
+            {'title': 'ERROR: COULD NOT READ DATA (.JSON) FILE!'},
+            {'_error': 'Error: ValueError during read load_json.'},
+        ]
+    # software and commit metadata
+    for field in json_data:
+        if is_object_metadata(field):
+            setattr(document, 'object_metadata', field)
+            break
+    # field values from JSON
+    for mf in module.FIELDS:
+        for f in json_data:
+            if hasattr(f, 'keys') and (f.keys()[0] == mf['name']):
+                fieldname = f.keys()[0]
+                # run jsonload_* functions on field data if present
+                field_data = modules.Module(module).function(
+                    'jsonload_%s' % fieldname,
+                    f.values()[0]
+                )
+                if isinstance(field_data, basestring):
+                    field_data = field_data.strip()
+                setattr(document, fieldname, field_data)
+    # Fill in missing fields with default values from module.FIELDS.
+    # Note: should not replace fields that are just empty.
+    for mf in module.FIELDS:
+        if not hasattr(document, mf['name']):
+            setattr(document, mf['name'], mf.get('default',None))
+    # Add timeszone to fields if not present
+    apply_timezone(document, module)
+    return json_data
+
+def apply_timezone(document, module):
+    """Set time zone for datetime fields if not present in datetime fields
+    
+    If document matches certain criteria, override the timezone with a
+    specified alternate timezone.
+    """
+    # add timezone to any datetime fields missing it
+    for mf in module.FIELDS:
+        if mf['model_type'] == datetime:
+            fieldname = mf['name']
+            dt = getattr(document, fieldname)
+            if dt and isinstance(dt, datetime) and (not dt.tzinfo):
+                # Use default timezone unless...
+                if document.identifier.idparts['org'] in config.ALT_TIMEZONES.keys():
+                    timezone = config.ALT_TIMEZONES[document.identifier.idparts['org']]
+                else:
+                    timezone = config.TZ
+                setattr(document, fieldname, timezone.localize(dt))
+
+def dump_json(obj, module, template=False,
+              template_passthru=['id', 'record_created', 'record_lastmod'],
+              exceptions=[]):
+    """Arranges object data in list-of-dicts format before serialization.
+    
+    DDR keeps data in Git is to take advantage of versioning.  Python
+    dicts store data in random order which makes it impossible to
+    meaningfully compare diffs of the data over time.  DDR thus stores
+    data as an alphabetically arranged list of dicts, with several
+    exceptions.
+    
+    The first dict in the list is not part of the object itself but
+    contains metadata about the state of the DDR application at the time
+    the file was last written: the Git commit of the app, the release
+    number, and the versions of Git and git-annex used.
+    
+    Python data types that cannot be represented in JSON (e.g. datetime)
+    are converted into strings.
+    
+    @param obj: Collection/Entity/File object.
+    @param module: modules.Module
+    @param template: Boolean True if object to be used as blank template.
+    @param template_passthru: list
+    @param exceptions: list
+    @returns: dict
+    """
+    data = []
+    for mf in module.FIELDS:
+        item = {}
+        fieldname = mf['name']
+        field_data = ''
+        if template and (fieldname not in template_passthru) and hasattr(mf,'form'):
+            # write default values
+            field_data = mf['form']['initial']
+        elif hasattr(obj, mf['name']):
+            # run jsondump_* functions on field data if present
+            field_data = modules.Module(module).function(
+                'jsondump_%s' % fieldname,
+                getattr(obj, fieldname)
+            )
+        item[fieldname] = field_data
+        if fieldname not in exceptions:
+            data.append(item)
+    return data
+
+def from_json(model, json_path, identifier):
+    """Read the specified JSON file and properly instantiate object.
+    
+    @param model: LocalCollection, LocalEntity, or File
+    @param json_path: absolute path to the object's .json file
+    @param identifier: [optional] Identifier
+    @returns: object
+    """
+    document = None
+    if not model:
+        raise Exception('Cannot instantiate from JSON without a model object.')
+    if not json_path:
+        raise Exception('Bad path: %s' % json_path)
+    if identifier.model in ['file']:
+        # object_id is in .json file
+        path = os.path.splitext(json_path)[0]
+        document = model(path, identifier=identifier)
+    else:
+        # object_id is in object directory
+        document = model(os.path.dirname(json_path), identifier=identifier)
+    document_id = document.id  # save this just in case
+    document.load_json(fileio.read_text(json_path))
+    if not document.id:
+        # id gets overwritten if document.json is blank
+        document.id = document_id
+    return document
+
+def prep_csv(obj, module, headers=[]):
+    """Dump object field values to list suitable for a CSV file.
+    
+    Note: Autogenerated and non-user-editable fields
+    (SHA1 and other hashes, file size, etc) should be excluded
+    from the CSV file.
+    Note: For files these are replaced by File.id which contains
+    the role and a fragment of the SHA1 hash.
+    
+    @param obj_: Collection, Entity, File
+    @param module: modules.Module
+    @param headers: list If nonblank only export specified fields.
+    @returns: list of values
+    """
+    if headers:
+        field_names = headers
+    else:
+        field_names = module.field_names()
+        # TODO field_directives go here!
+    # seealso DDR.modules.Module.function
+    values = []
+    for fieldname in field_names:
+        value = ''
+        # insert file_id as first column
+        if (module.module.MODEL == 'file') and (fieldname == 'file_id'):
+            field_data = obj.id
+        elif hasattr(obj, fieldname):
+            # run csvdump_* functions on field data if present
+            field_data = module.function(
+                'csvdump_%s' % fieldname,
+                getattr(obj, fieldname)
+            )
+            if field_data == None:
+                field_data = ''
+        value = util.normalize_text(field_data)
+        values.append(value)
+    return values
+
+def csvload_rowd(module, rowd):
+    """Apply module's csvload_* methods to rowd data
+    """
+    # In repo_models.object.FIELDS, individual fields can be marked
+    # so they are ignored (e.g. not included) when importing.
+    # TODO make field_directives ONCE at start of rowds loop
+    field_directives = {
+        f['name']: f['csv']['import']
+        for f in module.module.FIELDS
+    }
+    data = {}
+    for fieldname,value in rowd.iteritems():
+        ignored = 'ignore' in field_directives[fieldname]
+        if not ignored:
+            # run csvload_* functions on field data if present
+            field_data = module.function(
+                'csvload_%s' % fieldname,
+                rowd[fieldname]
+            )
+            # TODO optimize, normalize only once
+            data[fieldname] = util.normalize_text(field_data)
+    return data
+
+def load_csv(obj, module, rowd):
+    """Populates object from a row in a CSV file.
+    
+    @param obj: Collection/Entity/File object.
+    @param module: modules.Module
+    @param rowd: dict Headers/row cells for one line of a CSV file.
+    @returns: list of changed fields
+    """
+    # In repo_models.object.FIELDS, individual fields can be marked
+    # so they are ignored (e.g. not included) when importing.
+    field_directives = {
+        f['name']: f['csv']['import']
+        for f in module.module.FIELDS
+    }
+    # apply module's csvload_* methods to rowd data
+    rowd = csvload_rowd(module, rowd)
+    obj.modified = []
+    for field,value in rowd.iteritems():
+        ignored = 'ignore' in field_directives[field]
+        if not ignored:
+            oldvalue = getattr(obj, field, '')
+            value = rowd[field]
+            if value != oldvalue:
+                obj.modified.append(field)
+            setattr(obj, field, value)
+    # Add timezone to fields if not present
+    apply_timezone(obj, module.module)
+    return obj.modified
+
+def from_csv(identifier, rowd):
+    """Instantiates a File object from CSV row data.
+    
+    @param identifier: [optional] Identifier
+    @param rowd: dict Headers/row cells for one line of a CSV file.
+    @returns: object
+    """
+    obj = identifier.object()
+    obj.load_csv(headers, rowd)
+    return obj
+
+def load_xml():
+    pass
+
+def prep_xml():
+    pass
+
+def from_xml():
+    pass
+
+def signature_abs(obj, basepath):
+    """Absolute path to signature image file, if signature_id present.
+    """
+    if isinstance(obj, dict):
+        sid = obj.get('signature_id')
+    else:
+        sid = getattr(obj, 'signature_id', None)
+    if sid:
+        oi = Identifier(sid, basepath)
+        if oi and oi.model == 'file':
+            return oi.path_abs('access')
+    return None
