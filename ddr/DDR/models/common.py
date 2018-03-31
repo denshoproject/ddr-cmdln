@@ -43,6 +43,124 @@ class Stub(object):
         return []
 
 
+class DDRObject(object):
+    
+    def __repr__(self):
+        """Returns string representation of object.
+        
+        >>> c = Collection('/tmp/ddr-testing-123')
+        >>> c
+        <Collection ddr-testing-123>
+        """
+        return "<%s.%s %s:%s>" % (
+            self.__module__, self.__class__.__name__, self.identifier.model, self.id
+        )
+
+    #exists
+    #create
+    #new
+    #save
+    #delete
+    #from_json
+    #from_csv
+    #from_identifier
+    #parent
+    #children
+    
+    def signature_abs(self):
+        """Absolute path to signature image file, if signature_id present.
+        """
+        return common.signature_abs(self, self.identifier.basepath)
+    
+    def labels_values(self):
+        """Apply display_{field} functions to prep object data for the UI.
+        """
+        module = self.identifier.fields_module()
+        return modules.Module(module).labels_values(self)
+    
+    def choices(self, field_name):
+        """Returns controlled-vocab choices for specified field, if any
+        
+        @param field_name: str
+        @returns: list or None
+        """
+        return modules.Module(self.identifier.fields_module()).field_choices(field_name)
+    
+    def form_prep(self):
+        """Apply formprep_{field} functions in Entity module to prep data dict to pass into DDRForm object.
+        
+        @returns data: dict object as used by Django Form object.
+        """
+        return common.form_prep(self, self.identifier.fields_module())
+    
+    def form_post(self, cleaned_data):
+        """Apply formpost_{field} functions to process cleaned_data from DDRForm
+        
+        @param cleaned_data: dict
+        """
+        common.form_post(self, self.identifier.fields_module(), cleaned_data)
+    
+    def inheritable_fields( self ):
+        """Returns list of Collection/Entity object's field names marked as inheritable.
+        
+        >>> c = Collection.from_json('/tmp/ddr-testing-123')
+        >>> c.inheritable_fields()
+        ['status', 'public', 'rights']
+        """
+        module = self.identifier.fields_module()
+        return inheritance.inheritable_fields(module.FIELDS )
+
+    def selected_inheritables(self, cleaned_data ):
+        """Returns names of fields marked as inheritable in cleaned_data.
+        
+        Fields are considered selected if dict contains key/value pairs in the form
+        'FIELD_inherit':True.
+        
+        @param cleaned_data: dict Fieldname:value pairs.
+        @returns: list
+        """
+        return inheritance.selected_inheritables(self.inheritable_fields(), cleaned_data)
+    
+    #update_inheritables
+    #inherit
+    
+    def lock( self, text ): return locking.lock(self.lock_path, text)
+    def unlock( self, text ): return locking.unlock(self.lock_path, text)
+    def locked( self ): return locking.locked(self.lock_path)
+
+    #load_json
+    #dump_json
+    
+    def write_json(self, obj_metadata={}):
+        """Write Collection/Entity JSON file to disk.
+        
+        @param obj_metadata: dict Cached results of object_metadata.
+        """
+        if not os.path.exists(self.identifier.path_abs()):
+            os.makedirs(self.identifier.path_abs())
+        fileio.write_text(
+            self.dump_json(doc_metadata=True, obj_metadata=obj_metadata),
+            self.json_path
+        )
+    
+    #post_json
+    #load_csv
+    #dump_csv
+    
+    def changelog( self ):
+        """Gets Collection/Entity changelog
+        """
+        if os.path.exists(self.changelog_path):
+            return open(self.changelog_path, 'r').read()
+        return '%s is empty or missing' % self.changelog_path
+    
+    #control
+    #dump_xml
+    #write_xml
+
+
+# helper functions -----------------------------------------------------
+
 def sort_file_paths(json_paths, rank='role-eid-sort'):
     """Sort file JSON paths in human-friendly order.
     

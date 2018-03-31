@@ -181,7 +181,7 @@ def file_to_filemeta(f):
             fd[key] = getattr(f, key)
     return fd
 
-class Entity( object ):
+class Entity(common.DDRObject):
     root = None
     id = None
     idparts = None
@@ -246,11 +246,6 @@ class Entity( object ):
         
         self._children_objects = []
         self._file_objects = []
-    
-    def __repr__(self):
-        return "<%s.%s %s:%s>" % (
-            self.__module__, self.__class__.__name__, self.identifier.model, self.id
-        )
 
     @staticmethod
     def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
@@ -457,54 +452,6 @@ class Entity( object ):
         self.files = sorted(files, key=lambda f: int(f.sort))
         return self._children_objects + self.files
     
-    def signature_abs(self):
-        """Absolute path to signature image file, if signature_id present.
-        """
-        return common.signature_abs(self, self.identifier.basepath)
-    
-    def labels_values(self):
-        """Apply display_{field} functions to prep object data for the UI.
-        """
-        module = self.identifier.fields_module()
-        return modules.Module(module).labels_values(self)
-    
-    def choices(self, field_name):
-        """Returns controlled-vocab choices for specified field, if any
-        
-        @param field_name: str
-        @returns: list or None
-        """
-        return modules.Module(self.identifier.fields_module()).field_choices(field_name)
-    
-    def form_prep(self):
-        """Apply formprep_{field} functions in Entity module to prep data dict to pass into DDRForm object.
-        
-        @returns data: dict object as used by Django Form object.
-        """
-        return common.form_prep(self, self.identifier.fields_module())
-    
-    def form_post(self, cleaned_data):
-        """Apply formpost_{field} functions to process cleaned_data from DDRForm
-        
-        @param cleaned_data: dict
-        """
-        common.form_post(self, self.identifier.fields_module(), cleaned_data)
-
-    def inheritable_fields( self ):
-        module = self.identifier.fields_module()
-        return inheritance.inheritable_fields(module.FIELDS)
-    
-    def selected_inheritables(self, cleaned_data ):
-        """Returns names of fields marked as inheritable in cleaned_data.
-        
-        Fields are considered selected if dict contains key/value pairs in the form
-        'FIELD_inherit':True.
-        
-        @param cleaned_data: dict Fieldname:value pairs.
-        @returns: list
-        """
-        return inheritance.selected_inheritables(self.inheritable_fields(), cleaned_data)
-    
     def update_inheritables( self, inheritables, cleaned_data ):
         """Update specified fields of child objects.
         
@@ -516,10 +463,6 @@ class Entity( object ):
     
     def inherit( self, parent ):
         inheritance.inherit( parent, self )
-    
-    def lock( self, text ): return locking.lock(self.lock_path, text)
-    def unlock( self, text ): return locking.unlock(self.lock_path, text)
-    def locked( self ): return locking.locked(self.lock_path)
 
     def load_json(self, json_text):
         """Populate Entity data from JSON-formatted text.
@@ -573,18 +516,6 @@ class Entity( object ):
             'file_groups': files_to_filegroups(self._file_objects, to_dict=1)
         })
         return common.format_json(data)
-
-    def write_json(self, obj_metadata={}):
-        """Write Entity JSON file to disk.
-        
-        @param obj_metadata: dict Cached results of object_metadata.
-        """
-        if not os.path.exists(self.identifier.path_abs()):
-            os.makedirs(self.identifier.path_abs())
-        fileio.write_text(
-            self.dump_json(doc_metadata=True, obj_metadata=obj_metadata),
-            self.json_path
-        )
     
     def post_json(self):
         # NOTE: this is same basic code as docstore.index
@@ -630,12 +561,6 @@ class Entity( object ):
         module = modules.Module(self.identifier.fields_module())
         return common.prep_csv(self, module, headers=headers)
     
-    def changelog( self ):
-        """Gets Entity changelog
-        """
-        if os.path.exists(self.changelog_path):
-            return open(self.changelog_path, 'r').read()
-        return '%s is empty or missing' % self.changelog_path
     
     def control( self ):
         """Gets Entity control file

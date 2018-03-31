@@ -31,7 +31,7 @@ FILE_KEYS = ['path_rel',
              'access_rel',
              'xmp',]
 
-class File( object ):
+class File(common.DDRObject):
     id = None
     idparts = None
     external = None
@@ -126,11 +126,6 @@ class File( object ):
         self.access_rel = i.path_rel('access')
         
         self.basename = os.path.basename(self.path_abs)
-
-    def __repr__(self):
-        return "<%s.%s %s:%s>" % (
-            self.__module__, self.__class__.__name__, self.identifier.model, self.id
-        )
 
     #@staticmethod
     #def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
@@ -311,41 +306,6 @@ class File( object ):
     
     #def signature_abs(self):
     
-    def labels_values(self):
-        """Apply display_{field} functions to prep object data for the UI.
-        """
-        module = self.identifier.fields_module()
-        return modules.Module(module).labels_values(self)
-    
-    def choices(self, field_name):
-        """Returns controlled-vocab choices for specified field, if any
-        
-        @param field_name: str
-        @returns: list or None
-        """
-        return modules.Module(self.identifier.fields_module()).field_choices(field_name)
-    
-    def form_prep(self):
-        """Apply formprep_{field} functions in File module to prep data dict to pass into DDRForm object.
-        
-        @returns data: dict object as used by Django Form object.
-        """
-        return common.form_prep(self, self.identifier.fields_module())
-    
-    def form_post(self, cleaned_data):
-        """Apply formpost_{field} functions to process cleaned_data from DDRForm
-        
-        @param cleaned_data: dict
-        """
-        common.form_post(self, self.identifier.fields_module(), cleaned_data)
-    
-    def inherit( self, parent ):
-        inheritance.inherit( parent, self )
-    
-    #def lock( self, text ): 
-    #def unlock( self, text ): 
-    #def locked( self ): 
-    
     def load_json(self, json_text):
         """Populate File data from JSON-formatted text.
         
@@ -388,19 +348,6 @@ class File( object ):
         # what we call path_rel in the .json is actually basename
         data.insert(1, {'path_rel': self.basename})
         return common.format_json(data)
-
-    def write_json(self, obj_metadata={}):
-        """Write File JSON file to disk.
-        
-        @param obj_metadata: dict Cached results of object_metadata.
-        """
-        dirname = os.path.dirname(self.identifier.path_abs())
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
-        fileio.write_text(
-            self.dump_json(doc_metadata=True, obj_metadata=obj_metadata),
-            self.json_path
-        )
     
     def post_json(self, public=False):
         # NOTE: this is same basic code as docstore.index

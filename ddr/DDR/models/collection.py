@@ -22,7 +22,7 @@ TEMPLATE_PATH = os.path.join(config.INSTALL_PATH, 'ddr', 'DDR', 'templates')
 GITIGNORE_TEMPLATE = os.path.join(TEMPLATE_PATH, 'gitignore.tpl')
 
 
-class Collection( object ):
+class Collection(common.DDRObject):
     root = None
     id = None
     idparts = None
@@ -108,17 +108,6 @@ class Collection( object ):
         self.files_path_rel     = i.path_rel('files')
         
         self.git_url = '{}:{}'.format(config.GITOLITE, self.id)
-    
-    def __repr__(self):
-        """Returns string representation of object.
-        
-        >>> c = Collection('/tmp/ddr-testing-123')
-        >>> c
-        <Collection ddr-testing-123>
-        """
-        return "<%s.%s %s:%s>" % (
-            self.__module__, self.__class__.__name__, self.identifier.model, self.id
-        )
 
     @staticmethod
     def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
@@ -323,11 +312,6 @@ class Collection( object ):
                 entities.append(entity)
         return entities
     
-    def signature_abs(self):
-        """Absolute path to signature image file, if signature_id present.
-        """
-        return common.signature_abs(self, self.identifier.basepath)
-    
     def identifiers(self, model=None, force_read=False):
         """Lists Identifiers for all or subset of Collection's descendents.
         
@@ -347,55 +331,6 @@ class Collection( object ):
             )
         ]
     
-    def labels_values(self):
-        """Apply display_{field} functions to prep object data for the UI.
-        """
-        module = self.identifier.fields_module()
-        return modules.Module(module).labels_values(self)
-    
-    def choices(self, field_name):
-        """Returns controlled-vocab choices for specified field, if any
-        
-        @param field_name: str
-        @returns: list or None
-        """
-        return modules.Module(self.identifier.fields_module()).field_choices(field_name)
-    
-    def form_prep(self):
-        """Apply formprep_{field} functions in Collection module to prep data dict to pass into DDRForm object.
-        
-        @returns data: dict object as used by Django Form object.
-        """
-        return common.form_prep(self, self.identifier.fields_module())
-    
-    def form_post(self, cleaned_data):
-        """Apply formpost_{field} functions to process cleaned_data from DDRForm
-        
-        @param cleaned_data: dict
-        """
-        common.form_post(self, self.identifier.fields_module(), cleaned_data)
-    
-    def inheritable_fields( self ):
-        """Returns list of Collection object's field names marked as inheritable.
-        
-        >>> c = Collection.from_json('/tmp/ddr-testing-123')
-        >>> c.inheritable_fields()
-        ['status', 'public', 'rights']
-        """
-        module = self.identifier.fields_module()
-        return inheritance.inheritable_fields(module.FIELDS )
-
-    def selected_inheritables(self, cleaned_data ):
-        """Returns names of fields marked as inheritable in cleaned_data.
-        
-        Fields are considered selected if dict contains key/value pairs in the form
-        'FIELD_inherit':True.
-        
-        @param cleaned_data: dict Fieldname:value pairs.
-        @returns: list
-        """
-        return inheritance.selected_inheritables(self.inheritable_fields(), cleaned_data)
-    
     def update_inheritables( self, inheritables, cleaned_data ):
         """Update specified fields of child objects.
         
@@ -404,10 +339,6 @@ class Collection( object ):
         @returns: tuple [changed object Ids],[changed objects' JSON files]
         """
         return inheritance.update_inheritables(self, 'collection', inheritables, cleaned_data)
-    
-    def lock( self, text ): return locking.lock(self.lock_path, text)
-    def unlock( self, text ): return locking.unlock(self.lock_path, text)
-    def locked( self ): return locking.locked(self.lock_path)
     
     def load_json(self, json_text):
         """Populates Collection from JSON-formatted text.
@@ -461,12 +392,6 @@ class Collection( object ):
     # load_csv
     # dump_csv
     
-    def changelog( self ):
-        """Gets Collection changelog
-        """
-        if os.path.exists(self.changelog_path):
-            return open(self.changelog_path, 'r').read()
-        return '%s is empty or missing' % self.changelog_path
     
     def control( self ):
         """Gets Collection control file
