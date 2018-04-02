@@ -1,18 +1,23 @@
 import logging
 logger = logging.getLogger(__name__)
 import os
+import re
 
+from jinja2 import Template
 import simplejson as json
 
 from DDR import commands
 from DDR import config
+from DDR.control import CollectionControlFile
 from DDR import docstore
 from DDR import dvcs
 from DDR import fileio
+from DDR import format_json
 from DDR.identifier import Identifier
 from DDR import inheritance
 from DDR import locking
 from DDR.models import common
+from DDR.models.entity import ListEntity
 from DDR import modules
 from DDR import util
 
@@ -364,8 +369,8 @@ class Collection(common.DDRObject):
         if obj_metadata:
             data.insert(0, obj_metadata)
         elif doc_metadata:
-            data.insert(0, object_metadata(module, self.path))
-        return common.format_json(data)
+            data.insert(0, common.object_metadata(module, self.path))
+        return format_json(data)
     
     def write_json(self, obj_metadata={}):
         """Write Collection JSON file to disk.

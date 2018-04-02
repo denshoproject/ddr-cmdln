@@ -3,10 +3,12 @@ import os
 
 import simplejson as json
 
+from DDR import VERSION
 from DDR import config
 from DDR import dvcs
 from DDR import fileio
 from DDR.identifier import Identifier
+from DDR import inheritance
 from DDR import locking
 from DDR import modules
 from DDR import util
@@ -70,7 +72,7 @@ class DDRObject(object):
     def signature_abs(self):
         """Absolute path to signature image file, if signature_id present.
         """
-        return common.signature_abs(self, self.identifier.basepath)
+        return signature_abs(self, self.identifier.basepath)
     
     def labels_values(self):
         """Apply display_{field} functions to prep object data for the UI.
@@ -91,14 +93,14 @@ class DDRObject(object):
         
         @returns data: dict object as used by Django Form object.
         """
-        return common.form_prep(self, self.identifier.fields_module())
+        return form_prep(self, self.identifier.fields_module())
     
     def form_post(self, cleaned_data):
         """Apply formpost_{field} functions to process cleaned_data from DDRForm
         
         @param cleaned_data: dict
         """
-        common.form_post(self, self.identifier.fields_module(), cleaned_data)
+        form_post(self, self.identifier.fields_module(), cleaned_data)
     
     def inheritable_fields( self ):
         """Returns list of Collection/Entity object's field names marked as inheritable.

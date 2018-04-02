@@ -1,14 +1,18 @@
 from copy import deepcopy
+from datetime import datetime
 import logging
 logger = logging.getLogger(__name__)
 import os
 
+from jinja2 import Template
 import simplejson as json
 
 from DDR import commands
 from DDR import config
+from DDR.control import EntityControlFile
 from DDR import docstore
 from DDR import fileio
+from DDR import format_json
 from DDR.identifier import Identifier, MODULES, VALID_COMPONENTS
 from DDR import ingest
 from DDR import inheritance
@@ -507,7 +511,7 @@ class Entity(common.DDRObject):
         if obj_metadata:
             data.insert(0, obj_metadata)
         elif doc_metadata:
-            data.insert(0, object_metadata(module, self.parent_path))
+            data.insert(0, common.object_metadata(module, self.parent_path))
         
         data.append({
             'children': [entity_to_childrenmeta(o) for o in self.children_meta]
@@ -515,7 +519,7 @@ class Entity(common.DDRObject):
         data.append({
             'file_groups': files_to_filegroups(self._file_objects, to_dict=1)
         })
-        return common.format_json(data)
+        return format_json(data)
     
     def post_json(self):
         # NOTE: this is same basic code as docstore.index

@@ -70,7 +70,7 @@ class Exporter():
         
         if hasattr(object_class, 'xmp') and not hasattr(object_class, 'mets'):
             # File or subclass
-            json_paths = models.sort_file_paths(json_paths)
+            json_paths = models.common.sort_file_paths(json_paths)
         else:
             # Entity or subclass
             json_paths = util.natural_sort(json_paths)
@@ -425,7 +425,7 @@ class Importer():
         @param fidentifier: Identifier
         @returns: boolean
         """
-        is_stub = fidentifier.object_class() == models.Stub
+        is_stub = fidentifier.object_class() == models.common.Stub
         return fidentifier.parent(stubs=is_stub)
 
     @staticmethod
@@ -532,7 +532,7 @@ class Importer():
             # Getting obj_metadata takes about 1sec each time
             # TODO caching works as long as all objects have same metadata...
             if not obj_metadata:
-                obj_metadata = models.object_metadata(
+                obj_metadata = models.common.object_metadata(
                     eidentifier.fields_module(),
                     repository.working_dir
                 )
@@ -582,7 +582,7 @@ class Importer():
 
     @staticmethod
     def _csv_load(module, rowds):
-        return [models.csvload_rowd(module, rowd) for rowd in rowds]
+        return [models.common.csvload_rowd(module, rowd) for rowd in rowds]
 
     @staticmethod
     def _fidentifiers(rowds, cidentifier):
@@ -769,7 +769,7 @@ class Importer():
             # Getting obj_metadata takes about 1sec each time
             # TODO caching works as long as all objects have same metadata...
             if not obj_metadata:
-                obj_metadata = models.object_metadata(
+                obj_metadata = models.common.object_metadata(
                     file_.identifier.fields_module(),
                     repository.working_dir
                 )

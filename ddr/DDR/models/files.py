@@ -3,11 +3,14 @@ mimetypes.init()
 import os
 
 import envoy
+from jinja2 import Template
+import simplejson as json
 
 from DDR import commands
 from DDR import config
 from DDR import docstore
 from DDR import fileio
+from DDR import format_json
 from DDR.identifier import Identifier
 from DDR import inheritance
 from DDR.models import common
@@ -340,14 +343,14 @@ class File(common.DDRObject):
         module = self.identifier.fields_module()
         if self.basename and not self.mimetype:
             self.mimetype = self.get_mimetype(force=True)
-        data = dump_json(self, module)
+        data = common.dump_json(self, module)
         if obj_metadata:
             data.insert(0, obj_metadata)
         elif doc_metadata:
-            data.insert(0, object_metadata(module, self.collection_path))
+            data.insert(0, common.object_metadata(module, self.collection_path))
         # what we call path_rel in the .json is actually basename
         data.insert(1, {'path_rel': self.basename})
-        return common.format_json(data)
+        return format_json(data)
     
     def post_json(self, public=False):
         # NOTE: this is same basic code as docstore.index
