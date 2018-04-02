@@ -371,7 +371,7 @@ class Entity(common.DDRObject):
         
         self.children(force_read=True)
         self.write_json()
-        self.write_mets()
+        self.write_xml()
         updated_files = [
             self.json_path,
             self.mets_path,
@@ -585,7 +585,7 @@ class Entity(common.DDRObject):
     def write_xml(self):
         """Write METS XML file to disk.
         """
-        fileio.write_text(self.dump_mets(), self.mets_path)
+        fileio.write_text(self.dump_xml(), self.mets_path)
     
     # specific to Entity
     

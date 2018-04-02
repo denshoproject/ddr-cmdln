@@ -223,7 +223,7 @@ class Collection(common.DDRObject):
         self.set_repo_description()
         
         self.write_json()
-        self.write_ead()
+        self.write_xml()
         updated_files = [self.json_path, self.ead_path,]
         
         # if inheritable fields selected, propagate changes to child objects
@@ -426,7 +426,7 @@ class Collection(common.DDRObject):
     def write_xml(self):
         """Write EAD XML file to disk.
         """
-        fileio.write_text(self.dump_ead(), self.ead_path)
+        fileio.write_text(self.dump_xml(), self.ead_path)
     
     # specific to Collection
     
