@@ -355,7 +355,7 @@ class File(common.DDRObject):
     def post_json(self, public=False):
         # NOTE: this is same basic code as docstore.index
         return docstore.Docstore().post(
-            common.load_json_lite(self.json_path, self.identifier.model, self.id),
+            self,
             docstore._public_fields().get(self.identifier.model, []),
             {
                 'parent_id': self.parent_id,
