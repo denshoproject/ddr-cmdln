@@ -398,18 +398,18 @@ class File(common.DDRObject):
         )
         return modified
     
-    def dump_csv(self, headers=[]):
+    def dump_csv(self, fields=[]):
         """Dump File data to list of values suitable for CSV.
         
         @returns: list of values
         """
         # make sure we export 'id' if it's not in model FIELDS (ahem, files)
-        if 'id' not in headers:
-            headers.insert(0, 'id')
+        if 'id' not in fields:
+            fields.insert(0, 'id')
         module = modules.Module(self.identifier.fields_module())
         if self.basename and not self.mimetype:
             self.mimetype = self.get_mimetype(force=True)
-        return common.prep_csv(self, module, headers=headers)
+        return common.prep_csv(self, module, fields=fields)
     
     # specific to File
     

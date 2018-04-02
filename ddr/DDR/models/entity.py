@@ -557,13 +557,13 @@ class Entity(common.DDRObject):
         self.rm_file_duplicates()
         return modified
 
-    def dump_csv(self, headers=[]):
+    def dump_csv(self, fields=[]):
         """Dump Entity data to CSV-formatted text.
         
         @returns: JSON-formatted text
         """
         module = modules.Module(self.identifier.fields_module())
-        return common.prep_csv(self, module, headers=headers)
+        return common.prep_csv(self, module, fields=fields)
     
     
     def control( self ):
