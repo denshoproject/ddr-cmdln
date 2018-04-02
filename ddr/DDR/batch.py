@@ -669,7 +669,9 @@ class Importer():
     @staticmethod
     def _rowd_is_external(rowd):
         """indicates whether or not rowd represents an external file."""
-        if int(rowd.get('external', 0)):
+        if rowd.get('external') and isinstance(rowd['external'], basestring) and rowd['external'].isdigit():
+            rowd['external'] = int(rowd['external'])
+        if rowd.get('external', 0):
             return True
         return False
     
