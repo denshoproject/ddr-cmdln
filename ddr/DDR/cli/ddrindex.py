@@ -225,9 +225,14 @@ def alias(hosts, index, alias, delete):
 @click.option('--index','-i',
               default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
               help='Elasticsearch index.')
-def mappings(hosts, index):
-    """Push mappings to the specified index.
+@click.option('--debug', '-d', is_flag=True, help='Display current mappings.')
+def mappings(hosts, index, debug):
+    """Push mappings to the specified index or display.
     """
+    if debug:
+        data = docstore.Docstore(hosts, index).get_mappings(raw=1)
+        text = json.dumps(data)
+        click.echo(text)
     docstore.Docstore(hosts, index).init_mappings()
 
 
