@@ -307,6 +307,36 @@ def publish(hosts, index, recurse, force, path):
               default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
               help='Elasticsearch index.')
 @click.argument('path')
+def repo(hosts, index, path):
+    """Post the repository record to Elasticsearch
+    """
+    status = docstore.Docstore(hosts, index).repo(path)
+    click.echo(status)
+
+
+@ddrindex.command()
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
+@click.argument('path')
+def org(hosts, index, path):
+    """Post the organization record to Elasticsearch
+    """
+    status = docstore.Docstore(hosts, index).org(path)
+    click.echo(status)
+
+
+@ddrindex.command()
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
+@click.argument('path')
 def narrators(hosts, index, path):
     """Post the DDR narrators file to Elasticsearch
     """
