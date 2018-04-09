@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import mimetypes
 mimetypes.init()
 import os
@@ -11,7 +12,7 @@ from DDR import config
 from DDR import docstore
 from DDR import fileio
 from DDR import format_json
-from DDR.identifier import Identifier
+from DDR.identifier import Identifier, ID_COMPONENTS
 from DDR import inheritance
 from DDR.models import common
 from DDR import modules

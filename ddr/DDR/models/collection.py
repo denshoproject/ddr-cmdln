@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import logging
 logger = logging.getLogger(__name__)
 import os
@@ -13,7 +14,7 @@ from DDR import docstore
 from DDR import dvcs
 from DDR import fileio
 from DDR import format_json
-from DDR.identifier import Identifier
+from DDR.identifier import Identifier, ID_COMPONENTS
 from DDR import inheritance
 from DDR import locking
 from DDR.models import common

@@ -1070,6 +1070,9 @@ class Identifier(object):
         """The object identified by the Identifier.
         """
         return self.object_class(mappings).from_identifier(self)
+
+    def organization_id(self):
+        return format_id(self, 'organization')
     
     def collection_id(self):
         """ID of the collection to which the Identifier belongs, if any.

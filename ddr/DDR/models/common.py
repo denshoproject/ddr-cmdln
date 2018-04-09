@@ -1,13 +1,18 @@
+from collections import OrderedDict
+from copy import deepcopy
 from datetime import datetime
 import os
 
+import elasticsearch_dsl as dsl
 import simplejson as json
 
 from DDR import VERSION
 from DDR import config
+from DDR import docstore
 from DDR import dvcs
 from DDR import fileio
-from DDR.identifier import Identifier
+from DDR.identifier import Identifier, ID_COMPONENTS, MODELS_IDPARTS
+from DDR.identifier import ELASTICSEARCH_CLASSES_BY_MODEL
 from DDR import inheritance
 from DDR import locking
 from DDR import modules
@@ -132,6 +137,86 @@ class DDRObject(object):
 
     #load_json
     #dump_json
+    
+    def to_esobject(self, public_fields=[], public=True):
+        """Returns an Elasticsearch DSL version of the object
+        
+        @param public_fields: list
+        @param public: boolean
+        @returns: subclass of repo_models.elastic.ESObject
+        """
+        # instantiate appropriate subclass of ESObject / DocType
+        # TODO Devil's advocate: why are we doing this? We already have the object.
+        ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[self.identifier.model]
+        fields_module = self.identifier.fields_module()
+        signature_img = os.path.join(
+            self.identifier.collection_id(),
+            access_filename(self.signature_id),
+        )
+        
+        d = ES_Class()
+        d.meta.id = self.identifier.id
+        d.id = self.identifier.id
+        d.model = self.identifier.model
+        if self.identifier.collection_id() != self.identifier.id:
+            # we don't want file-role (a stub) as parent
+            d.parent_id = self.identifier.parent_id(stubs=0)
+        else:
+            # but we do want repository,organization (both stubs)
+            d.parent_id = self.identifier.parent_id(stubs=1)
+        d.organization_id = self.identifier.organization_id()
+        d.collection_id = self.identifier.collection_id()
+        d.signature_id = self.signature_id
+        # ID components (repo, org, cid, ...) as separate fields
+        idparts = deepcopy(self.identifier.idparts)
+        idparts.pop('model')
+        for k in ID_COMPONENTS:
+            setattr(d, k, '') # ensure all fields present
+        for k,v in idparts.iteritems():
+            setattr(d, k, v)
+        # links
+        d.links_html = self.identifier.id
+        d.links_json = self.identifier.id
+        d.links_img = signature_img
+        d.links_thumb = signature_img
+        d.links_parent = self.identifier.parent_id(stubs=True)
+        d.links_children = self.identifier.id
+        # title,description
+        if hasattr(self, 'title'): d.title = self.title
+        else: d.title = self.label
+        if hasattr(self, 'description'): d.description = self.description
+        else: d.description = ''
+        # breadcrumbs
+        d.lineage = [
+            {
+                'id': i.id,
+                'model': i.model,
+                'idpart': str(MODELS_IDPARTS[i.model][-1][-1]),
+                'label': str(i.idparts[
+                    MODELS_IDPARTS[i.model][-1][-1]
+                ]),
+            }
+            for i in self.identifier.lineage(stubs=0)
+        ]
+        # module-specific fields
+        for fieldname in docstore.doctype_fields(ES_Class):
+            # hide non-public fields if this is public
+            if public and (fieldname not in public_fields):
+                continue
+            # complex fields use repo_models.MODEL.index_FIELD if present
+            if hasattr(fields_module, 'index_%s' % fieldname):
+                field_data = modules.Module(fields_module).function(
+                    'index_%s' % fieldname,
+                    getattr(self, fieldname),
+                )
+            else:
+                try:
+                    field_data = getattr(self, fieldname)
+                except AttributeError as err:
+                    field_data = None
+            if field_data:
+                setattr(d, fieldname, field_data)
+        return d
     
     def write_json(self, obj_metadata={}):
         """Write Collection/Entity JSON file to disk.
@@ -592,3 +677,11 @@ def signature_abs(obj, basepath):
         if oi and oi.model == 'file':
             return oi.path_abs('access')
     return None
+
+def access_filename(file_id):
+    """
+    TODO This is probably redundant. D-R-Y!
+    """
+    if file_id:
+        return '%s-a.jpg' % file_id
+    return file_id
