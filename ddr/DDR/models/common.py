@@ -229,6 +229,13 @@ class DDRObject(object):
                     field_data = None
             if field_data:
                 setattr(d, fieldname, field_data)
+        # "special" fields
+        # narrator_id
+        # TODO find a way to search on creators.id
+        if (self.identifier.model in ['entity','segment']):
+            for c in self.creators:
+                if (c['role'] == 'narrator') and hasattr(c, 'id'):
+                    d.narrator_id = c['id']
         return d
     
     def write_json(self, obj_metadata={}):
