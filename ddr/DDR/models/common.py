@@ -149,10 +149,23 @@ class DDRObject(object):
         # TODO Devil's advocate: why are we doing this? We already have the object.
         ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[self.identifier.model]
         fields_module = self.identifier.fields_module()
-        signature_img = os.path.join(
-            self.identifier.collection_id(),
-            access_filename(self.signature_id),
-        )
+        
+        img_path = ''
+        if hasattr(self, 'mimetype') and (self.mimetype == 'text/html'):  # TODO knows too much!!!
+            img_path = os.path.join(
+                self.identifier.collection_id(),
+                '%s.htm' % self.id,
+            )
+        elif hasattr(self, 'access_rel'):
+            img_path = os.path.join(
+                self.identifier.collection_id(),
+                os.path.basename(self.access_rel),
+            )
+        elif self.signature_id:
+            img_path = os.path.join(
+                self.identifier.collection_id(),
+                access_filename(self.signature_id),
+            )
         
         d = ES_Class()
         d.meta.id = self.identifier.id
@@ -177,10 +190,10 @@ class DDRObject(object):
         # links
         d.links_html = self.identifier.id
         d.links_json = self.identifier.id
-        d.links_img = signature_img
-        d.links_thumb = signature_img
         d.links_parent = self.identifier.parent_id(stubs=True)
         d.links_children = self.identifier.id
+        d.links_img = img_path
+        d.links_thumb = img_path
         # title,description
         if hasattr(self, 'title'): d.title = self.title
         else: d.title = self.label
