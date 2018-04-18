@@ -400,23 +400,34 @@ class Docstore():
         # push facet data
         statuses = []
         for v in vocabs.keys():
+            fid = vocabs[v]['id']
             facet = Facet()
-            facet.meta.id = vocabs[v]['id']
-            id = vocabs[v]['id']
-            title = vocabs[v]['title']
-            description = vocabs[v]['description']
+            facet.meta.id = fid
+            facet.id = fid
+            facet.model = 'facet'
+            facet.links_html = fid
+            facet.links_json = fid
+            facet.links_children = fid
+            facet.title = vocabs[v]['title']
+            facet.description = vocabs[v]['description']
             logging.debug(facet)
             status = facet.save(using=self.es, index=self.indexname)
             statuses.append(status)
             
             for t in vocabs[v]['terms']:
-                term = FacetTerm()
-                term_id = '-'.join([
-                    str(facet.meta.id),
-                    str(t.pop('id')),
+                tid = t.pop('id')
+                facetterm_id = '-'.join([
+                    str(fid),
+                    str(tid),
                 ])
-                term.meta.id = term_id
-                term.id = term_id
+                term = FacetTerm()
+                term.meta.id = facetterm_id
+                term.id = facetterm_id
+                term.facet = fid
+                term.term_id = tid
+                term.links_html = facetterm_id
+                term.links_json = facetterm_id
+                # TODO doesn't handle location_geopoint
                 for field in FacetTerm._doc_type.mapping.to_dict()[
                         FacetTerm._doc_type.name]['properties'].keys():
                     if t.get(field):
