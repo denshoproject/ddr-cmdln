@@ -212,6 +212,9 @@ class DDRObject(object):
             for i in self.identifier.lineage(stubs=0)
         ]
         # module-specific fields
+        if hasattr(ES_Class, 'list_fields'):
+            setattr(d, '_fields', ES_Class.list_fields())
+        # module-specific fields
         for fieldname in docstore.doctype_fields(ES_Class):
             # hide non-public fields if this is public
             if public and (fieldname not in public_fields):
