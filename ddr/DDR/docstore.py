@@ -435,7 +435,17 @@ class Docstore():
                 logging.debug(term)
                 status = term.save(using=self.es, index=self.indexname)
                 statuses.append(status)
-                
+
+        forms_choices = {
+            'topics-choices': vocab.topics_choices(
+                config.VOCABS_PATH,
+                ELASTICSEARCH_CLASSES_BY_MODEL['facetterm']
+            ),
+            'facility-choices': vocab.facility_choices(
+                config.VOCABS_PATH,
+            ),
+        }
+        self.post_json('forms', 'forms-choices', forms_choices)
         return statuses
     
     def facet_terms(self, facet, order='term', all_terms=True, model=None):
