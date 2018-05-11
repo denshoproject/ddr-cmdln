@@ -233,12 +233,16 @@ class DDRObject(object):
             if field_data:
                 setattr(d, fieldname, field_data)
         # "special" fields
-        # narrator_id
-        # TODO find a way to search on creators.id
         if (self.identifier.model in ['entity','segment']):
+            # TODO find a way to search on creators.id
+            # narrator_id
             for c in self.creators:
                 if (c['role'] == 'narrator') and hasattr(c, 'id'):
                     d.narrator_id = c['id']
+            # topics & facility are too hard to search as nested objects
+            # so attach extra 'topics_id' and 'facility_id' fields
+            d.topics_id = [item['id'] for item in self.topics]
+            d.facility_id = [item['id'] for item in self.facility]
         return d
     
     def write_json(self, obj_metadata={}):
