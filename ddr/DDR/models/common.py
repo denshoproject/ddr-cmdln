@@ -167,6 +167,13 @@ class DDRObject(object):
                 access_filename(self.signature_id),
             )
         
+        download_path = ''
+        if (self.identifier.model in ['file']):
+            download_path = os.path.join(
+                self.identifier.collection_id(),
+                '%s%s' % (self.id, self.ext),
+            )
+        
         d = ES_Class()
         d.meta.id = self.identifier.id
         d.id = self.identifier.id
@@ -243,6 +250,9 @@ class DDRObject(object):
             # so attach extra 'topics_id' and 'facility_id' fields
             d.topics_id = [item['id'] for item in self.topics]
             d.facility_id = [item['id'] for item in self.facility]
+        elif (self.identifier.model in ['file']):
+            if download_path:
+                d.links_download = download_path
         return d
     
     def write_json(self, obj_metadata={}):
