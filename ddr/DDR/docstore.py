@@ -699,7 +699,12 @@ class Docstore():
                 path['note'] = 'No identifier'
                 bad_paths.append(path)
                 continue
-            document = oi.object()
+            try:
+                document = oi.object()
+            except Exception as err:
+                path['note'] = 'Could not instantiate: %s' % err
+                bad_paths.append(path)
+                continue
             if not document:
                 path['note'] = 'No document'
                 bad_paths.append(path)
