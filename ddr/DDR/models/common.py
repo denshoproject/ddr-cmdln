@@ -149,6 +149,12 @@ class DDRObject(object):
         # TODO Devil's advocate: why are we doing this? We already have the object.
         ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[self.identifier.model]
         fields_module = self.identifier.fields_module()
+        if not public_fields:
+            public_fields = [
+                f['name']
+                for f in fields_module.FIELDS
+                if f['elasticsearch']['public']
+            ]
         
         img_path = ''
         if hasattr(self, 'mimetype') and (self.mimetype == 'text/html'):  # TODO knows too much!!!
