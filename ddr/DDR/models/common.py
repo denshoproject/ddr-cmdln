@@ -250,8 +250,10 @@ class DDRObject(object):
             # TODO find a way to search on creators.id
             # narrator_id
             for c in self.creators:
-                if (c['role'] == 'narrator') and hasattr(c, 'id'):
+                try:
                     d.narrator_id = c['id']
+                except:
+                    pass
             # topics & facility are too hard to search as nested objects
             # so attach extra 'topics_id' and 'facility_id' fields
             d.topics_id = [item['id'] for item in self.topics]
