@@ -395,9 +395,23 @@ class Collection(common.DDRObject):
             }
         )
     
+    def reindex(self):
+        """Reindex Collection objects to Elasticsearch
+        """
+        ds = docstore.Docstore(config.DOCSTORE_HOST, config.DOCSTORE_INDEX)
+        # check for ES connection before going to all the trouble
+        health = ds.health()
+        index_exists = ds.index_exists(config.DOCSTORE_INDEX)
+        if not index_exists:
+            return {
+                'error':'Missing Elasticsearch index "%s"' % config.DOCSTORE_INDEX
+            }
+        return ds.post_multi(
+            self.identifier.path_abs(), recursive=True, force=True
+        )
+    
     # load_csv
     # dump_csv
-    
     
     def control( self ):
         """Gets Collection control file
