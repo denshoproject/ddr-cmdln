@@ -12,7 +12,7 @@ from DDR import util
 
 @click.command()
 @click.argument('collection_path')
-def ddrcheck(help, collection_path):
+def ddrcheck(collection_path):
     print('Gathering files in %s' % collection_path)
     paths = util.find_meta_files(
         collection_path, recursive=1,

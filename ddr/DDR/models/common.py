@@ -1,13 +1,18 @@
+from collections import OrderedDict
+from copy import deepcopy
 from datetime import datetime
 import os
 
+import elasticsearch_dsl as dsl
 import simplejson as json
 
 from DDR import VERSION
 from DDR import config
+from DDR import docstore
 from DDR import dvcs
 from DDR import fileio
-from DDR.identifier import Identifier
+from DDR.identifier import Identifier, ID_COMPONENTS, MODELS_IDPARTS
+from DDR.identifier import ELASTICSEARCH_CLASSES_BY_MODEL
 from DDR import inheritance
 from DDR import locking
 from DDR import modules
@@ -132,6 +137,131 @@ class DDRObject(object):
 
     #load_json
     #dump_json
+    
+    def to_esobject(self, public_fields=[], public=True):
+        """Returns an Elasticsearch DSL version of the object
+        
+        @param public_fields: list
+        @param public: boolean
+        @returns: subclass of repo_models.elastic.ESObject
+        """
+        # instantiate appropriate subclass of ESObject / DocType
+        # TODO Devil's advocate: why are we doing this? We already have the object.
+        ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[self.identifier.model]
+        fields_module = self.identifier.fields_module()
+        if not public_fields:
+            public_fields = [
+                f['name']
+                for f in fields_module.FIELDS
+                if f['elasticsearch']['public']
+            ]
+        
+        img_path = ''
+        if hasattr(self, 'mimetype') and (self.mimetype == 'text/html'):  # TODO knows too much!!!
+            img_path = os.path.join(
+                self.identifier.collection_id(),
+                '%s.htm' % self.id,
+            )
+        elif hasattr(self, 'access_rel'):
+            img_path = os.path.join(
+                self.identifier.collection_id(),
+                os.path.basename(self.access_rel),
+            )
+        elif self.signature_id:
+            img_path = os.path.join(
+                self.identifier.collection_id(),
+                access_filename(self.signature_id),
+            )
+        
+        download_path = ''
+        if (self.identifier.model in ['file']):
+            download_path = os.path.join(
+                self.identifier.collection_id(),
+                '%s%s' % (self.id, self.ext),
+            )
+        
+        d = ES_Class()
+        d.meta.id = self.identifier.id
+        d.id = self.identifier.id
+        d.model = self.identifier.model
+        if self.identifier.collection_id() != self.identifier.id:
+            # we don't want file-role (a stub) as parent
+            d.parent_id = self.identifier.parent_id(stubs=0)
+        else:
+            # but we do want repository,organization (both stubs)
+            d.parent_id = self.identifier.parent_id(stubs=1)
+        d.organization_id = self.identifier.organization_id()
+        d.collection_id = self.identifier.collection_id()
+        d.signature_id = self.signature_id
+        # ID components (repo, org, cid, ...) as separate fields
+        idparts = deepcopy(self.identifier.idparts)
+        idparts.pop('model')
+        for k in ID_COMPONENTS:
+            setattr(d, k, '') # ensure all fields present
+        for k,v in idparts.iteritems():
+            setattr(d, k, v)
+        # links
+        d.links_html = self.identifier.id
+        d.links_json = self.identifier.id
+        d.links_parent = self.identifier.parent_id(stubs=True)
+        d.links_children = self.identifier.id
+        d.links_img = img_path
+        d.links_thumb = img_path
+        # title,description
+        if hasattr(self, 'title'): d.title = self.title
+        else: d.title = self.label
+        if hasattr(self, 'description'): d.description = self.description
+        else: d.description = ''
+        # breadcrumbs
+        d.lineage = [
+            {
+                'id': i.id,
+                'model': i.model,
+                'idpart': str(MODELS_IDPARTS[i.model][-1][-1]),
+                'label': str(i.idparts[
+                    MODELS_IDPARTS[i.model][-1][-1]
+                ]),
+            }
+            for i in self.identifier.lineage(stubs=0)
+        ]
+        # module-specific fields
+        if hasattr(ES_Class, 'list_fields'):
+            setattr(d, '_fields', ES_Class.list_fields())
+        # module-specific fields
+        for fieldname in docstore.doctype_fields(ES_Class):
+            # hide non-public fields if this is public
+            if public and (fieldname not in public_fields):
+                continue
+            # complex fields use repo_models.MODEL.index_FIELD if present
+            if hasattr(fields_module, 'index_%s' % fieldname):
+                field_data = modules.Module(fields_module).function(
+                    'index_%s' % fieldname,
+                    getattr(self, fieldname),
+                )
+            else:
+                try:
+                    field_data = getattr(self, fieldname)
+                except AttributeError as err:
+                    field_data = None
+            if field_data:
+                setattr(d, fieldname, field_data)
+        # "special" fields
+        if (self.identifier.model in ['entity','segment']):
+            # TODO find a way to search on creators.id
+            # narrator_id
+            for c in self.creators:
+                try:
+                    d.narrator_id = c['id']
+                except:
+                    pass
+            # topics & facility are too hard to search as nested objects
+            # so attach extra 'topics_id' and 'facility_id' fields
+            d.topics_id = [item['id'] for item in self.topics]
+            d.facility_id = [item['id'] for item in self.facility]
+        elif (self.identifier.model in ['file']):
+            if download_path:
+                d.links_download = download_path
+        return d
     
     def write_json(self, obj_metadata={}):
         """Write Collection/Entity JSON file to disk.
@@ -592,3 +722,11 @@ def signature_abs(obj, basepath):
         if oi and oi.model == 'file':
             return oi.path_abs('access')
     return None
+
+def access_filename(file_id):
+    """
+    TODO This is probably redundant. D-R-Y!
+    """
+    if file_id:
+        return '%s-a.jpg' % file_id
+    return file_id

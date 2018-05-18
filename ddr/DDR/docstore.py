@@ -41,6 +41,8 @@ d.publish(PATH, recursive=True, public=True )
 ------------------------------------------------------------------------
 """
 from __future__ import print_function
+from collections import OrderedDict
+from copy import deepcopy
 from datetime import datetime
 import logging
 logger = logging.getLogger(__name__)
@@ -52,9 +54,12 @@ import simplejson as json
 
 from DDR import config
 from DDR import converters
-from DDR.identifier import Identifier, MODULES, InvalidInputException
+from DDR.identifier import Identifier
 from DDR.identifier import ELASTICSEARCH_CLASSES
 from DDR.identifier import ELASTICSEARCH_CLASSES_BY_MODEL
+from DDR.identifier import ID_COMPONENTS, InvalidInputException
+from DDR.identifier import MODEL_REPO_MODELS
+from DDR.identifier import MODULES, module_for_name
 from DDR import modules
 from DDR import util
 from DDR import vocab
@@ -289,6 +294,7 @@ class Docstore():
         status = self.es.indices.create(index=index, body=body)
         logger.debug(status)
         statuses = self.init_mappings()
+        self.model_fields_lists()
         logger.debug('DONE')
      
     def delete_index(self, index=None):
@@ -310,16 +316,50 @@ class Docstore():
         """Initializes mappings for Elasticsearch objects
         
         Mappings for objects in (ddr-defs)repo_models.elastic.ELASTICSEARCH_CLASSES
-        
+                
         @returns: JSON dict with status code and response
         """
         logger.debug('registering doc types')
         statuses = []
         for class_ in ELASTICSEARCH_CLASSES['all']:
             logger.debug('- %s' % class_['doctype'])
+            print('- %s' % class_)
             status = class_['class'].init(index=self.indexname, using=self.es)
             statuses.append( {'doctype':class_['doctype'], 'status':status} )
         return statuses
+
+    def model_fields_lists(self):
+        """
+        Lists of class-specific fields for each class, in order,
+        so documents may be emitted as OrderedDicts with fields in order.
+        HOSTS:PORT/INDEX/modelfields/collection/
+        HOSTS:PORT/INDEX/modelfields/entity/
+        HOSTS:PORT/INDEX/modelfields/segment/
+        HOSTS:PORT/INDEX/modelfields/file/
+        
+        identifier.MODEL_REPO_MODELS
+        Identifier.fields_module
+        """
+        DOCTYPE = 'esobjectfields'
+        EXCLUDED = [
+            'id', 'title', 'description',
+        ]
+        for model in MODEL_REPO_MODELS.keys():
+            module = module_for_name(MODEL_REPO_MODELS[model]['module']
+            )
+            fields = [
+                f['name'] for f in module.FIELDS
+                if f['elasticsearch']['public'] and (f['name'] not in EXCLUDED)
+            ]
+            data = {
+                'model': model,
+                'fields': fields,
+            }
+            self.post_json(
+                doc_type=DOCTYPE,
+                document_id=model,
+                json_text=json.dumps(data),
+            )
     
     def get_mappings(self, raw=False):
         """Get mappings for ESObjects
@@ -360,23 +400,34 @@ class Docstore():
         # push facet data
         statuses = []
         for v in vocabs.keys():
+            fid = vocabs[v]['id']
             facet = Facet()
-            facet.meta.id = vocabs[v]['id']
-            id = vocabs[v]['id']
-            title = vocabs[v]['title']
-            description = vocabs[v]['description']
+            facet.meta.id = fid
+            facet.id = fid
+            facet.model = 'facet'
+            facet.links_html = fid
+            facet.links_json = fid
+            facet.links_children = fid
+            facet.title = vocabs[v]['title']
+            facet.description = vocabs[v]['description']
             logging.debug(facet)
             status = facet.save(using=self.es, index=self.indexname)
             statuses.append(status)
             
             for t in vocabs[v]['terms']:
-                term = FacetTerm()
-                term_id = '-'.join([
-                    str(facet.meta.id),
-                    str(t.pop('id')),
+                tid = t.pop('id')
+                facetterm_id = '-'.join([
+                    str(fid),
+                    str(tid),
                 ])
-                term.meta.id = term_id
-                term.id = term_id
+                term = FacetTerm()
+                term.meta.id = facetterm_id
+                term.id = facetterm_id
+                term.facet = fid
+                term.term_id = tid
+                term.links_html = facetterm_id
+                term.links_json = facetterm_id
+                # TODO doesn't handle location_geopoint
                 for field in FacetTerm._doc_type.mapping.to_dict()[
                         FacetTerm._doc_type.name]['properties'].keys():
                     if t.get(field):
@@ -384,7 +435,17 @@ class Docstore():
                 logging.debug(term)
                 status = term.save(using=self.es, index=self.indexname)
                 statuses.append(status)
-                
+
+        forms_choices = {
+            'topics-choices': vocab.topics_choices(
+                config.VOCABS_PATH,
+                ELASTICSEARCH_CLASSES_BY_MODEL['facetterm']
+            ),
+            'facility-choices': vocab.facility_choices(
+                config.VOCABS_PATH,
+            ),
+        }
+        self.post_json('forms', 'forms-choices', forms_choices)
         return statuses
     
     def facet_terms(self, facet, order='term', all_terms=True, model=None):
@@ -445,25 +506,45 @@ class Docstore():
         return results['facets']['results']
 
     def _repo_org(self, path, doctype, remove=False):
+        """
+        seealso DDR.models.common.DDRObject.to_esobject
+        """
         # get and validate file
         with open(path, 'r') as f:
-            json_text = f.read()
-        data = json.loads(json_text)
+            data = json.loads(f.read())
         if (not (data.get('id') and data.get('repo'))):
             raise Exception('Data file is not well-formed.')
-        document_id = data['id']
-        # Add parts of id (e.g. repo, org, cid) to document as separate fields.
-        for key in ['repo', 'org', 'cid', 'eid', 'sid', 'role', 'sha1']:
-            if key not in data:
-                data[key] = ''
+        oi = Identifier(id=data['id'])
+        d = OrderedDict()
+        d['id'] = oi.id
+        d['model'] = oi.model
+        d['parent_id'] = oi.parent_id(stubs=1)
+        # links
+        d['links_html'] = oi.id
+        d['links_json'] = oi.id
+        d['links_img'] = '%s/logo.png' % oi.id
+        d['links_thumb'] = '%s/logo.png' % oi.id
+        d['links_parent'] = oi.parent_id(stubs=1)
+        d['links_children'] = oi.id
+        # title,description
+        d['title'] = data['title']
+        d['description'] = data['description']
+        d['url'] = data['url']
+        # ID components (repo, org, cid, ...) as separate fields
+        idparts = deepcopy(oi.idparts)
+        idparts.pop('model')
+        for k in ID_COMPONENTS:
+            d[k] = '' # ensure all fields present
+        for k,v in idparts.iteritems():
+            d[k] = v
         # add/update
-        if remove and self.exists(doctype, document_id):
+        if remove and self.exists(doctype, oi):
             results = self.es.delete(
-                index=self.indexname, doc_type=doctype, id=document_id
+                index=self.indexname, doc_type=doctype, id=oi.id
             )
         else:
             results = self.es.index(
-                index=self.indexname, doc_type=doctype, id=document_id, body=data
+                index=self.indexname, doc_type=doctype, id=oi.id, body=d
             )
         return results
     
@@ -551,50 +632,16 @@ class Docstore():
 
         if force:
             publishable = True
+            public = False
         else:
             if not parents:
                 parents = _parents_status([document.identifier.path_abs()])
             publishable = _publishable([document.identifier.path_abs()], parents)
+            public = True
         if not publishable:
             return {'status':403, 'response':'object not publishable'}
 
-        # instantiate appropriate subclass of ESObject / DocType
-        # TODO Devil's advocate: why are we doing this? We already have the object.
-        ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[document.identifier.model]
-        d = ES_Class()
-        fields_module = document.identifier.fields_module()
-        d.meta.id = document.identifier.id
-        for fieldname in doctype_fields(ES_Class):
-            
-            # index_* for complex fields
-            if hasattr(fields_module, 'index_%s' % fieldname):
-                field_data = modules.Module(fields_module).function(
-                    'index_%s' % fieldname,
-                    getattr(document, fieldname),
-                )
-            
-            # everything else
-            else:
-                try:
-                    field_data = getattr(document, fieldname)
-                except AttributeError as err:
-                    field_data = None
-            
-            if field_data:
-                setattr(d, fieldname, field_data)
-        
-        # Add parts of id (e.g. repo, org, cid) to document as separate fields.
-        for key in ['repo', 'org', 'cid', 'eid', 'sid', 'role', 'sha1']:
-            setattr(d, key, document.identifier.parts.get(key, ''))
-        
-        d.collection_id = document.identifier.collection_id()
-        if d.collection_id and (d.collection_id != document.identifier.id):
-            # we don't want file-role (a stub) as parent
-            d.parent_id = document.identifier.parent_id(stubs=0)
-        else:
-            # but we do want repository,organization (both stubs)
-            d.parent_id = document.identifier.parent_id(stubs=1)
-        
+        d = document.to_esobject(public_fields=public_fields, public=public)
         logger.debug('saving')
         status = d.save(using=self.es, index=self.indexname)
         logger.debug(str(status))
@@ -652,7 +699,12 @@ class Docstore():
                 path['note'] = 'No identifier'
                 bad_paths.append(path)
                 continue
-            document = oi.object()
+            try:
+                document = oi.object()
+            except Exception as err:
+                path['note'] = 'Could not instantiate: %s' % err
+                bad_paths.append(path)
+                continue
             if not document:
                 path['note'] = 'No document'
                 bad_paths.append(path)

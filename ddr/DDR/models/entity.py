@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from copy import deepcopy
 from datetime import datetime
 import logging
@@ -13,7 +14,7 @@ from DDR.control import EntityControlFile
 from DDR import docstore
 from DDR import fileio
 from DDR import format_json
-from DDR.identifier import Identifier, MODULES, VALID_COMPONENTS
+from DDR.identifier import Identifier, ID_COMPONENTS, MODULES, VALID_COMPONENTS
 from DDR import ingest
 from DDR import inheritance
 from DDR import locking
