@@ -174,7 +174,7 @@ class File(common.DDRObject):
         if exit:
             raise Exception('Could not create new Entity: %s, %s' % (exit, status))
         # load Entity object, inherit values from parent, write back to file
-        entity = Entity.from_identifier(identifier)
+        entity = Identifier(identifier).object()
         entity.inherit(collection)
         entity.write_json()
         updated_files = [entity.json_path]
@@ -215,8 +215,8 @@ class File(common.DDRObject):
         updated_files = [
             self.json_path,
         ]
-        
-        if parent and isinstance(parent, Entity):
+
+        if parent and (parent.identifier.model in ['entity','segment']):
             # update parent .children and .file_groups
             parent.children(force_read=True)
             parent.write_json()
@@ -303,7 +303,7 @@ class File(common.DDRObject):
     
     def parent( self ):
         i = Identifier(id=self.parent_id, base_path=self.identifier.basepath)
-        return Entity.from_identifier(i)
+        return i.object()
 
     def children( self, quick=None ):
         return []
