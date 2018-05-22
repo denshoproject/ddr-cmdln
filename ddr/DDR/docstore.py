@@ -718,7 +718,8 @@ class Docstore():
             
             # post document
             if path['action'] == 'POST':
-                created = self.post(document, parents=parents, force=force)
+                created = self.post(document, parents=parents, force=True)
+                # force=True bypasses _publishable in post() function
             # delete previously published items now marked incomplete/private
             elif existing_v and (path['action'] == 'SKIP'):
                 print('%s | %s/%s DELETE' % (datetime.now(config.TZ), n+1, num))
