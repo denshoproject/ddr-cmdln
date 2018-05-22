@@ -1264,8 +1264,6 @@ def _publishable(paths, parents, force=False):
             path_dicts.append(d)
             continue
         
-        # see if item incomplete or nonpublic
-        
         # see if item's parents are incomplete or nonpublic
         # TODO Bad! Bad! Generalize this...
         UNPUBLISHABLE = []
@@ -1278,6 +1276,28 @@ def _publishable(paths, parents, force=False):
         if UNPUBLISHABLE:
             d['action'] = 'SKIP'
             d['note'] = 'parent unpublishable'
+            path_dicts.append(d)
+            continue
+        
+        # see if item itself is incomplete or nonpublic
+        # TODO knows way too much about JSON data format
+        public = None; status = None
+        with open(path, 'r') as f:
+            document = json.loads(f.read())
+            for field in document:
+                for k,v in field.iteritems():
+                    if k == 'public':
+                        public = v
+                    if k == 'status':
+                        status = v
+        if public and (public not in PUBLIC_OK):
+            d['action'] = 'SKIP'
+            d['note'] = 'not public'
+            path_dicts.append(d)
+            continue
+        elif status and (status not in STATUS_OK):
+            d['action'] = 'SKIP'
+            d['note'] = 'status'
             path_dicts.append(d)
             continue
         
