@@ -2,6 +2,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from datetime import datetime
 import os
+import re
 
 import elasticsearch_dsl as dsl
 import simplejson as json
@@ -18,6 +19,9 @@ from DDR import locking
 from DDR import modules
 from DDR import util
 
+NARRATOR_IMG_PATTERN = '^narrators/(\w)+$'
+NARRATOR_IMG_REGEX = re.compile(NARRATOR_IMG_PATTERN)
+    
 
 class Path( object ):
     pass
@@ -712,11 +716,19 @@ def from_xml():
 
 def signature_abs(obj, basepath):
     """Absolute path to signature image file, if signature_id present.
+    
+    Expects obj.signature_id to be either a valid file ID
+    or a narrator image (ex. "narrators/NAME", "narrators/NAME_2")
+    
+    @returns: str absolute path to signature img, or None
     """
     if isinstance(obj, dict):
         sid = obj.get('signature_id')
     else:
         sid = getattr(obj, 'signature_id', None)
+    # ignore narrator ID
+    if sid and NARRATOR_IMG_REGEX.match(sid):
+        return None
     if sid:
         oi = Identifier(sid, basepath)
         if oi and oi.model == 'file':
