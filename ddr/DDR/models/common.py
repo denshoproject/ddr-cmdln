@@ -731,7 +731,10 @@ def signature_abs(obj, basepath):
     if sid and INTERVIEW_SIG_REGEX.match(sid):
         return None
     if sid:
-        oi = Identifier(sid, basepath)
+        try:
+            oi = Identifier(sid, basepath)
+        except:
+            oi = None
         if oi and oi.model == 'file':
             return oi.path_abs('access')
     return None
