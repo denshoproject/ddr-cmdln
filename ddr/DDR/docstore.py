@@ -1283,7 +1283,8 @@ def _publishable(paths, parents, force=False):
         # see if item itself is incomplete or nonpublic
         # TODO knows way too much about JSON data format
         public = None; status = None
-        with open(path, 'r') as f:
+        jsonpath = d['identifier'].path_abs('json')
+        with open(jsonpath, 'r') as f:
             document = json.loads(f.read())
             for field in document:
                 for k,v in field.iteritems():
