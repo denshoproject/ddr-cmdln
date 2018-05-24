@@ -19,9 +19,9 @@ from DDR import locking
 from DDR import modules
 from DDR import util
 
-NARRATOR_IMG_PATTERN = '^narrators/(\w)+$'
-NARRATOR_IMG_REGEX = re.compile(NARRATOR_IMG_PATTERN)
-    
+INTERVIEW_SIG_PATTERN = r'^denshovh-[a-z_0-9]{1,}-[0-9]{2,2}$'
+INTERVIEW_SIG_REGEX = re.compile(INTERVIEW_SIG_PATTERN)
+
 
 class Path( object ):
     pass
@@ -718,7 +718,8 @@ def signature_abs(obj, basepath):
     """Absolute path to signature image file, if signature_id present.
     
     Expects obj.signature_id to be either a valid file ID
-    or a narrator image (ex. "narrators/NAME", "narrators/NAME_2")
+    or a special interview signature image
+    (ex. "denshovh-aart-03", "denshovh-hlarry_g-02")
     
     @returns: str absolute path to signature img, or None
     """
@@ -726,8 +727,8 @@ def signature_abs(obj, basepath):
         sid = obj.get('signature_id')
     else:
         sid = getattr(obj, 'signature_id', None)
-    # ignore narrator ID
-    if sid and NARRATOR_IMG_REGEX.match(sid):
+    # ignore interview signature ID
+    if sid and INTERVIEW_SIG_REGEX.match(sid):
         return None
     if sid:
         oi = Identifier(sid, basepath)
