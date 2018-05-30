@@ -22,8 +22,8 @@ Publish vocabularies (used for topics, facility fields)
   $ ddrindex vocabs /opt/ddr-vocab/api/0.2
 
 Post repository and organization:
-  $ ddrindex postjson repository REPO /var/www/media/ddr/REPO/repository.json
-  $ ddrindex postjson organization REPO-ORG /var/www/media/ddr/REPO-ORG/organization.json
+  $ ddrindex repo REPO /var/www/media/ddr/REPO/repository.json
+  $ ddrindex org REPO-ORG /var/www/media/ddr/REPO-ORG/organization.json
 
 Post an object. Optionally, publish its child objects and/or ignore publication status.
   $ ddrindex publish [--recurse] [--force] /var/www/media/ddr/ddr-testing-123
