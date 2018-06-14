@@ -7,7 +7,7 @@
                           # LICENSE      Python3  PyPy
 
 beautifulsoup4==4.5.3     # MIT          y
-click==6.7
+click==6.7                # BSD          y        y
 elasticsearch>=2.0.0,<3.0.0     # Apache y        y
 elasticsearch-dsl>=2.0.0,<3.0.0 # Apache y        y
 envoy==0.0.3              # MIT          y             TODO replace!
