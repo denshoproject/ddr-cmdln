@@ -47,7 +47,11 @@ INSTALL_PATH = CONFIG.get('cmdln','install_path')
 REPO_MODELS_PATH = CONFIG.get('cmdln','repo_models_path')
 if REPO_MODELS_PATH not in sys.path:
     sys.path.append(REPO_MODELS_PATH)
+
 MEDIA_BASE = CONFIG.get('cmdln','media_base')
+# Location of Repository 'ddr' repo, which should contain repo_models
+# for the Repository.
+
 LOG_DIR = CONFIG.get('local', 'log_dir')
 LOG_FILE = CONFIG.get('local','log_file')
 LOG_LEVEL = CONFIG.get('local', 'log_level')
@@ -79,7 +83,14 @@ ELASTICSEARCH_DATETIME_FORMAT  = "%Y-%m-%dT%H:%M:%S"
 
 ACCESS_FILE_APPEND = CONFIG.get('cmdln','access_file_append')
 ACCESS_FILE_EXTENSION = CONFIG.get('cmdln','access_file_extension')
+ACCESS_FILE_SUFFIX = ACCESS_FILE_APPEND + ACCESS_FILE_EXTENSION
 ACCESS_FILE_GEOMETRY = CONFIG.get('cmdln','access_file_geometry')
+ACCESS_FILE_OPTIONS  = CONFIG.get('cmdln','access_file_options')
+
+THUMBNAIL_GEOMETRY   = CONFIG.get('cmdln','thumbnail_geometry')
+THUMBNAIL_COLORSPACE = 'sRGB'
+THUMBNAIL_OPTIONS    = CONFIG.get('cmdln','thumbnail_options')
+
 TEMPLATE_EAD = os.path.join(REPO_MODELS_PATH, 'templates', 'ead.xml')
 TEMPLATE_METS = os.path.join(REPO_MODELS_PATH, 'templates', 'mets.xml')
 TEMPLATE_EAD_JINJA2 = os.path.join(REPO_MODELS_PATH, 'templates', 'ead.xml.j2')
