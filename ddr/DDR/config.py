@@ -19,11 +19,11 @@ class NoConfigError(Exception):
         return repr(self.value)
 
 def read_configs(paths):
-    config = ConfigParser.ConfigParser()
-    configs_read = config.read(paths)
+    cfg = ConfigParser.ConfigParser()
+    configs_read = cfg.read(paths)
     if not configs_read:
         raise NoConfigError('No config file!')
-    return config
+    return cfg
 
 def _parse_alt_timezones(text):
     """Parses contents of [cmdln]alt_timezones
@@ -39,33 +39,33 @@ def _parse_alt_timezones(text):
     return data
 
 
-config = read_configs(CONFIG_FILES)
+CONFIG = read_configs(CONFIG_FILES)
 
-DEBUG = config.get('cmdln', 'debug')
+DEBUG = CONFIG.get('cmdln', 'debug')
 
-INSTALL_PATH = config.get('cmdln','install_path')
-REPO_MODELS_PATH = config.get('cmdln','repo_models_path')
+INSTALL_PATH = CONFIG.get('cmdln','install_path')
+REPO_MODELS_PATH = CONFIG.get('cmdln','repo_models_path')
 if REPO_MODELS_PATH not in sys.path:
     sys.path.append(REPO_MODELS_PATH)
-MEDIA_BASE = config.get('cmdln','media_base')
-LOG_DIR = config.get('local', 'log_dir')
-LOG_FILE = config.get('local','log_file')
-LOG_LEVEL = config.get('local', 'log_level')
+MEDIA_BASE = CONFIG.get('cmdln','media_base')
+LOG_DIR = CONFIG.get('local', 'log_dir')
+LOG_FILE = CONFIG.get('local','log_file')
+LOG_LEVEL = CONFIG.get('local', 'log_level')
 
-UTF8_STRICT = config.getboolean('cmdln','utf8_strict')
+UTF8_STRICT = CONFIG.getboolean('cmdln','utf8_strict')
 
 try:
-    DEFAULT_TIMEZONE = config.get('cmdln','default_timezone')
+    DEFAULT_TIMEZONE = CONFIG.get('cmdln','default_timezone')
 except:
     DEFAULT_TIMEZONE = 'America/Los_Angeles'
 TZ = pytz.timezone(DEFAULT_TIMEZONE)
-ALT_TIMEZONES = _parse_alt_timezones(config.get('cmdln','alt_timezones'))
-DATETIME_FORMAT = config.get('cmdln','datetime_format')
-DATE_FORMAT = config.get('cmdln','date_format')
-TIME_FORMAT = config.get('cmdln','time_format')
-PRETTY_DATETIME_FORMAT = config.get('cmdln','pretty_datetime_format')
-PRETTY_DATE_FORMAT = config.get('cmdln','pretty_date_format')
-PRETTY_TIME_FORMAT = config.get('cmdln','pretty_time_format')
+ALT_TIMEZONES = _parse_alt_timezones(CONFIG.get('cmdln','alt_timezones'))
+DATETIME_FORMAT = CONFIG.get('cmdln','datetime_format')
+DATE_FORMAT = CONFIG.get('cmdln','date_format')
+TIME_FORMAT = CONFIG.get('cmdln','time_format')
+PRETTY_DATETIME_FORMAT = CONFIG.get('cmdln','pretty_datetime_format')
+PRETTY_DATE_FORMAT = CONFIG.get('cmdln','pretty_date_format')
+PRETTY_TIME_FORMAT = CONFIG.get('cmdln','pretty_time_format')
 # Format used in Elasticsearch mapping.json
 # Elasticsearch uses the Joda-Time formatting:
 # http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html
@@ -77,29 +77,29 @@ ELASTICSEARCH_DATETIME_MAPPING = "yyyy-MM-dd'T'HH:mm:ss"
 #ELASTICSEARCH_DATETIME_FORMAT  = "%Y-%m-%dT%H:%M:%S%z"
 ELASTICSEARCH_DATETIME_FORMAT  = "%Y-%m-%dT%H:%M:%S"
 
-ACCESS_FILE_APPEND = config.get('cmdln','access_file_append')
-ACCESS_FILE_EXTENSION = config.get('cmdln','access_file_extension')
-ACCESS_FILE_GEOMETRY = config.get('cmdln','access_file_geometry')
+ACCESS_FILE_APPEND = CONFIG.get('cmdln','access_file_append')
+ACCESS_FILE_EXTENSION = CONFIG.get('cmdln','access_file_extension')
+ACCESS_FILE_GEOMETRY = CONFIG.get('cmdln','access_file_geometry')
 TEMPLATE_EAD = os.path.join(REPO_MODELS_PATH, 'templates', 'ead.xml')
 TEMPLATE_METS = os.path.join(REPO_MODELS_PATH, 'templates', 'mets.xml')
 TEMPLATE_EAD_JINJA2 = os.path.join(REPO_MODELS_PATH, 'templates', 'ead.xml.j2')
 TEMPLATE_METS_JINJA2 = os.path.join(REPO_MODELS_PATH, 'templates', 'mets.xml.j2')
-TEMPLATE_CJSON = config.get('cmdln','template_cjson')
-TEMPLATE_EJSON = config.get('cmdln','template_ejson')
+TEMPLATE_CJSON = CONFIG.get('cmdln','template_cjson')
+TEMPLATE_EJSON = CONFIG.get('cmdln','template_ejson')
 
-CGIT_URL = config.get('workbench','cgit_url')
-GIT_REMOTE_NAME = 'origin'  # config.get('workbench','remote')
-GITOLITE = config.get('workbench','gitolite')
-WORKBENCH_LOGIN_TEST = config.get('workbench','login_test_url')
-WORKBENCH_LOGIN_URL = config.get('workbench','workbench_login_url')
-WORKBENCH_LOGOUT_URL = config.get('workbench','workbench_logout_url')
-WORKBENCH_NEWCOL_URL = config.get('workbench','workbench_newcol_url')
-WORKBENCH_NEWENT_URL = config.get('workbench','workbench_newent_url')
-WORKBENCH_REGISTER_EIDS_URL = config.get('workbench','workbench_register_eids_url')
-WORKBENCH_URL = config.get('workbench','workbench_url')
-WORKBENCH_USERINFO = config.get('workbench','workbench_userinfo_url')
+CGIT_URL = CONFIG.get('workbench','cgit_url')
+GIT_REMOTE_NAME = 'origin'  # CONFIG.get('workbench','remote')
+GITOLITE = CONFIG.get('workbench','gitolite')
+WORKBENCH_LOGIN_TEST = CONFIG.get('workbench','login_test_url')
+WORKBENCH_LOGIN_URL = CONFIG.get('workbench','workbench_login_url')
+WORKBENCH_LOGOUT_URL = CONFIG.get('workbench','workbench_logout_url')
+WORKBENCH_NEWCOL_URL = CONFIG.get('workbench','workbench_newcol_url')
+WORKBENCH_NEWENT_URL = CONFIG.get('workbench','workbench_newent_url')
+WORKBENCH_REGISTER_EIDS_URL = CONFIG.get('workbench','workbench_register_eids_url')
+WORKBENCH_URL = CONFIG.get('workbench','workbench_url')
+WORKBENCH_USERINFO = CONFIG.get('workbench','workbench_userinfo_url')
 
-IDSERVICE_API_BASE = config.get('idservice', 'api_base')
+IDSERVICE_API_BASE = CONFIG.get('idservice', 'api_base')
 IDSERVICE_LOGIN_URL = IDSERVICE_API_BASE + '/rest-auth/login/'
 IDSERVICE_LOGOUT_URL = IDSERVICE_API_BASE + '/rest-auth/logout/'
 IDSERVICE_USERINFO_URL = IDSERVICE_API_BASE + '/rest-auth/user/'
@@ -107,12 +107,12 @@ IDSERVICE_NEXT_OBJECT_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/next/{mo
 IDSERVICE_CHECKIDS_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/check/'
 IDSERVICE_REGISTERIDS_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/create/'
 
-DOCSTORE_ENABLED = config.getboolean('local','docstore_enabled')
-DOCSTORE_TIMEOUT = int(config.get('local','docstore_timeout'))
-DOCSTORE_HOST_LOCAL = config.get('local','docstore_host')
-DOCSTORE_INDEX_LOCAL = config.get('local','docstore_index')
-DOCSTORE_HOST = config.get('public','docstore_host')
-DOCSTORE_INDEX = config.get('public','docstore_index')
+DOCSTORE_ENABLED = CONFIG.getboolean('local','docstore_enabled')
+DOCSTORE_TIMEOUT = int(CONFIG.get('local','docstore_timeout'))
+DOCSTORE_HOST_LOCAL = CONFIG.get('local','docstore_host')
+DOCSTORE_INDEX_LOCAL = CONFIG.get('local','docstore_index')
+DOCSTORE_HOST = CONFIG.get('public','docstore_host')
+DOCSTORE_INDEX = CONFIG.get('public','docstore_index')
 
-VOCABS_PATH = config.get('cmdln','vocabs_path')
-VOCAB_TERMS_URL = config.get('local', 'vocab_terms_url')
+VOCABS_PATH = CONFIG.get('cmdln','vocabs_path')
+VOCAB_TERMS_URL = CONFIG.get('local', 'vocab_terms_url')
