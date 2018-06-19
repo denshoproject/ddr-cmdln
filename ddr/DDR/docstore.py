@@ -576,6 +576,7 @@ class Docstore():
         with open(path, 'r') as f:
             data = json.loads(f.read())
         for document in data['narrators']:
+            document['model'] = 'narrator'
             has_published = document.get('has_published', '')
             if has_published.isdigit():
                 has_published = int(has_published)
