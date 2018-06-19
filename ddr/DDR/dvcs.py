@@ -16,6 +16,9 @@ import simplejson as json
 from DDR import config
 from DDR import storage
 
+# values are set after defining latest_commit()
+APP_COMMITS = {}
+
 
 def repository(path, user_name=None, user_mail=None):
     """
@@ -76,6 +79,14 @@ def latest_commit(path):
     else:
         return repo.git.log('--pretty=format:%H %d %ad', '--date=iso', '-1')
     return None
+
+# Latest commits for ddr-cmdln and ddr-local.
+# Include here in settings so only has to be retrieved once,
+# and so commits are visible in error pages and in page footers.
+APP_COMMITS = {
+    'cmd': latest_commit(config.INSTALL_PATH),
+    'def': latest_commit(config.REPO_MODELS_PATH),
+}
 
 def earliest_commit(path, parsed=False):
     """Returns earliest commit for the specified repository/path
