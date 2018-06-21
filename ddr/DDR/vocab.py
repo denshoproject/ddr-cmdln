@@ -90,6 +90,7 @@ and reimported from CSV.::
     >>> index.path_choices()
 """
 
+from collections import defaultdict, OrderedDict
 from datetime import datetime
 import logging
 logger = logging.getLogger(__name__)
@@ -663,3 +664,115 @@ def repair_topicdata(data):
             # refresh term even if it's not 'bad'
             item['term'] = THIS_MODULE.TOPICS[item['id']]
     return data
+
+
+def topics_choices(vocabs_path, FacetTermClass):
+    """List of topicID,path used in ddrpublic search forms topics fields.
+    
+    @param vocabs_path: str DDR.config.VOCABS_PATH
+    @param FacetTermClass: class DDR.identifier.ELASTICSEARCH_CLASSES_BY_MODEL['facetterm']
+    @returns: list [(term.id, term.path), ...]
+    """
+    facet = get_vocabs_all(vocabs_path)['topics']
+    terms = []
+    for t in facet['terms']:
+        term = FacetTermClass()
+        term.term_id = t.pop('id')
+        term.id = '-'.join([
+            str(facet['id']),
+            str(term.term_id),
+        ])
+        for field in FacetTermClass._doc_type.mapping.to_dict()[
+            FacetTermClass._doc_type.name
+        ]['properties'].keys():
+            if t.get(field):
+                setattr(term, field, t[field])
+        terms.append(term)
+    return [
+        (term.id, term.path)
+        for term in make_tree(terms)
+    ]
+
+def make_tree(terms_list):
+    """Rearranges terms list into hierarchical list.
+    
+    Uses term['ancestors'] to generate a tree structure
+    then "prints out" the tree to a list with indent (depth) indicators.
+    More specifically, it adds term['depth'] attribs and reorders
+    terms so they appear in the correct places in the hierarchy.
+    source: https://gist.github.com/hrldcpr/2012250
+    
+    @param terms_list: list
+    @returns: list
+    """
+    def tree():
+        """Define a tree data structure
+        """
+        return defaultdict(tree)
+    
+    def add(tree_, path):
+        """
+        @param tree_: defaultdict
+        @param path: list of ancestor term IDs
+        """
+        for node in path:
+            tree_ = tree_[node]
+    
+    def populate(terms_list):
+        """Create and populate tree structure
+        by iterating through list of terms and referencing ancestor/path keys
+        
+        @param terms_list: list of dicts
+        @returns: defaultdict
+        """
+        tree_ = tree()
+        for term in terms_list:
+            path = []
+            if hasattr(term, 'ancestors') and term.ancestors:
+                for tid in term.ancestors:
+                    path.append(tid)
+            path.append(term['term_id'])
+            add(tree_, path)
+        return tree_
+    
+    def flatten(tree_, depth=0):
+        """Takes tree dict and returns list of terms with depth values
+        
+        Variation on ptr() from the gist
+        Recursively gets term objects from terms_dict, adds depth,
+        and appends to list of terms.
+        
+        @param tree_: defaultdict Tree
+        @param depth: int Depth of indents
+        """
+        for key in sorted(tree_.keys()):
+            term = terms_dict[key]
+            term['depth'] = depth
+            terms.append(term)
+            depth += 1
+            flatten(tree_[key], depth)
+            depth -= 1
+    
+    terms_dict = {t['term_id']: t for t in terms_list}
+    terms_tree = populate(terms_list)
+    terms = []
+    flatten(terms_tree)
+    return terms
+
+def facility_choices(vocabs_path):
+    """List of faciltyID,title used in ddrpublic search forms facility fields.
+    
+    @param vocabs_path: str DDR.config.VOCABS_PATH
+    @returns: list [(term.id, term.path), ...]
+    """
+    facet = get_vocabs_all(vocabs_path)['facility']
+    terms = sorted(facet['terms'], key=lambda term: term['title'])
+    return [
+        (
+            '-'.join([
+                'facility', term['id'],
+            ]),
+            term['title']
+        )
+        for term in terms
+    ]

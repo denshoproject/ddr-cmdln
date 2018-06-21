@@ -22,11 +22,17 @@ Publish vocabularies (used for topics, facility fields)
   $ ddrindex vocabs /opt/ddr-vocab/api/0.2
 
 Post repository and organization:
-  $ ddrindex postjson repository REPO /var/www/media/ddr/REPO/repository.json
-  $ ddrindex postjson organization REPO-ORG /var/www/media/ddr/REPO-ORG/organization.json
+  $ ddrindex repo REPO /var/www/media/ddr/REPO/repository.json
+  $ ddrindex org REPO-ORG /var/www/media/ddr/REPO-ORG/organization.json
 
 Post an object. Optionally, publish its child objects and/or ignore publication status.
   $ ddrindex publish [--recurse] [--force] /var/www/media/ddr/ddr-testing-123
+
+Post narrators:
+  $ ddrindex narrators /opt/ddr-local/ddr-defs/narrators.json
+
+Post arbitrary JSON files:
+  $ ddrindex postjson DOCTYPE DOCUMENTID /PATH/TO/FILE.json
 
 MANAGEMENT COMMANDS
 
@@ -219,9 +225,14 @@ def alias(hosts, index, alias, delete):
 @click.option('--index','-i',
               default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
               help='Elasticsearch index.')
-def mappings(hosts, index):
-    """Push mappings to the specified index.
+@click.option('--debug', '-d', is_flag=True, help='Display current mappings.')
+def mappings(hosts, index, debug):
+    """Push mappings to the specified index or display.
     """
+    if debug:
+        data = docstore.Docstore(hosts, index).get_mappings(raw=1)
+        text = json.dumps(data)
+        click.echo(text)
     docstore.Docstore(hosts, index).init_mappings()
 
 
@@ -285,6 +296,51 @@ def publish(hosts, index, recurse, force, path):
     """Post the document and its children to Elasticsearch
     """
     status = docstore.Docstore(hosts, index).post_multi(path, recursive=recurse, force=force)
+    click.echo(status)
+
+
+@ddrindex.command()
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
+@click.argument('path')
+def repo(hosts, index, path):
+    """Post the repository record to Elasticsearch
+    """
+    status = docstore.Docstore(hosts, index).repo(path)
+    click.echo(status)
+
+
+@ddrindex.command()
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
+@click.argument('path')
+def org(hosts, index, path):
+    """Post the organization record to Elasticsearch
+    """
+    status = docstore.Docstore(hosts, index).org(path)
+    click.echo(status)
+
+
+@ddrindex.command()
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
+@click.argument('path')
+def narrators(hosts, index, path):
+    """Post the DDR narrators file to Elasticsearch
+    """
+    status = docstore.Docstore(hosts, index).narrators(path)
     click.echo(status)
 
 
