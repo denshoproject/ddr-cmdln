@@ -773,18 +773,19 @@ def make_tree(terms_list):
     flatten(terms_tree)
     return terms
 
-def facility_choices(vocabs_url):
-    """List of faciltyID,title used in ddrpublic search forms facility fields.
+def form_vocab_choices(vocabs_path, fieldname):
+    """List of keyword,label used in ddrpublic search multichoice fields.
     
-    @param vocabs_url: str DDR.config.VOCABS_URL
+    @param vocabs_path: str DDR.config.VOCABS_PATH
+    @param fieldname: str
     @returns: list [(term.id, term.path), ...]
     """
-    facet = get_vocabs(vocabs_url)['facility']
+    facet = get_vocabs_all(vocabs_path)[fieldname]
     terms = sorted(facet['terms'], key=lambda term: term['title'])
     return [
         (
             '-'.join([
-                'facility', term['id'],
+                fieldname, term['id'],
             ]),
             term['title']
         )
