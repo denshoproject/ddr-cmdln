@@ -441,9 +441,10 @@ class Docstore():
                 config.VOCABS_PATH,
                 ELASTICSEARCH_CLASSES_BY_MODEL['facetterm']
             ),
-            'facility-choices': vocab.facility_choices(
-                config.VOCABS_PATH,
-            ),
+            'facility-choices': vocab.form_vocab_choices(config.VOCABS_PATH, 'facility'),
+            'format-choices': vocab.form_vocab_choices(config.VOCABS_PATH, 'format'),
+            'genre-choices': vocab.form_vocab_choices(config.VOCABS_PATH, 'genre'),
+            'rights-choices': vocab.form_vocab_choices(config.VOCABS_PATH, 'rights'),
         }
         self.post_json('forms', 'forms-choices', forms_choices)
         return statuses
