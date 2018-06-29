@@ -272,6 +272,8 @@ class DDRObject(object):
         
         @param obj_metadata: dict Cached results of object_metadata.
         """
+        if hasattr(self, 'record_lastmod'):
+            self.record_lastmod = datetime.now(config.TZ)
         if not os.path.exists(self.identifier.path_abs()):
             os.makedirs(self.identifier.path_abs())
         fileio.write_text(
