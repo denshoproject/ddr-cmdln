@@ -96,9 +96,9 @@ def check(csv, collection, username, password, idservice):
     csv_path,collection_path = make_paths(csv, collection)
     ci = identifier.Identifier(collection_path)
     logging.debug(ci)
-    idservice_client = idservice_api_login(username, password, idservice)
     run_checks(
-        csv_path, ci, VOCABS_PATH, idservice_client
+        csv_path, ci, VOCABS_PATH,
+        idservice_api_login(username, password, idservice)
     )
     
     finish = datetime.now()
@@ -136,11 +136,14 @@ def register(csv, collection, username, password, idservice, dryrun):
 @click.argument('collection')
 @click.option('--user','-u', help='(required for commit) Git user name.')
 @click.option('--mail','-m', help='(required for commit) Git user e-mail address.')
+@click.option('--username','-U', help='ID service username. Use flag to avoid being prompted.')
+@click.option('--password','-P', help='ID service password. Use flag to avoid being prompted. Passwords args will remain in ~/.bash_history.')
+@click.option('--idservice','-i', help='Override URL of ID service in configs.')
+@click.option('--nocheck','-N', is_flag=True, help="Disable checking/validation (may take time on large collections).")
 @click.option('--dryrun','-d', help="Simulated run-through; don't modify files.")
 # TODO @click.option('--fromto', '-F', help="Only import specified rows. Use Python list syntax e.g. '523:711' or ':200' or '100:'.")
 # TODO @click.option('--log','-l', help='Log addfile to this path')
-# TODO @click.option('--nocheck','-N', help="Disable checking/validation (may take time on large collections).")
-def entity(csv, collection, user, mail, dryrun, nocheck):
+def entity(csv, collection, user, mail, username, password, idservice, nocheck, dryrun):
     """Import entity/object records from CSV.
     """
     start = datetime.now()
@@ -148,6 +151,11 @@ def entity(csv, collection, user, mail, dryrun, nocheck):
     csv_path,collection_path = make_paths(csv, collection)
     ci = identifier.Identifier(collection_path)
     logging.debug(ci)
+    if not nocheck:
+        idservice_client = idservice_api_login(username, password, idservice)
+        run_checks(
+            csv_path, ci, VOCABS_PATH, idservice_client
+        )
     #row_start,row_end = rows_start_end(fromto)
     imported = batch.Importer.import_entities(
         csv_path=csv_path,
@@ -172,11 +180,12 @@ def entity(csv, collection, user, mail, dryrun, nocheck):
 @click.argument('collection')
 @click.option('--user','-u', help='(required for commit) Git user name.')
 @click.option('--mail','-m', help='(required for commit) Git user e-mail address.')
+@click.option('--nocheck','-N', is_flag=True, help="Disable checking/validation (may take time on large collections).")
 @click.option('--dryrun','-d', help="Simulated run-through; don't modify files.")
 @click.option('--fromto', '-F', help="Only import specified rows. Use Python list syntax e.g. '523:711' or ':200' or '100:'.")
 @click.option('--log','-l', help='(optional) Log addfile to this path')
 # TODO @click.option('--nocheck','-N', help="Disable checking/validation (may take time on large collections).")
-def file(csv, collection, user, mail, dryrun, fromto, log):
+def file(csv, collection, user, mail, nocheck, dryrun, fromto, log):
     """Import file records from CSV.
     """
     start = datetime.now()
@@ -184,6 +193,10 @@ def file(csv, collection, user, mail, dryrun, fromto, log):
     csv_path,collection_path = make_paths(csv, collection)
     ci = identifier.Identifier(collection_path)
     logging.debug(ci)
+    if not nocheck:
+        run_checks(
+            csv_path, ci, VOCABS_PATH, idservice_client=None
+        )
     row_start,row_end = rows_start_end(fromto)
     imported = batch.Importer.import_files(
         csv_path=csv_path,
@@ -258,9 +271,6 @@ def make_paths(csv, collection):
 def run_checks(csv_path, ci, vocabs_path, idservice_client):
     """run the actual checks on the CSV doc,repo
     """
-    chkcsv = batch.Checker.check_csv(csv_path, ci, vocabs_path)
-    chkrepo = batch.Checker.check_repository(ci)
-    chkeids = batch.Checker.check_eids(chkcsv['rowds'], ci, idservice_client)
     tests = 0
     passed = 0
     def passfail(results, tests, passed):
@@ -268,9 +278,15 @@ def run_checks(csv_path, ci, vocabs_path, idservice_client):
         if results['passed']:
             passed += 1
         return tests,passed
+    
+    chkcsv = batch.Checker.check_csv(csv_path, ci, vocabs_path)
+    chkrepo = batch.Checker.check_repository(ci)
     tests,passed = passfail(chkcsv, tests, passed)
     tests,passed = passfail(chkrepo, tests, passed)
-    tests,passed = passfail(chkeids, tests, passed)
+    if (chkcsv.get('model') == 'entity') and idservice_client:
+        chkeids = batch.Checker.check_eids(chkcsv['rowds'], ci, idservice_client)
+        tests,passed = passfail(chkeids, tests, passed)
+    
     if passed != tests:
         logging.error('TESTS FAILED--QUITTING!')
         sys.exit(1)
