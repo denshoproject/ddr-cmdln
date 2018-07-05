@@ -38,18 +38,20 @@ class IDServiceClient():
     >>> ic.resume('gjost', u'9b68187429be07506dae2d1a493b74afd4ef7c35')
     >>> ic.logout()
     """
-    url = config.IDSERVICE_API_BASE
+    url = None
     debug = False
     username = None
     token = None
 
-    def login(self, username, password):
+    def login(self, username, password, url=config.IDSERVICE_API_BASE):
         """Initiate a session.
         
         @param username: str
         @param password: str
+        @param url: str
         @return: int,str (status_code,reason)
         """
+        self.url = url
         self.username = username
         logging.debug('idservice.IDServiceClient.login(%s)' % (self.username))
         r = requests.post(
