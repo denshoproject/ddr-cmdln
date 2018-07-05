@@ -32,6 +32,7 @@ from DDR import ingest
 from DDR import models
 from DDR import modules
 from DDR import util
+from DDR import vocab
 
 COLLECTION_FILES_PREFIX = 'files'
 
@@ -170,7 +171,7 @@ class Checker():
         logging.info('%s rows' % len(rowds))
         model,model_errs = Checker._guess_model(rowds)
         module = Checker._get_module(model)
-        vocabs = Checker._get_vocabs(module)
+        vocabs = vocab.get_vocabs_all(config.VOCAB_TERMS_URL)
         header_errs,rowds_errs = Checker._validate_csv_file(
             module, vocabs, headers, rowds
         )
@@ -297,66 +298,27 @@ class Checker():
         return already
 
     @staticmethod
-    def _load_vocab_files(vocabs_path):
-        """Loads vocabulary term files in the 'ddr' repository
-        
-        @param vocabs_path: Absolute path to dir containing vocab .json files.
-        @returns: list of raw text contents of files.
-        """
-        json_paths = []
-        for p in os.listdir(vocabs_path):
-            path = os.path.join(vocabs_path, p)
-            if os.path.splitext(path)[1] == '.json':
-                json_paths.append(path)
-        json_texts = [
-            fileio.read_text(path)
-            for path in json_paths
-        ]
-        return json_texts
-
-    @staticmethod
-    def _get_vocabs(module):
-        logging.info('Loading vocabs from API (%s)' % config.VOCAB_TERMS_URL)
-        urls = [
-            config.VOCAB_TERMS_URL % field.get('name')
-            for field in module.module.FIELDS
-            if field.get('vocab')
-        ]
-        vocabs = [
-            requests.get(url).text
-            for url in urls
-        ]
-        logging.info('ok')
-        return vocabs
-
-    @staticmethod
-    def _prep_valid_values(json_texts):
+    def _prep_valid_values(vocabs):
         """Prepares dict of acceptable values for controlled-vocab fields.
         
-        TODO should be method of DDR.modules.Module
+        >>> vocabs = {
+        ...     'status': {'id': 'status', 'terms': [
+        ...         {'id': 'inprocess', 'title': 'In Progress'},
+        ...         {'id': 'completed', 'title': 'Completed'}
+        ...     ]},
+        ...     'language': {'id': 'language', 'terms': [
+        ...         {'id': 'eng', 'title': 'English'},
+        ...         {'id': 'jpn', 'title': 'Japanese'},
+        ...     ]}
+        ... }
+        >>> batch._prep_valid_values(vocabs)
+        {'status': ['inprocess', 'completed'], 'language': ['eng', 'jpn']}
         
-        Loads choice values from FIELD.json files in the 'ddr' repository
-        into a dict:
-        {
-            'FIELD': ['VALID', 'VALUES', ...],
-            'status': ['inprocess', 'completed'],
-            'rights': ['cc', 'nocc', 'pdm'],
-            ...
-        }
-        
-        >>> json_texts = [
-        ...     '{"terms": [{"id": "advertisement"}, {"id": "album"}, {"id": "architecture"}], "id": "genre"}',
-        ...     '{"terms": [{"id": "eng"}, {"id": "jpn"}, {"id": "chi"}], "id": "language"}',
-        ... ]
-        >>> batch._prep_valid_values(json_texts)
-        {u'genre': [u'advertisement', u'album', u'architecture'], u'language': [u'eng', u'jpn', u'chi']}
-        
-        @param json_texts: list of raw text contents of files.
+        @param vocabs: dict Output of DDR.vocab.get_vocabs_all()
         @returns: dict
         """
         valid_values = {}
-        for text in json_texts:
-            data = json.loads(text)
+        for key,data in vocabs.iteritems():
             field = data['id']
             values = [term['id'] for term in data['terms']]
             if values:
