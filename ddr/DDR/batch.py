@@ -158,7 +158,7 @@ class Checker():
         @param cidentifier: Identifier
         @param vocabs_path: Absolute path to vocab dir
         @param session: requests.session object
-        @returns: nothing
+        @returns: dict of status info
         """
         logging.info('Checking CSV file')
         passed = False
@@ -187,6 +187,7 @@ class Checker():
             'model_errs': model_errs,
             'header_errs': header_errs,
             'rowds_errs': rowds_errs,
+            'model': model,
         }
     
     @staticmethod
@@ -261,6 +262,11 @@ class Checker():
         if len(models) > 1:
             errors.append('More than one model type in imput file!')
         model = models[0]
+        # new files don't have their own IDs
+        # instead they have their parent entity IDs
+        # the parent entity may be duplicated
+        if (model == 'entity') and rowds and ('basename_orig' in rowds[0].keys()):
+            model = 'file'
         # TODO should not know model name
         if model == 'file-role':
             model = 'file'
