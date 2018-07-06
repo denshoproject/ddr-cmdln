@@ -173,7 +173,7 @@ class Checker():
         module = Checker._get_module(model)
         vocabs = vocab.get_vocabs_all(config.VOCAB_TERMS_URL)
         header_errs,rowds_errs = Checker._validate_csv_file(
-            module, vocabs, headers, rowds
+            module, vocabs, headers, rowds, model
         )
         if (not model_errs) and (not header_errs) and (not rowds_errs):
             passed = True
@@ -332,13 +332,14 @@ class Checker():
         return valid_values
 
     @staticmethod
-    def _validate_csv_file(module, vocabs, headers, rowds):
+    def _validate_csv_file(module, vocabs, headers, rowds, model=''):
         """Validate CSV headers and data against schema/field definitions
         
         @param module: modules.Module
         @param vocabs: dict Output of _prep_valid_values()
         @param headers: list
         @param rowds: list
+        @param model: str
         @returns: list [header_errs, rowds_errs]
         """
         # gather data
@@ -362,7 +363,10 @@ class Checker():
         else:
             logging.info('ok')
         logging.info('Validating rows')
-        rowds_errs = csvfile.validate_rowds(module, headers, required_fields, valid_values, rowds)
+        find_dupes = True
+        if model and (model == 'file'):
+            find_dupes = False
+        rowds_errs = csvfile.validate_rowds(module, headers, required_fields, valid_values, rowds, find_dupes)
         if rowds_errs.keys():
             for name,errs in rowds_errs.iteritems():
                 if errs:
