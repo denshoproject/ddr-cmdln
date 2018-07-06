@@ -94,6 +94,7 @@ from collections import defaultdict, OrderedDict
 from datetime import datetime
 import logging
 logger = logging.getLogger(__name__)
+import multiprocessing
 import os
 import StringIO
 import sys
@@ -594,18 +595,32 @@ def _get_vocabs_all_fs(base, exclude='index'):
     }
 
 def _get_vocabs_all_http(base_url):
-    # TODO append 'VOCAB.json' to config.VOCAB_TERMS_URL instead of using string formating
-    #      to be more consistent with fs version
-    url = base_url % 'index'
+    # get list of vocabs
+    url = os.path.join(base_url, 'index.json')
     r = requests.get(url)
     if r.status_code != 200:
         raise Exception(
             'Cannot load vocabulary index: %s' % (url))
     vocabs = json.loads(r.text)
-    return {
-        vocab.replace('.json',''): _get_vocab_http(base_url, vocab)
-        for vocab in vocabs.keys()
-    }
+    
+    # get each vocab
+    def worker(vocab, url, return_dict):
+        return_dict[vocab] = _get_vocab_http(url)
+    return_dict = multiprocessing.Manager().dict()
+    jobs = []
+    for vocab,filename in vocabs.iteritems():
+        url = os.path.join(base_url, filename)
+        p = multiprocessing.Process(
+            target=worker,
+            args=(vocab, url, return_dict)
+        )
+        jobs.append(p)
+        p.start()
+    for proc in jobs:
+        proc.join()
+    
+    # turn return_dict into a regular dict
+    return {key:val for key,val in return_dict.items()}
 
 def get_vocabs_all(base):
     """Loads data for multiple vocabularies from URL or from filesystem.
