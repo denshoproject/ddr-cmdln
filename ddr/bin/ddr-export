@@ -4,6 +4,12 @@
 # ddr-export
 #
 
+DEPRECATION_NOTICE = """
+************************************************************************
+* ddr-export is deprecated -- use ddrexport instead                    *
+************************************************************************
+"""
+
 description = """Exports a DDR collection's entities or files to CSV."""
 
 epilog = """
@@ -127,6 +133,8 @@ def main():
     parser.add_argument('destination', help='Absolute path to destination directory or file.')
     args = parser.parse_args()
     
+    print(DEPRECATION_NOTICE)
+    
     # ensure we have absolute paths (CWD+relpath)
     collection_path = os.path.abspath(args.collection)
     destination_path = os.path.abspath(args.destination)
@@ -187,6 +195,7 @@ def main():
     else:
         logging.info('DONE - (%s elapsed) - %s' % (elapsed, filename))
     
+    print(DEPRECATION_NOTICE)    
     
 
 if __name__ == '__main__':

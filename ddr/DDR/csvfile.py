@@ -184,27 +184,30 @@ def find_invalid_values(module, headers, valid_values, rowds):
             errs.append(msg)
     return errs
     
-def validate_rowds(module, headers, required_fields, valid_values, rowds):
+def validate_rowds(module, headers, required_fields, valid_values, rowds, find_dupes=True):
     """Examines rows and raises exceptions if problems.
     
     Looks for
     - missing required fields
     - invalid field values
-    - duplicate IDs
+    - duplicate IDs (unless disabled)
+    Note: new files have their PARENT ENTITY ID but are not duplicates
     
     @param module: modules.Module object
     @param headers: List of field names
     @param required_fields: List of required field names
     @param valid_values:
     @param rowds: List of row dicts
+    @param find_dupes: boolean (should be False for new files)
     """
-    duplicate_ids = find_duplicate_ids(rowds)
+    errs = {}
     multiple_cids = find_multiple_cids(rowds)
     missing_required = find_missing_required(required_fields, rowds)
     invalid_values = find_invalid_values(module, headers, valid_values, rowds)
-    errs = {}
-    if duplicate_ids:
-        errs['Duplicate IDs'] = duplicate_ids
+    if find_dupes:
+        duplicate_ids = find_duplicate_ids(rowds)
+        if duplicate_ids:
+            errs['Duplicate IDs'] = duplicate_ids
     if multiple_cids:
         errs['Multiple collection IDs'] = multiple_cids
     if missing_required:

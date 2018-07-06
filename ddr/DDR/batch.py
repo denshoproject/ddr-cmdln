@@ -14,6 +14,7 @@ from datetime import datetime
 import logging
 import os
 import shutil
+import sys
 import traceback
 
 import requests
@@ -31,6 +32,7 @@ from DDR import ingest
 from DDR import models
 from DDR import modules
 from DDR import util
+from DDR import vocab
 
 COLLECTION_FILES_PREFIX = 'files'
 
@@ -156,7 +158,7 @@ class Checker():
         @param cidentifier: Identifier
         @param vocabs_path: Absolute path to vocab dir
         @param session: requests.session object
-        @returns: nothing
+        @returns: dict of status info
         """
         logging.info('Checking CSV file')
         passed = False
@@ -169,9 +171,9 @@ class Checker():
         logging.info('%s rows' % len(rowds))
         model,model_errs = Checker._guess_model(rowds)
         module = Checker._get_module(model)
-        vocabs = Checker._get_vocabs(module)
+        vocabs = vocab.get_vocabs_all(config.VOCAB_TERMS_URL)
         header_errs,rowds_errs = Checker._validate_csv_file(
-            module, vocabs, headers, rowds
+            module, vocabs, headers, rowds, model
         )
         if (not model_errs) and (not header_errs) and (not rowds_errs):
             passed = True
@@ -185,6 +187,7 @@ class Checker():
             'model_errs': model_errs,
             'header_errs': header_errs,
             'rowds_errs': rowds_errs,
+            'model': model,
         }
     
     @staticmethod
@@ -259,6 +262,11 @@ class Checker():
         if len(models) > 1:
             errors.append('More than one model type in imput file!')
         model = models[0]
+        # new files don't have their own IDs
+        # instead they have their parent entity IDs
+        # the parent entity may be duplicated
+        if (model == 'entity') and rowds and ('basename_orig' in rowds[0].keys()):
+            model = 'file'
         # TODO should not know model name
         if model == 'file-role':
             model = 'file'
@@ -296,66 +304,27 @@ class Checker():
         return already
 
     @staticmethod
-    def _load_vocab_files(vocabs_path):
-        """Loads vocabulary term files in the 'ddr' repository
-        
-        @param vocabs_path: Absolute path to dir containing vocab .json files.
-        @returns: list of raw text contents of files.
-        """
-        json_paths = []
-        for p in os.listdir(vocabs_path):
-            path = os.path.join(vocabs_path, p)
-            if os.path.splitext(path)[1] == '.json':
-                json_paths.append(path)
-        json_texts = [
-            fileio.read_text(path)
-            for path in json_paths
-        ]
-        return json_texts
-
-    @staticmethod
-    def _get_vocabs(module):
-        logging.info('Loading vocabs from API (%s)' % config.VOCAB_TERMS_URL)
-        urls = [
-            config.VOCAB_TERMS_URL % field.get('name')
-            for field in module.module.FIELDS
-            if field.get('vocab')
-        ]
-        vocabs = [
-            requests.get(url).text
-            for url in urls
-        ]
-        logging.info('ok')
-        return vocabs
-
-    @staticmethod
-    def _prep_valid_values(json_texts):
+    def _prep_valid_values(vocabs):
         """Prepares dict of acceptable values for controlled-vocab fields.
         
-        TODO should be method of DDR.modules.Module
+        >>> vocabs = {
+        ...     'status': {'id': 'status', 'terms': [
+        ...         {'id': 'inprocess', 'title': 'In Progress'},
+        ...         {'id': 'completed', 'title': 'Completed'}
+        ...     ]},
+        ...     'language': {'id': 'language', 'terms': [
+        ...         {'id': 'eng', 'title': 'English'},
+        ...         {'id': 'jpn', 'title': 'Japanese'},
+        ...     ]}
+        ... }
+        >>> batch._prep_valid_values(vocabs)
+        {'status': ['inprocess', 'completed'], 'language': ['eng', 'jpn']}
         
-        Loads choice values from FIELD.json files in the 'ddr' repository
-        into a dict:
-        {
-            'FIELD': ['VALID', 'VALUES', ...],
-            'status': ['inprocess', 'completed'],
-            'rights': ['cc', 'nocc', 'pdm'],
-            ...
-        }
-        
-        >>> json_texts = [
-        ...     '{"terms": [{"id": "advertisement"}, {"id": "album"}, {"id": "architecture"}], "id": "genre"}',
-        ...     '{"terms": [{"id": "eng"}, {"id": "jpn"}, {"id": "chi"}], "id": "language"}',
-        ... ]
-        >>> batch._prep_valid_values(json_texts)
-        {u'genre': [u'advertisement', u'album', u'architecture'], u'language': [u'eng', u'jpn', u'chi']}
-        
-        @param json_texts: list of raw text contents of files.
+        @param vocabs: dict Output of DDR.vocab.get_vocabs_all()
         @returns: dict
         """
         valid_values = {}
-        for text in json_texts:
-            data = json.loads(text)
+        for key,data in vocabs.iteritems():
             field = data['id']
             values = [term['id'] for term in data['terms']]
             if values:
@@ -363,13 +332,14 @@ class Checker():
         return valid_values
 
     @staticmethod
-    def _validate_csv_file(module, vocabs, headers, rowds):
+    def _validate_csv_file(module, vocabs, headers, rowds, model=''):
         """Validate CSV headers and data against schema/field definitions
         
         @param module: modules.Module
         @param vocabs: dict Output of _prep_valid_values()
         @param headers: list
         @param rowds: list
+        @param model: str
         @returns: list [header_errs, rowds_errs]
         """
         # gather data
@@ -393,7 +363,10 @@ class Checker():
         else:
             logging.info('ok')
         logging.info('Validating rows')
-        rowds_errs = csvfile.validate_rowds(module, headers, required_fields, valid_values, rowds)
+        find_dupes = True
+        if model and (model == 'file'):
+            find_dupes = False
+        rowds_errs = csvfile.validate_rowds(module, headers, required_fields, valid_values, rowds, find_dupes)
         if rowds_errs.keys():
             for name,errs in rowds_errs.iteritems():
                 if errs:

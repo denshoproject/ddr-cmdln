@@ -64,8 +64,10 @@ setup(
     ]},
     entry_points='''
         [console_scripts]
-        ddrindex=DDR.cli.ddrindex:ddrindex
         ddrcheck=DDR.cli.ddrcheck:ddrcheck
+        ddrexport=DDR.cli.ddrexport:ddrexport
+        ddrindex=DDR.cli.ddrindex:ddrindex
+        ddrimport=DDR.cli.ddrimport:ddrimport
     ''',
     scripts = [
         'bin/ddr',
@@ -74,10 +76,10 @@ setup(
         'bin/ddr-checkencoding',
         'bin/ddr-checkbinaries',
         'bin/ddr-config',
-        'bin/ddr-export',
+        'bin/ddr-export',  # TODO remove
         'bin/ddr-filter',
         'bin/ddr-idexport',
-        'bin/ddr-import',
+        'bin/ddr-import',  # TODO remove
         'bin/ddr-info',
         'bin/ddr-massupdate',
         'bin/ddr-missing',
