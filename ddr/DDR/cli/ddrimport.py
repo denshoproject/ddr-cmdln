@@ -23,9 +23,12 @@ username and/or password at the commandline to skip the prompts:
 You can send all add-file log entries to the same file:
     $ ddrimport file -L /tmp/mylogfile.log ...
 
+ID service username and password can be exported to environment variables:
+    $ export DDRID_USER='gjost'
+    $ export DDRID_PASS='REDACTED'
+
 Please see "ddrexport help" for information on exporting CSV files.
 ---"""
-
 
 from datetime import datetime
 import getpass
@@ -43,6 +46,8 @@ from DDR import dvcs
 from DDR import identifier
 from DDR import idservice
 
+IDSERVICE_ENVIRONMENT_USERNAME = 'DDRID_USER'
+IDSERVICE_ENVIRONMENT_PASSWORD = 'DDRID_PASS'
 VOCABS_PATH = os.path.normpath(config.VOCABS_PATH)
 AGENT = 'ddr-import'
 
@@ -328,13 +333,20 @@ def idservice_api_login(username=None, password=None, url=None):
     @param url: str
     @returns: idservice.IDServiceClient
     """
+    
     if username:
         logging.debug('Username: %s' % username)
+    elif os.environ.get(IDSERVICE_ENVIRONMENT_USERNAME):
+        username = os.environ.get(IDSERVICE_ENVIRONMENT_USERNAME)
     else:
         username = raw_input('Username: ')
     if password:
-        dummy = ''.join(['*' for n in password])
-        logging.debug('Password: %s' % dummy)
+        redacted = ''.join(['*' for n in password])
+        logging.debug('Password: %s' % redacted)
+    elif os.environ.get(IDSERVICE_ENVIRONMENT_PASSWORD):
+        password = os.environ.get(IDSERVICE_ENVIRONMENT_PASSWORD)
+        redacted = ''.join(['*' for n in password])
+        logging.debug('Password: %s' % redacted)
     else:
         password = getpass.getpass(prompt='Password: ')
     
