@@ -583,7 +583,7 @@ def get_vocab(path_url):
     
     @param path_url: str URL of vocabulary file (.json)
     """
-    if 'http://' in path_url:
+    if ('https://' in path_url) or ('http://' in path_url):
         return _get_vocab_http(path_url)
     return _get_vocab_fs(path_url)
 
@@ -630,7 +630,7 @@ def get_vocabs_all(base):
     @param base: str URL or filesystem path
     @param vocab: str
     """
-    if 'http://' in base:
+    if ('https://' in base) or ('http://' in base):
         return _get_vocabs_all_http(base)
     return _get_vocabs_all_fs(base)
 
