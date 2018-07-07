@@ -391,7 +391,7 @@ class Docstore():
         @returns: JSON dict with status code and response
         """
         logger.debug('index_facets(%s, %s)' % (self.indexname, path))
-        vocabs = vocab.get_vocabs_all(path)
+        vocabs = vocab.get_vocabs(path)
         
         # get classes from ddr-defs
         Facet = ELASTICSEARCH_CLASSES_BY_MODEL['facet']

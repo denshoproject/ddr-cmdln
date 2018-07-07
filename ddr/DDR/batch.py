@@ -171,7 +171,7 @@ class Checker():
         logging.info('%s rows' % len(rowds))
         model,model_errs = Checker._guess_model(rowds)
         module = Checker._get_module(model)
-        vocabs = vocab.get_vocabs_all(config.VOCABS_URL)
+        vocabs = vocab.get_vocabs(config.VOCABS_URL)
         header_errs,rowds_errs = Checker._validate_csv_file(
             module, vocabs, headers, rowds, model
         )
@@ -320,7 +320,7 @@ class Checker():
         >>> batch._prep_valid_values(vocabs)
         {'status': ['inprocess', 'completed'], 'language': ['eng', 'jpn']}
         
-        @param vocabs: dict Output of DDR.vocab.get_vocabs_all()
+        @param vocabs: dict Output of DDR.vocab.get_vocabs()
         @returns: dict
         """
         valid_values = {}
