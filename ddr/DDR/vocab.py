@@ -662,7 +662,7 @@ def repair_topicdata(data):
     # get topics so we can repair topic term (path) field
     # keep it so we only retrieve it once
     if not THIS_MODULE.TOPICS:
-        topics_path_url = '/'.join([config.VOCAB_TERMS_URL, 'topics.json'])
+        topics_path_url = os.path.join(config.VOCABS_URL, 'topics.json')
         topics = get_vocab(topics_path_url)
         THIS_MODULE.TOPICS = {
             str(term['id']): term['path']
@@ -681,14 +681,14 @@ def repair_topicdata(data):
     return data
 
 
-def topics_choices(vocabs_path, FacetTermClass):
+def topics_choices(vocabs_url, FacetTermClass):
     """List of topicID,path used in ddrpublic search forms topics fields.
     
-    @param vocabs_path: str DDR.config.VOCABS_PATH
+    @param vocabs_url: str DDR.config.VOCABS_URL
     @param FacetTermClass: class DDR.identifier.ELASTICSEARCH_CLASSES_BY_MODEL['facetterm']
     @returns: list [(term.id, term.path), ...]
     """
-    facet = get_vocabs_all(vocabs_path)['topics']
+    facet = get_vocabs_all(vocabs_url)['topics']
     terms = []
     for t in facet['terms']:
         term = FacetTermClass()
@@ -774,13 +774,13 @@ def make_tree(terms_list):
     flatten(terms_tree)
     return terms
 
-def facility_choices(vocabs_path):
+def facility_choices(vocabs_url):
     """List of faciltyID,title used in ddrpublic search forms facility fields.
     
-    @param vocabs_path: str DDR.config.VOCABS_PATH
+    @param vocabs_url: str DDR.config.VOCABS_URL
     @returns: list [(term.id, term.path), ...]
     """
-    facet = get_vocabs_all(vocabs_path)['facility']
+    facet = get_vocabs_all(vocabs_url)['facility']
     terms = sorted(facet['terms'], key=lambda term: term['title'])
     return [
         (

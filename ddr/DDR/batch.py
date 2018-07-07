@@ -171,7 +171,7 @@ class Checker():
         logging.info('%s rows' % len(rowds))
         model,model_errs = Checker._guess_model(rowds)
         module = Checker._get_module(model)
-        vocabs = vocab.get_vocabs_all(config.VOCAB_TERMS_URL)
+        vocabs = vocab.get_vocabs_all(config.VOCABS_URL)
         header_errs,rowds_errs = Checker._validate_csv_file(
             module, vocabs, headers, rowds, model
         )

@@ -80,7 +80,7 @@ def main():
     print('DOCSTORE_HOST               %s' % config.DOCSTORE_HOST)
     print('DOCSTORE_INDEX              %s' % config.DOCSTORE_INDEX)
 
-    print('VOCAB_TERMS_URL             %s' % config.VOCAB_TERMS_URL)
+    print('VOCABS_URL                  %s' % config.VOCABS_URL)
 
     print('REPO_MODELS_PATH            %s' % config.REPO_MODELS_PATH)
     print('sys.path')

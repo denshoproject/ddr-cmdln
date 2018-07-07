@@ -57,7 +57,7 @@ from DDR import dvcs
 from DDR import identifier
 from DDR import idservice
 
-VOCABS_PATH = config.VOCABS_PATH
+VOCABS_URL = config.VOCABS_URL
 AGENT = 'ddr-import'
 
 logging.basicConfig(
@@ -133,7 +133,7 @@ def main():
     # ensure we have absolute paths (CWD+relpath)
     csv_path = os.path.abspath(os.path.normpath(args.csv))
     collection_path = os.path.abspath(os.path.normpath(args.collection))
-    vocabs_path = os.path.normpath(VOCABS_PATH)
+    vocabs_path = os.path.normpath(VOCABS_URL)
     
     # Check args
     if not os.path.exists(csv_path):

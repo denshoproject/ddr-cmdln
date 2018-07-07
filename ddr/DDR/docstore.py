@@ -23,7 +23,7 @@ d.delete_index()
 d.create_index()
 
 d.init_mappings(INDEX)
-d.post_facets(docstore.VOCABS_PATH)
+d.post_facets(docstore.VOCABS_URL)
 
 # Delete a collection
 d.delete(os.path.basename(PATH), recursive=True)
@@ -378,7 +378,7 @@ class Docstore():
             for class_ in ELASTICSEARCH_CLASSES['all']
         }
     
-    def post_vocabs(self, path=config.VOCABS_PATH):
+    def post_vocabs(self, path=config.VOCABS_URL):
         """Posts ddr-vocab facets,terms to ES.
         
         curl -XPUT 'http://localhost:9200/meta/facet/format' -d '{ ... }'
@@ -438,11 +438,11 @@ class Docstore():
 
         forms_choices = {
             'topics-choices': vocab.topics_choices(
-                config.VOCABS_PATH,
+                config.VOCABS_URL,
                 ELASTICSEARCH_CLASSES_BY_MODEL['facetterm']
             ),
             'facility-choices': vocab.facility_choices(
-                config.VOCABS_PATH,
+                config.VOCABS_URL,
             ),
         }
         self.post_json('forms', 'forms-choices', forms_choices)
