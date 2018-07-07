@@ -682,7 +682,7 @@ def topics_choices(vocabs_url, FacetTermClass):
     @param FacetTermClass: class DDR.identifier.ELASTICSEARCH_CLASSES_BY_MODEL['facetterm']
     @returns: list [(term.id, term.path), ...]
     """
-    facet = get_vocabs_all(vocabs_url)['topics']
+    facet = get_vocabs(vocabs_url)['topics']
     terms = []
     for t in facet['terms']:
         term = FacetTermClass()
@@ -774,7 +774,7 @@ def facility_choices(vocabs_url):
     @param vocabs_url: str DDR.config.VOCABS_URL
     @returns: list [(term.id, term.path), ...]
     """
-    facet = get_vocabs_all(vocabs_url)['facility']
+    facet = get_vocabs(vocabs_url)['facility']
     terms = sorted(facet['terms'], key=lambda term: term['title'])
     return [
         (
