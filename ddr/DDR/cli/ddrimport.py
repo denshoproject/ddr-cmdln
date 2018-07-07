@@ -101,7 +101,7 @@ def check(csv, collection, username, password, idservice):
     ci = identifier.Identifier(collection_path)
     logging.debug(ci)
     run_checks(
-        csv_path, ci, VOCABS_URL,
+        csv_path, ci, config.VOCABS_URL,
         idservice_api_login(username, password, idservice)
     )
     
@@ -158,13 +158,13 @@ def entity(csv, collection, user, mail, username, password, idservice, nocheck, 
     if not nocheck:
         idservice_client = idservice_api_login(username, password, idservice)
         run_checks(
-            csv_path, ci, VOCABS_URL, idservice_client
+            csv_path, ci, config.VOCABS_URL, idservice_client
         )
     #row_start,row_end = rows_start_end(fromto)
     imported = batch.Importer.import_entities(
         csv_path=csv_path,
         cidentifier=ci,
-        vocabs_url=VOCABS_URL,
+        vocabs_url=config.VOCABS_URL,
         git_name=user,
         git_mail=mail,
         agent=AGENT,
@@ -199,13 +199,13 @@ def file(csv, collection, user, mail, nocheck, dryrun, fromto, log):
     logging.debug(ci)
     if not nocheck:
         run_checks(
-            csv_path, ci, VOCABS_URL, idservice_client=None
+            csv_path, ci, config.VOCABS_URL, idservice_client=None
         )
     row_start,row_end = rows_start_end(fromto)
     imported = batch.Importer.import_files(
         csv_path=csv_path,
         cidentifier=ci,
-        vocabs_url=VOCABS_URL,
+        vocabs_url=config.VOCABS_URL,
         git_name=user,
         git_mail=mail,
         agent=AGENT,
