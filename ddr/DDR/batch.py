@@ -144,7 +144,7 @@ class Checker():
         }
 
     @staticmethod
-    def check_csv(csv_path, cidentifier, vocabs_path):
+    def check_csv(csv_path, cidentifier, vocabs_url):
         """Load CSV, validate headers and rows
         
         Results dict includes:
@@ -156,7 +156,7 @@ class Checker():
         
         @param csv_path: Absolute path to CSV data file.
         @param cidentifier: Identifier
-        @param vocabs_path: Absolute path to vocab dir
+        @param vocabs_url: str URL or path to vocabs
         @param session: requests.session object
         @returns: dict of status info
         """
@@ -171,7 +171,7 @@ class Checker():
         logging.info('%s rows' % len(rowds))
         model,model_errs = Checker._guess_model(rowds)
         module = Checker._get_module(model)
-        vocabs = vocab.get_vocabs_all(config.VOCAB_TERMS_URL)
+        vocabs = vocab.get_vocabs(config.VOCABS_URL)
         header_errs,rowds_errs = Checker._validate_csv_file(
             module, vocabs, headers, rowds, model
         )
@@ -320,7 +320,7 @@ class Checker():
         >>> batch._prep_valid_values(vocabs)
         {'status': ['inprocess', 'completed'], 'language': ['eng', 'jpn']}
         
-        @param vocabs: dict Output of DDR.vocab.get_vocabs_all()
+        @param vocabs: dict Output of DDR.vocab.get_vocabs()
         @returns: dict
         """
         valid_values = {}
@@ -449,7 +449,7 @@ class Importer():
     # ----------------------------------------------------------------------
 
     @staticmethod
-    def import_entities(csv_path, cidentifier, vocabs_path, git_name, git_mail, agent, dryrun=False):
+    def import_entities(csv_path, cidentifier, vocabs_url, git_name, git_mail, agent, dryrun=False):
         """Adds or updates entities from a CSV file
         
         Running function multiple times with the same CSV file is idempotent.
@@ -461,7 +461,7 @@ class Importer():
         
         @param csv_path: Absolute path to CSV data file.
         @param cidentifier: Identifier
-        @param vocabs_path: Absolute path to vocab dir
+        @param vocabs_url: str URL or path to vocabs
         @param git_name: str
         @param git_mail: str
         @param agent: str
@@ -649,14 +649,14 @@ class Importer():
         return False
     
     @staticmethod
-    def import_files(csv_path, cidentifier, vocabs_path, git_name, git_mail, agent, row_start=0, row_end=9999999, log_path=None, dryrun=False):
+    def import_files(csv_path, cidentifier, vocabs_url, git_name, git_mail, agent, row_start=0, row_end=9999999, log_path=None, dryrun=False):
         """Adds or updates files from a CSV file
         
         TODO how to handle excluded fields like XMP???
         
         @param csv_path: Absolute path to CSV data file.
         @param cidentifier: Identifier
-        @param vocabs_path: Absolute path to vocab dir
+        @param vocabs_url: str URL or path to vocabs
         @param git_name: str
         @param git_mail: str
         @param agent: str

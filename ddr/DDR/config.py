@@ -124,5 +124,6 @@ DOCSTORE_INDEX_LOCAL = CONFIG.get('local','docstore_index')
 DOCSTORE_HOST = CONFIG.get('public','docstore_host')
 DOCSTORE_INDEX = CONFIG.get('public','docstore_index')
 
-VOCABS_PATH = CONFIG.get('cmdln','vocabs_path')
-VOCAB_TERMS_URL = CONFIG.get('local', 'vocab_terms_url')
+VOCABS_URL = CONFIG.get('cmdln', 'vocabs_url')
+# vocab.get_vocabs will cache data here
+VOCABS = {}  # keys = vocab keyword
