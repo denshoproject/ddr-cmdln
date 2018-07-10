@@ -415,14 +415,13 @@ class Docstore():
             statuses.append(status)
             
             for t in vocabs[v]['terms']:
-                tid = t.pop('id')
+                tid = t.get('id')
                 facetterm_id = '-'.join([
                     str(fid),
                     str(tid),
                 ])
                 term = FacetTerm()
                 term.meta.id = facetterm_id
-                term.id = facetterm_id
                 term.facet = fid
                 term.term_id = tid
                 term.links_html = facetterm_id
@@ -432,6 +431,7 @@ class Docstore():
                         FacetTerm._doc_type.name]['properties'].keys():
                     if t.get(field):
                         setattr(term, field, t[field])
+                term.id = facetterm_id  # overwrite term.id from original
                 logging.debug(term)
                 status = term.save(using=self.es, index=self.indexname)
                 statuses.append(status)

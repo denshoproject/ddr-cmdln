@@ -683,19 +683,24 @@ def topics_choices(vocabs_url, FacetTermClass):
     @returns: list [(term.id, term.path), ...]
     """
     facet = get_vocabs(vocabs_url)['topics']
+    fid = facet['id']
     terms = []
     for t in facet['terms']:
-        term = FacetTermClass()
-        term.term_id = t.pop('id')
-        term.id = '-'.join([
-            str(facet['id']),
-            str(term.term_id),
+        tid = t.get('id')
+        facetterm_id = '-'.join([
+            str(fid),
+            str(tid),
         ])
+        term = FacetTermClass()
+        term.meta.id = facetterm_id
+        term.facet = fid
+        term.term_id = t.get('id')
         for field in FacetTermClass._doc_type.mapping.to_dict()[
             FacetTermClass._doc_type.name
         ]['properties'].keys():
             if t.get(field):
                 setattr(term, field, t[field])
+        term.id = facetterm_id  # overwrite id from original
         terms.append(term)
     return [
         (term.id, term.path)
