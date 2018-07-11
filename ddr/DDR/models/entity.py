@@ -884,3 +884,65 @@ class Entity(common.DDRObject):
         logger.debug('updated_files: %s' % updated_files)
         
         return rm_files,updated_files
+    
+    def choose_ddrpublic_template(self):
+        """Choose template to display Entity; special templates for audio,video
+        
+        For use during Elasticsearch indexing.
+        Finds Entity's signature file, or the first mezzanine file,
+        or the Entity's first child's first mezzanine file, etc, etc
+        Matches Entity format and file mimetype to template
+        
+        @returns: signature,template
+        """
+        entity = self
+        try:
+            signature = Identifier(entity.signature_id, config.MEDIA_BASE).object()
+        except:
+            signature = None
+
+        # VH entities may not have a valid signature
+        if not signature:
+            def first_mezzanine(entity):
+                for fg in entity.file_groups:
+                    if fg['role'] == 'mezzanine':
+                        files = sorted(fg['files'], key=lambda file: file['sort'])
+                        if files:
+                            return files[0]
+                return None
+                
+            # use child entity if exists and has mezzanine file
+            if entity.children_meta:
+                for c in entity.children_meta:
+                    e = Identifier(c['id'], config.MEDIA_BASE).object()
+                    if first_mezzanine(e):
+                        entity = e
+                        break
+            # get signature image
+            mezzanine = first_mezzanine(entity)
+            if mezzanine:
+                signature = Identifier(mezzanine['id'], config.MEDIA_BASE).object()
+        
+        # search decision table for template or use default
+        template = TEMPLATE_DEFAULT
+        if signature:
+            key = ':'.join([ entity.format, signature.mimetype.split('/')[0] ])
+            template = KEYS_TEMPLATES.get(key)
+            if not template:
+                template = KEYS_TEMPLATE_DEFAULTS.get(key, TEMPLATE_DEFAULT)
+        return signature,template
+
+# Decision tables for various combinations of format and first component of mimetype.
+# We only define combinations for which we need special templates.
+KEYS_TEMPLATES = {
+    'av:audio': 'entities/detail-audio.html',
+    'av:video': 'entities/detail-video.html',
+    'vh:audio': 'entities/segment-audio.html',
+    'vh:video': 'entities/segment-video.html',
+}
+# Fallback in case entity sig "key" doesn't match anything
+KEYS_TEMPLATE_DEFAULTS = {
+    'vh': 'entities/segment.html',
+}
+# if nothing else you always get something
+TEMPLATE_DEFAULT = None
