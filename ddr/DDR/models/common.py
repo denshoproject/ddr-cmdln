@@ -197,6 +197,10 @@ class DDRObject(object):
         d.organization_id = self.identifier.organization_id()
         d.collection_id = self.identifier.collection_id()
         d.signature_id = self.signature_id
+        if hasattr(self, 'choose_ddrpublic_template'):
+            signature,template = self.choose_ddrpublic_template()
+            if template:
+                d.template = template
         # ID components (repo, org, cid, ...) as separate fields
         idparts = deepcopy(self.identifier.idparts)
         idparts.pop('model')
