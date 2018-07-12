@@ -885,15 +885,16 @@ class Entity(common.DDRObject):
         
         return rm_files,updated_files
     
-    def choose_ddrpublic_template(self):
-        """Choose template to display Entity; special templates for audio,video
+    def ddrpublic_template_key(self):
+        """Combine factors for ddrpublic template selection into key
         
-        For use during Elasticsearch indexing.
+        For use in ddrindex publish to Elasticsearch.
+        Generates a key which ddr-public will use to choose a template.
         Finds Entity's signature file, or the first mezzanine file,
         or the Entity's first child's first mezzanine file, etc, etc
         Matches Entity format and file mimetype to template
         
-        @returns: signature,template
+        @returns: signature,key
         """
         entity = self
         try:
@@ -923,26 +924,10 @@ class Entity(common.DDRObject):
             if mezzanine:
                 signature = Identifier(mezzanine['id'], config.MEDIA_BASE).object()
         
-        # search decision table for template or use default
-        template = TEMPLATE_DEFAULT
+        # prepare decision table key
+        key = None
         if signature:
-            key = ':'.join([ entity.format, signature.mimetype.split('/')[0] ])
-            template = KEYS_TEMPLATES.get(key)
-            if not template:
-                template = KEYS_TEMPLATE_DEFAULTS.get(key, TEMPLATE_DEFAULT)
-        return signature,template
-
-# Decision tables for various combinations of format and first component of mimetype.
-# We only define combinations for which we need special templates.
-KEYS_TEMPLATES = {
-    'av:audio': 'detail-audio',
-    'av:video': 'detail-video',
-    'vh:audio': 'segment-audio',
-    'vh:video': 'segment-video',
-}
-# Fallback in case entity sig "key" doesn't match anything
-KEYS_TEMPLATE_DEFAULTS = {
-    'vh': 'segment',
-}
-# if nothing else you always get something
-TEMPLATE_DEFAULT = None
+            key = ':'.join([
+                entity.format, signature.mimetype.split('/')[0]
+            ])
+        return signature,key
