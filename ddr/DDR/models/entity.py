@@ -935,14 +935,14 @@ class Entity(common.DDRObject):
 # Decision tables for various combinations of format and first component of mimetype.
 # We only define combinations for which we need special templates.
 KEYS_TEMPLATES = {
-    'av:audio': 'entities/detail-audio.html',
-    'av:video': 'entities/detail-video.html',
-    'vh:audio': 'entities/segment-audio.html',
-    'vh:video': 'entities/segment-video.html',
+    'av:audio': 'detail-audio',
+    'av:video': 'detail-video',
+    'vh:audio': 'segment-audio',
+    'vh:video': 'segment-video',
 }
 # Fallback in case entity sig "key" doesn't match anything
 KEYS_TEMPLATE_DEFAULTS = {
-    'vh': 'entities/segment.html',
+    'vh': 'segment',
 }
 # if nothing else you always get something
 TEMPLATE_DEFAULT = None
