@@ -24,4 +24,6 @@ requests==2.13.0          # Apache       y        y
 simplejson                # MIT          y        y
 unicodecsv==0.14.1        # BSD          y        y
 
-bpython==0.16  # TODO upgrade!
+bpython
+coverage
+nose
