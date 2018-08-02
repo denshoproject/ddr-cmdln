@@ -1,2 +1,2 @@
-nosetests --with-coverage --cover-html --cover-html-dir=test-coverage --cover-package=DDR
+nosetests --with-coverage --cover-html --cover-html-dir=/tmp/ddr-cmdln-test-coverage --cover-package=DDR
 
