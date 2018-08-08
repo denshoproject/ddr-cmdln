@@ -7,6 +7,7 @@ import os
 import re
 import socket
 
+from bs4 import BeautifulSoup
 from dateutil import parser
 import envoy
 import git
@@ -1091,6 +1092,122 @@ class Cgit():
     
     def __init__(self, cgit_url=config.CGIT_URL):
         self.url = cgit_url
+
+    def collections_latest(self, session, timeout=5):
+        """Gets list of N most recently modified repositories
+        
+        >>> session = requests.Session()
+        >>> session.auth = (username,password)
+        >>> dvcs.Cgit().collections_latest(session)
+        ['ddr-densho-12', 'ddr-densho-24', ...]
+        
+        @param session: requests.Session
+        @param timeout: int
+        @returns: list repository names
+        """
+        URL_TEMPLATE = '%s/cgit.cgi/?s=idle'
+        url = URL_TEMPLATE % (self.url)
+        logging.debug(url)
+        try:
+            r = session.get(url, timeout=timeout)
+            logging.debug(str(r.status_code))
+        except requests.ConnectionError:
+            r = None
+            title = '[ConnectionError]'
+        repos = []
+        if r and r.status_code == 200:
+            soup = BeautifulSoup(r.text, 'html.parser')
+            repos = [
+                tag.contents[0].string
+                for tag in soup.find_all('td', class_='toplevel-repo')
+            ]
+            return repos
+        return repos
+    
+    def collection_commits(self, repo_name, session, timeout=5):
+        """Gets list of most recently modified commits
+        
+        >>> session = requests.Session()
+        >>> session.auth = (username,password)
+        >>> dvcs.Cgit().collections_commits(session)
+        
+        @param repo_name: str
+        @param session: requests.Session
+        @param timeout: int
+        @returns: list of commit info dicts
+        """
+        URL_TEMPLATE = '%s/cgit.cgi/%s/atom/?h=master'
+        url = URL_TEMPLATE % (self.url, repo_name)
+        logging.debug(url)
+        try:
+            r = session.get(url, timeout=timeout)
+            logging.debug(str(r.status_code))
+        except requests.ConnectionError:
+            r = None
+            title = '[ConnectionError]'
+        commits = []
+        if r and r.status_code == 200:
+            soup = BeautifulSoup(r.text, 'html.parser')
+            commits = [
+                {
+                    'title': e.find('title').string,
+                    'updated': e.find('updated').string,
+                    'author': e.find('author').find('name').string,
+                    'email': e.find('author').find('email').string,
+                    'published': e.find('published').string,
+                    'href': e.find('link')['href'],
+                    'id': e.find('id').string,
+                    'agent': e.find('content', type='text').string.strip(),
+                }
+                for e in soup.find_all('entry')
+            ]
+        return commits
+    
+    def repository_latest(self, num_repos, session, timeout=5):
+        """Gets latest commits for top N latest modified repos
+        
+        session = requests.Session()
+        session.auth = (username,password)
+        dvcs.repository_latest(session)
+        
+        @param num_repos: int number of top repos to return
+        @param session: requests.Session
+        @param timeout: int
+        @returns: dict of {repo_name: [commits], ...}
+        """
+        print('getting list of repos')
+        repos = [
+            repo
+            for repo in self.collections_latest(session)
+            if 'testing' not in repo
+        ][:10]
+        print(repos)
+        #for repo in repos[:10]:
+        #    print(repo)
+        #    commits = dvcs.Cgit().collection_commits(repo, session)
+
+        print('getting commit feeds')
+        import multiprocessing
+         
+        def worker(repo_name, session, return_dict):
+            print(repo_name)
+            return_dict[repo_name] = self.collection_commits(repo, session)
+
+        return_dict = multiprocessing.Manager().dict()
+        jobs = []
+        for repo_name in repos[:10]:
+            p = multiprocessing.Process(
+                target=worker,
+                args=(repo_name, session, return_dict)
+            )
+            jobs.append(p)
+            p.start()
+         
+        for proc in jobs:
+            proc.join()
+         
+        data = {key:val for key,val in return_dict.items()}
+        return data
     
     def collection_title(self, repo, session, timeout=5):
         """Gets collection title from CGit
