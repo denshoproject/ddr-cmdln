@@ -269,7 +269,6 @@ class DDRObject(object):
             d.facility_id = [item['id'] for item in self.facility]
         if (self.identifier.model in ['segment']):
             d.ia_meta = archivedotorg.download_segment_meta(self.identifier.id)
-            print(d.ia_meta)
         if (self.identifier.model in ['file']):
             if download_path:
                 d.links_download = download_path
