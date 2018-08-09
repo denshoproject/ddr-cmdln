@@ -8,6 +8,7 @@ import elasticsearch_dsl as dsl
 import simplejson as json
 
 from DDR import VERSION
+from DDR import archivedotorg
 from DDR import config
 from DDR import docstore
 from DDR import dvcs
@@ -266,7 +267,10 @@ class DDRObject(object):
             # so attach extra 'topics_id' and 'facility_id' fields
             d.topics_id = [item['id'] for item in self.topics]
             d.facility_id = [item['id'] for item in self.facility]
-        elif (self.identifier.model in ['file']):
+        if (self.identifier.model in ['segment']):
+            d.ia_meta = archivedotorg.download_segment_meta(self.identifier.id)
+            print(d.ia_meta)
+        if (self.identifier.model in ['file']):
             if download_path:
                 d.links_download = download_path
         return d
