@@ -780,11 +780,7 @@ def form_vocab_choices(vocabs_path, fieldname):
     @param fieldname: str
     @returns: list [(term.id, term.path), ...]
     """
-<<<<<<< HEAD
-    facet = get_vocabs_all(vocabs_path)[fieldname]
-=======
     facet = get_vocabs(vocabs_path)[fieldname]
->>>>>>> develop
     terms = sorted(facet['terms'], key=lambda term: term['title'])
     return [
         (
