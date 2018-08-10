@@ -884,3 +884,50 @@ class Entity(common.DDRObject):
         logger.debug('updated_files: %s' % updated_files)
         
         return rm_files,updated_files
+    
+    def ddrpublic_template_key(self):
+        """Combine factors for ddrpublic template selection into key
+        
+        For use in ddrindex publish to Elasticsearch.
+        Generates a key which ddr-public will use to choose a template.
+        Finds Entity's signature file, or the first mezzanine file,
+        or the Entity's first child's first mezzanine file, etc, etc
+        Matches Entity format and file mimetype to template
+        
+        @returns: signature,key
+        """
+        entity = self
+        try:
+            signature = Identifier(entity.signature_id, config.MEDIA_BASE).object()
+        except:
+            signature = None
+
+        # VH entities may not have a valid signature
+        if not signature:
+            def first_mezzanine(entity):
+                for fg in entity.file_groups:
+                    if fg['role'] == 'mezzanine':
+                        files = sorted(fg['files'], key=lambda file: file['sort'])
+                        if files:
+                            return files[0]
+                return None
+                
+            # use child entity if exists and has mezzanine file
+            if entity.children_meta:
+                for c in entity.children_meta:
+                    e = Identifier(c['id'], config.MEDIA_BASE).object()
+                    if first_mezzanine(e):
+                        entity = e
+                        break
+            # get signature image
+            mezzanine = first_mezzanine(entity)
+            if mezzanine:
+                signature = Identifier(mezzanine['id'], config.MEDIA_BASE).object()
+        
+        # prepare decision table key
+        key = None
+        if signature:
+            key = ':'.join([
+                entity.format, signature.mimetype.split('/')[0]
+            ])
+        return signature,key

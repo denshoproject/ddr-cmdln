@@ -23,7 +23,7 @@ d.delete_index()
 d.create_index()
 
 d.init_mappings(INDEX)
-d.post_facets(docstore.VOCABS_PATH)
+d.post_facets(docstore.VOCABS_URL)
 
 # Delete a collection
 d.delete(os.path.basename(PATH), recursive=True)
@@ -378,7 +378,7 @@ class Docstore():
             for class_ in ELASTICSEARCH_CLASSES['all']
         }
     
-    def post_vocabs(self, path=config.VOCABS_PATH):
+    def post_vocabs(self, path=config.VOCABS_URL):
         """Posts ddr-vocab facets,terms to ES.
         
         curl -XPUT 'http://localhost:9200/meta/facet/format' -d '{ ... }'
@@ -391,7 +391,7 @@ class Docstore():
         @returns: JSON dict with status code and response
         """
         logger.debug('index_facets(%s, %s)' % (self.indexname, path))
-        vocabs = vocab.get_vocabs_all(path)
+        vocabs = vocab.get_vocabs(path)
         
         # get classes from ddr-defs
         Facet = ELASTICSEARCH_CLASSES_BY_MODEL['facet']
@@ -415,14 +415,13 @@ class Docstore():
             statuses.append(status)
             
             for t in vocabs[v]['terms']:
-                tid = t.pop('id')
+                tid = t.get('id')
                 facetterm_id = '-'.join([
                     str(fid),
                     str(tid),
                 ])
                 term = FacetTerm()
                 term.meta.id = facetterm_id
-                term.id = facetterm_id
                 term.facet = fid
                 term.term_id = tid
                 term.links_html = facetterm_id
@@ -432,19 +431,20 @@ class Docstore():
                         FacetTerm._doc_type.name]['properties'].keys():
                     if t.get(field):
                         setattr(term, field, t[field])
+                term.id = facetterm_id  # overwrite term.id from original
                 logging.debug(term)
                 status = term.save(using=self.es, index=self.indexname)
                 statuses.append(status)
 
         forms_choices = {
             'topics-choices': vocab.topics_choices(
-                config.VOCABS_PATH,
+                config.VOCABS_URL,
                 ELASTICSEARCH_CLASSES_BY_MODEL['facetterm']
             ),
-            'facility-choices': vocab.form_vocab_choices(config.VOCABS_PATH, 'facility'),
-            'format-choices': vocab.form_vocab_choices(config.VOCABS_PATH, 'format'),
-            'genre-choices': vocab.form_vocab_choices(config.VOCABS_PATH, 'genre'),
-            'rights-choices': vocab.form_vocab_choices(config.VOCABS_PATH, 'rights'),
+            'facility-choices': vocab.form_vocab_choices(config.VOCABS_URL, 'facility'),
+            'format-choices': vocab.form_vocab_choices(config.VOCABS_URL, 'format'),
+            'genre-choices': vocab.form_vocab_choices(config.VOCABS_URL, 'genre'),
+            'rights-choices': vocab.form_vocab_choices(config.VOCABS_URL, 'rights'),
         }
         self.post_json('forms', 'forms-choices', forms_choices)
         return statuses

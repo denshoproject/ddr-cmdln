@@ -20,7 +20,7 @@ import sys
 import simplejson as json
 
 from DDR import batch_update
-from DDR.config import REPO_MODELS_PATH
+from DDR.config import REPO_MODELS_PATH, VOCABS_URL
 from DDR import idservice
 from DDR import identifier
 from DDR import models
@@ -30,8 +30,6 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     stream=sys.stdout,
 )
-
-VOCABS_PATH = os.path.join(REPO_MODELS_PATH, 'vocab')
 
 
 def guess_model(csv_path, collection_path, args_model=None):
@@ -94,7 +92,7 @@ def main():
         updated = batch_update.update_entities(
             args.csv,
             args.collection,
-            VOCABS_PATH,
+            VOCABS_URL,
             args.user, args.mail, 'ddr-update'
         )
                 
@@ -103,7 +101,7 @@ def main():
         updated = batch_update.update_files(
             args.csv,
             args.collection,
-            VOCABS_PATH,
+            VOCABS_URL,
             args.user, args.mail, 'ddr-update'
         )
     

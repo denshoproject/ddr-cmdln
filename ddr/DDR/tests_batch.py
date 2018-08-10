@@ -46,7 +46,9 @@ def test_guess_model():
             'identifier': identifier.Identifier('ddr-testing-123-2-master'),
         },
     ]
-    assert_raises(Exception, batch.Checker._guess_model, rowds2)
+    expected2 = ('entity', ['More than one model type in imput file!'])
+    out2 = batch.Checker._guess_model(rowds2)
+    assert out2 == expected2
     # entities
     rowds3 = [
         {
@@ -54,7 +56,7 @@ def test_guess_model():
             'identifier': identifier.Identifier('ddr-testing-123-1'),
         },
     ]
-    expected3 = 'entity'
+    expected3 = ('entity',[])
     out3 = batch.Checker._guess_model(rowds3)
     assert out3 == expected3
     # files
@@ -64,7 +66,7 @@ def test_guess_model():
             'identifier': identifier.Identifier('ddr-testing-123-2-master-a1b2c3'),
         },
     ]
-    expected4 = 'file'
+    expected4 = ('file',[])
     out4 = batch.Checker._guess_model(rowds4)
     assert out4 == expected4
     # file-roles are files
@@ -74,9 +76,20 @@ def test_guess_model():
             'identifier': identifier.Identifier('ddr-testing-123-2-master'),
         },
     ]
-    expected5 = 'file'
+    expected5 = ('file',[])
     out5 = batch.Checker._guess_model(rowds5)
     assert out5 == expected5
+    # external files
+    rowds6 = [
+        {
+            'id':'ddr-testing-123-1',
+            'identifier': identifier.Identifier('ddr-testing-123-1'),
+            'basename_orig': 'somefile.jpg',
+        },
+    ]
+    expected6 = ('file',[])
+    out6 = batch.Checker._guess_model(rowds6)
+    assert out6 == expected6
 
 # TODO _ids_in_local_repo
 # TODO _load_vocab_files
@@ -85,11 +98,20 @@ def test_guess_model():
 # TODO _validate_csv_file
 
 def test_prep_valid_values():
-    json_texts = [
-        '{"terms": [{"id": "advertisement"}, {"id": "album"}, {"id": "architecture"}], "id": "genre"}',
-        '{"terms": [{"id": "eng"}, {"id": "jpn"}, {"id": "chi"}], "id": "language"}',
-    ]
-    expected = {u'genre': [u'advertisement', u'album', u'architecture'], u'language': [u'eng', u'jpn', u'chi']}
+    json_texts = {
+        'status': {'id': 'status', 'terms': [
+            {'id': 'inprocess', 'title': 'In Progress'},
+            {'id': 'completed', 'title': 'Completed'}
+        ]},
+        'language': {'id': 'language', 'terms': [
+            {'id': 'eng', 'title': 'English'},
+            {'id': 'jpn', 'title': 'Japanese'},
+        ]}
+    }
+    expected = {
+        'status': ['inprocess', 'completed'],
+        'language': ['eng', 'jpn']
+    }
     assert batch.Checker._prep_valid_values(json_texts) == expected
 
 # Importer

@@ -4,6 +4,12 @@
 # ddr-import
 #
 
+DEPRECATION_NOTICE = """
+************************************************************************
+* ddr-import is deprecated -- use ddrimport instead                    *
+************************************************************************
+"""
+
 description = """Imports new entities or files with data from CSV files."""
 
 epilog = """
@@ -51,7 +57,7 @@ from DDR import dvcs
 from DDR import identifier
 from DDR import idservice
 
-VOCABS_PATH = config.VOCABS_PATH
+VOCABS_URL = config.VOCABS_URL
 AGENT = 'ddr-import'
 
 logging.basicConfig(
@@ -121,11 +127,13 @@ def main():
     parser.add_argument('-P', '--password', help='ID service password')
     parser.add_argument('-l', '--log', help='(optional) Log addfile to this path')
     args = parser.parse_args()
+
+    print(DEPRECATION_NOTICE)
     
     # ensure we have absolute paths (CWD+relpath)
     csv_path = os.path.abspath(os.path.normpath(args.csv))
     collection_path = os.path.abspath(os.path.normpath(args.collection))
-    vocabs_path = os.path.normpath(VOCABS_PATH)
+    vocabs_path = os.path.normpath(VOCABS_URL)
     
     # Check args
     if not os.path.exists(csv_path):
@@ -164,6 +172,7 @@ def main():
         tests,passed = passfail(chkeids, tests, passed)
         if passed != tests:
             logging.error('TESTS FAILED--QUITTING!')
+            print(DEPRECATION_NOTICE)
             sys.exit(1)
     
     if args.command == 'cleanup':
@@ -178,6 +187,7 @@ def main():
         logging.debug('status:')
         status = dvcs.repo_status(repo)
         logging.debug(status)
+        print(DEPRECATION_NOTICE)
         sys.exit(0)
     
     if   args.command == 'entity':
@@ -222,6 +232,8 @@ def main():
     finish = datetime.now()
     elapsed = finish - start
     logging.info('DONE - %s elapsed' % elapsed)
+    
+    print(DEPRECATION_NOTICE)
 
 
 if __name__ == '__main__':

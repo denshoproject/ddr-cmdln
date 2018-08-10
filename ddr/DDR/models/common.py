@@ -8,6 +8,7 @@ import elasticsearch_dsl as dsl
 import simplejson as json
 
 from DDR import VERSION
+from DDR import archivedotorg
 from DDR import config
 from DDR import docstore
 from DDR import dvcs
@@ -197,6 +198,10 @@ class DDRObject(object):
         d.organization_id = self.identifier.organization_id()
         d.collection_id = self.identifier.collection_id()
         d.signature_id = self.signature_id
+        if hasattr(self, 'ddrpublic_template_key'):
+            signature,template_key = self.ddrpublic_template_key()
+            if template_key:
+                d.template = template_key
         # ID components (repo, org, cid, ...) as separate fields
         idparts = deepcopy(self.identifier.idparts)
         idparts.pop('model')
@@ -262,7 +267,9 @@ class DDRObject(object):
             # so attach extra 'topics_id' and 'facility_id' fields
             d.topics_id = [item['id'] for item in self.topics]
             d.facility_id = [item['id'] for item in self.facility]
-        elif (self.identifier.model in ['file']):
+        if (self.identifier.model in ['segment']):
+            d.ia_meta = archivedotorg.download_segment_meta(self.identifier.id)
+        if (self.identifier.model in ['file']):
             if download_path:
                 d.links_download = download_path
         return d
@@ -272,10 +279,8 @@ class DDRObject(object):
         
         @param obj_metadata: dict Cached results of object_metadata.
         """
-        if hasattr(self, 'record_lastmod'):
-            self.record_lastmod = datetime.now(config.TZ)
-        if not os.path.exists(self.identifier.path_abs()):
-            os.makedirs(self.identifier.path_abs())
+        if not os.path.exists(os.path.dirname(self.json_path)):
+            os.makedirs(os.path.dirname(self.json_path))
         fileio.write_text(
             self.dump_json(doc_metadata=True, obj_metadata=obj_metadata),
             self.json_path
