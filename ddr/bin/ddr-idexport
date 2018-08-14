@@ -71,7 +71,10 @@ def main():
     print(collection)
     
     data = [
-         i.id for i in collection.identifiers()
+        i.id
+        for i in collection.identifiers()
+        # only export IDs that idservice can ingest
+        if i.id in identifier.NEXTABLE_MODELS
     ]
     
     with open(path, 'w') as f:
