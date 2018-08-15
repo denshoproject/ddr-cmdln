@@ -8,7 +8,7 @@ import pytz
 CONFIG_FILES = [
     '/etc/ddr/ddr.cfg',       '/etc/ddr/local.cfg',
     '/etc/ddr/ddrlocal.cfg',  '/etc/ddr/ddrlocal-local.cfg',
-    '/etc/ddr/idservice.cfg', '/etc/ddr/idservice-local.cfg',
+    '/etc/ddr/ddridservice.cfg', '/etc/ddr/ddridservice-local.cfg',
 ]
 
 class NoConfigError(Exception):
@@ -109,7 +109,7 @@ WORKBENCH_REGISTER_EIDS_URL = CONFIG.get('workbench','workbench_register_eids_ur
 WORKBENCH_URL = CONFIG.get('workbench','workbench_url')
 WORKBENCH_USERINFO = CONFIG.get('workbench','workbench_userinfo_url')
 
-IDSERVICE_API_BASE = CONFIG.get('idservice', 'api_base')
+IDSERVICE_API_BASE = CONFIG.get('cmdln', 'idservice_api_base')
 IDSERVICE_LOGIN_URL = IDSERVICE_API_BASE + '/rest-auth/login/'
 IDSERVICE_LOGOUT_URL = IDSERVICE_API_BASE + '/rest-auth/logout/'
 IDSERVICE_USERINFO_URL = IDSERVICE_API_BASE + '/rest-auth/user/'

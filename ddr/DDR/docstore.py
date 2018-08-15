@@ -135,6 +135,14 @@ def all_list_fields():
                 LIST_FIELDS.append(f)
     return LIST_FIELDS
 
+def load_json(path):
+    with open(path, 'r') as f:
+        try:
+            data = json.loads(f.read())
+        except json.errors.JSONDecodeError:
+            raise Exception('simplejson.errors.JSONDecodeError reading %s' % path)
+        return data
+
 class InvalidPage(Exception):
     pass
 class PageNotAnInteger(InvalidPage):
@@ -511,8 +519,7 @@ class Docstore():
         seealso DDR.models.common.DDRObject.to_esobject
         """
         # get and validate file
-        with open(path, 'r') as f:
-            data = json.loads(f.read())
+        data = load_json(path)
         if (not (data.get('id') and data.get('repo'))):
             raise Exception('Data file is not well-formed.')
         oi = Identifier(id=data['id'])
@@ -574,8 +581,7 @@ class Docstore():
         @returns: dict
         """
         DOC_TYPE = 'narrator'
-        with open(path, 'r') as f:
-            data = json.loads(f.read())
+        data = load_json(path)
         for document in data['narrators']:
             document['model'] = 'narrator'
             has_published = document.get('has_published', '')
@@ -1212,8 +1218,7 @@ def _parents_status( paths ):
         p = {'id':None,
              'public':None,
              'status':None,}
-        with open(path, 'r') as f:
-            data = json.loads(f.read())
+        data = load_json(path)
         for field in data:
             fname = field.keys()[0]
             if fname in p.keys():
@@ -1286,14 +1291,13 @@ def _publishable(paths, parents, force=False):
         # TODO knows way too much about JSON data format
         public = None; status = None
         jsonpath = d['identifier'].path_abs('json')
-        with open(jsonpath, 'r') as f:
-            document = json.loads(f.read())
-            for field in document:
-                for k,v in field.iteritems():
-                    if k == 'public':
-                        public = v
-                    if k == 'status':
-                        status = v
+        document = load_json(jsonpath)
+        for field in document:
+            for k,v in field.iteritems():
+                if k == 'public':
+                    public = v
+                if k == 'status':
+                    status = v
         if public and (public not in PUBLIC_OK):
             d['action'] = 'SKIP'
             d['note'] = 'not public'
