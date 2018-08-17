@@ -15,7 +15,6 @@ GitPython==1.0.0          # BSD          y
 graphviz==0.6             # MIT          y
 Jinja2==2.9.5             # BSD          y
 markupsafe                # BSD          y             required by jinja2 but absent
-lxml==3.7.3               # BSD          y        N(?)
 psutil==5.2.1             # BSD          y        y
 python-dateutil==2.6.0    # BSD          y
 python-xmp-toolkit==2.0.1 # New BSD      y

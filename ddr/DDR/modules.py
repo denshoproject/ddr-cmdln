@@ -112,25 +112,6 @@ class Module(object):
             value = function(value)
         return value
     
-    def xml_function(self, function_name, tree, NAMESPACES, f, value):
-        """If module function is present and callable, pass value to it and return result.
-        
-        Same as Module.function but with XML we need to pass namespaces lists to
-        the functions.
-        Used in dump_ead(), dump_mets().
-        
-        @param function_name: Name of the function to be executed.
-        @param tree: An lxml tree object.
-        @param NAMESPACES: Dict of namespaces used in the XML document.
-        @param f: Field dict (from MODEL_FIELDS).
-        @param value: A single value to be passed to the function, or None.
-        @returns: Whatever the specified function returns.
-        """
-        if (function_name in dir(self.module)):
-            function = getattr(self.module, function_name)
-            tree = function(tree, NAMESPACES, f, value)
-        return tree
-    
     def labels_values(self, document):
         """Apply display_{field} functions to prep object data for the UI.
         
