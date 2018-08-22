@@ -267,8 +267,14 @@ class DDRObject(object):
             # so attach extra 'topics_id' and 'facility_id' fields
             d.topics_id = [item['id'] for item in self.topics]
             d.facility_id = [item['id'] for item in self.facility]
-        if (self.identifier.model in ['segment']):
-            d.ia_meta = archivedotorg.download_segment_meta(self.identifier.id)
+            # A/V object metadata from Internet Archive
+            if (self.identifier.model in archivedotorg.IA_HOSTED_MODELS) \
+            or (self.format in archivedotorg.IA_HOSTED_FORMATS):
+                ia_status,xml = archivedotorg.get_xml(self.identifier.id)
+                if ia_status == 200:
+                    d.ia_meta = archivedotorg.object_meta(
+                        self.identifier.id, ia_status, xml
+                    )
         if (self.identifier.model in ['file']):
             if download_path:
                 d.links_download = download_path

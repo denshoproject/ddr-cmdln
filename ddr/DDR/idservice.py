@@ -27,13 +27,14 @@ class IDServiceClient():
     
     >>> from DDR import identifier
     >>> oidentifier = identifier.Identifier('ddr-test')
+    >>> cidentifier = identifier.Identifier('ddr-test-123')
+    >>> eidentifier = identifier.Identifier('ddr-test-123-1')
     >>> ic.next_object_id(oidentifier, 'collection')
     201,'ddr-test-123'
-    >>> cidentifier = identifier.Identifier('ddr-test-123')
     >>> ic.next_object_id(cidentifier, 'entity')
     201,'ddr-test-123-1'
-    >>> ic.next_object_id(cidentifier, 'entity')
-    201,'ddr-test-123-1'
+    >>> ic.next_object_id(eidentifier, 'segment')
+    201,'ddr-test-123-1-1'
     
     >>> ic.resume('gjost', u'9b68187429be07506dae2d1a493b74afd4ef7c35')
     >>> ic.logout()

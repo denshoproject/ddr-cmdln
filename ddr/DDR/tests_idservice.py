@@ -22,8 +22,8 @@ LOGGED_OUT_HTML = """<html>
 </html>"""
 
 def test_needs_login():
-    soup0 = BeautifulSoup(LOGGED_IN_HTML, 'lxml')
-    soup1 = BeautifulSoup(LOGGED_OUT_HTML, 'lxml')
+    soup0 = BeautifulSoup(LOGGED_IN_HTML, 'html.parser')
+    soup1 = BeautifulSoup(LOGGED_OUT_HTML, 'html.parser')
     assert idservice._needs_login(soup0) == False
     assert idservice._needs_login(soup1) == True
 
