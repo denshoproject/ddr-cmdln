@@ -78,7 +78,6 @@ setup(
         'bin/ddr-config',
         'bin/ddr-export',  # TODO remove
         'bin/ddr-filter',
-        'bin/ddr-idexport',
         'bin/ddr-import',  # TODO remove
         'bin/ddr-info',
         'bin/ddr-massupdate',
