@@ -198,10 +198,6 @@ class DDRObject(object):
         d.organization_id = self.identifier.organization_id()
         d.collection_id = self.identifier.collection_id()
         d.signature_id = self.signature_id
-        if hasattr(self, 'ddrpublic_template_key'):
-            signature,template_key = self.ddrpublic_template_key()
-            if template_key:
-                d.template = template_key
         # ID components (repo, org, cid, ...) as separate fields
         idparts = deepcopy(self.identifier.idparts)
         idparts.pop('model')
@@ -268,13 +264,20 @@ class DDRObject(object):
             d.topics_id = [item['id'] for item in self.topics]
             d.facility_id = [item['id'] for item in self.facility]
             # A/V object metadata from Internet Archive
-            if (self.identifier.model in archivedotorg.IA_HOSTED_MODELS) \
-            or (self.format in archivedotorg.IA_HOSTED_FORMATS):
-                ia_status,xml = archivedotorg.get_xml(self.identifier.id)
-                if ia_status == 200:
-                    d.ia_meta = archivedotorg.object_meta(
-                        self.identifier.id, ia_status, xml
+            # A/V templates
+            if archivedotorg.is_iaobject(self):
+                http_status,xml = archivedotorg.get_xml(self.identifier.id)
+                if http_status == 200:
+                    iaobject = archivedotorg.IAObject.get(
+                        self.identifier.id, http_status, xml
                     )
+                    if iaobject:
+                        d.ia_meta = iaobject.dict()
+                        d.template = ':'.join([
+                            self.format,
+                            iaobject.mimetype.split('/')[0]
+                        ])
+
         if (self.identifier.model in ['file']):
             if download_path:
                 d.links_download = download_path
