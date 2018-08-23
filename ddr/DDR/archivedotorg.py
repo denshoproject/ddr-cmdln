@@ -26,7 +26,6 @@ FIELDNAMES = ['sha1','size','length','height','width','title',]
 
 
 def is_iaobject(o):
-    print(o.identifier.model, o.format)
     if (o.identifier.model in IA_HOSTED_MODELS) \
     or (o.format in IA_HOSTED_FORMATS):
         return True
