@@ -104,11 +104,12 @@ def test_selected_inheritables():
 
 def test_inherit():
     # TODO this test depends on particular repo_models modules and fields
-    collection = models.Collection(path_abs='/var/www/media/ddr/ddr-test-123')
-    entity = models.Entity(path_abs='/var/www/media/ddr/ddr-test-123/files/ddr-test-123-456')
-    file_ = models.File(
-        path_abs='/var/www/media/ddr/ddr-test-123/files/ddr-test-123-456/files/ddr-test-123-456-master-abc123'
-    )
+    ci = identifier.Identifier('/var/www/media/ddr/ddr-testing-123')
+    ei = identifier.Identifier('/var/www/media/ddr/ddr-testing-123/files/ddr-testing-123-456')
+    fi = identifier.Identifier('/var/www/media/ddr/ddr-testing-123/files/ddr-testing-123-456/files/ddr-testing-123-456-master-abc123')
+    collection = models.Collection(ci.path_abs(), identifier=ci)
+    entity = models.Entity(ei.path_abs(), identifier=ei)
+    file_ = models.File(fi.path_abs(), identifier=fi)
     
     collection.public = True
     entity.public = False
