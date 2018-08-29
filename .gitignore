@@ -4,6 +4,7 @@
 *.deb
 *.svg
 .coverage
+.tox/
 coverage-*
 ddr/build/
 ddr/ddr_cmdln.egg-info/
