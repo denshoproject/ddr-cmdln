@@ -7,8 +7,6 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 import requests
 
-from django.conf import settings
-
 IA_DOWNLOAD_URL = 'https://archive.org/download'
 
 # Models that should always be checked for IA content
@@ -26,7 +24,6 @@ FIELDNAMES = ['sha1','size','length','height','width','title',]
 
 
 def is_iaobject(o):
-    print(o.identifier.model, o.format)
     if (o.identifier.model in IA_HOSTED_MODELS) \
     or (o.format in IA_HOSTED_FORMATS):
         return True

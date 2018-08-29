@@ -26,3 +26,4 @@ unicodecsv==0.14.1        # BSD          y        y
 bpython
 coverage
 nose
+tox

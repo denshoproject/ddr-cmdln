@@ -752,6 +752,7 @@ def remotes(repo, paths=None, clone_log_n=1):
     @returns: list of remotes
     """
     reader = repo.config_reader()
+    reader.sections()  # reader.items() works better if you do this first
     remotes = []
     for remote in repo.remotes:
         section_name = 'remote "%s"' % remote.name
@@ -872,7 +873,7 @@ def annex_get_description(repo, annex_status):
     """
     # TODO 
     try:
-        uuid = repo.git.config('annex.uuid')
+        uuid = repo.config_reader().get('annex','uuid')
     except:
         uuid = 'unknown-annex-uuid'
         logging.error('UNKNOWN ANNEX UUID')
@@ -919,7 +920,7 @@ def annex_set_description( repo, annex_status, description=None, drive_label=Non
             desc = description
         else:
             # gather information
-            user_mail = repo.git.config('user.email')
+            user_mail = repo.config_reader().get('user','email')
             # generate description
             desc = _annex_make_description(
                 drive_label=drive_label,

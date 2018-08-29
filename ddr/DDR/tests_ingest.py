@@ -114,8 +114,10 @@ def test_make_access_file():
         os.remove(access_dest_path)
     # arrange test jpg
     src_path = TEST_IMG_PATH
+    parent_dir = os.path.dirname(src_path)
+    if not os.path.exists(parent_dir):
+        os.makedirs(parent_dir)
     if not os.path.exists(src_path):
-        os.makedirs(os.path.dirname(src_path))
         urllib.urlretrieve(TEST_IMG_URL, TEST_IMG_PATH)
     assert ingest.make_access_file(src_path, access_dest_path, log) == access_dest_path
     # clean up

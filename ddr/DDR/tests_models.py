@@ -233,31 +233,31 @@ FILEGROUPS_DATA = {
 
 FILEGROUPS_META = [
     {
-        "role": "master",
-        "files": [FILEMETA_DATA['ddr-densho-23-1-master-adb451ffec']]
-    },
-    {
         "role": "mezzanine",
         "files": [FILEMETA_DATA['ddr-densho-23-1-mezzanine-adb451ffec']]
     },
-]
-FILES_META = [
-    FILEMETA_DATA['ddr-densho-23-1-master-adb451ffec'],
-    FILEMETA_DATA['ddr-densho-23-1-mezzanine-adb451ffec'],
-]
-FILEGROUPS_OBJECTS = [
     {
         "role": "master",
-        "files": [FILEGROUPS_DATA['ddr-densho-23-1-master-adb451ffec']]
+        "files": [FILEMETA_DATA['ddr-densho-23-1-master-adb451ffec']]
     },
+]
+FILES_META = [
+    FILEMETA_DATA['ddr-densho-23-1-mezzanine-adb451ffec'],
+    FILEMETA_DATA['ddr-densho-23-1-master-adb451ffec'],
+]
+FILEGROUPS_OBJECTS = [
     {
         "role": "mezzanine",
         "files": [FILEGROUPS_DATA['ddr-densho-23-1-mezzanine-adb451ffec']]
     },
+    {
+        "role": "master",
+        "files": [FILEGROUPS_DATA['ddr-densho-23-1-master-adb451ffec']]
+    },
 ]
 FILES_OBJECTS = [
-    FILEGROUPS_DATA['ddr-densho-23-1-master-adb451ffec'],
     FILEGROUPS_DATA['ddr-densho-23-1-mezzanine-adb451ffec'],
+    FILEGROUPS_DATA['ddr-densho-23-1-master-adb451ffec'],
 ]
 
 def test_filegroups_to_files():
@@ -276,7 +276,7 @@ def test_files_to_filegroups():
     print('FILEGROUPS_OBJECTS\n%s' % FILEGROUPS_OBJECTS)
     print('out1\n%s' % out1)
     assert out1 == FILEGROUPS_OBJECTS
-
+    
 def test_Entity__init__():
     collection_id = 'ddr-testing-123'
     entity_id = 'ddr-testing-123-456'

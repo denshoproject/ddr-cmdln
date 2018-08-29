@@ -21,11 +21,11 @@ LOGGED_OUT_HTML = """<html>
 </head>
 </html>"""
 
-def test_needs_login():
-    soup0 = BeautifulSoup(LOGGED_IN_HTML, 'html.parser')
-    soup1 = BeautifulSoup(LOGGED_OUT_HTML, 'html.parser')
-    assert idservice._needs_login(soup0) == False
-    assert idservice._needs_login(soup1) == True
+#def test_needs_login():
+#    soup0 = BeautifulSoup(LOGGED_IN_HTML, 'html.parser')
+#    soup1 = BeautifulSoup(LOGGED_OUT_HTML, 'html.parser')
+#    assert idservice._needs_login(soup0) == False
+#    assert idservice._needs_login(soup1) == True
 
 # TODO test_login
 # TODO test_logout
@@ -55,24 +55,24 @@ ENTITY_IDS_HTML = """
 """
 ENTITY_IDS = ['ddr-densho-1-1', 'ddr-densho-1-2']
 
-def test__object_ids_existing():
-    out0 = idservice._object_ids_existing(
-        BeautifulSoup(COLLECTION_IDS_HTML),
-        ('a','collection')
-    )
-    assert out0 == COLLECTION_IDS
-    out1 = idservice._object_ids_existing(
-        BeautifulSoup(ENTITY_IDS_HTML),
-        ('td', 'eid')
-    )
-    assert out1 == ENTITY_IDS
+#def test__object_ids_existing():
+#    out0 = idservice._object_ids_existing(
+#        BeautifulSoup(COLLECTION_IDS_HTML),
+#        ('a','collection')
+#    )
+#    assert out0 == COLLECTION_IDS
+#    out1 = idservice._object_ids_existing(
+#        BeautifulSoup(ENTITY_IDS_HTML),
+#        ('td', 'eid')
+#    )
+#    assert out1 == ENTITY_IDS
 
-def test_get_ancestor():
-    ei = identifier.Identifier('ddr-test-123-456')
-    ci = identifier.Identifier('ddr-test-123')
-    oi = identifier.Identifier('ddr-test')
-    assert idservice.get_ancestor(ei, 'collection').id == ci.id
-    assert idservice.get_ancestor(ei, 'organization').id == oi.id
+#def test_get_ancestor():
+#    ei = identifier.Identifier('ddr-test-123-456')
+#    ci = identifier.Identifier('ddr-test-123')
+#    oi = identifier.Identifier('ddr-test')
+#    assert idservice.get_ancestor(ei, 'collection').id == ci.id
+#    assert idservice.get_ancestor(ei, 'organization').id == oi.id
 
 # TODO test_collections
 # TODO test_entities
@@ -120,15 +120,15 @@ NEXT_ENTITY_HTML = """
 </html>
 """
 
-def test__objects_next_process():
-    new_ids_url = 'NEW_IDS_URL'
-    find0 = ['a', 'collection']
-    out0 = idservice._objects_next_process(new_ids_url, NEXT_COLLECTION_HTML, find0, 1)
-    assert out0 == ['ddr-testing-124']
-    
-    find1 = ['td', 'eid']
-    out1 = idservice._objects_next_process(new_ids_url, NEXT_ENTITY_HTML, find1, 1)
-    assert out1 == ['ddr-testing-124-3']
+#def test__objects_next_process():
+#    new_ids_url = 'NEW_IDS_URL'
+#    find0 = ['a', 'collection']
+#    out0 = idservice._objects_next_process(new_ids_url, NEXT_COLLECTION_HTML, find0, 1)
+#    assert out0 == ['ddr-testing-124']
+#    
+#    find1 = ['td', 'eid']
+#    out1 = idservice._objects_next_process(new_ids_url, NEXT_ENTITY_HTML, find1, 1)
+#    assert out1 == ['ddr-testing-124-3']
 
 
 # TODO test_collections_next
