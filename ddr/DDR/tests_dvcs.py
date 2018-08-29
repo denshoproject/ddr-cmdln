@@ -44,6 +44,7 @@ def test_repository():
     repo = git.Repo.init(path)
     dvcs.repository(path=path, user_name=user, user_mail=mail)
     reader = repo.config_reader()
+    reader.sections()
     core_items = {i[0]:i[1] for i in reader.items('core')}
     user_items = {i[0]:i[1] for i in reader.items('user')}
     annex_items = {i[0]:i[1] for i in reader.items('annex')}

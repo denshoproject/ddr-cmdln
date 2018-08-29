@@ -92,6 +92,8 @@ get: get-app get-ddr-defs
 
 install: install-prep install-app install-configs
 
+test: test-app
+
 uninstall: uninstall-app uninstall-configs
 
 clean: clean-app
@@ -165,6 +167,8 @@ get-app: get-ddr-cmdln
 
 install-app: install-git-annex install-virtualenv install-ddr-cmdln install-configs
 
+test-app: test-ddr-cmdln
+
 uninstall-app: uninstall-ddr-cmdln uninstall-configs
 
 clean-app: clean-ddr-cmdln
@@ -203,6 +207,11 @@ mkdir-ddr-cmdln:
 	-mkdir -p $(MEDIA_ROOT)
 	chown -R ddr.root $(MEDIA_ROOT)
 	chmod -R 755 $(MEDIA_ROOT)
+
+test-ddr-cmdln:
+	@echo ""
+	@echo "test-ddr-cmdln ---------------------------------------------------------"
+	source $(VIRTUALENV)/bin/activate; cd ddr/ && tox
 
 uninstall-ddr-cmdln: install-virtualenv
 	@echo ""

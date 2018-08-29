@@ -145,7 +145,8 @@ def test_definitions_children():
         'segment': ['file'],
     }
     out = identifier.Definitions.children(PARENTS)
-    assert out == expected
+    # test contents of list regardless of order
+    assert set(out) == set(expected)
 
 def test_definitions_id_components():
     IDENTIFIERS = [
@@ -1132,7 +1133,9 @@ CHILD_MODELS_DATA = [
 ]
 def test_child_models():
     for oid,stubs,expected in CHILD_MODELS_DATA:
-        assert identifier.Identifier(id=oid).child_models(stubs) == expected
+        out = identifier.Identifier(id=oid).child_models(stubs)
+        # test contents of list regardless of order
+        assert set(out) == set(expected)
 
 def test_child():
     i = identifier.Identifier(id='ddr-test-123')

@@ -64,18 +64,6 @@ def test_parse_cataliases():
 # list_facets
 # facet_terms
 
-def test_is_publishable():
-    data0 = [{'id': 'ddr-testing-123-1'}]
-    data1 = [{'id': 'ddr-testing-123-1'}, {'public':0}, {'status':'inprogress'}]
-    data2 = [{'id': 'ddr-testing-123-1'}, {'public':0}, {'status':'completed'}]
-    data3 = [{'id': 'ddr-testing-123-1'}, {'public':1}, {'status':'inprogress'}]
-    data4 = [{'id': 'ddr-testing-123-1'}, {'public':1}, {'status':'completed'}]
-    assert docstore._is_publishable(data0) == False
-    assert docstore._is_publishable(data1) == False
-    assert docstore._is_publishable(data2) == False
-    assert docstore._is_publishable(data3) == False
-    assert docstore._is_publishable(data4) == True
-
 def test_filter_payload():
     data = [{'id': 'ddr-testing-123-1'}, {'title': 'Title'}, {'secret': 'this is a secret'}]
     public_fields = ['id', 'title']
@@ -120,9 +108,9 @@ def test_clean_payload():
         {'id': 'ddr-testing-141'},
         {'record_created': '2013-09-13T14:49:43'},
         {'creators': [u'Mitsuoka, Norio: photographer']},
-        {'facility': ['10']},
+        {'facility': 'Tule Lake [10]'},
         {'parent': {'href': '', 'uuid': '', 'label': 'ddr-testing-123'}},
-        {'topics': ['123']},
+        {'topics': ['Topics [123]']},
         {},
         {}
     ]
@@ -300,55 +288,16 @@ def test_file_parent_ids():
     assert docstore._file_parent_ids(i1) == expected1
     assert docstore._file_parent_ids(i2) == expected2
 
-def test_publishable_or_not():
-    PATHS = [
-        '/tmp/ddr/ddr-test-123/files/ddr-test-123-1/files/ddr-test-123-1-master-96c.json',
-        '/tmp/ddr/ddr-test-123/files/ddr-test-123-2/files/ddr-test-123-2-master-c46.json',
-        '/tmp/ddr/ddr-test-123/files/ddr-test-123-1/entity.json',
-        '/tmp/ddr/ddr-test-123/files/ddr-test-123-2/entity.json',
-        '/tmp/ddr/ddr-test-123/collection.json',
-        '/tmp/ddr/ddr-test-124/files/ddr-test-124-1/files/ddr-test-124-1-master-6c9.json',
-        '/tmp/ddr/ddr-test-124/files/ddr-test-124-2/files/ddr-test-124-2-master-46c.json',
-        '/tmp/ddr/ddr-test-124/files/ddr-test-124-1/entity.json',
-        '/tmp/ddr/ddr-test-124/files/ddr-test-124-2/entity.json',
-        '/tmp/ddr/ddr-test-124/collection.json',
-       ]
-    PARENTS = {
-        u'ddr-test-123-1': {'status': u'completed', 'public': u'1'},
-        u'ddr-test-123-2': {'status': u'completed', 'public': u'0'},
-        u'ddr-test-123': {'status': u'completed', 'public': u'1'},
-        u'ddr-test-124-1': {'status': u'completed', 'public': u'1'},
-        u'ddr-test-124-2': {'status': u'completed', 'public': u'0'},
-        u'ddr-test-124': {'status': u'completed', 'public': u'1'},
-       }
-    EXPECTED_SUCCESSFUL = [
-        '/tmp/ddr/ddr-test-123/files/ddr-test-123-1/files/ddr-test-123-1-master-96c.json',
-        '/tmp/ddr/ddr-test-123/files/ddr-test-123-1/entity.json',
-        '/tmp/ddr/ddr-test-123/files/ddr-test-123-2/entity.json',
-        '/tmp/ddr/ddr-test-123/collection.json',
-        '/tmp/ddr/ddr-test-124/files/ddr-test-124-1/files/ddr-test-124-1-master-6c9.json',
-        '/tmp/ddr/ddr-test-124/files/ddr-test-124-1/entity.json',
-        '/tmp/ddr/ddr-test-124/files/ddr-test-124-2/entity.json',
-        '/tmp/ddr/ddr-test-124/collection.json'
-       ]
-    EXPECTED_BAD = [
-        ('/tmp/ddr/ddr-test-123/files/ddr-test-123-2/files/ddr-test-123-2-master-c46.json',
-         403, "parent unpublishable: ['ddr-test-123-2']"),
-        ('/tmp/ddr/ddr-test-124/files/ddr-test-124-2/files/ddr-test-124-2-master-46c.json',
-         403, "parent unpublishable: ['ddr-test-124-2']")
-       ]
-    successful_paths,bad_paths = docstore._publishable_or_not(PATHS, PARENTS)
-    assert successful_paths == EXPECTED_SUCCESSFUL
-    assert bad_paths == EXPECTED_BAD
-
 # _has_access_file
 # _store_signature_file
 # _choose_signatures
 # load_document_json
 
-def test_publish():
+def test_post_multi():
     hosts = [{'host': '127.0.0.1', 'port': 9999}]
     index = 'fakeindex'
-    results = docstore.Docstore(hosts, index).publish('/tmp', recursive=True, public=True)
-    assert results == {'successful': 0, 'bad': [], 'total': 0}
+    results = docstore.Docstore(hosts, index).post_multi('/tmp', recursive=True, force=True)
+    print('results %s' % results)
+    expected = {'successful': 0, 'skipped': 0, 'total': 0, 'bad': []}
+    assert results == expected
                        

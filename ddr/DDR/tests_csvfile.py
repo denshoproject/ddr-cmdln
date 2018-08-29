@@ -100,6 +100,22 @@ class TestSchema(object):
             'name': 'status',
         }
     ]
+    @staticmethod
+    def csvvalidate_status( data ):
+        """TODO csvvalidate_* should be in DDR.validation"""
+        return TestSchema._choice_is_valid('status', data[0], data[1])
+    @staticmethod
+    def _choice_is_valid(field, valid_values, value):
+        """
+        @param field: str
+        @param valid_values: dict {'field': ['list', 'of', 'valid', 'values']
+        @param value: str
+        @returns: boolean
+        """
+        if value in valid_values[field]:
+            return True
+        return False
+
 
 def test_check_row_values():
     module = modules.Module(TestSchema())
@@ -217,7 +233,7 @@ def test_find_invalid_values():
         {'id':'ddr-test-124', 'status':'complete',},
     ]
     expected1 = [
-        "row 1: ddr-test-123 ['status']"
+        "row 0: ddr-test-123 ['status']"
     ]
     out1 = csvfile.find_invalid_values(module, headers, valid_values, rowds1)
     assert out1 == expected1

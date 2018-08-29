@@ -8,42 +8,19 @@ import unittest
 
 import envoy
 import git
+from nose.tools import nottest
 import requests
 
-from DDR import CONFIG_FILE
-from DDR.commands import annex_whereis_file
+from DDR import config
+from DDR import dvcs
 
+DEBUG = True
 
+TEST_TMP_PATH = '/tmp/ddr-cmdln-test-{}'.format(datetime.now().strftime('%Y%m%d%H%M'))
+LOGGING_FILE = os.path.join(TEST_TMP_PATH, 'log')
 
-class NoConfigError(Exception):
-    def __init__(self, value):
-        self.value = value
-    def __str__(self):
-        return repr(self.value)
-
-if not os.path.exists(CONFIG_FILE):
-    raise NoConfigError('No config file!')
-config = ConfigParser.ConfigParser()
-config.read(CONFIG_FILE)
-
-DEBUG = config.get('testing','debug')
-
-LOGGING_FORMAT = '%(asctime)s %(levelname)s %(message)s'
-LOGGING_DATEFMT = '%Y-%m-%d %H:%M:%S'
-LOGGING_FILE = config.get('testing','log_file')
-if config.get('testing','log_level') == 'debug':
-    LOGGING_LEVEL = logging.DEBUG
-else:
-    LOGGING_LEVEL = logging.ERROR
-LOGGING_LEVEL = logging.DEBUG
-logging.basicConfig(format=LOGGING_FORMAT, datefmt=LOGGING_DATEFMT, level=LOGGING_LEVEL, filename=LOGGING_FILE)
-
-GIT_REMOTE_NAME = config.get('workbench','remote')
-GITWEB_URL = config.get('workbench','gitweb_url')
-
-TEST_TMP_PATH  = config.get('testing','base_path')
-TEST_USER_NAME = config.get('testing','user_name')
-TEST_USER_MAIL = config.get('testing','user_mail')
+TEST_USER_NAME = 'testing'
+TEST_USER_MAIL = 'testing@example.com'
 
 TEST_CID       = 'ddr-testing-{}'.format(datetime.now().strftime('%Y%m%d%H%M'))
 TEST_EIDS      = ['{}-{}'.format(TEST_CID, n) for n in [1,2]]
@@ -163,11 +140,13 @@ def file_in_remote_commit(collection_cid, commit, filename, debug=False):
 
 class TestCollection( unittest.TestCase ):
 
+    @nottest
     def setUp( self ):
         pass
 
     # initialize -------------------------------------------------------
     
+    @nottest
     def test_00_create( self ):
         """Create a collection.
         """
@@ -206,6 +185,7 @@ class TestCollection( unittest.TestCase ):
         self.assertEqual(remote_hash_master, local_hash_master)
         self.assertEqual(remote_hash_gitannex, local_hash_gitannex)
 
+    @nottest
     def test_020_status( self ):
         """Get status info for collection.
         """
@@ -222,6 +202,7 @@ class TestCollection( unittest.TestCase ):
         self.assertTrue('# On branch master' in lines)
         self.assertTrue('nothing to commit (working directory clean)' in lines)
 
+    @nottest
     def test_021_annex_status( self ):
         """Get annex status info for collection.
         """
@@ -241,6 +222,7 @@ class TestCollection( unittest.TestCase ):
         self.assertTrue( 'known annex size: 0 bytes'                 in lines)
         self.assertTrue( 'bloom filter size: 16 mebibytes (0% full)' in lines)
         
+    @nottest
     def test_03_update( self ):
         """Register changes to specified file; does not push.
         """
@@ -263,6 +245,7 @@ class TestCollection( unittest.TestCase ):
         commit = last_local_commit(TEST_COLLECTION, 'master')
         self.assertTrue(file_in_local_commit(TEST_COLLECTION, 'master', commit, 'control', debug=debug))
     
+    @nottest
     def test_04_sync( self ):
         """git pull/push to workbench server, git-annex sync
         """
@@ -290,6 +273,7 @@ class TestCollection( unittest.TestCase ):
         self.assertEqual(remote_hash_gitannex, local_hash_gitannex)
         # TODO sync is not actually working, but these tests aren't capturing that
     
+    @nottest
     def test_10_entity_create( self ):
         """Create new entity in the collection
         """
@@ -343,6 +327,7 @@ class TestCollection( unittest.TestCase ):
             entry = '<unittitle eid="{}">'.format(eid)
             self.assertTrue(entry in ead)
         
+    @nottest
     def test_11_entity_destroy( self ):
         """Remove entity from the collection
         """
@@ -357,6 +342,7 @@ class TestCollection( unittest.TestCase ):
         # TODO confirm entity no longer in ead.xml <dsc>
         # TODO confirm entity desctruction properly recorded for posterity
     
+    @nottest
     def test_12_entity_update( self ):
         """Register changes to specified file; does not push.
         """
@@ -386,6 +372,7 @@ class TestCollection( unittest.TestCase ):
                 file_in_local_commit(
                     TEST_COLLECTION, 'master', commit, destfilerelpath, debug=debug))
     
+    @nottest
     def test_13_entity_add( self ):
         """git annex add file to entity, push it, and confirm that in remote repo
         """
@@ -432,6 +419,7 @@ class TestCollection( unittest.TestCase ):
         # TODO test 20121205.jpg,6a00e55055.png in local commit
         # TODO test 20121205.jpg,6a00e55055.png in remote commit
     
+    @nottest
     def test_14_sync_again( self ):
         """Sync again, this time to see if 
         """
@@ -459,6 +447,7 @@ class TestCollection( unittest.TestCase ):
         self.assertEqual(remote_hash_gitannex, local_hash_gitannex)
         # TODO sync is not actually working, but these tests aren't capturing that
     
+    @nottest
     def test_20_push( self ):
         """git annex copy a file to the server; confirm it was actually copied.
         """
@@ -482,10 +471,11 @@ class TestCollection( unittest.TestCase ):
             run = envoy.run(cmd, timeout=30)
             logging.debug(run.std_out)
             # confirm that GIT_REMOTE_NAME appears in list of remotes the file appears in
-            remotes = annex_whereis_file(repo, pushfile_rel)
+            remotes = dvcs.annex_whereis_file(repo, pushfile_rel)
             logging.debug('    remotes {}'.format(remotes))
             self.assertTrue(GIT_REMOTE_NAME in remotes)
 
+    @nottest
     def test_30_clone( self ):
         """Clone an existing collection to an alternate location.
         
@@ -514,6 +504,7 @@ class TestCollection( unittest.TestCase ):
         self.assertTrue(os.path.exists(git))
         self.assertTrue(os.path.exists(annex))
 
+    @nottest
     def test_31_pull( self ):
         """git-annex pull files into collection from test_30_clone.
         
@@ -551,6 +542,7 @@ class TestCollection( unittest.TestCase ):
             self.assertTrue(os.path.islink(file_rel))
             self.assertTrue('/.git/annex/objects/' in os.readlink(file_rel))
     
+    @nottest
     def test_99_destroy( self ):
         """Destroy a collection.
         """
