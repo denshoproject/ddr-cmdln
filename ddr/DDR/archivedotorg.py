@@ -7,8 +7,6 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 import requests
 
-from django.conf import settings
-
 IA_DOWNLOAD_URL = 'https://archive.org/download'
 
 # Models that should always be checked for IA content
