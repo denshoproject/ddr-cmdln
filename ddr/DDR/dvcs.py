@@ -752,6 +752,7 @@ def remotes(repo, paths=None, clone_log_n=1):
     @returns: list of remotes
     """
     reader = repo.config_reader()
+    reader.sections()  # reader.items() works better if you do this first
     remotes = []
     for remote in repo.remotes:
         section_name = 'remote "%s"' % remote.name
