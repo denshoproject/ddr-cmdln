@@ -9,6 +9,10 @@ from nose.tools import assert_raises
 import config  # adds repo_models to sys.path
 import identifier
 
+TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'identifier')
+#if not os.path.exists(TESTING_BASE_DIR):
+#    os.makedirs(TESTING_BASE_DIR)
+
 BASE_PATHS = [
     '/var/www/media/ddr',
     '/media/qnfs/kinkura/gold',

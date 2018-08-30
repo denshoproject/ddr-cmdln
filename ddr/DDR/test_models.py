@@ -3,11 +3,14 @@ import json
 import os
 import shutil
 
+import config
 import models
 import identifier
 
-BASEDIR = '/tmp/test-ddr-models'
-MEDIA_BASE = os.path.join(BASEDIR, 'ddr')
+TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'models')
+if not os.path.exists(TESTING_BASE_DIR):
+    os.makedirs(TESTING_BASE_DIR)
+MEDIA_BASE = os.path.join(TESTING_BASE_DIR, 'ddr')
 
 class TestModule(object):
     __name__ = 'TestModule'

@@ -127,3 +127,5 @@ DOCSTORE_INDEX = CONFIG.get('public','docstore_index')
 VOCABS_URL = CONFIG.get('cmdln', 'vocabs_url')
 # vocab.get_vocabs will cache data here
 VOCABS = {}  # keys = vocab keyword
+
+TESTING_BASE_DIR = '/tmp/ddr-cmdln-testing'

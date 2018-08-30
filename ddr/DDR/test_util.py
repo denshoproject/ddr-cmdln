@@ -5,7 +5,9 @@ import shutil
 import config
 import util
 
-
+TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'util')
+#if not os.path.exists(TESTING_BASE_DIR):
+#    os.makedirs(TESTING_BASE_DIR)
 
 SAMPLE_DIRS = [
     '.git',
@@ -45,7 +47,7 @@ META_MODEL = {
 }
 
 def test_find_meta_files():
-    basedir = '/tmp/DDR_test_utils'
+    basedir = os.path.join(TESTING_BASE_DIR, 'find-meta-files')
     if os.path.exists(basedir):
         shutil.rmtree(basedir, ignore_errors=1)
     
@@ -99,7 +101,7 @@ def test_natural_order_string():
     assert util.natural_order_string('ddr-testing-123-15') == '15'
 
 def test_file_hash():
-    path = '/tmp/test-hash-%s' % datetime.now(config.TZ).strftime('%Y%m%dT%H%M%S')
+    path = os.path.join(TESTING_BASE_DIR, 'test-hash-%s' % datetime.now(config.TZ).strftime('%Y%m%dT%H%M%S'))
     text = 'hash'
     sha1 = '2346ad27d7568ba9896f1b7da6b5991251debdf2'
     sha256 = 'd04b98f48e8f8bcc15c6ae5ac050801cd6dcfd428fb5f9e65c4e16e7807340fa'

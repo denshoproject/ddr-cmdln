@@ -1,9 +1,14 @@
 from datetime import datetime
 import json
+import os
 
+import config
 import models
 import modules
 
+TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'modules')
+#if not os.path.exists(TESTING_BASE_DIR):
+#    os.makedirs(TESTING_BASE_DIR)
 
 def test_Module_path():
     class TestModule(object):

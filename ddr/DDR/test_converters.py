@@ -2,9 +2,14 @@
 """
 
 from datetime import datetime
+import os
 
 import config
 import converters
+
+TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'converters')
+#if not os.path.exists(TESTING_BASE_DIR):
+#    os.makedirs(TESTING_BASE_DIR)
 
 
 def assertion(func, arg, expected):

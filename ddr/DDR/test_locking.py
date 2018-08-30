@@ -4,12 +4,15 @@ import os
 import config
 import locking
 
+TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'locking')
+if not os.path.exists(TESTING_BASE_DIR):
+    os.makedirs(TESTING_BASE_DIR)
 
 # locking.lock
 # locking.unlock
 # locking.locked
 def test_locking():
-    lock_path = '/tmp/test-lock-%s' % datetime.now(config.TZ).strftime('%Y%m%dT%H%M%S')
+    lock_path = os.path.join(TESTING_BASE_DIR, 'test-lock-%s' % datetime.now(config.TZ).strftime('%Y%m%dT%H%M%S'))
     text = 'we are locked. go away.'
     # before locking
     assert locking.locked(lock_path) == False
