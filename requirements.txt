@@ -25,5 +25,7 @@ unicodecsv==0.14.1        # BSD          y        y
 
 bpython
 coverage
-nose
+pytest
+pytest-cov
+pytest-xdist
 tox

@@ -1,12 +1,17 @@
 import os
 
+import config
 import fileio
+
+TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'fileio')
+if not os.path.exists(TESTING_BASE_DIR):
+    os.makedirs(TESTING_BASE_DIR)
 
 
 TEXT = '{"a": 1, "b": 2}'
 
 def test_read_text():
-    path = '/tmp/test_DDR.fileio.read_text.json'
+    path = os.path.join(TESTING_BASE_DIR, 'read_text.json')
     with open(path, 'w') as f:
         f.write(TEXT)
     data = fileio.read_text(path)
@@ -15,7 +20,7 @@ def test_read_text():
     os.remove(path)
 
 def test_write_text():
-    path = '/tmp/test_DDR.fileio.write_text.json'
+    path = os.path.join(TESTING_BASE_DIR, 'write_text.json')
     fileio.write_text(TEXT, path)
     with open(path, 'r') as f:
         written = f.read()
@@ -24,7 +29,7 @@ def test_write_text():
     os.remove(path)
 
 
-CSV_PATH = '/tmp/test_DDR.fileio.write_csv.csv'
+CSV_PATH = os.path.join(TESTING_BASE_DIR, 'write_csv.csv')
 CSV_HEADERS = ['id', 'title', 'description']
 CSV_ROWS = [
     ['ddr-test-123', 'thing 1', 'nothing here'],

@@ -12,6 +12,10 @@ import csvfile
 import identifier
 import modules
 
+TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'csvfile')
+#if not os.path.exists(TESTING_BASE_DIR):
+#    os.makedirs(TESTING_BASE_DIR)
+
 
 def test_make_row_dict():
     headers0 = ['id', 'created', 'lastmod', 'title', 'description']

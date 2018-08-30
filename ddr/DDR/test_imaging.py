@@ -3,28 +3,32 @@ import os
 from nose.tools import assert_raises
 import requests
 
+import config
 import imaging
 
+TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'imaging')
+if not os.path.exists(TESTING_BASE_DIR):
+    os.makedirs(TESTING_BASE_DIR)
 
 TEST_FILES = {
     'jpg': {
         'url': 'http://ddr.densho.org/download/media/ddr-densho-2/ddr-densho-2-33-mezzanine-16fe864756-a.jpg',
-        'path': '/tmp/ddr-cmdln_test-imaging.jpg',
+        'path': os.path.join(TESTING_BASE_DIR, 'test-imaging.jpg'),
         'identify': '',
     },
     'tif': {
         'url': 'http://ddr.densho.org/download/media/ddr-densho-2/ddr-densho-2-33-mezzanine-16fe864756.tif',
-        'path': '/tmp/ddr-cmdln_test-imaging.tif',
+        'path': os.path.join(TESTING_BASE_DIR, 'test-imaging.tif'),
         'identify': '',
     },
     'pdf': {
         'url': 'http://ddr.densho.org/download/media/ddr-hmwf-1/ddr-hmwf-1-577-mezzanine-c714496444.pdf',
-        'path': '/tmp/ddr-cmdln_test-imaging.pdf',
+        'path': os.path.join(TESTING_BASE_DIR, 'test-imaging.pdf'),
         'identify': '',
     },
 #    'doc': {
 #        'url': '',
-#        'path': '/tmp/ddr-cmdln_test-imaging.docx',
+#        'path': os.path.join(TESTING_BASE_DIR, 'test-imaging.docx'),
 #        'identify': '',
 #    },
 }
@@ -74,19 +78,21 @@ def test_analyze_magick():
 
 def test_analyze():
     _download_test_images()
-    path0 = '/tmp/missingfile.jpg'
+    path0 = os.path.join(TESTING_BASE_DIR, 'missingfile.jpg')
     path1 = TEST_FILES['jpg']['path']
     assert_raises(Exception, imaging.analyze, path0)
     assert os.path.exists(path1)
     out1 = imaging.analyze(path1)
     expected1 = {
         'std_err': '',
-        'std_out': '/tmp/ddr-cmdln_test-imaging.jpg JPEG 1024x588 1024x588+0+0 8-bit Grayscale Gray 256c 124KB 0.000u 0:00.000',
+        'std_out': '%s JPEG 1024x588 1024x588+0+0 8-bit Grayscale Gray 256c 124KB 0.000u 0:00.000' % (
+            TEST_FILES['jpg']['path']
+        ),
         'format': 'JPEG',
         'image': True,
         'can_thumbnail': None,
         'frames': 1,
-        'path': '/tmp/ddr-cmdln_test-imaging.jpg'
+        'path': TEST_FILES['jpg']['path'],
     }
     
     print('out1 %s' % out1)
@@ -106,7 +112,7 @@ def test_geometry_is_ok():
 def test_thumbnail():
     _download_test_images()
     src = TEST_FILES['jpg']['path']
-    dest = '/tmp/ddr-test-imaging-thumb.jpg'
+    dest = os.path.join(TESTING_BASE_DIR, 'test-imaging-thumb.jpg')
     geometry = '100x100'
     assert os.path.exists(src)
     imaging.thumbnail(src, dest, geometry)
