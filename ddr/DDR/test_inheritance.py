@@ -6,6 +6,10 @@ import identifier
 import inheritance
 import models
 
+TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'inheritance')
+if not os.path.exists(TESTING_BASE_DIR):
+    os.makedirs(TESTING_BASE_DIR)
+
 MODEL_FIELDS_INHERITABLE = [
     {'name':'id',},
     {'name':'record_created',},
@@ -46,7 +50,7 @@ CHILD_JSONS_EXPECTED = [
 
 def test_child_jsons():
     pass
-    basedir = '/tmp/test_DDR.inheritance.child_jsons'
+    basedir = os.path.join(TESTING_BASE_DIR, 'child_jsons')
     if os.path.exists(basedir):
         shutil.rmtree(basedir, ignore_errors=1)
     

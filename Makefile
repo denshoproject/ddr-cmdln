@@ -213,6 +213,11 @@ test-ddr-cmdln:
 	@echo "test-ddr-cmdln ---------------------------------------------------------"
 	source $(VIRTUALENV)/bin/activate; cd ddr/ && tox
 
+coverage:
+	@echo ""
+	@echo "test-coverage ----------------------------------------------------------"
+	source $(VIRTUALENV)/bin/activate && pytest --cov-report html:/tmp/ddr-cmdln-cov-html --cov=DDR
+
 uninstall-ddr-cmdln: install-virtualenv
 	@echo ""
 	@echo "uninstall-ddr-cmdln ----------------------------------------------------"

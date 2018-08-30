@@ -7,10 +7,12 @@ import git
 from nose.tools import assert_raises
 
 import batch
+import config
 import identifier
 
-TMP_DIR = '/tmp/tests-ddr-batch'
-
+TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'batch')
+#if not os.path.exists(TESTING_BASE_DIR):
+#    os.makedirs(TESTING_BASE_DIR)
 
 # Exporter
 # TODO test_make_tmpdir

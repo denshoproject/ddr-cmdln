@@ -16,8 +16,10 @@ from DDR import dvcs
 
 DEBUG = True
 
-TEST_TMP_PATH = '/tmp/ddr-cmdln-test-{}'.format(datetime.now().strftime('%Y%m%d%H%M'))
-LOGGING_FILE = os.path.join(TEST_TMP_PATH, 'log')
+TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'commands')
+if not os.path.exists(TESTING_BASE_DIR):
+    os.makedirs(TESTING_BASE_DIR)
+LOGGING_FILE = os.path.join(TESTING_BASE_DIR, 'log')
 
 TEST_USER_NAME = 'testing'
 TEST_USER_MAIL = 'testing@example.com'
@@ -25,7 +27,7 @@ TEST_USER_MAIL = 'testing@example.com'
 TEST_CID       = 'ddr-testing-{}'.format(datetime.now().strftime('%Y%m%d%H%M'))
 TEST_EIDS      = ['{}-{}'.format(TEST_CID, n) for n in [1,2]]
 
-TEST_COLLECTION      = os.path.join(TEST_TMP_PATH,TEST_CID)
+TEST_COLLECTION      = os.path.join(TESTING_BASE_DIR,TEST_CID)
 COLLECTION_CHANGELOG = os.path.join(TEST_COLLECTION, 'changelog')
 COLLECTION_CONTROL   = os.path.join(TEST_COLLECTION, 'control')
 COLLECTION_EAD       = os.path.join(TEST_COLLECTION, 'ead.xml')
@@ -521,7 +523,7 @@ class TestCollection( unittest.TestCase ):
         for f in os.listdir(TEST_MEDIA_DIR):
             entity_path = os.path.join(COLLECTION_FILES,eid)
             file_abs = os.path.join(entity_path, 'files', f)
-            file_rel = file_abs.replace(TEST_TMP_PATH, '').replace(TEST_CID, '', 1)
+            file_rel = file_abs.replace(TESTING_BASE_DIR, '').replace(TEST_CID, '', 1)
             if file_rel.startswith('/'):
                 file_rel = file_rel[1:]
             logging.debug('entity_path: {}'.format(entity_path))

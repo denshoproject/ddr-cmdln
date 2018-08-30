@@ -1,10 +1,14 @@
 from datetime import datetime
 import json
 import os
+
+import config
+import fileio
 import vocab
 
-import fileio
-
+TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'vocab')
+if not os.path.exists(TESTING_BASE_DIR):
+    os.makedirs(TESTING_BASE_DIR)
 
 # Index.add
 # Index.terms
@@ -70,7 +74,7 @@ def test_objects():
 # Term.json
 
 def test_csv():
-    filename = '/tmp/vocab-index-%s' % datetime.now().strftime('%Y%m%d-%H%M%S')
+    filename = os.path.join(TESTING_BASE_DIR, 'vocab-index-%s' % datetime.now().strftime('%Y%m%d-%H%M%S'))
     filename_csv = '%s.csv' % filename
     # prep
     terms_csv = TERMS_CSV.strip()
@@ -88,7 +92,7 @@ def test_csv():
     os.remove(filename_csv)
 
 def test_json():
-    filename = '/tmp/vocab-index-%s' % datetime.now().strftime('%Y%m%d-%H%M%S')
+    filename = os.path.join(TESTING_BASE_DIR, 'vocab-index-%s' % datetime.now().strftime('%Y%m%d-%H%M%S'))
     filename_json = '%s.json' % filename
     # prep
     with open(filename_json, 'w') as f0:
