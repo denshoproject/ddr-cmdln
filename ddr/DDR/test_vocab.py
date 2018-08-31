@@ -4,6 +4,7 @@ import os
 
 import config
 import fileio
+import identifier
 import vocab
 
 TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'vocab')
@@ -334,4 +335,187 @@ MENU_CHOICES = [
     (1, 'music'), (2, 'classical'), (3, 'jazz'), (4, 'electronic'),
     (5, 'romantic'), (6, 'modern'), (7, 'traditional'), (8, 'fusion'),
     (9, 'dance'), (10, 'experimental')
+]
+
+#def test_index_format():
+#    assert False
+# 
+#def test_index_parse_csv_urls():
+#    assert False
+# 
+#def test_index_dump_text():
+#    assert False
+# 
+#def test_index_path_choices():
+#    assert False
+# 
+#def test_term_repr():
+#    assert False
+# 
+#def test_term_from_dict():
+#    assert False
+# 
+#def test_term_flatten_json():
+#    assert False
+# 
+#def test_term_csv():
+#    assert False
+
+def test_repair_topicdata():
+    topics = [
+        {'id': u'120', 'term': u'Activism and involvement'},
+        {"id": "235", "term": "i"},
+    ]
+    expected = [
+        {'id': u'120', 'term': u'Activism and involvement'},
+        {'id': '235', 'term': u"Activism and involvement: Politics"},
+    ]
+    out = vocab.repair_topicdata(topics, facet=TOPICS_VOCAB)
+    assert out == expected
+
+def test_topics_choices():
+    out = vocab.topics_choices(
+        TOPICS_VOCAB,
+        identifier.ELASTICSEARCH_CLASSES_BY_MODEL['facetterm']
+    )
+    print(out)
+    assert out == TOPICS_CHOICES
+
+#def test_make_tree():
+#    assert False
+
+def test_form_vocab_choices():
+    out = vocab.form_vocab_choices(STATUS_VOCAB, 'status')
+    assert out == STATUS_CHOICES
+
+STATUS_VOCAB = {
+    'id': 'status',
+    'title': 'Status',
+    'description': '',
+    'terms': [
+        {'id': 'inprocess', 'title': 'In Progress', 'description': ''},
+        {'id': 'completed', 'title': 'Completed', 'description': ''}
+    ],
+}
+STATUS_CHOICES = [
+    ('status-completed', 'Completed'),
+    ('status-inprocess', 'In Progress')
+]
+
+TOPICS_VOCAB = {
+    'id': 'topics',
+    'title': 'Topics',
+    'description': '',
+    'terms': [
+        
+        {
+            "id": 120,
+            "title": "Activism and involvement",
+            "_title": "Activism and involvement [120]",
+            "path": "Activism and involvement",
+            "parent_id": 0,
+            "ancestors": [],
+            "siblings": [],
+            "children": [
+                235, 447, 462
+            ],
+            "weight": 0
+        },
+
+        {
+            "id": 235,
+            "title": "Politics",
+            "_title": "Support from the non-Japanese American community [80] (formerly Supporters on the Outside [80])",
+            "path": "Activism and involvement: Politics",
+            "parent_id": 120,
+            "ancestors": [120],
+            "siblings": [462],
+            "children": [448],
+            "weight": 0,
+        },
+
+        {
+            "id": 448,
+            "title": "Political systems and ideologies",
+            "_title": "Political systems and ideologies [448]",
+            "path": "Activism and involvement: Politics: Political systems and ideologies",
+            "parent_id": 235,
+            "ancestors": [120, 235],
+            "siblings": [],
+            "children": [449, 451],
+            "weight": 0,
+        },
+
+        {
+            "id": 449,
+            "title": "Communism",
+            "_title": "Communism [449]",
+            "path": "Activism and involvement: Politics: Political systems and ideologies: Communism",
+            "parent_id": 448,
+            "ancestors": [120, 235, 448],
+            "siblings": [451],
+            "children": [],
+            "weight": 0,
+        },
+
+        {
+            "id": 451,
+            "title": "Socialism",
+            "_title": "Socialism [451]",
+            "path": "Activism and involvement: Politics: Political systems and ideologies: Socialism",
+            "parent_id": 448,
+            "ancestors": [120, 235, 448],
+            "siblings": [449],
+            "children": [],
+            "weight": 0,
+        },
+
+        {
+            "id": 447,
+            "title": "Anti-war movements",
+            "_title": "Anti-war movements [447]",
+            "path": "Activism and involvement: Anti-war movements",
+            "parent_id": 120,
+            "ancestors": [120],
+            "siblings": [462],
+            "children": [],
+            "weight": 0
+        },
+
+        {
+            "id": 462,
+            "title": "Movements and ideologies",
+            "_title": "Movements and ideologies [462]",
+            "path": "Activism and involvement: Movements and ideologies",
+            "parent_id": 120,
+            "ancestors": [120],
+            "siblings": [235],
+            "children": [463],
+            "weight": 0,
+        },
+
+        {
+            "id": 463,
+            "title": "Feminism",
+            "_title": "Feminism [463]",
+            "path": "Activism and involvement: Movements and ideologies: Feminism",
+            "parent_id": 462,
+            "ancestors": [120, 462],
+            "siblings": [],
+            "children": [],
+            "weight": 0
+        },
+
+    ],
+}
+
+TOPICS_CHOICES = [
+    ('topics-120', 'Activism and involvement'),
+    ('topics-235', 'Activism and involvement: Politics'),
+    ('topics-448', 'Activism and involvement: Politics: Political systems and ideologies'),
+    ('topics-449', 'Activism and involvement: Politics: Political systems and ideologies: Communism'),
+    ('topics-451', 'Activism and involvement: Politics: Political systems and ideologies: Socialism'),
+    ('topics-447', 'Activism and involvement: Anti-war movements'),
+    ('topics-462', 'Activism and involvement: Movements and ideologies'),
+    ('topics-463', 'Activism and involvement: Movements and ideologies: Feminism')
 ]

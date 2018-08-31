@@ -634,7 +634,7 @@ THIS_MODULE = sys.modules[__name__]
 # global var so we don't have to retrieve topics for every entity
 TOPICS = {}
 
-def repair_topicdata(data):
+def repair_topicdata(data, facet):
     """Repair damaged topics data
     # see https://github.com/densho/ddr-cmdln/issues/43
     
@@ -651,13 +651,13 @@ def repair_topicdata(data):
     ]
     
     @param data: list of dicts
+    @param facet: dict Output of get_vocabs()[FIELDNAME]
     @return: list of dicts
     """
+    topics = facet
     # get topics so we can repair topic term (path) field
     # keep it so we only retrieve it once
     if not THIS_MODULE.TOPICS:
-        topics_path_url = os.path.join(config.VOCABS_URL, 'topics.json')
-        topics = get_vocab(topics_path_url)
         THIS_MODULE.TOPICS = {
             str(term['id']): term['path']
             for term in topics['terms']
@@ -675,14 +675,13 @@ def repair_topicdata(data):
     return data
 
 
-def topics_choices(vocabs_url, FacetTermClass):
+def topics_choices(facet, FacetTermClass):
     """List of topicID,path used in ddrpublic search forms topics fields.
     
-    @param vocabs_url: str DDR.config.VOCABS_URL
+    @param facet: dict Output of get_vocabs()[FIELDNAME]
     @param FacetTermClass: class DDR.identifier.ELASTICSEARCH_CLASSES_BY_MODEL['facetterm']
     @returns: list [(term.id, term.path), ...]
     """
-    facet = get_vocabs(vocabs_url)['topics']
     fid = facet['id']
     terms = []
     for t in facet['terms']:
@@ -773,14 +772,13 @@ def make_tree(terms_list):
     flatten(terms_tree)
     return terms
 
-def form_vocab_choices(vocabs_path, fieldname):
+def form_vocab_choices(facet, fieldname):
     """List of keyword,label used in ddrpublic search multichoice fields.
     
-    @param vocabs_path: str DDR.config.VOCABS_PATH
+    @param facet: dict Output of get_vocabs()[FIELDNAME]
     @param fieldname: str
     @returns: list [(term.id, term.path), ...]
     """
-    facet = get_vocabs(vocabs_path)[fieldname]
     terms = sorted(facet['terms'], key=lambda term: term['title'])
     return [
         (
