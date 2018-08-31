@@ -13,17 +13,19 @@ TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'ingest')
 if not os.path.exists(TESTING_BASE_DIR):
     os.makedirs(TESTING_BASE_DIR)
 
-# TODO test_AddFileLogger_entry
-
-#def test_AddFileLogger_ok():
-    
-
-# TODO test_AddFileLogger_not_ok
-# TODO test_AddFileLogger_log
-# TODO test_AddFileLogger_crash
-
 TEST_IMG_URL = 'https://web.archive.org/web/20011221151014im_/http://densho.org/images/logo.jpg'
 TEST_IMG_PATH = os.path.join(TESTING_BASE_DIR, 'test-imaging.jpg')
+
+
+class TestAddFileLogger():
+    pass
+    # TODO def test_repr(self):
+    # TODO def test_entry(self):
+    # TODO def test_ok(self):
+    # TODO def test_not_ok(self):
+    # TODO def test_log(self):
+    # TODO def test_crash(self):
+
 
 def test_log_path():
     eid = 'ddr-test-123-456'
@@ -31,7 +33,7 @@ def test_log_path():
     out = ingest._log_path(identifier.Identifier(eid), TESTING_BASE_DIR)
     assert out == expected
 
-# TODO test_addfile_logger
+# TODO def test_addfile_logger():
 
 def test_check_dir():
     eid = 'ddr-test-123-456'
@@ -43,7 +45,7 @@ def test_check_dir():
         ingest.check_dir, 'var', '/var', log
     )
 
-# TODO test_checksums
+# TODO def test_checksums():
 
 def test_destination_path():
     src_path = os.path.join(TESTING_BASE_DIR, 'somefile.tif')
@@ -137,7 +139,7 @@ def test_make_access_file():
     if os.path.exists(access_dest_path):
         os.remove(access_dest_path)
 
-# TODO test_write_object_metadata
+# TODO def test_write_object_metadata():
 
 def test_move_files():
     # this seems way too complicated
@@ -173,7 +175,7 @@ def test_move_files():
         shutil.rmtree(os.path.dirname(tmp), ignore_errors=True)
         shutil.rmtree(os.path.dirname(dest), ignore_errors=True)
 
-def reverse_files_list():
+def test_reverse_files_list():
     files = [
         ('a', 'b'),
         ('c', 'd'),
@@ -184,8 +186,8 @@ def reverse_files_list():
     ]
     assert ingest.reverse_files_list(files) == reverse
 
-# TODO test_move_new_files_back
-# TODO test_move_existing_files_back
+# TODO def test_move_new_files_back():
+# TODO def test_move_existing_files_back():
 
 def test_predict_staged():
     already = ['a', 'b']
@@ -193,7 +195,8 @@ def test_predict_staged():
     expected = ['a', 'b', 'c', 'd']
     assert ingest.predict_staged(already, planned) == expected
 
-# TODO test_stage_files
-# TODO test_add_file
-# TODO test_add_access
-# TODO test_add_file_commit
+# TODO def test_stage_files():
+# TODO def test_add_local_file():
+# TODO def test_add_external_file():
+# TODO def test_add_access():
+# TODO def test_add_file_commit():
