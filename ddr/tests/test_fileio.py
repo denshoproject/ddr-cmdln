@@ -1,7 +1,7 @@
 import os
 
-import config
-import fileio
+from DDR import config
+from DDR import fileio
 
 TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'fileio')
 if not os.path.exists(TESTING_BASE_DIR):

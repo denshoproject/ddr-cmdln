@@ -5,11 +5,11 @@ import os
 import git
 import pytest
 
-from . import config
-from . import identifier
-from .models import collection, entity, files
-from . import signatures
-from . import util
+from DDR import config
+from DDR import identifier
+from DDR.models import collection, entity, files
+from DDR import signatures
+from DDR import util
 
 TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'signatures')
 if not os.path.exists(TESTING_BASE_DIR):

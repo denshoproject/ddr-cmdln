@@ -1,10 +1,10 @@
 import os
 import shutil
 
-import config
-import identifier
-import inheritance
-import models
+from DDR import config
+from DDR import identifier
+from DDR import inheritance
+from DDR import models
 
 TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'inheritance')
 if not os.path.exists(TESTING_BASE_DIR):

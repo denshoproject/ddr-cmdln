@@ -3,7 +3,7 @@ import os
 
 from nose.tools import assert_raises
 
-import config
+from DDR import config
 
 TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'config')
 if not os.path.exists(TESTING_BASE_DIR):

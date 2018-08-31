@@ -6,8 +6,8 @@ import os
 from bs4 import BeautifulSoup
 import pytest
 
-from . import archivedotorg
-from . import identifier
+from DDR import archivedotorg
+from DDR import identifier
 
 
 def test_is_iaobject():

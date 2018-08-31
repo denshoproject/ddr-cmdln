@@ -3,8 +3,8 @@ import os
 from nose.tools import assert_raises
 import requests
 
-import config
-import imaging
+from DDR import config
+from DDR import imaging
 
 TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'imaging')
 if not os.path.exists(TESTING_BASE_DIR):

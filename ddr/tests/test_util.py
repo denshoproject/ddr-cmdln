@@ -2,8 +2,8 @@ from datetime import datetime
 import os
 import shutil
 
-import config
-import util
+from DDR import config
+from DDR import util
 
 TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'util')
 #if not os.path.exists(TESTING_BASE_DIR):

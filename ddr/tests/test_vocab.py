@@ -2,10 +2,10 @@ from datetime import datetime
 import json
 import os
 
-import config
-import fileio
-import identifier
-import vocab
+from DDR import config
+from DDR import fileio
+from DDR import identifier
+from DDR import vocab
 
 TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'vocab')
 if not os.path.exists(TESTING_BASE_DIR):

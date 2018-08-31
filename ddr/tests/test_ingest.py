@@ -4,10 +4,10 @@ import urllib
 
 from nose.tools import assert_raises
 
-import config
-import identifier
-import ingest
-from models import Entity, File
+from DDR import config
+from DDR import identifier
+from DDR import ingest
+from DDR.models import Entity, File
 
 TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'ingest')
 if not os.path.exists(TESTING_BASE_DIR):

@@ -3,8 +3,8 @@ import os
 
 import pytz
 
-import config
-import changelog
+from DDR import config
+from DDR import changelog
 
 
 TZ = pytz.utc
