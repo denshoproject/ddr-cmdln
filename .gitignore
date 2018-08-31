@@ -4,6 +4,7 @@
 *.deb
 *.svg
 .coverage
+.testmondata
 .tox/
 coverage-*
 ddr/build/
