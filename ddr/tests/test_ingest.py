@@ -13,13 +13,48 @@ TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'ingest')
 if not os.path.exists(TESTING_BASE_DIR):
     os.makedirs(TESTING_BASE_DIR)
 
-TEST_IMG_URL = 'https://web.archive.org/web/20011221151014im_/http://densho.org/images/logo.jpg'
-TEST_IMG_PATH = os.path.join(TESTING_BASE_DIR, 'test-imaging.jpg')
+IMG_URL = 'https://web.archive.org/web/20011221151014im_/http://densho.org/images/logo.jpg'
+IMG_PATH = os.path.join(TESTING_BASE_DIR, 'test-imaging.jpg')
+# checksums of test file test-imaging.jpg
+IMG_MD5    = 'c034f564e3ae1b603270cd332c3e858d'
+IMG_SHA1   = 'f7ab5eada2e30f274b0b3166d658fe7f74f22b65'
+IMG_SHA256 = 'b27c8443d393392a743c57ee348a29139c61f0f5d5363d6cfb474f35fcba2174'
+
+COLLECTION_ID = 'ddr-testing-123'
+ENTITY_ID     = 'ddr-testing-123-4'
+FILE_ID       = 'ddr-testing-123-4-master-a1b2c3'
+COLLECTION_DIR = os.path.join(TESTING_BASE_DIR, COLLECTION_ID)
+ENTITY_IDENTIFIER = identifier.Identifier(
+    id=ENTITY_ID, base_path=TESTING_BASE_DIR
+)
+FILE_IDENTIFIER = identifier.Identifier(
+    id=FILE_ID, base_path=TESTING_BASE_DIR
+)
+LOGPATH = os.path.join(
+    TESTING_BASE_DIR, 'addfile', COLLECTION_ID,
+    '%s.log' % ENTITY_ID
+)
+
+SRC_PATH = os.path.join(TESTING_BASE_DIR, 'testfile.tif')
+DEST_PATH = os.path.join(TESTING_BASE_DIR, '%s.tif' % FILE_ID)
+TMP_PATH = os.path.join(
+    TESTING_BASE_DIR,
+    'tmp/file-add/%s/%s/testfile.tif' % (COLLECTION_ID, ENTITY_ID)
+)
+TMP_PATH_RENAMED = os.path.join(TESTING_BASE_DIR, '%s.tif' % FILE_ID)
+ACCESS_PATH = os.path.join(TESTING_BASE_DIR, '%s-a.jpg' % FILE_ID)
 
 
 class TestAddFileLogger():
-    pass
-    # TODO def test_repr(self):
+    
+    def test_repr(self):
+        log = ingest.addfile_logger(
+            identifier=ENTITY_IDENTIFIER, base_dir=TESTING_BASE_DIR
+        )
+        out = log.__repr__()
+        expected = "<DDR.ingest.AddFileLogger '%s'>" % LOGPATH
+        assert out == expected
+
     # TODO def test_entry(self):
     # TODO def test_ok(self):
     # TODO def test_not_ok(self):
@@ -28,16 +63,24 @@ class TestAddFileLogger():
 
 
 def test_log_path():
-    eid = 'ddr-test-123-456'
-    expected = os.path.join(TESTING_BASE_DIR, 'addfile/ddr-test-123/ddr-test-123-456.log')
-    out = ingest._log_path(identifier.Identifier(eid), TESTING_BASE_DIR)
-    assert out == expected
+    out = ingest._log_path(ENTITY_IDENTIFIER, base_dir=TESTING_BASE_DIR)
+    assert out == LOGPATH
 
-# TODO def test_addfile_logger():
+def test_addfile_logger():
+    out0 = ingest.addfile_logger(
+        identifier=ENTITY_IDENTIFIER, base_dir=TESTING_BASE_DIR
+    ).logpath
+    print(out0)
+    assert out0 == LOGPATH
+    
+    out1 = ingest.addfile_logger(
+        log_path=LOGPATH, base_dir=TESTING_BASE_DIR
+    ).logpath
+    print(out1)
+    assert out1 == LOGPATH
 
 def test_check_dir():
-    eid = 'ddr-test-123-456'
-    log = ingest.addfile_logger(identifier.Identifier(eid), base_dir=TESTING_BASE_DIR)
+    log = ingest.addfile_logger(ENTITY_IDENTIFIER, base_dir=TESTING_BASE_DIR)
     label = 'testing'
     assert ingest.check_dir('tmp', '/tmp', log)
     assert_raises(
@@ -45,54 +88,47 @@ def test_check_dir():
         ingest.check_dir, 'var', '/var', log
     )
 
-# TODO def test_checksums():
+def test_checksums():
+    md5,sha1,sha256 = ingest.checksums(
+        IMG_PATH,
+        ingest.addfile_logger(
+            identifier=ENTITY_IDENTIFIER, base_dir=TESTING_BASE_DIR
+        )
+    )
+    assert md5    == IMG_MD5
+    assert sha1   == IMG_SHA1
+    assert sha256 == IMG_SHA256
 
 def test_destination_path():
-    src_path = os.path.join(TESTING_BASE_DIR, 'somefile.tif')
-    fidentifier = identifier.Identifier('ddr-test-123-456-master-abcde12345')
-    expected = os.path.join(TESTING_BASE_DIR, 'ddr-test-123-456-master-abcde12345.tif')
-    out = ingest.destination_path(src_path, TESTING_BASE_DIR, fidentifier)
+    out = ingest.destination_path(SRC_PATH, TESTING_BASE_DIR, FILE_IDENTIFIER)
     print('out      %s' % out)
-    print('expected %s' % expected)
-    assert out == expected
+    print('expected %s' % DEST_PATH)
+    assert out == DEST_PATH
 
 def test_temporary_path():
-    src_path = os.path.join(TESTING_BASE_DIR, 'somefile.tif')
-    fidentifier = identifier.Identifier('ddr-test-123-456-master-abc123')
-    expected = os.path.join(TESTING_BASE_DIR, 'tmp/file-add/ddr-test-123/ddr-test-123-456/somefile.tif')
-    out = ingest.temporary_path(src_path, TESTING_BASE_DIR, fidentifier)
+    out = ingest.temporary_path(SRC_PATH, TESTING_BASE_DIR, FILE_IDENTIFIER)
     print('out      %s' % out)
-    print('expected %s' % expected)
-    assert out == expected
+    print('expected %s' % TMP_PATH)
+    assert out == TMP_PATH
 
 def test_temporary_path_renamed():
-    tmp_path = os.path.join(TESTING_BASE_DIR, 'somefile.tif')
-    dest_path = os.path.join(TESTING_BASE_DIR, 'ddr-test-123/files/ddr-test-123-456/files/ddr-test-123-456-master-abc123.tif')
-    expected = os.path.join(TESTING_BASE_DIR, 'ddr-test-123-456-master-abc123.tif')
-    out = ingest.temporary_path_renamed(tmp_path, dest_path)
+    out = ingest.temporary_path_renamed(SRC_PATH, DEST_PATH)
     print('out      %s' % out)
-    print('expected %s' % expected)
-    assert out == expected
+    print('expected %s' % TMP_PATH_RENAMED)
+    assert out == TMP_PATH_RENAMED
 
 def test_access_path():
-    fidentifier = identifier.Identifier('ddr-test-123-456-master-abc123')
-    file_class = fidentifier.object_class()
-    tmp_path_renamed = os.path.join(TESTING_BASE_DIR, 'ddr-test-123-456-master-abc123.tif')
-    expected = os.path.join(TESTING_BASE_DIR, 'ddr-test-123-456-master-abc123-a.jpg')
-    out = ingest.access_path(file_class, tmp_path_renamed)
+    out = ingest.access_path(FILE_IDENTIFIER.object_class(), TMP_PATH_RENAMED)
     print('out      %s' % out)
-    print('expected %s' % expected)
-    assert out == expected
+    print('expected %s' % ACCESS_PATH)
+    assert out == ACCESS_PATH
 
 def test_copy_to_workdir():
-    eid = 'ddr-test-123-456-master-abc123'
-    entity = identifier.Identifier(eid)
-    # inputs
+    log = ingest.addfile_logger(ENTITY_IDENTIFIER, base_dir=TESTING_BASE_DIR)
+    # prep
     src_path = os.path.join(TESTING_BASE_DIR, 'src', 'somefile.tif')
     tmp_path = os.path.join(TESTING_BASE_DIR, 'tmp', 'somefile.tif')
     tmp_path_renamed = os.path.join(TESTING_BASE_DIR, 'ddr-test-123-456-master-abc123.tif')
-    log = ingest.addfile_logger(entity, base_dir=TESTING_BASE_DIR)
-    # prep
     src_dir = os.path.dirname(src_path)
     tmp_dir = os.path.dirname(tmp_path)
     # clean slate
@@ -118,26 +154,24 @@ def test_copy_to_workdir():
 
 def test_make_access_file():
     # inputs
-    src_path = os.path.join(TESTING_BASE_DIR, 'src', 'somefile.png')
-    access_dest_path = os.path.join(TESTING_BASE_DIR, 'ddr-test-123-456-master-abc123-a.jpg')
-    expected = access_dest_path
-    log = ingest.addfile_logger(identifier.Identifier('ddr-test-123-456'), base_dir=TESTING_BASE_DIR)
-    # no src_path so fails
-    assert ingest.make_access_file(src_path, access_dest_path, log) == None
+    log = ingest.addfile_logger(ENTITY_IDENTIFIER, base_dir=TESTING_BASE_DIR)
     # prep
-    if os.path.exists(access_dest_path):
-        os.remove(access_dest_path)
-    # arrange test jpg
-    src_path = TEST_IMG_PATH
+    if os.path.exists(ACCESS_PATH):
+        os.remove(ACCESS_PATH)
+    # no src_path so fails
+    missing_file = os.path.join(TESTING_BASE_DIR, 'src', 'somefile.png')
+    assert ingest.make_access_file(missing_file, ACCESS_PATH, log) == None
+    # get test jpg
+    src_path = IMG_PATH
     parent_dir = os.path.dirname(src_path)
     if not os.path.exists(parent_dir):
         os.makedirs(parent_dir)
     if not os.path.exists(src_path):
-        urllib.urlretrieve(TEST_IMG_URL, TEST_IMG_PATH)
-    assert ingest.make_access_file(src_path, access_dest_path, log) == access_dest_path
+        urllib.urlretrieve(IMG_URL, IMG_PATH)
+    assert ingest.make_access_file(src_path, ACCESS_PATH, log) == ACCESS_PATH
     # clean up
-    if os.path.exists(access_dest_path):
-        os.remove(access_dest_path)
+    if os.path.exists(ACCESS_PATH):
+        os.remove(ACCESS_PATH)
 
 # TODO def test_write_object_metadata():
 
@@ -148,7 +182,7 @@ def test_move_files():
         (os.path.join(TESTING_BASE_DIR, 'src', 'file1.txt'), os.path.join(TESTING_BASE_DIR, 'dest', 'file1.txt')),
         (os.path.join(TESTING_BASE_DIR, 'src', 'file2.txt'), os.path.join(TESTING_BASE_DIR, 'dest', 'file2.txt')),
     ]
-    log = ingest.addfile_logger(identifier.Identifier('ddr-test-123-456'), base_dir=TESTING_BASE_DIR)
+    log = ingest.addfile_logger(ENTITY_IDENTIFIER, base_dir=TESTING_BASE_DIR)
     # fresh start
     for tmp,dest in files:
         shutil.rmtree(os.path.dirname(tmp), ignore_errors=True)
