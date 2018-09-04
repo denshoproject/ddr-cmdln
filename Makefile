@@ -95,6 +95,8 @@ install: install-prep install-app install-configs
 
 test: test-app
 
+coverage: coverage-app
+
 uninstall: uninstall-app uninstall-configs
 
 clean: clean-app
@@ -170,6 +172,8 @@ install-app: install-git-annex install-virtualenv install-ddr-cmdln install-conf
 
 test-app: test-ddr-cmdln
 
+coverage-app: coverage-ddr-cmdln
+
 uninstall-app: uninstall-ddr-cmdln uninstall-configs
 
 clean-app: clean-ddr-cmdln
@@ -212,12 +216,14 @@ mkdir-ddr-cmdln:
 test-ddr-cmdln:
 	@echo ""
 	@echo "test-ddr-cmdln ---------------------------------------------------------"
-	source $(VIRTUALENV)/bin/activate; cd ddr/ && tox
+	source $(VIRTUALENV)/bin/activate; \
+	cd ddr/ && tox
 
-coverage:
+coverage-ddr-cmdln:
 	@echo ""
-	@echo "test-coverage ----------------------------------------------------------"
-	source $(VIRTUALENV)/bin/activate && pytest --cov-report html:/tmp/ddr-cmdln-cov-html --cov=DDR
+	@echo "coverage-ddr-cmdln -----------------------------------------------------"
+	source $(VIRTUALENV)/bin/activate; \
+	pytest --cov-report html:/tmp/ddr-cmdln-cov-html --cov=DDR
 
 uninstall-ddr-cmdln: install-virtualenv
 	@echo ""
