@@ -232,7 +232,15 @@ uninstall-ddr-cmdln: install-virtualenv
 	cd $(INSTALL_CMDLN)/ddr && pip uninstall -y -r $(INSTALL_CMDLN)/requirements.txt
 
 clean-ddr-cmdln:
-	-rm -Rf $(INSTALL_CMDLN)/ddr/build
+	-rm -Rf .coverage
+	-rm -Rf .pytest_cache
+	-rm -Rf .testmondata
+	-rm -Rf .tmontmp
+	-rm -Rf ddr/build
+	-rm -Rf ddr/ddr_cmdln.egg-info
+	-rm -Rf ddr/dist
+	-rm -Rf ddr/.pytest_cache
+	-rm -Rf ddr/.tox
 
 mkdir-ddr-local:
 	@echo ""
