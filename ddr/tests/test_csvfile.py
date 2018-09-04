@@ -7,10 +7,10 @@ import envoy
 import git
 from nose.tools import assert_raises
 
-import config
-import csvfile
-import identifier
-import modules
+from DDR import config
+from DDR import csvfile
+from DDR import identifier
+from DDR import modules
 
 TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'csvfile')
 #if not os.path.exists(TESTING_BASE_DIR):

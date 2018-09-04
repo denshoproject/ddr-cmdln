@@ -1,3 +1,9 @@
+# This module was part of the DR inventory effort back in late 2013,early 2014.
+# See discussions on 2013-09-17, 09-27, 11-21, and 2014-02-04.
+# This module was intended to work with myrepos, a tool for managing multiple
+# repositories at the same time.
+# https://myrepos.branchable.com/
+
 import ConfigParser
 import logging
 logger = logging.getLogger(__name__)
@@ -136,7 +142,7 @@ def read_mrconfig( path ):
     return config
 
 def make_mrconfig( defaults, repos, server, base_path='' ):
-    """Makes an .mrconfig file.
+    """Makes a myrepos .mrconfig file.
     
     import organization
     p = '/media/WD5000BMV-2/ddr/ddr-testing/WD5000BMV-2.csv'

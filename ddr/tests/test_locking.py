@@ -1,8 +1,8 @@
 from datetime import datetime
 import os
 
-import config
-import locking
+from DDR import config
+from DDR import locking
 
 TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'locking')
 if not os.path.exists(TESTING_BASE_DIR):

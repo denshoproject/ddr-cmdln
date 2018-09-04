@@ -27,5 +27,6 @@ bpython
 coverage
 pytest
 pytest-cov
+pytest-testmon
 pytest-xdist
 tox

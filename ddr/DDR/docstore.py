@@ -443,16 +443,28 @@ class Docstore():
                 logging.debug(term)
                 status = term.save(using=self.es, index=self.indexname)
                 statuses.append(status)
-
+        
         forms_choices = {
             'topics-choices': vocab.topics_choices(
-                config.VOCABS_URL,
+                vocab.get_vocabs(config.VOCABS_URL)['topics'],
                 ELASTICSEARCH_CLASSES_BY_MODEL['facetterm']
             ),
-            'facility-choices': vocab.form_vocab_choices(config.VOCABS_URL, 'facility'),
-            'format-choices': vocab.form_vocab_choices(config.VOCABS_URL, 'format'),
-            'genre-choices': vocab.form_vocab_choices(config.VOCABS_URL, 'genre'),
-            'rights-choices': vocab.form_vocab_choices(config.VOCABS_URL, 'rights'),
+            'facility-choices': vocab.form_vocab_choices(
+                vocab.get_vocabs(config.VOCABS_URL)['facility'],
+                'facility'
+            ),
+            'format-choices': vocab.form_vocab_choices(
+                vocab.get_vocabs(config.VOCABS_URL)['format'],
+                'format'
+            ),
+            'genre-choices': vocab.form_vocab_choices(
+                vocab.get_vocabs(config.VOCABS_URL)['genre'],
+                'genre'
+            ),
+            'rights-choices': vocab.form_vocab_choices(
+                vocab.get_vocabs(config.VOCABS_URL)['rights'],
+                'rights'
+            ),
         }
         self.post_json('forms', 'forms-choices', forms_choices)
         return statuses

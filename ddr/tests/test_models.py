@@ -3,9 +3,9 @@ import json
 import os
 import shutil
 
-import config
-import models
-import identifier
+from DDR import config
+from DDR import models
+from DDR import identifier
 
 TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'models')
 if not os.path.exists(TESTING_BASE_DIR):

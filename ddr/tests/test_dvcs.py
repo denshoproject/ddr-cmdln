@@ -6,8 +6,8 @@ import shutil
 from nose.tools import assert_raises
 import git
 
-import config
-import dvcs
+from DDR import config
+from DDR import dvcs
 
 TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'dvcs')
 if not os.path.exists(TESTING_BASE_DIR):

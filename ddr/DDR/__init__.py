@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 VERSION = '0.9.4-beta'
 
 from datetime import datetime, timedelta
@@ -10,6 +11,11 @@ from DDR import config
 
 
 def _json_handler(obj):
+    """Function that gets called for objects that can't otherwise be serialized.
+    
+    Should return a JSON encodable version of the object or raise a TypeError.
+    https://docs.python.org/3/library/json.html
+    """
     if hasattr(obj, 'isoformat'):
         return obj.strftime(config.DATETIME_FORMAT)
     else:
