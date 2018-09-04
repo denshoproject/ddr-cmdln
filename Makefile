@@ -57,6 +57,7 @@ help:
 	@echo ""
 	@echo "get     - Clones ddr-local, ddr-cmdln, ddr-defs, wgets static files & ES pkg."
 	@echo "install - Performs complete install. See also: make howto-install"
+	@echo "test    - Runs unit tests (run 'make install' first)."
 	@echo ""
 	@echo "vbox-guest     - Installs VirtualBox Guest Additions"
 	@echo "network-config - Installs standard network conf (CHANGES IP TO 192.168.56.101!)"
