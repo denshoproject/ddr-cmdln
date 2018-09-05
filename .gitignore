@@ -4,6 +4,8 @@
 *.deb
 *.svg
 .coverage
+.pytest_cache/
+.testmondata
 .tox/
 coverage-*
 ddr/build/

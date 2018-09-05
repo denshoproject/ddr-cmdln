@@ -57,6 +57,7 @@ help:
 	@echo ""
 	@echo "get     - Clones ddr-local, ddr-cmdln, ddr-defs, wgets static files & ES pkg."
 	@echo "install - Performs complete install. See also: make howto-install"
+	@echo "test    - Runs unit tests (run 'make install' first)."
 	@echo ""
 	@echo "vbox-guest     - Installs VirtualBox Guest Additions"
 	@echo "network-config - Installs standard network conf (CHANGES IP TO 192.168.56.101!)"
@@ -93,6 +94,8 @@ get: get-app get-ddr-defs
 install: install-prep install-app install-configs
 
 test: test-app
+
+coverage: coverage-app
 
 uninstall: uninstall-app uninstall-configs
 
@@ -169,6 +172,8 @@ install-app: install-git-annex install-virtualenv install-ddr-cmdln install-conf
 
 test-app: test-ddr-cmdln
 
+coverage-app: coverage-ddr-cmdln
+
 uninstall-app: uninstall-ddr-cmdln uninstall-configs
 
 clean-app: clean-ddr-cmdln
@@ -211,12 +216,14 @@ mkdir-ddr-cmdln:
 test-ddr-cmdln:
 	@echo ""
 	@echo "test-ddr-cmdln ---------------------------------------------------------"
-	source $(VIRTUALENV)/bin/activate; cd ddr/ && tox
+	source $(VIRTUALENV)/bin/activate; \
+	cd ddr/ && tox
 
-coverage:
+coverage-ddr-cmdln:
 	@echo ""
-	@echo "test-coverage ----------------------------------------------------------"
-	source $(VIRTUALENV)/bin/activate && pytest --cov-report html:/tmp/ddr-cmdln-cov-html --cov=DDR
+	@echo "coverage-ddr-cmdln -----------------------------------------------------"
+	source $(VIRTUALENV)/bin/activate; \
+	pytest --cov-report html:/tmp/ddr-cmdln-cov-html --cov=DDR
 
 uninstall-ddr-cmdln: install-virtualenv
 	@echo ""
@@ -225,7 +232,15 @@ uninstall-ddr-cmdln: install-virtualenv
 	cd $(INSTALL_CMDLN)/ddr && pip uninstall -y -r $(INSTALL_CMDLN)/requirements.txt
 
 clean-ddr-cmdln:
-	-rm -Rf $(INSTALL_CMDLN)/ddr/build
+	-rm -Rf .coverage
+	-rm -Rf .pytest_cache
+	-rm -Rf .testmondata
+	-rm -Rf .tmontmp
+	-rm -Rf ddr/build
+	-rm -Rf ddr/ddr_cmdln.egg-info
+	-rm -Rf ddr/dist
+	-rm -Rf ddr/.pytest_cache
+	-rm -Rf ddr/.tox
 
 mkdir-ddr-local:
 	@echo ""
