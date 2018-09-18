@@ -117,16 +117,20 @@ def check_row_values(module, headers, valid_values, rowd):
     if not validate_id(rowd['id']):
         invalid.append('id')
     for field in headers:
-        value = module.function(
-            'csvload_%s' % field,
-            rowd[field]
-        )
-        valid = module.function(
-            'csvvalidate_%s' % field,
-            [valid_values, value]
-        )
-        if not valid:
-            invalid.append(field)
+        try:
+            value = module.function(
+                'csvload_%s' % field,
+                rowd[field]
+            )
+            valid = module.function(
+                'csvvalidate_%s' % field,
+                [valid_values, value]
+            )
+            if not valid:
+                invalid.append(field)
+        except ValueError as err:
+            msg = '%s: %s' % (field, str(err))
+            invalid.append(msg)
     return invalid
 
 def find_duplicate_ids(rowds):
