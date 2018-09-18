@@ -92,7 +92,7 @@ def test_latest_commit():
     path_to_file = os.path.join(path, 'testing')
     out2 = dvcs.latest_commit(path_to_file)
     # analyze
-    regex = r'([0123456789abcdef]+)\s+\([a-zA-Z]+, [a-zA-Z-]+\) ([0-9-]+) ([0-9:]+) (-[0-9]+)'
+    regex = r'([0123456789abcdef]+)\s+\([a-zA-Z]+ -> [a-zA-Z-]+\) ([0-9-]+) ([0-9:]+) (-[0-9]+)'
     assert re.match(regex, out1)
     assert re.match(regex, out2)
 
