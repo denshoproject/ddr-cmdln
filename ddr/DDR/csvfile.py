@@ -24,10 +24,19 @@ def make_rowds(rows, row_start=0, row_end=9999999):
     """Takes list of rows (from csv lib) and turns into list of rowds (dicts)
     
     @param rows: list
-    @returns: (headers, list of OrderedDicts)
+    @returns: (headers, list of OrderedDicts, list of errors)
     """
     headers = rows.pop(0)
-    return headers, [make_row_dict(headers, row) for row in rows[row_start:row_end]]
+    rowds = []
+    errors = []
+    for n,row in enumerate(rows[row_start:row_end]):
+        try:
+            rowd = make_row_dict(headers, row)
+            rowds.append(rowd)
+        except Exception as err:
+            msg = 'row %s: %s' % (n, str(err))
+            errors.append(msg)
+    return headers,rowds,errors
 
 def validate_headers(headers, field_names, exceptions):
     """Validates headers and crashes if problems.

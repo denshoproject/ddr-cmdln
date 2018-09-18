@@ -45,9 +45,12 @@ def test_make_rowds():
                 ('id', 'id1'), ('created', 'later'), ('lastmod', 'later'),
                 ('title', 'title1'), ('description', 'descr1')
             ])
-        ]
+        ],
+        []
     )
-    assert csvfile.make_rowds(rows0) == expected
+    out = csvfile.make_rowds(rows0)
+    print(out)
+    assert out == expected
 
 def test_validate_headers():
     headers0 = ['id', 'title']

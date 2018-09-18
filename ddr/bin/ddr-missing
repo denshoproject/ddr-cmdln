@@ -120,7 +120,7 @@ def load_csv(csv_path):
     @returns: (headers, rowds)
     """
     logging.debug('load_csv %s' % csv_path)
-    headers,rowds = csvfile.make_rowds(fileio.read_csv(csv_path))
+    headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
     logging.debug('%s rows' % len(rowds))
     return headers,rowds
 

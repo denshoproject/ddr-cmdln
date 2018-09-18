@@ -151,6 +151,7 @@ class Checker():
         - 'passed'
         - 'headers'
         - 'rowds'
+        - 'csv_errs'
         - 'header_errs'
         - 'rowds_errs'
         
@@ -162,7 +163,14 @@ class Checker():
         """
         logging.info('Checking CSV file')
         passed = False
-        headers,rowds = csvfile.make_rowds(fileio.read_csv(csv_path))
+        headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
+        if csv_errs:
+            logging.error('FAIL')
+            logging.error('CSV errors:')
+            for csv_err in csv_errs:
+                logging.error('* %s' % csv_err)
+            logging.error('NOTE: Line numbers may not be exact.')
+            logging.error('      Numbering starts at zero and may not include header row.')
         for rowd in rowds:
             if rowd.get('id'):
                 rowd['identifier'] = identifier.Identifier(rowd['id'])
@@ -175,15 +183,18 @@ class Checker():
         header_errs,rowds_errs = Checker._validate_csv_file(
             module, vocabs, headers, rowds, model
         )
-        if (not model_errs) and (not header_errs) and (not rowds_errs):
+        if (not model_errs) and (not header_errs) and (not csv_errs) and (not rowds_errs):
             passed = True
             logging.info('ok')
         else:
             logging.error('FAIL')
+            logging.error('NOTE: Line numbers may not be exact.')
+            logging.error('      Numbering starts at zero and may not include header row.')
         return {
             'passed': passed,
             'headers': headers,
             'rowds': rowds,
+            'csv_errs': csv_errs,
             'model_errs': model_errs,
             'header_errs': header_errs,
             'rowds_errs': rowds_errs,
@@ -476,7 +487,7 @@ class Importer():
         logging.info(repository)
         
         logging.info('Reading %s' % csv_path)
-        headers,rowds = csvfile.make_rowds(fileio.read_csv(csv_path))
+        headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
         logging.info('%s rows' % len(rowds))
         
         logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
@@ -679,7 +690,7 @@ class Importer():
         logging.debug(repository)
         
         logging.info('Reading %s' % csv_path)
-        headers,rowds = csvfile.make_rowds(fileio.read_csv(csv_path), row_start, row_end)
+        headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path), row_start, row_end)
         logging.info('%s rows' % len(rowds))
         logging.info('csv_load rowds')
         module = Checker._get_module(model)
@@ -887,7 +898,7 @@ class Importer():
         """
         logging.info('-----------------------------------------------')
         logging.info('Reading %s' % csv_path)
-        headers,rowds = csvfile.make_rowds(fileio.read_csv(csv_path))
+        headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
         logging.info('%s rows' % len(rowds))
         
         logging.info('Looking up already registered IDs')
