@@ -92,7 +92,7 @@ def test_latest_commit():
     path_to_file = os.path.join(path, 'testing')
     out2 = dvcs.latest_commit(path_to_file)
     # analyze
-    regex = r'([0123456789abcdef]+)\s+\([a-zA-Z]+, [a-zA-Z-]+\) ([0-9-]+) ([0-9:]+) (-[0-9]+)'
+    regex = r'([0123456789abcdef]+)\s+\([a-zA-Z]+ -> [a-zA-Z-]+\) ([0-9-]+) ([0-9:]+) (-[0-9]+)'
     assert re.match(regex, out1)
     assert re.match(regex, out2)
 
@@ -205,10 +205,13 @@ STATUS_LONG_1 = """# On branch master
 nothing to commit, working directory clean"""
 STATUS_LONG_2 = """On branch master
 nothing to commit, working directory clean"""
+STATUS_LONG_3 = """On branch master
+nothing to commit, working tree clean"""
 STATUS_LONG = [
     STATUS_LONG_0,
     STATUS_LONG_1,
     STATUS_LONG_2,
+    STATUS_LONG_3,
 ]
 # git-status --short (more stable)
 STATUS_SHORT_0 = """## master"""

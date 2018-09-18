@@ -337,17 +337,25 @@ def idservice_api_login(username=None, password=None, url=None):
         logging.debug('Username: %s' % username)
     elif os.environ.get(IDSERVICE_ENVIRONMENT_USERNAME):
         username = os.environ.get(IDSERVICE_ENVIRONMENT_USERNAME)
+        logging.debug('Username: %s (environ)' % username)
     else:
         username = raw_input('Username: ')
+    if not username:
+        logging.error('No username!')
+        sys.exit(1)
+    
     if password:
         redacted = ''.join(['*' for n in password])
         logging.debug('Password: %s' % redacted)
     elif os.environ.get(IDSERVICE_ENVIRONMENT_PASSWORD):
         password = os.environ.get(IDSERVICE_ENVIRONMENT_PASSWORD)
         redacted = ''.join(['*' for n in password])
-        logging.debug('Password: %s' % redacted)
+        logging.debug('Password: %s (environ)' % redacted)
     else:
         password = getpass.getpass(prompt='Password: ')
+    if not password:
+        logging.error('No password!')
+        sys.exit(1)
     
     ic = idservice.IDServiceClient()
     status1,reason1 = ic.login(username, password, url)
