@@ -205,10 +205,13 @@ STATUS_LONG_1 = """# On branch master
 nothing to commit, working directory clean"""
 STATUS_LONG_2 = """On branch master
 nothing to commit, working directory clean"""
+STATUS_LONG_3 = """On branch master
+nothing to commit, working tree clean"""
 STATUS_LONG = [
     STATUS_LONG_0,
     STATUS_LONG_1,
     STATUS_LONG_2,
+    STATUS_LONG_3,
 ]
 # git-status --short (more stable)
 STATUS_SHORT_0 = """## master"""
