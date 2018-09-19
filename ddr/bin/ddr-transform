@@ -57,7 +57,8 @@ def transform(collection, filter=None, models=None, topics=None, created=None, c
     logging.info('Finding metadata files')
     paths = util.find_meta_files(collection.identifier.path_abs(), recursive=True, force_read=True)
     logging.info('%s paths' % len(paths))
-    
+
+    TOPICS = vocab.get_vocabs(config.VOCABS_URL)['topics']
     # filter out paths
     these_paths = []
     for path in paths:
@@ -85,7 +86,7 @@ def transform(collection, filter=None, models=None, topics=None, created=None, c
         
         if topics and o.identifier.model in ['entity', 'segment']:
             before = o.topics
-            after = vocab.repair_topicdata(o.topics)
+            after = vocab.repair_topicdata(o.topics, TOPICS)
             o.topics = after
 
         if created and hasattr(o, 'record_created'):
