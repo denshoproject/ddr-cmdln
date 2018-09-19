@@ -73,7 +73,10 @@ def latest_commit(path):
     
     @param path: Absolute path to repo or file within.
     """
-    repo = git.Repo(path, search_parent_directories=True)
+    try:
+        repo = git.Repo(path, search_parent_directories=True)
+    except git.InvalidGitRepositoryError:
+        return 'Invalid Git repository: "%s"' % path
     if os.path.isfile(path):
         return repo.git.log('--pretty=format:%H %d %ad', '--date=iso', '-1', path)
     else:
