@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 import re
 
+from deepdiff import DeepDiff
 import elasticsearch_dsl as dsl
 import simplejson as json
 
@@ -23,6 +24,9 @@ from DDR import util
 INTERVIEW_SIG_PATTERN = r'^denshovh-[a-z_0-9]{1,}-[0-9]{2,2}$'
 INTERVIEW_SIG_REGEX = re.compile(INTERVIEW_SIG_PATTERN)
 
+DIFF_IGNORED = [
+    'app_commit', 'commit',  # object metadata
+]
 
 class Path( object ):
     pass
@@ -76,6 +80,48 @@ class DDRObject(object):
     #from_json
     #from_csv
     #from_identifier
+    
+    def dict(self):
+        """Returns an OrderedDict of object fields data
+        """
+        return to_dict(self, self.identifier.fields_module())
+    
+    def diff(self, other, ignore_fields=[]):
+        """Compares object fields with those of another object
+        
+        NOTE: This function should only be used to tell IF objects differ,
+        not HOW they differ.
+        NOTE: Output should be treated as a boolean.
+        It's currently a dict (unless the datetime error below) but the
+        format is subject to change.
+        
+        @param other: DDRObject
+        @param ignore_fields: list
+        @returns: dict
+        """
+        ignore_fields = DIFF_IGNORED + ignore_fields
+        
+        def rm_ignored(data, ignore):
+            """Remove lines containing the specified fields
+            @param data: OrderedDict
+            @param ignore: list of ignored fieldnames
+            @returns: list of dicts minus ignored fields
+            """
+            keys = data.keys()
+            for fieldname in ignore:
+                if fieldname in keys:
+                    data.pop(fieldname)
+            return data
+        
+        this = rm_ignored(self.dict(), ignore_fields)
+        that = rm_ignored(other.dict(), ignore_fields)
+        try:
+            return DeepDiff(this, that)
+        except TypeError:
+            # DeepDiff crashes when trying to compare timezone-aware
+            # and timezone-ignorant datetimes. Let's consider these different
+            return True
+    
     #parent
     #children
     
@@ -283,6 +329,17 @@ class DDRObject(object):
                 d.links_download = download_path
         return d
     
+    def modified(self):
+        """Returns True if object non-ignored fields differ from file.
+        
+        @returns: boolean
+        """
+        if not os.path.exists(self.json_path):
+            return True
+        if self.diff(Identifier(path=self.identifier.path_abs('json')).object()):
+            return True
+        return False
+
     def write_json(self, obj_metadata={}):
         """Write Collection/Entity JSON file to disk.
         
@@ -419,6 +476,20 @@ def is_object_metadata(data):
         if key in data.keys():
             return True
     return False
+
+def to_dict(document, module):
+    """Returns an OrderedDict containing the object fields and values.
+    
+    @param document: Collection, Entity, File document object
+    @param module: collection, entity, files model definitions module
+    @returns: OrderedDict
+    """
+    data = OrderedDict()
+    for f in module.FIELDS:
+        fieldname = f['name']
+        field_data = getattr(document, f['name'])
+        data[fieldname] = field_data
+    return data
 
 def form_prep(document, module):
     """Apply formprep_{field} functions to prep data dict to pass into DDRForm object.
