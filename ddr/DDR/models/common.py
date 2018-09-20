@@ -340,17 +340,19 @@ class DDRObject(object):
             return True
         return False
 
-    def write_json(self, obj_metadata={}):
+    def write_json(self, doc_metadata=True, obj_metadata={}):
         """Write Collection/Entity JSON file to disk.
         
+        @param doc_metadata: boolean
         @param obj_metadata: dict Cached results of object_metadata.
         """
-        if not os.path.exists(os.path.dirname(self.json_path)):
-            os.makedirs(os.path.dirname(self.json_path))
-        fileio.write_text(
-            self.dump_json(doc_metadata=True, obj_metadata=obj_metadata),
-            self.json_path
-        )
+        if self.modified():
+            if not os.path.exists(os.path.dirname(self.json_path)):
+                os.makedirs(os.path.dirname(self.json_path))
+            fileio.write_text(
+                self.dump_json(doc_metadata=doc_metadata, obj_metadata=obj_metadata),
+                self.json_path
+            )
     
     #post_json
     #load_csv
