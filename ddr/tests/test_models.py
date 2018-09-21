@@ -1,3 +1,5 @@
+from collections import OrderedDict
+from copy import deepcopy
 from datetime import datetime
 import json
 import os
@@ -305,6 +307,95 @@ def test_Entity__init__():
 # TODO Entity.create
 # TODO Entity.from_identifier
 # TODO Entity.from_json
+
+ENTITY_DICT = OrderedDict([
+    ('id', 'ddr-testing-123-456'),
+    ('record_created', datetime(2018, 9, 20, 12, 23, 21, 227561)),
+    ('record_lastmod', datetime(2018, 9, 20, 12, 23, 21, 227582)),
+    ('status', ''), ('public', ''), ('sort', 1),
+    ('title', ''), ('description', ''),
+    ('creation', ''), ('location', ''), ('creators', ''),
+    ('language', ''), ('genre', ''), ('format', ''), ('extent', ''),
+    ('contributor', ''), ('alternate_id', ''), ('digitize_person', ''),
+    ('digitize_organization', ''), ('digitize_date', ''), ('credit', ''),
+    ('rights', ''), ('rights_statement', ''), ('topics', ''),
+    ('persons', ''), ('facility', ''), ('chronology', ''),
+    ('geography', ''), ('parent', ''), ('signature_id', ''),
+    ('notes', '')
+])
+
+def test_Entity_dict():
+    collection_id = 'ddr-testing-123'
+    entity_id = 'ddr-testing-123-456'
+    collection_path = os.path.join(MEDIA_BASE, collection_id)
+    path_abs = os.path.join(collection_path, 'files', entity_id)
+    o = models.Entity.create(path_abs)
+    o.record_created = datetime(2018, 9, 20, 12, 23, 21, 227561)
+    o.record_lastmod = datetime(2018, 9, 20, 12, 23, 21, 227582)
+    out = o.dict()
+    print(out)
+    assert out == ENTITY_DICT
+
+def test_Entity_diff():
+    collection_id = 'ddr-testing-123'
+    entity_id = 'ddr-testing-123-456'
+    collection_path = os.path.join(MEDIA_BASE, collection_id)
+    path_abs = os.path.join(collection_path, 'files', entity_id)
+    o1 = models.Entity.create(path_abs)
+    o2 = deepcopy(o1)
+    # identical
+    out0 = o1.diff(o2)
+    print('out0 %s' % out0)
+    assert out0 == {}
+    # change lastmod
+    o2.record_lastmod = datetime.now()
+    out1 = o1.diff(o2, ignore_fields=['record_lastmod'])
+    print('out1 %s' % out1)
+    assert out1 == {}  # no diffs
+    out2 = o1.diff(o2)
+    print('out2 %s' % out2)
+    assert out2        # diffs present
+
+def test_Entity_modified():
+    collection_id = 'ddr-testing-123'
+    entity_id = 'ddr-testing-123-456'
+    collection_path = os.path.join(MEDIA_BASE, collection_id)
+    path_abs = os.path.join(collection_path, 'files', entity_id)
+    
+    print('NEW DOCUMENT')
+    o0 = models.Entity(path_abs)
+    print('o0 %s' % o0)
+    # nonexistent documents are considered modified
+    print('o0.modified() %s' % o0.modified())
+    assert o0.modified() == True
+    now = datetime.now()
+    o0.record_created = now
+    o0.record_lastmod = now
+    o0.title = 'TITLE'
+    o0.write_json(doc_metadata=False)
+    
+    print('EXISTING DOCUMENT')
+    o1 = identifier.Identifier(id=entity_id, base_path=MEDIA_BASE).object()
+    print('o1 %s' % o1)
+    # freshly loaded object should not be modified
+    print('o1.modified() %s' % o1.modified())
+    assert o1.modified() == False
+    assert o1.title == 'TITLE'
+    
+    o1.title = 'new title'
+    assert o1.title == 'new title'
+    print('o1.modified() %s' % o1.modified())
+    assert o1.modified() == True
+    assert o1.title == 'new title'
+    o1.write_json(doc_metadata=False)
+    
+    # existing document
+    o2 = identifier.Identifier(id=entity_id, base_path=MEDIA_BASE).object()
+    # freshly loaded object should not be modified
+    print('o2.modified() %s' % o2.modified())
+    assert o2.modified() == False
+    assert o2.title == 'new title'
+
 # TODO Entity.parent
 # TODO Entity.children
 # TODO Entity.labels_values
