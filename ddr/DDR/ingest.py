@@ -474,7 +474,7 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='', l
     
     # entity metadata will only be written if everything else was moved
     log.ok('Writing entity.json')
-    entity.write_json()
+    entity.write_json(force=True)
     
     log.ok('Staging files')
     git_files = [
