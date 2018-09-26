@@ -164,6 +164,8 @@ class DDRObject(object):
         >>> c = Collection.from_json('/tmp/ddr-testing-123')
         >>> c.inheritable_fields()
         ['status', 'public', 'rights']
+        
+        @returns: list
         """
         module = self.identifier.fields_module()
         return inheritance.inheritable_fields(module.FIELDS )

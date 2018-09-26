@@ -7,8 +7,9 @@ from DDR import util
 def _child_jsons( path, testing=False ):
     """List all the .json files under path directory; excludes specified dir.
     
-    @param path: Absolute directory path.
-    @return list of paths
+    @param path: str Absolute directory path.
+    @param testing: boolean
+    @returns: list of paths
     """
     return [
         p for p in util.find_meta_files(basedir=path, recursive=True, testing=testing)
@@ -18,8 +19,8 @@ def _child_jsons( path, testing=False ):
 def _selected_field_values( parent_object, inheritables ):
     """Gets list of selected inherited fieldnames and their values from the parent object
     
-    @param parent_object
-    @param inheritables
+    @param parent_object: DDRObject
+    @param inheritables: list
     @returns: list of (fieldname,value) tuples
     """
     return [
@@ -46,9 +47,9 @@ def selected_inheritables( inheritables, cleaned_data ):
     
     Selector fields are assumed to be BooleanFields named "FIELD_inherit".
     
-    @param inheritables: List of field/attribute names.
+    @param inheritables: list of field/attribute names.
     @param cleaned_data: form.cleaned_data.
-    @return
+    @returns: list
     """
     fieldnames = {
         '%s_inherit' % field: field
@@ -67,6 +68,8 @@ def update_inheritables( parent_object, objecttype, inheritables, cleaned_data )
     """Update specified inheritable fields of child objects using form data.
     
     @param parent_object: Collection or Entity with values to be inherited.
+    @param objecttype: NOT USED
+    @param inheritables: list
     @param cleaned_data: Form cleaned_data from POST.
     @returns: tuple List of changed object Ids, list of changed objects' JSON files.
     """
