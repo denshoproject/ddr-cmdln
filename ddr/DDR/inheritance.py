@@ -64,11 +64,10 @@ def selected_inheritables( inheritables, cleaned_data ):
         ]
     return selected
     
-def update_inheritables( parent_object, objecttype, inheritables, cleaned_data ):
+def update_inheritables( parent_object, inheritables, cleaned_data ):
     """Update specified inheritable fields of child objects using form data.
     
     @param parent_object: Collection or Entity with values to be inherited.
-    @param objecttype: NOT USED
     @param inheritables: list
     @param cleaned_data: Form cleaned_data from POST.
     @returns: tuple List of changed object Ids, list of changed objects' JSON files.
