@@ -159,7 +159,7 @@ class DDRObject(object):
         form_post(self, self.identifier.fields_module(), cleaned_data)
     
     def inheritable_fields( self ):
-        """Returns list of Collection/Entity object's field names marked as inheritable.
+        """Returns list of object's inheritable field names 
         
         >>> c = Collection.from_json('/tmp/ddr-testing-123')
         >>> c.inheritable_fields()
@@ -167,19 +167,22 @@ class DDRObject(object):
         
         @returns: list
         """
-        module = self.identifier.fields_module()
-        return inheritance.inheritable_fields(module.FIELDS )
+        return inheritance.inheritable_fields(
+            self.identifier.fields_module().FIELDS
+        )
 
     def selected_inheritables(self, cleaned_data ):
         """Returns names of fields marked as inheritable in cleaned_data.
         
-        Fields are considered selected if dict contains key/value pairs in the form
-        'FIELD_inherit':True.
+        Fields are considered selected if dict contains key/value pairs
+        in the form 'FIELD_inherit':True.
         
         @param cleaned_data: dict Fieldname:value pairs.
         @returns: list
         """
-        return inheritance.selected_inheritables(self.inheritable_fields(), cleaned_data)
+        return inheritance.selected_inheritables(
+            self.inheritable_fields(), cleaned_data
+        )
     
     #update_inheritables
     #inherit

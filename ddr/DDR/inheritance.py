@@ -12,7 +12,9 @@ def _child_jsons( path, testing=False ):
     @returns: list of paths
     """
     return [
-        p for p in util.find_meta_files(basedir=path, recursive=True, testing=testing)
+        p for p in util.find_meta_files(
+            basedir=path, recursive=True, testing=testing
+        )
         if os.path.dirname(p) != path
     ]
 
@@ -24,9 +26,24 @@ def _selected_field_values( parent_object, inheritables ):
     @returns: list of (fieldname,value) tuples
     """
     return [
-        (field, getattr(parent_object, field))
+        (
+            '.'.join([parent_object.identifier.model, field]),
+            getattr(parent_object, field)
+        )
         for field in inheritables
     ]
+
+def _child_field(parent_model_field, child_model):
+    """
+    @param parent_model_field: str '{parent_model}.{fieldname}'
+    @param child_model: str
+    @returns: str child field name
+    """
+    for child_field in identifier.INHERITABLE_FIELDS[parent_model_field]:
+        model,field = child_field.split('.')
+        if model == child_model:
+            return field
+    return None
 
 def inheritable_fields( MODEL_FIELDS ):
     """Returns a list of fields that can inherit or grant values.
@@ -37,15 +54,15 @@ def inheritable_fields( MODEL_FIELDS ):
     @returns: list
     """
     return [
-        f['name']
-        for f in MODEL_FIELDS
-        if f.get('inheritable', None)
+        field['name']
+        for field in MODEL_FIELDS
+        if '.'.join([field['model'], field['name']]) in identifier.INHERITABLE_FIELDS.keys()
     ]
 
 def selected_inheritables( inheritables, cleaned_data ):
-    """Indicates which inheritable fields from the list were selected in the form.
+    """Indicates listed inheritable fields that are selected in the form.
     
-    Selector fields are assumed to be BooleanFields named "FIELD_inherit".
+    Selector fields are BooleanFields named "FIELD_inherit".
     
     @param inheritables: list of field/attribute names.
     @param cleaned_data: form.cleaned_data.
@@ -65,37 +82,46 @@ def selected_inheritables( inheritables, cleaned_data ):
     return selected
     
 def update_inheritables( parent_object, inheritables, cleaned_data ):
-    """Update specified inheritable fields of child objects using form data.
+    """Update specified inheritable fields of child objects
     
-    @param parent_object: Collection or Entity with values to be inherited.
-    @param inheritables: list
-    @param cleaned_data: Form cleaned_data from POST.
-    @returns: tuple List of changed object Ids, list of changed objects' JSON files.
+    @param parent_object: Collection or Entity
+    @param inheritables: str list
+    @param cleaned_data: dict Form cleaned_data from POST.
+    @returns: tuple (List changed object Ids, list changed objects files)
     """
     child_ids = []
     changed_files = []
-    # values of selected inheritable fields from parent
+    # values of parent_object's selected inheritable fields
+    # keys are MODEL_FIELD to match identifier.INHERITABLE_FIELDS
     field_values = _selected_field_values(parent_object, inheritables)
     # load child objects and apply the change
     if field_values:
         for json_path in _child_jsons(parent_object.path):
-            child = None
-            oid = identifier.Identifier(path=json_path)
-            child = oid.object()
+            child = identifier.Identifier(path=json_path).object()
             if child:
-                # set field if exists in child and doesn't already match parent value
+                # set field if exists in child and doesn't already match
+                # parent value
                 changed = False
-                for field,value in field_values:
-                    if hasattr(child, field):
-                        existing_value = getattr(child,field)
+                for model_field,value in field_values:
+                    model,field = model_field.split('.')
+                    # name of child field (may be diff from parent)
+                    # see identifier.INHERITABLE_FIELDS
+                    child_field = _child_field(
+                        model_field, child.identifier.model
+                    )
+                    # update if different
+                    if hasattr(child, child_field):
+                        existing_value = getattr(child, child_field)
                         if existing_value != value:
-                            setattr(child, field, value)
+                            setattr(child, child_field, value)
                             changed = True
                 # write json and add to list of changed IDs/files
                 if changed:
                     child.write_json()
-                    if hasattr(child, 'id'):         child_ids.append(child.id)
-                    elif hasattr(child, 'basename'): child_ids.append(child.basename)
+                    if hasattr(child, 'id'):
+                        child_ids.append(child.id)
+                    elif hasattr(child, 'basename'):
+                        child_ids.append(child.basename)
                     changed_files.append(json_path)
     return child_ids,changed_files
 
