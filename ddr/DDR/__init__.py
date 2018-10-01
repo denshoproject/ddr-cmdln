@@ -43,39 +43,3 @@ def format_json(data, sort_keys=True):
         indent=4, separators=(',', ': '), sort_keys=sort_keys,
         default=_json_handler,
     )
-
-
-class Timer( object ):
-    """
-    from DDR import Timer
-    t = Timer()
-    t.mark('start')
-    ...YOUR CODE HERE...
-    t.mark('did something')
-    ...MORE CODE...
-    t.mark('did something else')
-    ...MORE CODE...
-    t.display()
-    """
-    steps = []
-    
-    def mark( self, msg ):
-        now = datetime.now(config.TZ)
-        index = len(self.steps)
-        if index:
-            delta = now - self.steps[-1]['datetime']
-        else:
-            delta = timedelta(0)
-        step = {'index':index, 'datetime':now, 'delta':delta, 'msg':msg}
-        self.steps.append(step)
-        logger.debug(msg)
-    
-    def display( self ):
-        """Return list of steps arranged slowest first.
-        """
-        from operator import itemgetter
-        ordered = sorted(self.steps, key=itemgetter('delta'))
-        logger.debug('TIMER RESULTS -- SLOWEST-FASTEST -----------------------------------')
-        for step in ordered:
-            logger.debug('{:>10}: {:<14} | {}'.format(step['index'], step['delta'], step['msg']))
-        return self.steps
