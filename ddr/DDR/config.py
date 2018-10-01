@@ -22,7 +22,7 @@ def read_configs(paths):
     configs_read = cfg.read(paths)
     if not configs_read:
         raise NoConfigError('No config file!')
-    return cfg
+    return cfg,configs_read
 
 def _parse_alt_timezones(text):
     """Parses contents of [cmdln]alt_timezones
@@ -38,7 +38,7 @@ def _parse_alt_timezones(text):
     return data
 
 
-CONFIG = read_configs(CONFIG_FILES)
+CONFIG,CONFIGS_READ = read_configs(CONFIG_FILES)
 
 DEBUG = CONFIG.get('cmdln', 'debug')
 

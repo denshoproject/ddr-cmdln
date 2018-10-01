@@ -411,6 +411,31 @@ class Definitions():
             i['model']: i['files']
             for i in identifiers
         }
+    
+    @staticmethod
+    def inheritable_fields(modules):
+        """Build tree of inheritable fields.
+        
+        Module fields have an 'inherits' attribute which specifies which
+        fields a field can inherit from.  This function builds a top-down
+        tree from that data.
+        
+        @returns: dict of PARENT_MODULE.FIELD -> [CHILD_MODULE.FIELD]
+        """
+        parent_fields = {}
+        for module_name,module in modules.items():
+            if hasattr(module, 'FIELDS'):
+                for module_field in module.FIELDS:
+                    if module_field.get('inherits'):
+                        for x in module_field.get('inherits'):
+                            child_field = '.'.join([
+                                module_name, module_field['name']
+                            ])
+                            if not parent_fields.get(x):
+                                parent_fields[x] = []
+                            if not child_field in parent_fields[x]:
+                                parent_fields[x].append(child_field)
+        return parent_fields
 
 
 try:
@@ -461,6 +486,7 @@ ID_TEMPLATES = Definitions.id_templates(IDENTIFIERS)
 PATH_TEMPLATES = Definitions.path_templates(IDENTIFIERS)
 URL_TEMPLATES = Definitions.url_templates(IDENTIFIERS)
 ADDITIONAL_PATHS = Definitions.additional_paths(IDENTIFIERS)
+INHERITABLE_FIELDS = Definitions.inheritable_fields(MODULES)
 
 
 # ----------------------------------------------------------------------

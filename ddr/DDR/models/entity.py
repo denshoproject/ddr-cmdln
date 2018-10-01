@@ -464,9 +464,14 @@ class Entity(common.DDRObject):
         @param cleaned_data: dict Fieldname:value pairs.
         @returns: tuple [changed object Ids],[changed objects' JSON files]
         """
-        return inheritance.update_inheritables(self, 'entity', inheritables, cleaned_data)
+        return inheritance.update_inheritables(self, inheritables, cleaned_data)
     
     def inherit( self, parent ):
+        """Inherit inheritable fields from the specified parent object.
+        
+        @param parent: DDRObject
+        @returns: None
+        """
         inheritance.inherit( parent, self )
 
     def load_json(self, json_text):
