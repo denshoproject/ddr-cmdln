@@ -141,7 +141,8 @@ def thumbnail(src, dest, geometry):
     data['std_out'] = r.std_out
     data['std_err'] = r.std_err
     data['exists'] = os.path.exists(dest)
-    data['size'] = os.path.getsize(dest)
+    if os.path.exists(dest):
+        data['size'] = os.path.getsize(dest)
     data['islink'] = os.path.islink(dest)
     return data
 
