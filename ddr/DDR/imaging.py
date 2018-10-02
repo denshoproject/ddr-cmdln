@@ -21,6 +21,7 @@ CalledProcessError: Command 'identify /tmp/DDRWorkbenchScreenShots.docx' returne
 
 """
 
+from datetime import datetime
 import os
 import subprocess
 
@@ -119,11 +120,13 @@ def thumbnail(src, dest, geometry):
     assert geometry_is_ok(geometry)
     data = {
         'src': src,
+        'size_src': os.path.getsize(src),
         'dest': dest,
         'geometry': geometry,
         'analysis': None,
         'convert': None,
         'attempted': None,
+        'elapsed': None,
         'status_code': None,
         'std_out': None,
         'std_err': None,
@@ -135,7 +138,9 @@ def thumbnail(src, dest, geometry):
     data['analysis'] = analysis
     cmd = CONVERT_CMD.format(src=src, geometry=geometry, dest=dest)
     data['convert'] = cmd
+    start = datetime.now()
     r = envoy.run(cmd)
+    data['elapsed'] = str(datetime.now() - start)
     data['attempted'] = True
     data['status_code'] = r.status_code
     data['std_out'] = r.std_out
