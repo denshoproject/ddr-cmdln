@@ -29,7 +29,7 @@ import envoy
 import libxmp
 
 IDENTIFY_CMD = 'identify "{path}"'
-CONVERT_CMD  = "convert \"{src}\"[0] -resize '{geometry}' {dest}"
+CONVERT_CMD  = "convert {options} \"{src}\"[0] -resize '{geometry}' {dest}"
 
 
 def analyze_magick(std_out, std_err):
@@ -103,7 +103,7 @@ def geometry_is_ok(geometry):
         return True
     return False
 
-def thumbnail(src, dest, geometry):
+def thumbnail(src, dest, geometry, options=''):
     """Attempt to make thumbnail
     
     Note: uses Imagemagick 'convert' and 'identify'.
@@ -136,7 +136,9 @@ def thumbnail(src, dest, geometry):
     }
     analysis = analyze(src)
     data['analysis'] = analysis
-    cmd = CONVERT_CMD.format(src=src, geometry=geometry, dest=dest)
+    if not options:
+        options = ''
+    cmd = CONVERT_CMD.format(options=options, src=src, geometry=geometry, dest=dest)
     data['convert'] = cmd
     start = datetime.now()
     r = envoy.run(cmd)

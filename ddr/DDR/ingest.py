@@ -163,7 +163,8 @@ def make_access_file(src_path, access_dest_path, log):
         data = imaging.thumbnail(
             src_path,
             access_dest_path,
-            geometry=config.ACCESS_FILE_GEOMETRY
+            geometry=config.ACCESS_FILE_GEOMETRY,
+            options=config.ACCESS_FILE_OPTIONS,
         )
         # identify
         log.ok('| identify: %s' % data['analysis']['std_out'])
