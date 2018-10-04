@@ -30,6 +30,8 @@ import libxmp
 
 IDENTIFY_CMD = 'identify "{path}"'
 CONVERT_CMD  = "convert {options} \"{src}\"[0] -resize '{geometry}' {dest}"
+CONVERT_LARGEFILE_THRESHOLD = 768 * 1000
+CONVERT_LARGEFILE_OPTIONS = '-limit memory 2GB -limit map 4GB'
 
 
 def analyze_magick(std_out, std_err):
@@ -103,6 +105,21 @@ def geometry_is_ok(geometry):
         return True
     return False
 
+def _convert_cmd(src, dest, geometry, options=''):
+    """Prepare ImageMagick convert command
+    
+    @param src: Absolute path to source file.
+    @param dest: Absolute path to destination file.
+    @param geometry: String (ex: '200x200')
+    @param options: str
+    @returns: str
+    """
+    if os.path.getsize(src) >= CONVERT_LARGEFILE_THRESHOLD:
+        options = CONVERT_LARGEFILE_OPTIONS
+    return CONVERT_CMD.format(
+        options=options, src=src, geometry=geometry, dest=dest
+    )
+
 def thumbnail(src, dest, geometry, options=''):
     """Attempt to make thumbnail
     
@@ -136,9 +153,7 @@ def thumbnail(src, dest, geometry, options=''):
     }
     analysis = analyze(src)
     data['analysis'] = analysis
-    if not options:
-        options = ''
-    cmd = CONVERT_CMD.format(options=options, src=src, geometry=geometry, dest=dest)
+    cmd = _convert_cmd(src, dest, geometry, options)
     data['convert'] = cmd
     start = datetime.now()
     r = envoy.run(cmd)
