@@ -69,7 +69,7 @@ def test_analyze_magick():
     #assert tiff['image'] == True
     assert pdf['path'] == TEST_FILES['pdf']['path']
     assert pdf['frames'] == 2
-    assert pdf['format'] == 'PBM'
+    assert pdf['format'] in ['PBM', 'PDF']
     assert pdf['image'] == True
     #assert docx['path'] == None
     #assert docx['frames'] == 1
@@ -120,7 +120,7 @@ def test_thumbnail():
 
 def test_extract_xmp():
     _download_test_images()
-    expected0 = '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Exempi + XMP Core 5.1.2"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about=""/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>'.strip()
+    expected0 = '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Exempi + XMP Core 5.5.0"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about=""/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>'.strip()
     out0 = imaging.extract_xmp(TEST_FILES['jpg']['path']).strip()
     out0 = out0.replace(u'\ufeff', '')
     assert out0 == expected0
