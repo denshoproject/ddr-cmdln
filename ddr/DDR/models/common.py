@@ -334,7 +334,7 @@ class DDRObject(object):
                 d.links_download = download_path
         return d
     
-    def modified(self):
+    def is_modified(self):
         """Returns True if object non-ignored fields differ from file.
         
         @returns: boolean
@@ -352,7 +352,7 @@ class DDRObject(object):
         @param obj_metadata: dict Cached results of object_metadata.
         @param force: boolean Write even nothing looks changed.
         """
-        if force or self.modified():
+        if force or self.is_modified():
             if not os.path.exists(os.path.dirname(self.json_path)):
                 os.makedirs(os.path.dirname(self.json_path))
             fileio.write_text(
@@ -778,18 +778,18 @@ def load_csv(obj, module, rowd):
     }
     # apply module's csvload_* methods to rowd data
     rowd = csvload_rowd(module, rowd)
-    obj.modified = []
+    obj.modified_fields = []
     for field,value in rowd.iteritems():
         ignored = 'ignore' in field_directives[field]
         if not ignored:
             oldvalue = getattr(obj, field, '')
             value = rowd[field]
             if value != oldvalue:
-                obj.modified.append(field)
+                obj.modified_fields.append(field)
             setattr(obj, field, value)
     # Add timezone to fields if not present
     apply_timezone(obj, module.module)
-    return obj.modified
+    return obj.modified_fields
 
 def from_csv(identifier, rowd):
     """Instantiates a File object from CSV row data.

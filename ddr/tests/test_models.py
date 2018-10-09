@@ -356,7 +356,7 @@ def test_Entity_diff():
     print('out2 %s' % out2)
     assert out2        # diffs present
 
-def test_Entity_modified():
+def test_Entity_is_modified():
     collection_id = 'ddr-testing-123'
     entity_id = 'ddr-testing-123-456'
     collection_path = os.path.join(MEDIA_BASE, collection_id)
@@ -366,8 +366,8 @@ def test_Entity_modified():
     o0 = models.Entity(path_abs)
     print('o0 %s' % o0)
     # nonexistent documents are considered modified
-    print('o0.modified() %s' % o0.modified())
-    assert o0.modified() == True
+    print('o0.is_modified() %s' % o0.is_modified())
+    assert o0.is_modified() == True
     now = datetime.now()
     o0.record_created = now
     o0.record_lastmod = now
@@ -378,22 +378,22 @@ def test_Entity_modified():
     o1 = identifier.Identifier(id=entity_id, base_path=MEDIA_BASE).object()
     print('o1 %s' % o1)
     # freshly loaded object should not be modified
-    print('o1.modified() %s' % o1.modified())
-    assert o1.modified() == False
+    print('o1.is_modified() %s' % o1.is_modified())
+    assert o1.is_modified() == False
     assert o1.title == 'TITLE'
     
     o1.title = 'new title'
     assert o1.title == 'new title'
-    print('o1.modified() %s' % o1.modified())
-    assert o1.modified() == True
+    print('o1.is_modified() %s' % o1.is_modified())
+    assert o1.is_modified() == True
     assert o1.title == 'new title'
     o1.write_json(doc_metadata=False)
     
     # existing document
     o2 = identifier.Identifier(id=entity_id, base_path=MEDIA_BASE).object()
     # freshly loaded object should not be modified
-    print('o2.modified() %s' % o2.modified())
-    assert o2.modified() == False
+    print('o2.is_modified() %s' % o2.is_modified())
+    assert o2.is_modified() == False
     assert o2.title == 'new title'
 
 # TODO Entity.parent
