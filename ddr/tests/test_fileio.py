@@ -11,17 +11,29 @@ if not os.path.exists(TESTING_BASE_DIR):
 TEXT = '{"a": 1, "b": 2}'
 
 def test_read_text():
+    # TODO test bad chars
     path = os.path.join(TESTING_BASE_DIR, 'read_text.json')
     with open(path, 'w') as f:
         f.write(TEXT)
+    # regular
     data = fileio.read_text(path)
+    assert data == TEXT
+    # utf8_strict
+    data = fileio.read_text(path, utf8_strict=True)
     assert data == TEXT
     # clean up
     os.remove(path)
 
 def test_write_text():
+    # TODO test bad chars
     path = os.path.join(TESTING_BASE_DIR, 'write_text.json')
+    # regular
     fileio.write_text(TEXT, path)
+    with open(path, 'r') as f:
+        written = f.read()
+    assert written == TEXT
+    # utf8_strict
+    fileio.write_text(TEXT, path, utf8_strict=True)
     with open(path, 'r') as f:
         written = f.read()
     assert written == TEXT
