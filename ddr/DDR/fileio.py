@@ -10,6 +10,7 @@ def read_text(path, utf8_strict=False):
     """Read text file; make sure text is in UTF-8.
     
     @param path: str Absolute path to file.
+    @param utf8_strict: boolean
     @returns: unicode
     """
     if not os.path.exists(path):
@@ -33,15 +34,19 @@ def read_text(path, utf8_strict=False):
         with open(path, 'r') as f:
             return f.read()
 
-def write_text(text, path):
+def write_text(text, path, utf8_strict=False):
     """Write text to UTF-8 file.
     
     @param text: unicode
     @param path: str Absolute path to file.
+    @param utf8_strict: boolean
     """
-    # TODO use codecs.open utf-8
-    with open(path, 'w') as f:
-        f.write(text)
+    if utf8_strict:
+        with codecs.open(path, 'w', 'utf-8') as f:
+            return f.write(text)
+    else:
+        with open(path, 'w') as f:
+            f.write(text)
 
 
 # Some files' XMP data is wayyyyyy too big
