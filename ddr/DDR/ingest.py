@@ -44,8 +44,7 @@ class AddFileLogger():
     def log(self):
         log = ''
         if os.path.exists(self.logpath):
-            with open(self.logpath, 'r') as f:
-                log = f.read()
+            log = fileio.read_text(self.logpath)
         return log
 
     def crash(self, msg, exception=Exception):

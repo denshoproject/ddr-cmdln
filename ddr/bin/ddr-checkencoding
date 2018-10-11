@@ -27,6 +27,7 @@ import chardet
 import git
 import simplejson as json
 
+from DDR import fileio
 from DDR import models
 from DDR import util
 
@@ -70,8 +71,7 @@ def analyze_files(paths, verbose=False):
         except:
             bad += 1
             defects.append(path)
-            with open(path, 'r') as f:
-                text = f.read()
+            text = fileio.read_text(path)
             guess = chardet.detect(text)
             if verbose:
                 print('\n| %s %s' % (path, guess))

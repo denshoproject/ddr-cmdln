@@ -80,6 +80,7 @@ import simplejson as json
 
 from DDR import config
 from DDR import docstore
+from DDR import fileio
 from DDR import identifier
 
 
@@ -276,9 +277,11 @@ def postjson(hosts, index, doctype, object_id, path):
     This command is for posting raw JSON files.  If the file you wish to post
     is a DDR object, please use "ddrindex post".
     """
-    with open(path, 'r') as f:
-        text = f.read()
-    status = docstore.Docstore(hosts, index).post_json(doctype, object_id, text)
+    status = docstore.Docstore(hosts, index).post_json(
+        doctype,
+        object_id,
+        fileio.read_text(path)
+    )
     click.echo(status)
 
 

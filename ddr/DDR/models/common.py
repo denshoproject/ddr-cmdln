@@ -558,8 +558,7 @@ def load_json_lite(json_path, model, object_id):
     @param object_id: str
     @returns: list of dicts
     """
-    with open(json_path, 'r') as f:
-        document = json.loads(f.read())
+    document = json.loads(fileio.read_text(json_path))
     if model == 'file':
         document.append( {'id':object_id} )
     return document

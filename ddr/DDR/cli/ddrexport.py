@@ -37,6 +37,7 @@ import click
 
 from DDR import config
 from DDR import batch
+from DDR import fileio
 from DDR import identifier
 from DDR import util
 
@@ -184,8 +185,7 @@ def read_id_file(path):
     @param path: str Absolute path to file.
     @returns: list of IDs
     """
-    with open(path, 'r') as f:
-        text = f.read()
+    text = fileio.read_text(path)
     ids = [line.strip() for line in text.strip().split('\n')]
     return ids
 

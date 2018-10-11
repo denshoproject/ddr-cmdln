@@ -23,6 +23,7 @@ import simplejson as json
 
 from DDR import config
 from DDR import commands
+from DDR import fileio
 from DDR import identifier
 from DDR import models
 from DDR import util
@@ -108,15 +109,14 @@ class SigIdentifier(identifier.Identifier):
         """Extracts specified fields from JSON
         """
         data = {}
-        with open(path, 'r') as f:
-            for d in json.loads(f.read()):
-                key = d.keys()[0]
-                if key in JSON_FIELDS.keys():
-                    # coerces to int
-                    if d.get(key) and isinstance(JSON_FIELDS[key], int):
-                        data[key] = int(d[key])
-                    else:
-                        data[key] = d[key]
+        for d in json.loads(fileio.read_text(path)):
+            key = d.keys()[0]
+            if key in JSON_FIELDS.keys():
+                # coerces to int
+                if d.get(key) and isinstance(JSON_FIELDS[key], int):
+                    data[key] = int(d[key])
+                else:
+                    data[key] = d[key]
         return data
 
     def publishable(self):

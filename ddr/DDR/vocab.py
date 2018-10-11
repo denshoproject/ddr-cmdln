@@ -249,11 +249,9 @@ class Index( object ):
         if not extension in ['.json', '.csv']:
             raise Exception('Index.read only reads .json and .csv files.')
         if extension.lower() == '.json':
-            with open(path, 'r') as f:
-                self.load_json(f.read())
+            self.load_json(fileio.read_text(path))
         elif extension.lower() == '.csv':
-            with open(path, 'r') as f:
-                self.load_csv(f.read())
+            self.load_csv(fileio.read_text(path))
     
     def write( self, path):
         """Write to the specified file (.json or .csv).
@@ -264,11 +262,9 @@ class Index( object ):
         if not extension in ['.json', '.csv']:
             raise Exception('Index.read only writes .json and .csv files.')
         if extension.lower() == '.json':
-            with open(path, 'w') as f:
-                f.write(self.dump_json())
+            fileio.write_text(self.dump_json(), path)
         elif extension.lower() == '.csv':
-            with open(path, 'w') as f:
-                f.write(self.dump_csv())
+            fileio.write_text(self.dump_csv(), path)
             
     def load_json( self, text ):
         """Load terms from a JSON file.
@@ -561,8 +557,7 @@ def _get_vocab_fs(path):
     @param path: str Absolute path to vocabulary file (.json)
     """
     logging.info('getting vocab: %s' % path)
-    with open(path, 'r') as f:
-        return json.loads(f.read())
+    return json.loads(fileio.read_text(path))
 
 def _get_vocab_http(url):
     """Loads vocabulary data from vocab API.

@@ -70,6 +70,7 @@ import git
 import simplejson as json
 
 from DDR import config
+from DDR import fileio
 from DDR import identifier
 from DDR import models
 from DDR import util
@@ -212,9 +213,7 @@ def is_publishable( json_path ):
     @param path: Absolute path to *.json file.
     @returns: True or False
     """
-    data = None
-    with open(json_path, 'r') as f:
-        data = json.loads(f.read())
+    data = json.loads(fileio.read_text(json_path))
     if data:
         public = False
         completed = False
@@ -238,9 +237,7 @@ def is_publishable_file( json_path ):
     @param path: Absolute path to *.json file.
     @returns: True or False
     """
-    data = None
-    with open(json_path, 'r') as f:
-        data = json.loads(f.read())
+    data = json.loads(fileio.read_text(json_path))
     if data:
         public = False
         for field in data:
@@ -550,8 +547,7 @@ def main():
         # print git-filter-branch to shell script
         FILTERBRANCH_SH_PATH = os.path.join(os.path.dirname(FILTER_REPO_PATH), '%s.sh' % os.path.basename(FILTER_REPO_PATH))
         sh = mk_filterbranch_script(FILTER_REPO_PATH, exclusion_list_path, PUBLIC_REPO_PATH, keep_temp_repo=args.keeptmp)
-        with open(FILTERBRANCH_SH_PATH, 'w') as f:
-            f.write(sh)
+        fileio.write_text(sh, FILTERBRANCH_SH_PATH)
         print('Run this command:\n\n    sh %s | tee -a %s\n' % (FILTERBRANCH_SH_PATH, LOG))
         
         ## run filter-branch in a subprocess

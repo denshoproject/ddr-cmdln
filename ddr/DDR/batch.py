@@ -1297,28 +1297,27 @@ class Updater():
     @staticmethod
     def _read_todo(path):
         #logging.debug('_read_todo(%s)' % path)
-        with open(path, 'r') as f:
-            text = f.read()
+        text = fileio.read_text(path)
         cids = [line.strip() for line in text.strip().split('\n') if line.strip()]
         return cids
     
     @staticmethod
     def _write_todo(cids, path):
         #logging.debug('_write_todo(%s, %s)' % (cids, path))
-        with open(path, 'w') as f:
-            f.write('\n'.join(cids))
+        fileio.write_text(
+            '\n'.join(cids),
+            path
+        )
     
     @staticmethod
     def _read_this(basedir):
-        with open(path, 'r') as f:
-            text = f.read()
+        text = fileio.read_text(path)
         return text.strip()
     
     @staticmethod
     def _write_this(basedir, cid):
         path = os.path.join(basedir, Updater.THIS)
-        with open(path, 'w') as f:
-            f.write(cid)
+        fileio.write_text(cid, path)
 
     # NOTE: should use DDR.fileio but quoting/delimiters/etc are hardcoded
     

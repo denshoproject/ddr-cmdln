@@ -88,9 +88,7 @@ def find_files(basedir, filetypes):
 def update_file(json_path, field_name, new_value):
     """Updates specified field in json file with a value and saves.
     """
-    with open(json_path, 'r') as f:
-        data = json.loads(f.read())
-    
+    data = json.loads(fileio.read_text(json_path))
     for field in data:
         fname = field.keys()[0]
         if fname == field_name:
