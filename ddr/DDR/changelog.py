@@ -167,10 +167,9 @@ def write_changelog_entry(path, messages, user, email, timestamp=None):
         date=converters.datetime_to_text(timestamp, converters.config.PRETTY_DATETIME_FORMAT)
         )
     try:
-        preexisting = os.path.getsize(path)
+        # preexisting file
+        if os.path.getsize(path):
+            entry = '\n' + entry
     except:
-        preexisting = False
-    with open(path, 'a') as f:
-        if preexisting:
-            f.write('\n')
-        f.write(entry)
+        pass
+    fileio.append_text(entry, path)
