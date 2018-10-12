@@ -40,6 +40,8 @@ def test_write_text():
     # clean up
     os.remove(path)
 
+def test_append_text():
+    assert False
 
 CSV_PATH = os.path.join(TESTING_BASE_DIR, 'write_csv.csv')
 CSV_HEADERS = ['id', 'title', 'description']

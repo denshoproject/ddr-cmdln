@@ -48,6 +48,20 @@ def write_text(text, path, utf8_strict=False):
         with open(path, 'w') as f:
             f.write(text)
 
+def append_text(text, path, utf8_strict=False):
+    """Append text to UTF-8 file.
+    
+    @param text: unicode
+    @param path: str Absolute path to file.
+    @param utf8_strict: boolean
+    """
+    if utf8_strict:
+        with codecs.open(path, 'a', 'utf-8') as f:
+            return f.write(text)
+    else:
+        with open(path, 'a') as f:
+            f.write(text)
+
 
 # Some files' XMP data is wayyyyyy too big
 csv.field_size_limit(sys.maxsize)
