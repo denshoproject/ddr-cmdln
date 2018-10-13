@@ -186,20 +186,20 @@ class File(common.DDRObject):
         )
         return exit,status
     
-    def save(self, git_name, git_mail, agent, collection=None, parent=None, cleaned_data={}, commit=True):
+    def save(self, git_name, git_mail, agent, collection=None, parent=None, inheritables=[], commit=True):
         """Writes File metadata, stages, and commits.
         
-        Updates .children and .file_groups if parent is (almost certainly) an Entity.
-        Returns exit code, status message, and list of updated files.  Files list
-        is for use by e.g. batch operations that want to commit all modified files
-        in one operation rather than piecemeal.
+        Updates .children and .file_groups if parent is (almost certainly)
+        an Entity.  Returns exit code, status message, and list of updated
+        files.  Files list is for use by e.g. batch operations that want
+        to commit all modified files in one operation rather than piecemeal.
         
         @param git_name: str
         @param git_mail: str
         @param agent: str
         @param collection: Collection
         @param parent: Entity or Segment
-        @param cleaned_data: dict Form data (all fields required)
+        @param inheritables: list of selected inheritable fields
         @param commit: boolean
         @returns: exit,status,updated_files (int,str,list)
         """
@@ -207,9 +207,6 @@ class File(common.DDRObject):
             collection = self.identifier.collection().object()
         if not parent:
             parent = self.identifier.parent().object()
-        
-        if cleaned_data:
-            self.form_post(cleaned_data)
         
         self.write_json()
         updated_files = [
@@ -221,6 +218,8 @@ class File(common.DDRObject):
             parent.children(force_read=True)
             parent.write_json()
             updated_files.append(parent.json_path)
+        
+        # files have no child object inheritors
         
         exit,status = commands.entity_update(
             git_name, git_mail,

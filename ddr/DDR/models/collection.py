@@ -203,33 +203,30 @@ class Collection(common.DDRObject):
         )
         return exit,status
     
-    def save(self, git_name, git_mail, agent, cleaned_data={}, commit=True):
+    def save(self, git_name, git_mail, agent, inheritables=[], commit=True):
         """Writes specified Collection metadata, stages, and commits.
         
-        Returns exit code, status message, and list of updated files.  Files list
-        is for use by e.g. batch operations that want to commit all modified files
-        in one operation rather than piecemeal.  This is included in Collection
-        to be consistent with the other objects' methods.
+        Returns exit code, status message, and list of updated files.
+        Files list is for use by e.g. batch operations that want to commit
+        all modified files in one operation rather than piecemeal.  This
+        is included in Collection to be consistent with the other objects'
+        methods.
         
         @param git_name: str
         @param git_mail: str
         @param agent: str
-        @param cleaned_data: dict Form data (all fields required)
+        @param inheritables: list of selected inheritable fields
         @param commit: boolean
         @returns: exit,status,updated_files (int,str,list)
         """
-        if cleaned_data:
-            self.form_post(cleaned_data)
-        
         self.set_repo_description()
         
         self.write_json()
         self.write_xml()
         updated_files = [self.json_path, self.ead_path,]
         
-        # if inheritable fields selected, propagate changes to child objects
-        inheritables = self.selected_inheritables(cleaned_data)
-        modified_ids,modified_files = self.update_inheritables(inheritables, cleaned_data)
+        # propagate inheritable changes to child objects
+        modified_ids,modified_files = self.update_inheritables(inheritables)
         if modified_files:
             updated_files = updated_files + modified_files
 
