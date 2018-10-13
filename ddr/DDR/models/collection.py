@@ -337,15 +337,6 @@ class Collection(common.DDRObject):
             )
         ]
     
-    def update_inheritables( self, inheritables, cleaned_data ):
-        """Update specified fields of child objects.
-        
-        @param inheritables: list Names of fields that shall be inherited.
-        @param cleaned_data: dict Fieldname:value pairs.
-        @returns: tuple [changed object Ids],[changed objects' JSON files]
-        """
-        return inheritance.update_inheritables(self, inheritables, cleaned_data)
-    
     def load_json(self, json_text):
         """Populates Collection from JSON-formatted text.
         

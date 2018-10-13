@@ -184,8 +184,21 @@ class DDRObject(object):
             self.inheritable_fields(), cleaned_data
         )
     
-    #update_inheritables
-    #inherit
+    def update_inheritables( self, inheritables ):
+        """Update specified fields of child objects.
+        
+        @param inheritables: list Names of fields that shall be inherited.
+        @returns: tuple [changed object Ids],[changed objects' JSON files]
+        """
+        return inheritance.update_inheritables(self, inheritables)
+    
+    def inherit( self, parent ):
+        """Inherit inheritable fields from the specified parent object.
+        
+        @param parent: DDRObject
+        @returns: None
+        """
+        inheritance.inherit( parent, self )
     
     def lock( self, text ): return locking.lock(self.lock_path, text)
     def unlock( self, text ): return locking.unlock(self.lock_path, text)
