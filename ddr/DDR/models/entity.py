@@ -456,23 +456,6 @@ class Entity(common.DDRObject):
             files = [f for f in self._file_objects]
         self.files = sorted(files, key=lambda f: int(f.sort))
         return self._children_objects + self.files
-    
-    def update_inheritables( self, inheritables, cleaned_data ):
-        """Update specified fields of child objects.
-        
-        @param inheritables: list Names of fields that shall be inherited.
-        @param cleaned_data: dict Fieldname:value pairs.
-        @returns: tuple [changed object Ids],[changed objects' JSON files]
-        """
-        return inheritance.update_inheritables(self, inheritables, cleaned_data)
-    
-    def inherit( self, parent ):
-        """Inherit inheritable fields from the specified parent object.
-        
-        @param parent: DDRObject
-        @returns: None
-        """
-        inheritance.inherit( parent, self )
 
     def load_json(self, json_text):
         """Populate Entity data from JSON-formatted text.
