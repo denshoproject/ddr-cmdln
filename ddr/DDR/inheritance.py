@@ -81,19 +81,18 @@ def selected_inheritables( inheritables, cleaned_data ):
         ]
     return selected
     
-def update_inheritables( parent_object, inheritables, cleaned_data ):
+def update_inheritables( parent_object, selected_fields ):
     """Update specified inheritable fields of child objects
     
     @param parent_object: Collection or Entity
-    @param inheritables: str list
-    @param cleaned_data: dict Form cleaned_data from POST.
+    @param selected_fields: str list of selected inheritable fields
     @returns: tuple (List changed object Ids, list changed objects files)
     """
     child_ids = []
     changed_files = []
     # values of parent_object's selected inheritable fields
     # keys are MODEL_FIELD to match identifier.INHERITABLE_FIELDS
-    field_values = _selected_field_values(parent_object, inheritables)
+    field_values = _selected_field_values(parent_object, selected_fields)
     # load child objects and apply the change
     if field_values:
         for json_path in _child_jsons(parent_object.path):
@@ -110,7 +109,7 @@ def update_inheritables( parent_object, inheritables, cleaned_data ):
                         model_field, child.identifier.model
                     )
                     # update if different
-                    if hasattr(child, child_field):
+                    if child_field and hasattr(child, child_field):
                         existing_value = getattr(child, child_field)
                         if existing_value != value:
                             setattr(child, child_field, value)

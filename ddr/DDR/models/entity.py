@@ -347,28 +347,25 @@ class Entity(common.DDRObject):
         )
         return exit,status
     
-    def save(self, git_name, git_mail, agent, collection=None, cleaned_data={}, commit=True):
+    def save(self, git_name, git_mail, agent, collection=None, inheritables=[], commit=True):
         """Writes specified Entity metadata, stages, and commits.
         
         Updates .children and .file_groups if parent is another Entity.
-        Returns exit code, status message, and list of updated files.  Files list
-        is for use by e.g. batch operations that want to commit all modified files
-        in one operation rather than piecemeal.
+        Returns exit code, status message, and list of updated files.
+        Files list is for use by e.g. batch operations that want to commit
+        all modified files in one operation rather than piecemeal.
         
         @param git_name: str
         @param git_mail: str
         @param agent: str
         @param collection: Collection
-        @param cleaned_data: dict Form data (all fields required)
+        @param inheritables: list of selected inheritable fields
         @param commit: boolean
         @returns: exit,status,updated_files (int,str,list)
         """
         if not collection:
             collection = self.identifier.collection().object()
         parent = self.identifier.parent().object()
-        
-        if cleaned_data:
-            self.form_post(cleaned_data)
         
         self.children(force_read=True)
         self.write_json()
@@ -385,8 +382,8 @@ class Entity(common.DDRObject):
             parent.write_json()
             updated_files.append(parent.json_path)
         
-        inheritables = self.selected_inheritables(cleaned_data)
-        modified_ids,modified_files = self.update_inheritables(inheritables, cleaned_data)
+        # propagate inheritable changes to child objects
+        modified_ids,modified_files = self.update_inheritables(inheritables)
         if modified_files:
             updated_files = updated_files + modified_files
 
@@ -456,23 +453,6 @@ class Entity(common.DDRObject):
             files = [f for f in self._file_objects]
         self.files = sorted(files, key=lambda f: int(f.sort))
         return self._children_objects + self.files
-    
-    def update_inheritables( self, inheritables, cleaned_data ):
-        """Update specified fields of child objects.
-        
-        @param inheritables: list Names of fields that shall be inherited.
-        @param cleaned_data: dict Fieldname:value pairs.
-        @returns: tuple [changed object Ids],[changed objects' JSON files]
-        """
-        return inheritance.update_inheritables(self, inheritables, cleaned_data)
-    
-    def inherit( self, parent ):
-        """Inherit inheritable fields from the specified parent object.
-        
-        @param parent: DDRObject
-        @returns: None
-        """
-        inheritance.inherit( parent, self )
 
     def load_json(self, json_text):
         """Populate Entity data from JSON-formatted text.
