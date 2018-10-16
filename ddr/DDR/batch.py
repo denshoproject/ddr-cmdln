@@ -1318,36 +1318,6 @@ class Updater():
     def _write_this(basedir, cid):
         path = os.path.join(basedir, Updater.THIS)
         fileio.write_text(cid, path)
-
-    # NOTE: should use DDR.fileio but quoting/delimiters/etc are hardcoded
-    
-    @staticmethod
-    def _csv_reader(csvfile):
-        return csv.reader(
-            csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL,
-        )
-    
-    @staticmethod
-    def _csv_writer(csvfile):
-        return csv.writer(
-            csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL,
-        )
-    
-    @staticmethod
-    def _read_csv(path):
-        rows = []
-        with open(path, 'rU') as f:  # the 'U' is for universal-newline mode
-            for row in Updater._csv_reader(f):
-                rows.append(row)
-        return rows
-    
-    @staticmethod
-    def _write_csv(path, headers, rows):
-        with open(path, 'wb') as f:
-            writer = Updater._csv_writer(f)
-            writer.writerow(headers)
-            for row in rows:
-                writer.writerow(row)
     
     @staticmethod
     def _read_done(basedir):
@@ -1355,7 +1325,7 @@ class Updater():
         headers = None
         rows = []
         if os.path.exists(path):
-            rows = Updater._read_csv(path)
+            rows = fileio.read_csv(path)
             if rows:
                 headers = rows.pop(0)
         return headers,rows
@@ -1366,11 +1336,11 @@ class Updater():
         headers = []
         rows = []
         if os.path.exists(path):
-            rows = Updater._read_csv(path)
+            rows = fileio.read_csv(path)
             if rows:
                 headers = rows.pop(0)
         if not headers:
             headers = metrics.headers()
         if metrics.cid:
             rows.append(metrics.row())
-        Updater._write_csv(path, headers, rows)
+        fileio.write_csv(path, headers, rows)
