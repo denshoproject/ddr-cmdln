@@ -343,8 +343,7 @@ def write_exclusion_list( path, exclusion_list, filename ):
     cmd = 'git rm -qrf --cached --ignore-unmatch %s ;\\\n'
     #cmd = 'git rm -rf --cached --ignore-unmatch %s ;\\\n'
     actions = [cmd % path for path in exclusion_list]
-    with open(fname, 'w') as f:
-        f.writelines(actions)
+    fileio.write_text('\n'.join(actions), fname)
     if os.path.exists(fname):
         return fname
     return 1
