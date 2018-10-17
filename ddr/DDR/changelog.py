@@ -166,10 +166,4 @@ def write_changelog_entry(path, messages, user, email, timestamp=None):
         email=email,
         date=converters.datetime_to_text(timestamp, converters.config.PRETTY_DATETIME_FORMAT)
         )
-    try:
-        # preexisting file
-        if os.path.getsize(path):
-            entry = '\n' + entry
-    except:
-        pass
     fileio.append_text(entry, path)

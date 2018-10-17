@@ -55,11 +55,18 @@ def append_text(text, path, utf8_strict=False):
     @param path: str Absolute path to file.
     @param utf8_strict: boolean
     """
+    addnewline = False
+    if os.path.exists(path):
+        addnewline = True
     if utf8_strict:
         with codecs.open(path, 'a', 'utf-8') as f:
-            return f.write(text)
+            if addnewline:
+                f.write('\n')
+            f.write(text)
     else:
         with open(path, 'a') as f:
+            if addnewline:
+                f.write('\n')
             f.write(text)
 
 
