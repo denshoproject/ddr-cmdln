@@ -40,8 +40,28 @@ def test_write_text():
     # clean up
     os.remove(path)
 
+APPEND_TEXT = [
+    '000',
+    '001',
+    '002',
+]
+
 def test_append_text():
-    assert False
+    path = os.path.join(TESTING_BASE_DIR, 'append_text.json')
+    if os.path.exists(path):
+        os.remove(path)
+    # before start
+    assert os.path.exists(path) == False
+    # append some lines
+    for n in range(0,len(APPEND_TEXT)):
+        this = APPEND_TEXT[n]
+        fileio.append_text(this, path)
+        with open(path, 'r') as f:
+            out = f.read()
+        expected = '\n'.join(APPEND_TEXT[:n+1])
+        assert out == expected
+    # clean up
+    os.remove(path)
 
 CSV_PATH = os.path.join(TESTING_BASE_DIR, 'write_csv.csv')
 CSV_HEADERS = ['id', 'title', 'description']
