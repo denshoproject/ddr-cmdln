@@ -169,16 +169,17 @@ class Collection(common.DDRObject):
         return data
     
     @staticmethod
-    def create(path_abs, identifier=None):
+    def create(path_abs, identifier=None, parent=None):
         """Creates a new Collection with initial values from module.FIELDS.
         
         @param path_abs: str Absolute path; must end in valid DDR id.
         @param identifier: [optional] Identifier
+        @param parent: [optional] DDRObject parent object
         @returns: Collection object
         """
         if not identifier:
             identifier = Identifier(path=path_abs)
-        return common.create_object(identifier)
+        return common.create_object(identifier, parent=parent)
     
     @staticmethod
     def new(identifier, git_name, git_mail, agent='cmdln'):

@@ -294,16 +294,17 @@ class Entity(common.DDRObject):
         return data
     
     @staticmethod
-    def create(path_abs, identifier=None):
+    def create(path_abs, identifier=None, parent=None):
         """Creates a new Entity with initial values from module.FIELDS.
         
         @param path_abs: str Absolute path; must end in valid DDR id.
         @param identifier: [optional] Identifier
+        @param parent: [optional] DDRObject parent object
         @returns: Entity object
         """
         if not identifier:
             identifier = Identifier(path=path_abs)
-        obj = common.create_object(identifier)
+        obj = common.create_object(identifier, parent=parent)
         obj.files = []
         return obj
     
