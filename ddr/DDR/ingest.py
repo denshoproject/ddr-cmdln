@@ -530,7 +530,7 @@ def add_external_file(entity, data, git_name, git_mail, agent='', log_path=None,
     
     if not (data.get('external') and data['external']):
         log.ok('Regular file (not external)')
-        raise Exception('Not an external (metadata-only) file: %s' % file_)
+        raise Exception('Not an external (metadata-only) file: %s' % data)
     
     log.ok('Identifier')
     # note: we can't make this until we have the sha1
