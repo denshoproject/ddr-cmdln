@@ -511,7 +511,7 @@ class Importer():
             except IOError:
                 entity = None
             if not entity:
-                entity = models.Entity.create(eidentifier.path_abs(), eidentifier)
+                entity = models.Entity.create(eidentifier)
             modified = entity.load_csv(rowd)
             # Getting obj_metadata takes about 1sec each time
             # TODO caching works as long as all objects have same metadata...

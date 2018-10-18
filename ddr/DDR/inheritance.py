@@ -34,7 +34,8 @@ def _selected_field_values( parent_object, inheritables ):
     ]
 
 def _child_field(parent_model_field, child_model):
-    """
+    """Get name of child field from identifier.INHERITABLE_FIELDS
+    
     @param parent_model_field: str '{parent_model}.{fieldname}'
     @param child_model: str
     @returns: str child field name
@@ -131,5 +132,9 @@ def inherit( parent, child ):
     @param child: A webui.models.Entity or webui.models.File
     """
     for field in parent.inheritable_fields():
-        if hasattr(parent, field) and hasattr(child, field):
-            setattr(child, field, getattr(parent, field))
+        child_field = _child_field(
+            '.'.join([parent.identifier.model, field]),
+            child.identifier.model
+        )
+        if child_field and hasattr(parent, field):
+            setattr(child, child_field, getattr(parent, field))

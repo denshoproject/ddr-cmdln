@@ -431,7 +431,7 @@ def sort_file_paths(json_paths, rank='role-eid-sort'):
             paths_sorted.append(val)
     return paths_sorted
 
-def create_object(identifier):
+def create_object(identifier, parent=None):
     """Creates a new object initial values from module.FIELDS.
     
     If identifier.fields_module().FIELDS.field['default'] is non-None
@@ -441,6 +441,7 @@ def create_object(identifier):
     with a default value. Ahem.
     
     @param identifier: Identifier
+    @param parent: DDRObject (optional)
     @returns: object
     """
     object_class = identifier.object_class()
@@ -468,6 +469,14 @@ def create_object(identifier):
                 )
         elif hasattr(f, 'name') and hasattr(f, 'initial'):
             setattr(obj, f['name'], f['initial'])
+    # inherit defaults from parent
+    if (not parent) and identifier.parent():
+        try:
+            parent = identifier.parent().object()
+        except IOError:
+            parent = None
+    if parent:
+        inheritance.inherit(parent, obj)
     return obj
 
 def object_metadata(module, repo_path):
