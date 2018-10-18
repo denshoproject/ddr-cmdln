@@ -294,16 +294,13 @@ class Entity(common.DDRObject):
         return data
     
     @staticmethod
-    def create(path_abs, identifier=None, parent=None):
+    def create(identifier, parent=None):
         """Creates a new Entity with initial values from module.FIELDS.
         
-        @param path_abs: str Absolute path; must end in valid DDR id.
-        @param identifier: [optional] Identifier
+        @param identifier: Identifier
         @param parent: [optional] DDRObject parent object
         @returns: Entity object
         """
-        if not identifier:
-            identifier = Identifier(path=path_abs)
         obj = common.create_object(identifier, parent=parent)
         obj.files = []
         return obj
@@ -321,7 +318,7 @@ class Entity(common.DDRObject):
         collection = identifier.collection().object()
         if not collection:
             raise Exception('Parent collection for %s does not exist.' % identifier)
-        entity = Entity.create(identifier.path_abs(), identifier)
+        entity = Entity.create(identifier)
         fileio.write_text(
             entity.dump_json(template=True),
             config.TEMPLATE_EJSON

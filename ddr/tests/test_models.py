@@ -329,7 +329,8 @@ def test_Entity_dict():
     entity_id = 'ddr-testing-123-456'
     collection_path = os.path.join(MEDIA_BASE, collection_id)
     path_abs = os.path.join(collection_path, 'files', entity_id)
-    o = models.Entity.create(path_abs)
+    ei = identifier.Identifier(path_abs)
+    o = models.Entity.create(ei)
     o.record_created = datetime(2018, 9, 20, 12, 23, 21, 227561)
     o.record_lastmod = datetime(2018, 9, 20, 12, 23, 21, 227582)
     out = o.dict()
@@ -341,7 +342,8 @@ def test_Entity_diff():
     entity_id = 'ddr-testing-123-456'
     collection_path = os.path.join(MEDIA_BASE, collection_id)
     path_abs = os.path.join(collection_path, 'files', entity_id)
-    o1 = models.Entity.create(path_abs)
+    ei = identifier.Identifier(path_abs)
+    o1 = models.Entity.create(ei)
     o2 = deepcopy(o1)
     # identical
     out0 = o1.diff(o2)

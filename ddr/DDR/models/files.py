@@ -135,15 +135,13 @@ class File(common.DDRObject):
     #def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
     
     @staticmethod
-    def create(path_abs, identifier=None, parent=None):
+    def create(identifier=None, parent=None):
         """Creates a new File with initial values from module.FIELDS.
         
-        @param path_abs: str Absolute path; must end in valid DDR id.
         @param identifier: [optional] Identifier
+        @param parent: [optional] DDRObject parent object
         @returns: File object
         """
-        if not identifier:
-            identifier = Identifier(path=path_abs)
         return common.create_object(identifier, parent=parent)
     
     @staticmethod
@@ -159,7 +157,7 @@ class File(common.DDRObject):
         parent = identifier.parent().object()
         if not parent:
             raise Exception('Parent for %s does not exist.' % identifier)
-        file_ = File.create(identifier.path_abs(), identifier)
+        file_ = File.create(identifier)
         file_.write_json()
         
         entity_file_edit(request, collection, file_, git_name, git_mail)
@@ -298,7 +296,7 @@ class File(common.DDRObject):
         """
         if os.path.exists(identifier.path_abs('json')):
             return File.from_json(identifier.path_abs('json'), identifier)
-        return File.create(identifier.path_abs('json'), identifier)
+        return File.create(identifier)
     
     def parent( self ):
         i = Identifier(id=self.parent_id, base_path=self.identifier.basepath)

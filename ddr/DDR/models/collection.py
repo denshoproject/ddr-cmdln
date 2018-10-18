@@ -169,16 +169,13 @@ class Collection(common.DDRObject):
         return data
     
     @staticmethod
-    def create(path_abs, identifier=None, parent=None):
+    def create(identifier, parent=None):
         """Creates a new Collection with initial values from module.FIELDS.
         
-        @param path_abs: str Absolute path; must end in valid DDR id.
-        @param identifier: [optional] Identifier
+        @param identifier: Identifier
         @param parent: [optional] DDRObject parent object
         @returns: Collection object
         """
-        if not identifier:
-            identifier = Identifier(path=path_abs)
         return common.create_object(identifier, parent=parent)
     
     @staticmethod
@@ -191,7 +188,7 @@ class Collection(common.DDRObject):
         @param agent: str
         @returns: exit,status int,str
         """
-        collection = Collection.create(identifier.path_abs(), identifier)
+        collection = Collection.create(identifier)
         fileio.write_text(
             collection.dump_json(template=True),
             config.TEMPLATE_CJSON

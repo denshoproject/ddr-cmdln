@@ -408,7 +408,7 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='', l
     tmp_access_path = make_access_file(src_path, access_dest_path, log)
     
     log.ok('File object')
-    file_ = file_class(path_abs=dest_path, identifier=fidentifier)
+    file_ = File.create(fidentifier, parent=entity)
     file_.basename_orig = os.path.basename(src_path)
     # add extension to path_abs
     basename_ext = os.path.splitext(file_.basename_orig)[1]
@@ -543,7 +543,7 @@ def add_external_file(entity, data, git_name, git_mail, agent='', log_path=None,
     log.ok('| identifier %s' % fidentifier)
     
     log.ok('File object')
-    file_ = fidentifier.object()
+    file_ = File.create(fidentifier, parent=entity)
     # add extension to path_abs
     basename_ext = os.path.splitext(data['basename_orig'])[1]
     path_abs_ext = os.path.splitext(file_.path_abs)[1]
