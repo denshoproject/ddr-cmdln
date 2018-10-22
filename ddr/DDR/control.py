@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 
+from DDR import fileio
 
 MODULE_PATH = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_PATH = os.path.join(MODULE_PATH, 'templates')
@@ -11,10 +12,7 @@ ENTITY_CONTROL_TEMPLATE     = os.path.join(TEMPLATE_PATH, 'entity_control.tpl' )
 
 
 def load_template(filename):
-    template = ''
-    with open(filename, 'r') as f:
-        template = f.read()
-    return template
+    return fileio.read_text(filename)
 
 
 class ControlFile( object ):
@@ -54,8 +52,7 @@ class CollectionControlFile( ControlFile ):
     def create( path, collection_id ):
         logging.debug('    CollectionControlFile.create({})'.format(path))
         t = load_template(COLLECTION_CONTROL_TEMPLATE)
-        with open(path, 'w') as f:
-            f.write(t.format(cid=collection_id))
+        fileio.write_text(t.format(cid=collection_id), path)
     
     def update_checksums( self, collection ):
         self._config.remove_section('Entities')
@@ -80,8 +77,10 @@ class EntityControlFile( ControlFile ):
     def create( path, collection_id, entity_id ):
         logging.debug('    EntityControlFile.create({})'.format(path))
         t = load_template(ENTITY_CONTROL_TEMPLATE)
-        with open(path, 'w') as f:
-            f.write(t.format(cid=collection_id, eid=entity_id))
+        fileio.write_text(
+            t.format(cid=collection_id, eid=entity_id),
+            path
+        )
     
     CHECKSUMS = ['sha1', 'sha256', 'files']
     def update_checksums( self, entity ):

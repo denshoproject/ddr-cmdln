@@ -5,6 +5,7 @@ import os
 from dateutil import parser
 
 from DDR import config
+from DDR import fileio
 from DDR import converters
 
 
@@ -117,9 +118,7 @@ def read_changelog(path):
     @param path: Absolute path to changelog file.
     @returns list of entry dicts
     """
-    with open(path, 'r') as f:
-        log = f.read()
-    return read_entries(log)
+    return read_entries(fileio.read_text(path))
 
 def make_entry(messages, user, mail, timestamp=None):
     """Makes a (new-style) changelog entry.
@@ -148,10 +147,7 @@ CHANGELOG_TEMPLATE    = os.path.join(TEMPLATE_PATH, 'changelog.tpl')
 CHANGELOG_DATE_FORMAT = os.path.join(TEMPLATE_PATH, 'changelog-date.tpl')
 
 def load_template(filename):
-    template = ''
-    with open(filename, 'r') as f:
-        template = f.read()
-    return template
+    return fileio.read_text(filename)
 
 def write_changelog_entry(path, messages, user, email, timestamp=None):
     logging.debug('    write_changelog_entry({})'.format(path))
@@ -170,11 +166,4 @@ def write_changelog_entry(path, messages, user, email, timestamp=None):
         email=email,
         date=converters.datetime_to_text(timestamp, converters.config.PRETTY_DATETIME_FORMAT)
         )
-    try:
-        preexisting = os.path.getsize(path)
-    except:
-        preexisting = False
-    with open(path, 'a') as f:
-        if preexisting:
-            f.write('\n')
-        f.write(entry)
+    fileio.append_text(entry, path)

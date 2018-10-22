@@ -14,6 +14,7 @@ import requests
 import simplejson as json
 
 from DDR import config
+from DDR import fileio
 from DDR import storage
 
 # values are set after defining latest_commit()
@@ -616,8 +617,7 @@ def merge_add( repo, file_path_rel ):
     """
     # check for merge conflict markers
     file_path_abs = os.path.join(repo.working_dir, file_path_rel)
-    with open(file_path_abs, 'r') as f:
-        txt = f.read()
+    txt = fileio.read_text(file_path_abs)
     if (MERGE_MARKER_START in txt) or (MERGE_MARKER_MID in txt) or (MERGE_MARKER_END in txt):
         return 'ERROR: file still contains merge conflict markers'
     repo.git.add(file_path_rel)

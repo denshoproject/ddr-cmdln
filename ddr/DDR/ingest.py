@@ -35,8 +35,7 @@ class AddFileLogger():
         @returns log: A text file.
         """
         entry = '[{}] {} - {}\n'.format(datetime.now(config.TZ).isoformat('T'), ok, msg)
-        with open(self.logpath, 'a') as f:
-            f.write(entry)
+        fileio.append_text(entry, self.logpath)
     
     def ok(self, msg): self.entry('ok', msg)
     def not_ok(self, msg): self.entry('not ok', msg)
@@ -44,8 +43,7 @@ class AddFileLogger():
     def log(self):
         log = ''
         if os.path.exists(self.logpath):
-            with open(self.logpath, 'r') as f:
-                log = f.read()
+            log = fileio.read_text(self.logpath)
         return log
 
     def crash(self, msg, exception=Exception):

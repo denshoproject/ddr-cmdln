@@ -420,9 +420,9 @@ class Collection(common.DDRObject):
         
         TODO This should not actually write the XML! It should return XML to the code that calls it.
         """
-        with open(config.TEMPLATE_EAD_JINJA2, 'r') as f:
-            template = f.read()
-        return Template(template).render(object=self)
+        return Template(
+            fileio.read_text(config.TEMPLATE_EAD_JINJA2)
+        ).render(object=self)
 
     def write_xml(self):
         """Write EAD XML file to disk.
@@ -433,12 +433,11 @@ class Collection(common.DDRObject):
     
     def gitignore( self ):
         if not os.path.exists(self.gitignore_path):
-            with open(GITIGNORE_TEMPLATE, 'r') as fr:
-                gt = fr.read()
-            with open(self.gitignore_path, 'w') as fw:
-                fw.write(gt)
-        with open(self.gitignore_path, 'r') as f:
-            return f.read()
+            fileio.write_text(
+                fileio.read_text(GITIGNORE_TEMPLATE),
+                self.gitignore_path
+            )
+        return fileio.read_text(self.gitignore_path)
     
     @staticmethod
     def collection_paths( collections_root, repository, organization ):

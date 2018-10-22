@@ -98,19 +98,17 @@ def read_missingfiles_file(files_nothere):
     @returns: list
     """
     logging.debug('read_missingfiles_file %s' % files_nothere)
-    not_here = []
-    with open(files_nothere, 'r') as f:
-        not_here = [
-            os.path.splitext(
-                os.path.basename(
-                    json.loads(
-                        row.strip()
-                    )['file']
-                )
-            )[0]
-            for row in f.readlines()
-            if row.strip()
-        ]
+    not_here = [
+        os.path.splitext(
+            os.path.basename(
+                json.loads(
+                    row.strip()
+                )['file']
+            )
+        )[0]
+        for row in fileio.read_text(files_nothere).splitlines()
+        if row.strip()
+    ]
     logging.debug('%s missing' % len(not_here))
     return not_here
 
@@ -152,10 +150,11 @@ def read_replacements_dir(path):
 
 def read_replacements_file(path):
     logging.debug('read_replacements_file %s' % path)
-    with open(path, 'r') as f:
-        filenames = [line.split() for line in f.readlines()]
-        logging.debug('%s filenames' % len(filenames))
-        return filenames
+    filenames = [
+        line.split() for line in fileio.read_text(path).splitlines()
+    ]
+    logging.debug('%s filenames' % len(filenames))
+    return filenames
 
 def make_basenames_filenames(rowds):
     """read files export, make dict of originalfilename: file ID
@@ -364,8 +363,10 @@ def find_replacements(collection_path, csv_path, replacements_dir=None, replacem
     logging.info('Identifying replacement files')
     replacements = []
     if replacements_file:
-        with open(replacements_file, 'r') as f:
-            replacements = [line.strip() for line in f.readlines()]
+        replacements = [
+            line.strip()
+            for line in fileio.read_text(replacements_file).splitlines()
+        ]
     elif replacements_dir:
         replacements = os.listdir(replacements_dir)
     rowds = add_missing_filenames(

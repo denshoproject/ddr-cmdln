@@ -33,9 +33,7 @@ def format_json(data, sort_keys=True):
     >>> data = {'a':1, 'b':2}
     >>> path = '/tmp/ddrlocal.models.write_json.json'
     >>> write_json(data, path)
-    >>> with open(path, 'r') as f:
-    ...     print(f.readlines())
-    ...
+    >>> print(fileio.read_text(path))
     ['{\n', '    "a": 1,\n', '    "b": 2\n', '}']
     """
     return json.dumps(

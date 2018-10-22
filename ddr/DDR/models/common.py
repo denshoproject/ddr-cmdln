@@ -410,10 +410,9 @@ def sort_file_paths(json_paths, rank='role-eid-sort'):
         role = identifier.parts.get('role',None)
         sha1 = identifier.parts.get('sha1',None)
         sort = 0
-        with open(path, 'r') as f:
-            for line in f.readlines():
-                if 'sort' in line:
-                    sort = line.split(':')[1].replace('"','').strip()
+        for line in fileio.read_text(path).splitlines():
+            if 'sort' in line:
+                sort = line.split(':')[1].replace('"','').strip()
         eid = str(eid)
         sha1 = str(sha1)
         sort = str(sort)
@@ -580,8 +579,7 @@ def load_json_lite(json_path, model, object_id):
     @param object_id: str
     @returns: list of dicts
     """
-    with open(json_path, 'r') as f:
-        document = json.loads(f.read())
+    document = json.loads(fileio.read_text(json_path))
     if model == 'file':
         document.append( {'id':object_id} )
     return document

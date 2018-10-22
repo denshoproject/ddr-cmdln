@@ -562,9 +562,9 @@ class Entity(common.DDRObject):
         
         TODO This should not actually write the XML! It should return XML to the code that calls it.
         """
-        with open(config.TEMPLATE_METS_JINJA2, 'r') as f:
-            template = f.read()
-        return Template(template).render(object=self)
+        return Template(
+            fileio.read_text(config.TEMPLATE_METS_JINJA2)
+        ).render(object=self)
 
     def write_xml(self):
         """Write METS XML file to disk.

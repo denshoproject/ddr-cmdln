@@ -54,6 +54,7 @@ import simplejson as json
 
 from DDR import config
 from DDR import converters
+from DDR import fileio
 from DDR.identifier import Identifier
 from DDR.identifier import ELASTICSEARCH_CLASSES
 from DDR.identifier import ELASTICSEARCH_CLASSES_BY_MODEL
@@ -136,12 +137,11 @@ def all_list_fields():
     return LIST_FIELDS
 
 def load_json(path):
-    with open(path, 'r') as f:
-        try:
-            data = json.loads(f.read())
-        except json.errors.JSONDecodeError:
-            raise Exception('simplejson.errors.JSONDecodeError reading %s' % path)
-        return data
+    try:
+        data = json.loads(fileio.read_text(path))
+    except json.errors.JSONDecodeError:
+        raise Exception('simplejson.errors.JSONDecodeError reading %s' % path)
+    return data
 
 class InvalidPage(Exception):
     pass
