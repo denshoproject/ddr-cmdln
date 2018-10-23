@@ -70,6 +70,7 @@ setup(
         ddrconfig=DDR.cli.ddrconfig:ddrconfig
         ddrexport=DDR.cli.ddrexport:ddrexport
         ddrindex=DDR.cli.ddrindex:ddrindex
+        ddrinfo=DDR.cli.ddrinfo:ddrinfo
         ddrimport=DDR.cli.ddrimport:ddrimport
         ddrtransform=DDR.cli.ddrtransform:ddrtransform
     ''',
@@ -78,7 +79,6 @@ setup(
         'bin/ddr-backup',
         'bin/ddr-batch',
         'bin/ddr-filter',
-        'bin/ddr-info',
         'bin/ddr-massupdate',
         'bin/ddr-missing',
         'bin/ddr-pubcopy',

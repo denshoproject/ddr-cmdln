@@ -1,24 +1,9 @@
-#!/usr/bin/env python
-
-#
-# ddr-info
-#
-
-description = """Print info about a repository."""
-
-epilog = """
-
-ddr-info /PATH/TO/REPO
-
----"""
-
-
-import argparse
 from datetime import datetime
 import logging
 import sys
 
-import simplejson as json
+import click
+import simplejson
 
 from DDR import dvcs
 from DDR import identifier
@@ -29,6 +14,38 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     stream=sys.stdout,
 )
+
+
+@click.command()
+@click.argument('collection')
+@click.option('--json','-j',  is_flag=True, help='Output as JSON')
+def ddrinfo(collection, json):
+    """ddrinfo - Prints info about a repository.
+    
+    \b
+    Example:
+        ddr-info /PATH/TO/REPO
+    """
+    start = datetime.now()
+    
+    repo = dvcs.repository(collection)
+    #logging.debug(repo)
+
+    data = {}
+    #logging.debug('Getting file info')
+    data.update(file_info(repo))
+    
+    #logging.debug('Getting annex info')
+    data.update(annex_info(repo))
+
+    if json:
+        print(simplejson.dumps(data))
+    else:
+        output(data)
+    
+    finish = datetime.now()
+    elapsed = finish - start
+    #logging.info('DONE - (%s)' % (elapsed))
 
 
 def file_info(repo):
@@ -91,40 +108,3 @@ def annex_info(repo):
 def output(data):
     for key,val in data.iteritems():
         logging.info('%s: %s' % (key,val))
-
-
-def main():
-
-    parser = argparse.ArgumentParser(
-        description=description,
-        epilog=epilog,
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-    parser.add_argument('collection', help='Absolute path to Collection.')
-    parser.add_argument('-j', '--json', action='store_true', help='Output as JSON')
-    args = parser.parse_args()
-    
-    start = datetime.now()
-    
-    repo = dvcs.repository(args.collection)
-    #logging.debug(repo)
-
-    data = {}
-    #logging.debug('Getting file info')
-    data.update(file_info(repo))
-    
-    #logging.debug('Getting annex info')
-    data.update(annex_info(repo))
-
-    if args.json:
-        print(json.dumps(data))
-    else:
-        output(data)
-    
-    finish = datetime.now()
-    elapsed = finish - start
-    #logging.info('DONE - (%s)' % (elapsed))
-    
-
-if __name__ == '__main__':
-    main()
