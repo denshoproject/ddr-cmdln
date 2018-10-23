@@ -1,24 +1,10 @@
-#!/usr/bin/env python
-
-#
-# ddr-transform
-#
-
-description = """Simple: just loads objects and saves them again."""
-
-epilog = """
-This has the effect of updating objects to the latest file format.
-Someday this command could be used to run function from script file
-on each .json file in a repository.
----"""
-
-
-import argparse
 from datetime import datetime
 import fnmatch
 import logging
 import os
 import sys
+
+import click
 
 from DDR import config
 from DDR import commands
@@ -34,7 +20,31 @@ logging.basicConfig(
 )
 
 
-def transform(collection, filter=None, models=None, topics=None, created=None, commit=None, user=None, mail=None):
+@click.command()
+@click.argument('collection')
+@click.option('--filter', '-f',
+              help='Only touch objects w matching ID (wildcard)')
+@click.option('--models', '-M',
+              help='Only touch specified models (comma-separated list)')
+@click.option('--topics', '-t', is_flag=True,
+              help='Fix damaged topics data.')
+@click.option('--created', '-R', is_flag=True,
+              help='Replace entity.record_created w ts of first commit.')
+@click.option('--commit', '-C', is_flag=True, help='Commit changes.')
+@click.option('--user','-u', help='(required for commit) User name')
+@click.option('--mail','-m', help='(required for commit) User email')
+def ddrtransform(collection, filter, models, topics, created, commit, user, mail):
+    """ddrtransform - Just loads objects and saves them again.
+
+    This has the effect of updating objects to the latest file format.
+    Someday this command could be used to run function from script file
+    on each .json file in a repository.
+    """
+    transform(collection, filter, models, topics, created, commit, user, mail)
+
+
+def transform(collection, filter='', models='', topics=None, created=None, commit=None, user=None, mail=None):
+    
     if commit and ((not user) or (not mail)):
         logging.error('You must specify a user and email address! >:-0')
         sys.exit(1)
@@ -42,7 +52,7 @@ def transform(collection, filter=None, models=None, topics=None, created=None, c
         logging.info('Not committing changes')
     
     start = datetime.now()
-
+    
     if filter:
         logging.info('FILTER: "%s"' % filter)
     ONLY_THESE = []
@@ -51,13 +61,18 @@ def transform(collection, filter=None, models=None, topics=None, created=None, c
         ONLY_THESE = models.split(',')
     
     logging.info('Loading collection')
-    collection = identifier.Identifier(os.path.normpath(collection)).object()
+    cidentifier = identifier.Identifier(os.path.normpath(collection))
+    collection = cidentifier.object()
     logging.info(collection)
     
     logging.info('Finding metadata files')
-    paths = util.find_meta_files(collection.identifier.path_abs(), recursive=True, force_read=True)
+    paths = util.find_meta_files(
+        collection.identifier.path_abs(),
+        recursive=True,
+        force_read=True
+    )
     logging.info('%s paths' % len(paths))
-
+    
     TOPICS = vocab.get_vocabs(config.VOCABS_URL)['topics']
     # filter out paths
     these_paths = []
@@ -88,7 +103,7 @@ def transform(collection, filter=None, models=None, topics=None, created=None, c
             before = o.topics
             after = vocab.repair_topicdata(o.topics, TOPICS)
             o.topics = after
-
+        
         if created and hasattr(o, 'record_created'):
             record_created_before = o.record_created
             commit = dvcs.earliest_commit(path, parsed=True)
@@ -107,41 +122,8 @@ def transform(collection, filter=None, models=None, topics=None, created=None, c
         logging.info('ok')
     else:
         logging.info('Changes not committed')
-
+    
     end = datetime.now()
     elapsed = end - start
     per = elapsed / num
     logging.info('DONE (%s elapsed, %s per object)' % (elapsed, per))
-
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        description=description,
-        epilog=epilog,
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-    parser.add_argument('collection', help='Absolute path to Collection.')
-    parser.add_argument('-f', '--filter', help='Only transform objects with matching ID (simple wildcard)')
-    parser.add_argument('-M', '--models', help='Only transform specified models (comma-separated list)')
-    parser.add_argument('-t', '--topics', action='store_true', help='Fix damaged topics data.')
-    parser.add_argument('-R', '--created', action='store_true', help='Replace entity.record_created w ts of first commit.')
-    parser.add_argument('-C', '--commit', action='store_true', help='Commit changes.')
-    parser.add_argument('-u', '--user', help='(required for commit) User name')
-    parser.add_argument('-m', '--mail', help='(required for commit) User email')
-    args = parser.parse_args()
-    
-    transform(
-        collection=args.collection,
-        filter=args.filter,
-        models=args.models,
-        topics=args.topics,
-        created=args.created,
-        commit=args.commit,
-        user=args.user,
-        mail=args.mail,
-    )
-
-
-if __name__ == '__main__':
-    main()

@@ -68,6 +68,7 @@ setup(
         ddrexport=DDR.cli.ddrexport:ddrexport
         ddrindex=DDR.cli.ddrindex:ddrindex
         ddrimport=DDR.cli.ddrimport:ddrimport
+        ddrtransform=DDR.cli.ddrtransform:ddrtransform
     ''',
     scripts = [
         'bin/ddr',
@@ -82,7 +83,6 @@ setup(
         'bin/ddr-missing',
         'bin/ddr-pubcopy',
         'bin/ddr-signatures',
-        'bin/ddr-transform',
         'bin/ddr-update',
         'bin/ddrdensho255fix',
     ],
