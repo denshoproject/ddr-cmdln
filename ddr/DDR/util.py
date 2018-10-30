@@ -12,6 +12,10 @@ def find_meta_files(basedir, recursive=False, model=None, files_first=False, for
     Skips/excludes .git directories.
     TODO depth (go down N levels from basedir)
     
+    NOTE: Looked at replacing this with pathlib rglob[1] but this
+    function is consistently faster.
+    [1] list(pathlib.Path(path).rglob('*.json'))
+    
     @param basedir: Absolute path
     @param recursive: Whether or not to recurse into subdirectories.
     @param model: list Restrict to the named model ('collection','entity','file').
