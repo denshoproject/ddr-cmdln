@@ -138,10 +138,7 @@ def analyze_files(paths, verbose=False):
     for path in paths:
         bad = 0
         try:
-            with codecs.open(
-                    path, 'r', encoding='utf-8', errors='strict'
-            ) as f:
-                text = f.read()
+            text = fileio.read_text(path, utf8_strict=True)
         except:
             bad += 1
             defects.append(path)
