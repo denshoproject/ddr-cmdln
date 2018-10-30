@@ -64,7 +64,7 @@ def check_encoding(repo_url, destdir, verbose=False, csv=False, headers=False, j
     out(verbose, repo)
     
     out(verbose, 'analyzing')
-    paths = util.find_meta_files(repo_path, recursive=True)
+    paths = util.find_meta_files(repo_path, recursive=True, testing=True)
     defects = analyze_files(paths, verbose)
     
     out(verbose, 'cleaning up')
@@ -96,11 +96,11 @@ def check_encoding(repo_url, destdir, verbose=False, csv=False, headers=False, j
             json.dumps(data)
         )
     else:
-        print('%s%s, %s files, %s bad, %s elapsed' % (
+        print('%s%s, %s bad, %s files, %s elapsed' % (
             prefix,
             collection_id,
-            len(paths),
             len(defects),
+            len(paths),
             elapsed
         ))
 
