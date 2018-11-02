@@ -210,7 +210,7 @@ class Index( object ):
             t = self._parent(t)
             path.append(t.title)
         path.reverse()
-        return ': '.join(path)
+        return config.VOCABS_PRECOORD_PATH_SEP.join(path)
     
     def _format( self, term ):
         """Generates thesaurus-style text output for each Term.

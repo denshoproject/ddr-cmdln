@@ -125,6 +125,10 @@ DOCSTORE_HOST = CONFIG.get('public','docstore_host')
 DOCSTORE_INDEX = CONFIG.get('public','docstore_index')
 
 VOCABS_URL = CONFIG.get('cmdln', 'vocabs_url')
+# Separator between path elements for hierarchical precoordinated terms.
+# e.g. 'Geographic communities: Washington: Seattle'
+VOCABS_PRECOORD_PATH_SEP = ': '
+
 # vocab.get_vocabs will cache data here
 VOCABS = {}  # keys = vocab keyword
 
