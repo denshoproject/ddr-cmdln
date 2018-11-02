@@ -669,6 +669,33 @@ def repair_topicdata(data, facet):
             item['term'] = THIS_MODULE.TOPICS[item['id']]
     return data
 
+def TEMP_scrub_topicdata(data):
+    """Pretty much the same as repair_topicdata, from repo_models
+    """
+    # TEMPORARY function for fixing bad data
+    # see https://github.com/densho/ddr-cmdln/issues/43
+    if not THIS_MODULE.TOPICS:
+        # get topics so we can repair topic term (path) field
+        logging.debug('getting topics')
+        THIS_MODULE.TOPICS = {
+            str(term['id']): term['path']
+            for term in get_vocabs(config.VOCABS_URL)['topics']['terms']
+        }
+        logging.debug('ok')
+    for item in data:
+        # 'id' field is supposed to be an integer in a str
+        if (not item['id'].isdigit()) and (':' in item['id']):
+            logging.debug('Fixing topic ID')
+            logging.debug('BEFORE %s' % item)
+            tid = item['id'].split(':')[-1]
+            if tid.isdigit():
+                item['id'] = tid
+                item['term'] = THIS_MODULE.TOPICS[tid]
+            logging.debug('    -> %s' % item)
+        if THIS_MODULE.TOPICS.get(item['id']):
+            item['term'] = THIS_MODULE.TOPICS[item['id']]
+    return data
+
 
 def topics_choices(facet, FacetTermClass):
     """List of topicID,path used in ddrpublic search forms topics fields.
