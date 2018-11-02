@@ -488,7 +488,7 @@ LISTOFDICTS_SEPARATORS = [':', '|', ';']
 LISTOFDICTS_SPLIT1X = [':']
 
 def text_to_listofdicts(text, separators=LISTOFDICTS_SEPARATORS, split1x=LISTOFDICTS_SPLIT1X):
-    text = normalize_string(text)
+    text = normalize_string(text).replace('\\n','').replace('\n','')
     if not text:
         return []
     splitnum1 = _setsplitnum(separators[-1], split1x)
@@ -508,7 +508,7 @@ def text_to_listofdicts(text, separators=LISTOFDICTS_SEPARATORS, split1x=LISTOFD
             i = item.strip()
             if i:
                 key,val = i.split(separators[-3], splitnum3)
-                d[key] = val
+                d[key.strip()] = val.strip()
         # don't append empty dicts
         if d:
             dicts.append(d)
