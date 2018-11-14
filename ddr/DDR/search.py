@@ -204,35 +204,15 @@ class Searcher(object):
         self.fields = fields
         self.s = search
 
-    def prepare(self, request):
+    def prepare(self, fulltext='', models=SEARCH_MODELS, parent='', filters={}):
         """assemble elasticsearch_dsl.Search object
+        
+        @param fulltext: str
+        @param models: list of str
+        @param parent: str
+        @param filters: dict
+        @returns: elasticsearch_dsl.Search
         """
-
-        # gather inputs ------------------------------
-        
-        if hasattr(request, 'query_params'):
-            # api (rest_framework)
-            params = dict(request.query_params)
-        elif hasattr(request, 'GET'):
-            # web ui (regular Django)
-            params = dict(request.GET)
-        else:
-            params = {}
-        
-        # whitelist params
-        bad_fields = [
-            key for key in params.keys()
-            if key not in SEARCH_PARAM_WHITELIST + ['page']
-        ]
-        for key in bad_fields:
-            params.pop(key)
-        
-        # doctypes
-        if params.get('models'):
-            models = params.pop('models')
-        else:
-            models = SEARCH_MODELS
-        
         s = Search(
             using=DOCSTORE.es,
             index=DOCSTORE.indexname,
@@ -240,9 +220,8 @@ class Searcher(object):
         ).source(include=identifier.ELASTICSEARCH_LIST_FIELDS)
         
         # fulltext query
-        if params.get('fulltext'):
+        if fulltext:
             # MultiMatch chokes on lists
-            fulltext = params.pop('fulltext')
             if isinstance(fulltext, list) and (len(fulltext) == 1):
                 fulltext = fulltext[0]
             # fulltext search
@@ -254,14 +233,12 @@ class Searcher(object):
                 )
             )
 
-        # parent
-        if params.get('parent'):
-            param = params.pop('parent')
-            parent = '%s*' % param[0]
+        if parent:
+            parent = '%s*' % parent
             s = s.query("wildcard", id=parent)
         
         # filters
-        for key,val in params.items():
+        for key,val in filters.items():
             
             if key in SEARCH_NESTED_FIELDS:
     
@@ -492,12 +469,13 @@ class SearchResults(object):
         data['page_size'] = self.page_size
         data['this_page'] = self.this_page
 
-        params = {key:val for key,val in request.GET.items()}
-        if params.get('page'): params.pop('page')
-        if params.get('limit'): params.pop('limit')
-        if params.get('offset'): params.pop('offset')
-        qs = [key + '=' + val for key,val in params.items()]
-        query_string = '&'.join(qs)
+        if request:
+            params = {key:val for key,val in request.GET.items()}
+            if params.get('page'): params.pop('page')
+            if params.get('limit'): params.pop('limit')
+            if params.get('offset'): params.pop('offset')
+            qs = [key + '=' + val for key,val in params.items()]
+            query_string = '&'.join(qs)
 
         data['prev_api'] = ''
         if self.prev_offset != None:
@@ -545,3 +523,82 @@ class SearchResults(object):
         data['query'] = self.query
         data['aggregations'] = self.aggregations
         return data
+
+def format_object(oi, d, request=None, is_detail=False):
+    """Format detail or list objects for command-line
+    
+    Certain fields are always included (id, title, etc and links).
+    Everything else is determined by what fields are in the result dict.
+    
+    d is basically an elasticsearch_dsl.Result, packaged by
+    search.SearchResults.
+    
+    @param oi: Identifier
+    @param d: dict
+    @param request: None
+    @param is_detail: boolean
+    """
+    try:
+        collection_id = oi.collection_id()
+    except:
+        collection_id = None
+    
+    data = OrderedDict()
+    data['id'] = d.pop('id')
+    data['model'] = oi.model
+    data['collection_id'] = collection_id
+    data['links'] = make_links(
+        oi, d, request, source='es', is_detail=is_detail
+    )
+    DETAIL_EXCLUDE = []
+    for key,val in d.items():
+        if key not in DETAIL_EXCLUDE:
+            data[key] = val
+    return data
+
+def make_links(oi, d, request=None, source='fs', is_detail=False):
+    """Make the 'links pod' at the top of detail or list objects.
+    
+    @param oi: Identifier
+    @param d: dict
+    @param request: None
+    @param source: str 'fs' (filesystem) or 'es' (elasticsearch)
+    @param is_detail: boolean
+    @returns: dict
+    """
+    assert source in ['fs', 'es']
+    try:
+        collection_id = oi.collection_id()
+        child_models = oi.child_models(stubs=False)
+    except:
+        collection_id = None
+        child_models = oi.child_models(stubs=True)
+    
+    img_url = ''
+    if d.get('signature_id'):
+        img_url = identifier.Identifier(d['signature_id'])
+    elif d.get('access_rel'):
+        img_url = oi
+    elif oi.model in ['repository','organization']:
+        img_url = '%s%s/%s' % (
+            settings.MEDIA_URL,
+            oi.path_abs().replace(settings.MEDIA_ROOT, ''),
+            'logo.png'
+        )
+    
+    links = OrderedDict()
+    
+    if is_detail:
+        # objects above the collection level are stubs and do not have collection_id
+        # collections have collection_id but have to point up to parent stub
+        # API does not include stubs inside collections (roles)
+        if collection_id and (collection_id != oi.id):
+            parent_id = oi.parent_id(stubs=0)
+        else:
+            parent_id = oi.parent_id(stubs=1)
+        if parent_id:
+            links['parent'] = parent_id
+
+    links['img'] = img_url
+    
+    return links
