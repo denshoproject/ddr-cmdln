@@ -182,146 +182,6 @@ def django_page(limit, offset):
     return divmod(offset, limit)[0] + 1
 
 
-class Searcher(object):
-    """
-    >>> s = Searcher(index, mappings=DOCTYPE_CLASS, fields=SEARCH_LIST_FIELDS)
-    >>> s.prep(request_data)
-    'ok'
-    >>> r = s.execute()
-    'ok'
-    >>> d = r.to_dict(request)
-    """
-    index = DOCSTORE.indexname
-    mappings = {}
-    fields = []
-    q = OrderedDict()
-    query = {}
-    sort_cleaned = None
-    s = None
-    
-    def __init__(self, mappings, fields, search=None):
-        self.mappings = mappings
-        self.fields = fields
-        self.s = search
-
-    def prepare(self, fulltext='', models=SEARCH_MODELS, parent='', filters={}):
-        """assemble elasticsearch_dsl.Search object
-        
-        @param fulltext: str
-        @param models: list of str
-        @param parent: str
-        @param filters: dict
-        @returns: elasticsearch_dsl.Search
-        """
-        s = Search(
-            using=DOCSTORE.es,
-            index=DOCSTORE.indexname,
-            doc_type=models,
-        ).source(include=identifier.ELASTICSEARCH_LIST_FIELDS)
-        
-        # fulltext query
-        if fulltext:
-            # MultiMatch chokes on lists
-            if isinstance(fulltext, list) and (len(fulltext) == 1):
-                fulltext = fulltext[0]
-            # fulltext search
-            s = s.query(
-                QueryString(
-                    query=fulltext,
-                    fields=SEARCH_INCLUDE_FIELDS,
-                    allow_leading_wildcard=False,
-                )
-            )
-
-        if parent:
-            parent = '%s*' % parent
-            s = s.query("wildcard", id=parent)
-        
-        # filters
-        for key,val in filters.items():
-            
-            if key in SEARCH_NESTED_FIELDS:
-    
-                # search for *ALL* the topics (AND)
-                for term_id in val:
-                    s = s.filter(
-                        Q('bool',
-                          must=[
-                              Q('nested',
-                                path=key,
-                                query=Q(
-                                    'term',
-                                    **{'%s.id' % key: term_id}
-                                )
-                              )
-                          ]
-                        )
-                    )
-                
-                ## search for *ANY* of the topics (OR)
-                #s = s.query(
-                #    Q('bool',
-                #      must=[
-                #          Q('nested',
-                #            path=key,
-                #            query=Q('terms', **{'%s.id' % key: val})
-                #          )
-                #      ]
-                #    )
-                #)
-    
-            elif key in SEARCH_PARAM_WHITELIST:
-                s = s.filter('terms', **{key: val})
-        
-        # aggregations
-        for fieldname,field in SEARCH_AGG_FIELDS.items():
-            
-            # nested aggregation (Elastic docs: https://goo.gl/xM8fPr)
-            if fieldname == 'topics':
-                s.aggs.bucket(
-                    'topics', 'nested', path='topics'
-                ).bucket(
-                    'topic_ids', 'terms', field='topics.id', size=1000
-                )
-            elif fieldname == 'facility':
-                s.aggs.bucket(
-                    'facility', 'nested', path='facility'
-                ).bucket(
-                    'facility_ids', 'terms', field='facility.id',
-                    size=1000
-                )
-                # result:
-                # results.aggregations['topics']['topic_ids']['buckets']
-                #   {u'key': u'69', u'doc_count': 9}
-                #   {u'key': u'68', u'doc_count': 2}
-                #   {u'key': u'62', u'doc_count': 1}
-            
-            # simple aggregations
-            else:
-                s.aggs.bucket(fieldname, 'terms', field=field)
-        
-        self.s = s
-    
-    def execute(self, limit, offset):
-        """Execute a query and return SearchResults
-        
-        @param limit: int
-        @param offset: int
-        @returns: SearchResults
-        """
-        if not self.s:
-            raise Exception('Searcher has no ES Search object.')
-        start,stop = start_stop(limit, offset)
-        response = self.s[start:stop].execute()
-        return SearchResults(
-            mappings=self.mappings,
-            query=self.s.to_dict(),
-            results=response,
-            limit=limit,
-            offset=offset,
-        )
-
-
 class SearchResults(object):
     """Nicely packaged search results for use in API and UI.
     
@@ -524,6 +384,7 @@ class SearchResults(object):
         data['aggregations'] = self.aggregations
         return data
 
+
 def format_object(oi, d, request=None, is_detail=False):
     """Format detail or list objects for command-line
     
@@ -602,3 +463,143 @@ def make_links(oi, d, request=None, source='fs', is_detail=False):
     links['img'] = img_url
     
     return links
+
+
+class Searcher(object):
+    """
+    >>> s = Searcher(index, mappings=DOCTYPE_CLASS, fields=SEARCH_LIST_FIELDS)
+    >>> s.prep(request_data)
+    'ok'
+    >>> r = s.execute()
+    'ok'
+    >>> d = r.to_dict(request)
+    """
+    index = DOCSTORE.indexname
+    mappings = {}
+    fields = []
+    q = OrderedDict()
+    query = {}
+    sort_cleaned = None
+    s = None
+    
+    def __init__(self, mappings, fields, search=None):
+        self.mappings = mappings
+        self.fields = fields
+        self.s = search
+
+    def prepare(self, fulltext='', models=SEARCH_MODELS, parent='', filters={}):
+        """assemble elasticsearch_dsl.Search object
+        
+        @param fulltext: str
+        @param models: list of str
+        @param parent: str
+        @param filters: dict
+        @returns: elasticsearch_dsl.Search
+        """
+        s = Search(
+            using=DOCSTORE.es,
+            index=DOCSTORE.indexname,
+            doc_type=models,
+        ).source(include=identifier.ELASTICSEARCH_LIST_FIELDS)
+        
+        # fulltext query
+        if fulltext:
+            # MultiMatch chokes on lists
+            if isinstance(fulltext, list) and (len(fulltext) == 1):
+                fulltext = fulltext[0]
+            # fulltext search
+            s = s.query(
+                QueryString(
+                    query=fulltext,
+                    fields=SEARCH_INCLUDE_FIELDS,
+                    allow_leading_wildcard=False,
+                )
+            )
+
+        if parent:
+            parent = '%s*' % parent
+            s = s.query("wildcard", id=parent)
+        
+        # filters
+        for key,val in filters.items():
+            
+            if key in SEARCH_NESTED_FIELDS:
+    
+                # search for *ALL* the topics (AND)
+                for term_id in val:
+                    s = s.filter(
+                        Q('bool',
+                          must=[
+                              Q('nested',
+                                path=key,
+                                query=Q(
+                                    'term',
+                                    **{'%s.id' % key: term_id}
+                                )
+                              )
+                          ]
+                        )
+                    )
+                
+                ## search for *ANY* of the topics (OR)
+                #s = s.query(
+                #    Q('bool',
+                #      must=[
+                #          Q('nested',
+                #            path=key,
+                #            query=Q('terms', **{'%s.id' % key: val})
+                #          )
+                #      ]
+                #    )
+                #)
+    
+            elif key in SEARCH_PARAM_WHITELIST:
+                s = s.filter('terms', **{key: val})
+        
+        # aggregations
+        for fieldname,field in SEARCH_AGG_FIELDS.items():
+            
+            # nested aggregation (Elastic docs: https://goo.gl/xM8fPr)
+            if fieldname == 'topics':
+                s.aggs.bucket(
+                    'topics', 'nested', path='topics'
+                ).bucket(
+                    'topic_ids', 'terms', field='topics.id', size=1000
+                )
+            elif fieldname == 'facility':
+                s.aggs.bucket(
+                    'facility', 'nested', path='facility'
+                ).bucket(
+                    'facility_ids', 'terms', field='facility.id',
+                    size=1000
+                )
+                # result:
+                # results.aggregations['topics']['topic_ids']['buckets']
+                #   {u'key': u'69', u'doc_count': 9}
+                #   {u'key': u'68', u'doc_count': 2}
+                #   {u'key': u'62', u'doc_count': 1}
+            
+            # simple aggregations
+            else:
+                s.aggs.bucket(fieldname, 'terms', field=field)
+        
+        self.s = s
+    
+    def execute(self, limit, offset):
+        """Execute a query and return SearchResults
+        
+        @param limit: int
+        @param offset: int
+        @returns: SearchResults
+        """
+        if not self.s:
+            raise Exception('Searcher has no ES Search object.')
+        start,stop = start_stop(limit, offset)
+        response = self.s[start:stop].execute()
+        return SearchResults(
+            mappings=self.mappings,
+            query=self.s.to_dict(),
+            results=response,
+            limit=limit,
+            offset=offset,
+        )
