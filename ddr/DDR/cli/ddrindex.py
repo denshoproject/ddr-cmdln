@@ -565,8 +565,7 @@ def search(hosts, index, doctypes, parent, filters, limit, offset, page, aggrega
     # print raw results
     if raw:
         click.echo(results.to_dict(
-            request=None,
-            list_function=search_.format_object
+            list_function=search_.format_object,
         ))
         return
     

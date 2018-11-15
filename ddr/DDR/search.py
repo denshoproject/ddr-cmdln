@@ -296,31 +296,20 @@ class SearchResults(object):
         return u"<SearchResults '%s' [%s]>" % (
             self.query, self.total
         )
-
-    def _make_prevnext_url(self, query, request):
-        if request:
-            return urlparse.urlunsplit([
-                request.META['wsgi.url_scheme'],
-                request.META['HTTP_HOST'],
-                request.META['PATH_INFO'],
-                query,
-                None,
-            ])
-        return '?%s' % query
     
-    def to_dict(self, request, list_function):
+    def to_dict(self, list_function):
         """Express search results in API and Redis-friendly structure
         returns: dict
         """
-        return self._dict({}, request, list_function)
+        return self._dict({}, list_function)
     
-    def ordered_dict(self, request, list_function, pad=False):
+    def ordered_dict(self, list_function, pad=False):
         """Express search results in API and Redis-friendly structure
         returns: OrderedDict
         """
-        return self._dict(OrderedDict(), request, list_function, pad=pad)
+        return self._dict(OrderedDict(), list_function, pad=pad)
     
-    def _dict(self, data, request, list_function, pad=False):
+    def _dict(self, data, list_function, pad=False):
         data['total'] = self.total
         data['limit'] = self.limit
         data['offset'] = self.offset
@@ -329,30 +318,6 @@ class SearchResults(object):
         data['page_size'] = self.page_size
         data['this_page'] = self.this_page
 
-        if request:
-            params = {key:val for key,val in request.GET.items()}
-            if params.get('page'): params.pop('page')
-            if params.get('limit'): params.pop('limit')
-            if params.get('offset'): params.pop('offset')
-            qs = [key + '=' + val for key,val in params.items()]
-            query_string = '&'.join(qs)
-
-        data['prev_api'] = ''
-        if self.prev_offset != None:
-            data['prev_api'] = self._make_prevnext_url(
-                u'%s&limit=%s&offset=%s' % (
-                    query_string, self.limit, self.prev_offset
-                ),
-                request
-            )
-        data['next_api'] = ''
-        if self.next_offset != None:
-            data['next_api'] = self._make_prevnext_url(
-                u'%s&limit=%s&offset=%s' % (
-                    query_string, self.limit, self.next_offset
-                ),
-                request
-            )
         data['objects'] = []
         
         # pad before
@@ -369,7 +334,6 @@ class SearchResults(object):
                         o['id'], base_path=config.MEDIA_BASE
                     ),
                     o.to_dict(),
-                    request,
                     is_detail=False,
                 )
             )
@@ -385,7 +349,7 @@ class SearchResults(object):
         return data
 
 
-def format_object(oi, d, request=None, is_detail=False):
+def format_object(oi, d, is_detail=False):
     """Format detail or list objects for command-line
     
     Certain fields are always included (id, title, etc and links).
@@ -396,7 +360,6 @@ def format_object(oi, d, request=None, is_detail=False):
     
     @param oi: Identifier
     @param d: dict
-    @param request: None
     @param is_detail: boolean
     """
     try:
@@ -409,7 +372,7 @@ def format_object(oi, d, request=None, is_detail=False):
     data['model'] = oi.model
     data['collection_id'] = collection_id
     data['links'] = make_links(
-        oi, d, request, source='es', is_detail=is_detail
+        oi, d, source='es', is_detail=is_detail
     )
     DETAIL_EXCLUDE = []
     for key,val in d.items():
@@ -417,7 +380,7 @@ def format_object(oi, d, request=None, is_detail=False):
             data[key] = val
     return data
 
-def make_links(oi, d, request=None, source='fs', is_detail=False):
+def make_links(oi, d, source='fs', is_detail=False):
     """Make the 'links pod' at the top of detail or list objects.
     
     @param oi: Identifier
