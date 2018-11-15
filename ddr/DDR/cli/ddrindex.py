@@ -487,27 +487,65 @@ def status(hosts, index):
 @click.option('--parent','-P',
               default='',
               help='ID of parent object.')
+@click.option('--filters','-f',
+              default='', multiple=True,
+              help='Filter on certain fields (FIELD:VALUE,VALUE,...).')
 @click.option('--limit','-l',
               default=config.RESULTS_PER_PAGE,
-              help='Number of results to return (use with offset).')
+              help='Results page size.')
 @click.option('--offset','-o',
               default=0,
               help='Number of initial results to skip (use with limit).')
 @click.option('--page','-p',
               default=0,
               help='Which page of results to show.')
+@click.option('--aggregations','-a',
+              is_flag=True, default=False,
+              help='Show filter aggregations for result set.')
 @click.option('--raw','-r',
               is_flag=True, default=False,
               help='Raw Elasticsearch output.')
 @click.argument('fulltext')
-def search(hosts, index, doctypes, parent, limit, offset, page, raw, fulltext):
+def search(hosts, index, doctypes, parent, filters, limit, offset, page, aggregations, raw, fulltext):
+    """Fulltext search using Elasticsearch query_string syntax.
+    
+    \b
+    Examples:
+        $ ddrindex search seattle
+        $ ddrindex search "fusa OR teruo"
+        $ ddrindex search "fusa AND teruo"
+        $ ddrindex search "+fusa -teruo"
+        $ ddrindex search "title:seattle"
+    
+    Note: Quoting inside strings is not (yet?) supported in the
+    command-line version.
+    
+    \b
+    Specify parent object and doctype/model:
+        $ ddrindex search seattle --parent=ddr-densho-12
+        $ ddrindex search seattle --doctypes=entity,segment
+    
+    \b
+    Filter on certain fields (filters may repeat):
+        $ ddrindex search seattle --filter=topics:373,27
+        $ ddrindex search seattle -f=topics:373 -f facility=12
+    
+    Use the --aggregations/-a flag to display filter aggregations,
+    with document counts, filter keys, and labels.
     """
-    SEARCH HELP HERE
-    """
+    if filters:
+        data = {}
+        for f in filters:
+            field,v = f.split(':')
+            values = v.split(',')
+            data[field] = values
+        filters = data
+    else:
+        filters = {}
+        
     if page and offset:
         click.echo("Error: Specify either offset OR page, not both.")
         return
-    
     if page:
         thispage = int(page)
         offset = search_.es_offset(limit, thispage)
@@ -520,10 +558,11 @@ def search(hosts, index, doctypes, parent, limit, offset, page, raw, fulltext):
         fulltext=fulltext,
         models=doctypes.split(','),
         parent=parent,
+        filters=filters,
     )
     results = searcher.execute(limit, offset)
     
-    # print results
+    # print raw results
     if raw:
         click.echo(results.to_dict(
             request=None,
@@ -531,6 +570,7 @@ def search(hosts, index, doctypes, parent, limit, offset, page, raw, fulltext):
         ))
         return
     
+    # print formatted results
     # find longest ID
     longest_url = ''
     for result in results.objects:
@@ -557,3 +597,30 @@ def search(hosts, index, doctypes, parent, limit, offset, page, raw, fulltext):
             title=getattr(result, 'title', ''),
         )
         click.echo(out)
+    
+    if aggregations:
+        click.echo('Aggregations: (doc count, key, label)')
+        longest_agg = ''
+        for key,val in results.aggregations.items():
+            if val:
+                if len(key) > len(longest_agg):
+                    longest_agg = key
+        TEMPLATE = '{key}  {value}'
+        for key,val in results.aggregations.items():
+            if val:
+                values = [
+                    '(%s) %s "%s"' % (v['doc_count'], v['key'], v['label'])
+                    for v in val
+                ]
+                for n,v in enumerate(values):
+                    if n == 0:
+                        k = key + ' ' * (len(longest_agg) - len(key))
+                    else:
+                        k = ' ' * len(longest_agg)
+                    out = TEMPLATE.format(
+                        key=k,
+                        value=v
+                    )
+                    click.echo(out)
+
+    return
