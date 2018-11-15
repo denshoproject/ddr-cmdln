@@ -475,6 +475,7 @@ class Searcher(object):
     >>> d = r.to_dict(request)
     """
     index = DOCSTORE.indexname
+    search_results_class = SearchResults
     mappings = {}
     fields = []
     q = OrderedDict()
@@ -596,7 +597,7 @@ class Searcher(object):
             raise Exception('Searcher has no ES Search object.')
         start,stop = start_stop(limit, offset)
         response = self.s[start:stop].execute()
-        return SearchResults(
+        return self.search_results_class(
             mappings=self.mappings,
             query=self.s.to_dict(),
             results=response,
