@@ -82,6 +82,8 @@ from DDR import config
 from DDR import docstore
 from DDR import fileio
 from DDR import identifier
+from DDR import models
+from DDR import search as search_
 
 
 def logprint(level, msg, ts=True):
@@ -479,79 +481,145 @@ def status(hosts, index):
 @click.option('--index','-i',
               default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
               help='Elasticsearch index.')
-@click.option('--doctypes','-t', help='One or more doctypes (comma-separated).')
-@click.option('--query','-q', help='Query string, in double or single quotes.')
-@click.option('--must','-m', help='AND arg(s) (e.g. "language:eng,jpn!creators.role:author").')
-@click.option('--should','-s',  help ='OR arg(s) (e.g. "language:eng,jpn!creators.role:author").')
-@click.option('--mustnot','-n', help='NOT arg(s) (e.g. "language:eng,jpn!creators.role:author").')
-@click.option('--raw','-r', is_flag=True, help='Print raw Elasticsearch DSL and output.')
-def search(hosts, index, doctypes, query, must, should, mustnot, raw):
+@click.option('--doctypes','-t',
+              default='collection,entity,segment,file',
+              help='One or more doctypes (comma-separated).')
+@click.option('--parent','-P',
+              default='',
+              help='ID of parent object.')
+@click.option('--filters','-f',
+              default='', multiple=True,
+              help='Filter on certain fields (FIELD:VALUE,VALUE,...).')
+@click.option('--limit','-l',
+              default=config.RESULTS_PER_PAGE,
+              help='Results page size.')
+@click.option('--offset','-o',
+              default=0,
+              help='Number of initial results to skip (use with limit).')
+@click.option('--page','-p',
+              default=0,
+              help='Which page of results to show.')
+@click.option('--aggregations','-a',
+              is_flag=True, default=False,
+              help='Show filter aggregations for result set.')
+@click.option('--raw','-r',
+              is_flag=True, default=False,
+              help='Raw Elasticsearch output.')
+@click.argument('fulltext')
+def search(hosts, index, doctypes, parent, filters, limit, offset, page, aggregations, raw, fulltext):
+    """Fulltext search using Elasticsearch query_string syntax.
+    
+    \b
+    Examples:
+        $ ddrindex search seattle
+        $ ddrindex search "fusa OR teruo"
+        $ ddrindex search "fusa AND teruo"
+        $ ddrindex search "+fusa -teruo"
+        $ ddrindex search "title:seattle"
+    
+    Note: Quoting inside strings is not (yet?) supported in the
+    command-line version.
+    
+    \b
+    Specify parent object and doctype/model:
+        $ ddrindex search seattle --parent=ddr-densho-12
+        $ ddrindex search seattle --doctypes=entity,segment
+    
+    \b
+    Filter on certain fields (filters may repeat):
+        $ ddrindex search seattle --filter=topics:373,27
+        $ ddrindex search seattle -f=topics:373 -f facility=12
+    
+    Use the --aggregations/-a flag to display filter aggregations,
+    with document counts, filter keys, and labels.
     """
-    """
-    click.echo(search_results(
-        d=docstore.Docstore(hosts, index),
-        doctype=doctypes,
-        text=query,
-        must=must,
-        should=should,
-        mustnot=mustnot,
-        raw=raw
-    ))
+    if filters:
+        data = {}
+        for f in filters:
+            field,v = f.split(':')
+            values = v.split(',')
+            data[field] = values
+        filters = data
+    else:
+        filters = {}
+        
+    if page and offset:
+        click.echo("Error: Specify either offset OR page, not both.")
+        return
+    if page:
+        thispage = int(page)
+        offset = search_.es_offset(limit, thispage)
+    
+    searcher = search_.Searcher(
+        mappings=identifier.ELASTICSEARCH_CLASSES_BY_MODEL,
+        fields=identifier.ELASTICSEARCH_LIST_FIELDS,
+    )
+    searcher.prepare(
+        fulltext=fulltext,
+        models=doctypes.split(','),
+        parent=parent,
+        filters=filters,
+    )
+    results = searcher.execute(limit, offset)
+    
+    # print raw results
+    if raw:
+        click.echo(results.to_dict(
+            list_function=search_.format_object,
+        ))
+        return
+    
+    # print formatted results
+    # find longest ID
+    longest_url = ''
+    for result in results.objects:
+        url = '/'.join([
+            result.meta.index,
+            result.meta.doc_type,
+            result.meta.id,
+        ])
+        if len(url) > len(longest_url):
+            longest_url = url
+    num = len(results.objects)
+    for n,result in enumerate(results.objects):
+        url = '/'.join([
+            result.meta.index,
+            result.meta.doc_type,
+            result.meta.id,
+        ])
+        TEMPLATE = '{n}/{num}  {url}{pad}  {title}'
+        out = TEMPLATE.format(
+            n=n+1,
+            num=num,
+            url=url,
+            pad=' ' * (len(longest_url) - len(url)),
+            title=getattr(result, 'title', ''),
+        )
+        click.echo(out)
+    
+    if aggregations:
+        click.echo('Aggregations: (doc count, key, label)')
+        longest_agg = ''
+        for key,val in results.aggregations.items():
+            if val:
+                if len(key) > len(longest_agg):
+                    longest_agg = key
+        TEMPLATE = '{key}  {value}'
+        for key,val in results.aggregations.items():
+            if val:
+                values = [
+                    '(%s) %s "%s"' % (v['doc_count'], v['key'], v['label'])
+                    for v in val
+                ]
+                for n,v in enumerate(values):
+                    if n == 0:
+                        k = key + ' ' * (len(longest_agg) - len(key))
+                    else:
+                        k = ' ' * len(longest_agg)
+                    out = TEMPLATE.format(
+                        key=k,
+                        value=v
+                    )
+                    click.echo(out)
 
-def search_results(d, doctype, text, must=None, should=None, mustnot=None, raw=False):
-    if doctype:
-        if doctype in ['*', 'all', 'all_', '_all']:
-            doctypes = []
-        else:
-            doctypes = doctype.strip().split(',')
-    else:
-        doctypes = []
-    
-    def make_terms(arg):
-        # "language:eng,jpn!creators.role:author"
-        terms = []
-        if arg:
-            for term in arg.strip().split('!'):
-                fieldname,value = term.strip().split(':')
-                values = value.strip().split(',')
-                terms.append(
-                    {'terms': {fieldname: values}}
-                )
-        return terms
-    
-    q = docstore.search_query(
-        text=text,
-        must=make_terms(must),
-        should=make_terms(should),
-        mustnot=make_terms(mustnot),
-    )
-    if raw:
-        click.echo(format_json(q))
-    
-    data = d.search(
-        doctypes=doctypes,
-        query=q,
-        fields=['id','title'],
-    )
-    if raw:
-        click.echo(format_json(data))
-    else:
-        try:
-            # find longest IDs and types
-            len_id = 0
-            for item in data['hits']['hits']:
-                if len(item['_id']) > len_id:
-                    len_id = len(item['_id'])
-            len_type = 0
-            for item in data['hits']['hits']:
-                if len(item['_type']) > len_type:
-                    len_type = len(item['_type'])
-            
-            for item in data['hits']['hits']:
-                # format nicely, with padding
-                _id   = item['_id']   + ' ' * ((len_id   - len(item['_id']  )) + 2)
-                _type = item['_type'] + ' ' * ((len_type - len(item['_type'])) + 2)
-                # TODO all objects should have title
-                click.echo(_id + _type + item['_source']['title'])
-        except:
-            click.echo(format_json(data))
+    return

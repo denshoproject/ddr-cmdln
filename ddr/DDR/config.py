@@ -123,6 +123,9 @@ DOCSTORE_HOST_LOCAL = CONFIG.get('local','docstore_host')
 DOCSTORE_INDEX_LOCAL = CONFIG.get('local','docstore_index')
 DOCSTORE_HOST = CONFIG.get('public','docstore_host')
 DOCSTORE_INDEX = CONFIG.get('public','docstore_index')
+RESULTS_PER_PAGE = 25
+ELASTICSEARCH_MAX_SIZE = 10000
+ELASTICSEARCH_DEFAULT_LIMIT = RESULTS_PER_PAGE
 
 VOCABS_URL = CONFIG.get('cmdln', 'vocabs_url')
 # Separator between path elements for hierarchical precoordinated terms.
