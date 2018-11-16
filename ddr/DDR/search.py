@@ -476,6 +476,7 @@ class Searcher(object):
                 QueryString(
                     query=fulltext,
                     fields=SEARCH_INCLUDE_FIELDS,
+                    analyze_wildcard=False,
                     allow_leading_wildcard=False,
                 )
             )
