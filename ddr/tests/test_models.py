@@ -226,61 +226,65 @@ FILEMETA_DATA = {
     },
 }
 # dict of file objects so we can test against the following data structures
-FILEGROUPS_DATA = {
-    fid: identifier.Identifier(id=fid, base_path=MEDIA_BASE).object()
-    for fid in [
-        'ddr-densho-23-1-master-adb451ffec',
-        'ddr-densho-23-1-mezzanine-adb451ffec',
-        'ddr-testing-141-1-master-96c048001e',
-        'ddr-testing-141-1-master-c774ed4657',
-    ]
-}
+# ** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# ** filegroups testing disabled bc depends on nonexistent collection repo
+# ** TODO generate a repo for testing
+# ** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#FILEGROUPS_DATA = {
+#    fid: identifier.Identifier(id=fid, base_path=MEDIA_BASE).object()
+#    for fid in [
+#        'ddr-densho-23-1-master-adb451ffec',
+#        'ddr-densho-23-1-mezzanine-adb451ffec',
+#        'ddr-testing-141-1-master-96c048001e',
+#        'ddr-testing-141-1-master-c774ed4657',
+#    ]
+#}
+# 
+#FILEGROUPS_META = [
+#    {
+#        "role": "mezzanine",
+#        "files": [FILEMETA_DATA['ddr-densho-23-1-mezzanine-adb451ffec']]
+#    },
+#    {
+#        "role": "master",
+#        "files": [FILEMETA_DATA['ddr-densho-23-1-master-adb451ffec']]
+#    },
+#]
+#FILES_META = [
+#    FILEMETA_DATA['ddr-densho-23-1-mezzanine-adb451ffec'],
+#    FILEMETA_DATA['ddr-densho-23-1-master-adb451ffec'],
+#]
+#FILEGROUPS_OBJECTS = [
+#    {
+#        "role": "mezzanine",
+#        "files": [FILEGROUPS_DATA['ddr-densho-23-1-mezzanine-adb451ffec']]
+#    },
+#    {
+#        "role": "master",
+#        "files": [FILEGROUPS_DATA['ddr-densho-23-1-master-adb451ffec']]
+#    },
+#]
+#FILES_OBJECTS = [
+#    FILEGROUPS_DATA['ddr-densho-23-1-mezzanine-adb451ffec'],
+#    FILEGROUPS_DATA['ddr-densho-23-1-master-adb451ffec'],
+#]
 
-FILEGROUPS_META = [
-    {
-        "role": "mezzanine",
-        "files": [FILEMETA_DATA['ddr-densho-23-1-mezzanine-adb451ffec']]
-    },
-    {
-        "role": "master",
-        "files": [FILEMETA_DATA['ddr-densho-23-1-master-adb451ffec']]
-    },
-]
-FILES_META = [
-    FILEMETA_DATA['ddr-densho-23-1-mezzanine-adb451ffec'],
-    FILEMETA_DATA['ddr-densho-23-1-master-adb451ffec'],
-]
-FILEGROUPS_OBJECTS = [
-    {
-        "role": "mezzanine",
-        "files": [FILEGROUPS_DATA['ddr-densho-23-1-mezzanine-adb451ffec']]
-    },
-    {
-        "role": "master",
-        "files": [FILEGROUPS_DATA['ddr-densho-23-1-master-adb451ffec']]
-    },
-]
-FILES_OBJECTS = [
-    FILEGROUPS_DATA['ddr-densho-23-1-mezzanine-adb451ffec'],
-    FILEGROUPS_DATA['ddr-densho-23-1-master-adb451ffec'],
-]
-
-def test_filegroups_to_files():
-    out0 = models.entity.filegroups_to_files(FILEGROUPS_META)
-    out1 = models.entity.filegroups_to_files(FILEGROUPS_OBJECTS)
-    assert out0 == FILES_META
-    assert out1 == FILES_OBJECTS
-
-def test_files_to_filegroups():
-    out0 = models.entity.files_to_filegroups(FILES_META)
-    print('FILES_META\n%s' % FILES_META)
-    print('FILEGROUPS_META\n%s' % FILEGROUPS_META)
-    print('out0\n%s' % out0)
-    assert out0 == FILEGROUPS_META
-    out1 = models.entity.files_to_filegroups(FILES_OBJECTS)
-    print('FILEGROUPS_OBJECTS\n%s' % FILEGROUPS_OBJECTS)
-    print('out1\n%s' % out1)
-    assert out1 == FILEGROUPS_OBJECTS
+#def test_filegroups_to_files():
+#    out0 = models.entity.filegroups_to_files(FILEGROUPS_META)
+#    out1 = models.entity.filegroups_to_files(FILEGROUPS_OBJECTS)
+#    assert out0 == FILES_META
+#    assert out1 == FILES_OBJECTS
+# 
+#def test_files_to_filegroups():
+#    out0 = models.entity.files_to_filegroups(FILES_META)
+#    print('FILES_META\n%s' % FILES_META)
+#    print('FILEGROUPS_META\n%s' % FILEGROUPS_META)
+#    print('out0\n%s' % out0)
+#    assert out0 == FILEGROUPS_META
+#    out1 = models.entity.files_to_filegroups(FILES_OBJECTS)
+#    print('FILEGROUPS_OBJECTS\n%s' % FILEGROUPS_OBJECTS)
+#    print('out1\n%s' % out1)
+#    assert out1 == FILEGROUPS_OBJECTS
     
 def test_Entity__init__():
     collection_id = 'ddr-testing-123'
@@ -329,7 +333,8 @@ def test_Entity_dict():
     entity_id = 'ddr-testing-123-456'
     collection_path = os.path.join(MEDIA_BASE, collection_id)
     path_abs = os.path.join(collection_path, 'files', entity_id)
-    o = models.Entity.create(path_abs)
+    ei = identifier.Identifier(path_abs)
+    o = models.Entity.create(ei)
     o.record_created = datetime(2018, 9, 20, 12, 23, 21, 227561)
     o.record_lastmod = datetime(2018, 9, 20, 12, 23, 21, 227582)
     out = o.dict()
@@ -341,7 +346,8 @@ def test_Entity_diff():
     entity_id = 'ddr-testing-123-456'
     collection_path = os.path.join(MEDIA_BASE, collection_id)
     path_abs = os.path.join(collection_path, 'files', entity_id)
-    o1 = models.Entity.create(path_abs)
+    ei = identifier.Identifier(path_abs)
+    o1 = models.Entity.create(ei)
     o2 = deepcopy(o1)
     # identical
     out0 = o1.diff(o2)
@@ -356,7 +362,7 @@ def test_Entity_diff():
     print('out2 %s' % out2)
     assert out2        # diffs present
 
-def test_Entity_modified():
+def test_Entity_is_modified():
     collection_id = 'ddr-testing-123'
     entity_id = 'ddr-testing-123-456'
     collection_path = os.path.join(MEDIA_BASE, collection_id)
@@ -366,8 +372,8 @@ def test_Entity_modified():
     o0 = models.Entity(path_abs)
     print('o0 %s' % o0)
     # nonexistent documents are considered modified
-    print('o0.modified() %s' % o0.modified())
-    assert o0.modified() == True
+    print('o0.is_modified() %s' % o0.is_modified())
+    assert o0.is_modified() == True
     now = datetime.now()
     o0.record_created = now
     o0.record_lastmod = now
@@ -378,22 +384,22 @@ def test_Entity_modified():
     o1 = identifier.Identifier(id=entity_id, base_path=MEDIA_BASE).object()
     print('o1 %s' % o1)
     # freshly loaded object should not be modified
-    print('o1.modified() %s' % o1.modified())
-    assert o1.modified() == False
+    print('o1.is_modified() %s' % o1.is_modified())
+    assert o1.is_modified() == False
     assert o1.title == 'TITLE'
     
     o1.title = 'new title'
     assert o1.title == 'new title'
-    print('o1.modified() %s' % o1.modified())
-    assert o1.modified() == True
+    print('o1.is_modified() %s' % o1.is_modified())
+    assert o1.is_modified() == True
     assert o1.title == 'new title'
     o1.write_json(doc_metadata=False)
     
     # existing document
     o2 = identifier.Identifier(id=entity_id, base_path=MEDIA_BASE).object()
     # freshly loaded object should not be modified
-    print('o2.modified() %s' % o2.modified())
-    assert o2.modified() == False
+    print('o2.is_modified() %s' % o2.is_modified())
+    assert o2.is_modified() == False
     assert o2.title == 'new title'
 
 # TODO Entity.parent

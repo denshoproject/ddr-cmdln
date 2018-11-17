@@ -511,7 +511,7 @@ class Importer():
             except IOError:
                 entity = None
             if not entity:
-                entity = models.Entity.create(eidentifier.path_abs(), eidentifier)
+                entity = models.Entity.create(eidentifier)
             modified = entity.load_csv(rowd)
             # Getting obj_metadata takes about 1sec each time
             # TODO caching works as long as all objects have same metadata...
@@ -1297,58 +1297,27 @@ class Updater():
     @staticmethod
     def _read_todo(path):
         #logging.debug('_read_todo(%s)' % path)
-        with open(path, 'r') as f:
-            text = f.read()
+        text = fileio.read_text(path)
         cids = [line.strip() for line in text.strip().split('\n') if line.strip()]
         return cids
     
     @staticmethod
     def _write_todo(cids, path):
         #logging.debug('_write_todo(%s, %s)' % (cids, path))
-        with open(path, 'w') as f:
-            f.write('\n'.join(cids))
+        fileio.write_text(
+            '\n'.join(cids),
+            path
+        )
     
     @staticmethod
     def _read_this(basedir):
-        with open(path, 'r') as f:
-            text = f.read()
+        text = fileio.read_text(path)
         return text.strip()
     
     @staticmethod
     def _write_this(basedir, cid):
         path = os.path.join(basedir, Updater.THIS)
-        with open(path, 'w') as f:
-            f.write(cid)
-
-    # NOTE: should use DDR.fileio but quoting/delimiters/etc are hardcoded
-    
-    @staticmethod
-    def _csv_reader(csvfile):
-        return csv.reader(
-            csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL,
-        )
-    
-    @staticmethod
-    def _csv_writer(csvfile):
-        return csv.writer(
-            csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL,
-        )
-    
-    @staticmethod
-    def _read_csv(path):
-        rows = []
-        with open(path, 'rU') as f:  # the 'U' is for universal-newline mode
-            for row in Updater._csv_reader(f):
-                rows.append(row)
-        return rows
-    
-    @staticmethod
-    def _write_csv(path, headers, rows):
-        with open(path, 'wb') as f:
-            writer = Updater._csv_writer(f)
-            writer.writerow(headers)
-            for row in rows:
-                writer.writerow(row)
+        fileio.write_text(cid, path)
     
     @staticmethod
     def _read_done(basedir):
@@ -1356,7 +1325,7 @@ class Updater():
         headers = None
         rows = []
         if os.path.exists(path):
-            rows = Updater._read_csv(path)
+            rows = fileio.read_csv(path)
             if rows:
                 headers = rows.pop(0)
         return headers,rows
@@ -1367,11 +1336,11 @@ class Updater():
         headers = []
         rows = []
         if os.path.exists(path):
-            rows = Updater._read_csv(path)
+            rows = fileio.read_csv(path)
             if rows:
                 headers = rows.pop(0)
         if not headers:
             headers = metrics.headers()
         if metrics.cid:
             rows.append(metrics.row())
-        Updater._write_csv(path, headers, rows)
+        fileio.write_csv(path, headers, rows)

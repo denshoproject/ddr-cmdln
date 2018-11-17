@@ -169,8 +169,14 @@ class Module(object):
         @param document: A Collection, Entity, or File object.
         @returns: dict See DDR.dvcs.cmp_commits
         """
+        try:
+            repo = dvcs.repository(self.path)
+        except dvcs.git.InvalidGitRepositoryError:
+            # GitPython doesn't understand git worktrees
+            # return empty dict see dvcs.cmp_commits
+            return {'a':'', 'b':'', 'op':'--'}
         return dvcs.cmp_commits(
-            dvcs.repository(self.path),
+            repo,
             document_commit,
             module_commit
         )

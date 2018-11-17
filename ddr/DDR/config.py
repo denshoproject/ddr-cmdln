@@ -22,7 +22,7 @@ def read_configs(paths):
     configs_read = cfg.read(paths)
     if not configs_read:
         raise NoConfigError('No config file!')
-    return cfg
+    return cfg,configs_read
 
 def _parse_alt_timezones(text):
     """Parses contents of [cmdln]alt_timezones
@@ -38,7 +38,7 @@ def _parse_alt_timezones(text):
     return data
 
 
-CONFIG = read_configs(CONFIG_FILES)
+CONFIG,CONFIGS_READ = read_configs(CONFIG_FILES)
 
 DEBUG = CONFIG.get('cmdln', 'debug')
 
@@ -123,8 +123,15 @@ DOCSTORE_HOST_LOCAL = CONFIG.get('local','docstore_host')
 DOCSTORE_INDEX_LOCAL = CONFIG.get('local','docstore_index')
 DOCSTORE_HOST = CONFIG.get('public','docstore_host')
 DOCSTORE_INDEX = CONFIG.get('public','docstore_index')
+RESULTS_PER_PAGE = 25
+ELASTICSEARCH_MAX_SIZE = 10000
+ELASTICSEARCH_DEFAULT_LIMIT = RESULTS_PER_PAGE
 
 VOCABS_URL = CONFIG.get('cmdln', 'vocabs_url')
+# Separator between path elements for hierarchical precoordinated terms.
+# e.g. 'Geographic communities: Washington: Seattle'
+VOCABS_PRECOORD_PATH_SEP = ' -- '
+
 # vocab.get_vocabs will cache data here
 VOCABS = {}  # keys = vocab keyword
 

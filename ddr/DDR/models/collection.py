@@ -169,16 +169,14 @@ class Collection(common.DDRObject):
         return data
     
     @staticmethod
-    def create(path_abs, identifier=None):
+    def create(identifier, parent=None):
         """Creates a new Collection with initial values from module.FIELDS.
         
-        @param path_abs: str Absolute path; must end in valid DDR id.
-        @param identifier: [optional] Identifier
+        @param identifier: Identifier
+        @param parent: [optional] DDRObject parent object
         @returns: Collection object
         """
-        if not identifier:
-            identifier = Identifier(path=path_abs)
-        return common.create_object(identifier)
+        return common.create_object(identifier, parent=parent)
     
     @staticmethod
     def new(identifier, git_name, git_mail, agent='cmdln'):
@@ -190,7 +188,7 @@ class Collection(common.DDRObject):
         @param agent: str
         @returns: exit,status int,str
         """
-        collection = Collection.create(identifier.path_abs(), identifier)
+        collection = Collection.create(identifier)
         fileio.write_text(
             collection.dump_json(template=True),
             config.TEMPLATE_CJSON
@@ -203,33 +201,30 @@ class Collection(common.DDRObject):
         )
         return exit,status
     
-    def save(self, git_name, git_mail, agent, cleaned_data={}, commit=True):
+    def save(self, git_name, git_mail, agent, inheritables=[], commit=True):
         """Writes specified Collection metadata, stages, and commits.
         
-        Returns exit code, status message, and list of updated files.  Files list
-        is for use by e.g. batch operations that want to commit all modified files
-        in one operation rather than piecemeal.  This is included in Collection
-        to be consistent with the other objects' methods.
+        Returns exit code, status message, and list of updated files.
+        Files list is for use by e.g. batch operations that want to commit
+        all modified files in one operation rather than piecemeal.  This
+        is included in Collection to be consistent with the other objects'
+        methods.
         
         @param git_name: str
         @param git_mail: str
         @param agent: str
-        @param cleaned_data: dict Form data (all fields required)
+        @param inheritables: list of selected inheritable fields
         @param commit: boolean
         @returns: exit,status,updated_files (int,str,list)
         """
-        if cleaned_data:
-            self.form_post(cleaned_data)
-        
         self.set_repo_description()
         
         self.write_json()
         self.write_xml()
         updated_files = [self.json_path, self.ead_path,]
         
-        # if inheritable fields selected, propagate changes to child objects
-        inheritables = self.selected_inheritables(cleaned_data)
-        modified_ids,modified_files = self.update_inheritables(inheritables, cleaned_data)
+        # propagate inheritable changes to child objects
+        modified_ids,modified_files = self.update_inheritables(inheritables)
         if modified_files:
             updated_files = updated_files + modified_files
 
@@ -337,15 +332,6 @@ class Collection(common.DDRObject):
             )
         ]
     
-    def update_inheritables( self, inheritables, cleaned_data ):
-        """Update specified fields of child objects.
-        
-        @param inheritables: list Names of fields that shall be inherited.
-        @param cleaned_data: dict Fieldname:value pairs.
-        @returns: tuple [changed object Ids],[changed objects' JSON files]
-        """
-        return inheritance.update_inheritables(self, 'collection', inheritables, cleaned_data)
-    
     def load_json(self, json_text):
         """Populates Collection from JSON-formatted text.
         
@@ -434,9 +420,9 @@ class Collection(common.DDRObject):
         
         TODO This should not actually write the XML! It should return XML to the code that calls it.
         """
-        with open(config.TEMPLATE_EAD_JINJA2, 'r') as f:
-            template = f.read()
-        return Template(template).render(object=self)
+        return Template(
+            fileio.read_text(config.TEMPLATE_EAD_JINJA2)
+        ).render(object=self)
 
     def write_xml(self):
         """Write EAD XML file to disk.
@@ -447,12 +433,11 @@ class Collection(common.DDRObject):
     
     def gitignore( self ):
         if not os.path.exists(self.gitignore_path):
-            with open(GITIGNORE_TEMPLATE, 'r') as fr:
-                gt = fr.read()
-            with open(self.gitignore_path, 'w') as fw:
-                fw.write(gt)
-        with open(self.gitignore_path, 'r') as f:
-            return f.read()
+            fileio.write_text(
+                fileio.read_text(GITIGNORE_TEMPLATE),
+                self.gitignore_path
+            )
+        return fileio.read_text(self.gitignore_path)
     
     @staticmethod
     def collection_paths( collections_root, repository, organization ):

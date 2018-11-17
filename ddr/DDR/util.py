@@ -12,6 +12,10 @@ def find_meta_files(basedir, recursive=False, model=None, files_first=False, for
     Skips/excludes .git directories.
     TODO depth (go down N levels from basedir)
     
+    NOTE: Looked at replacing this with pathlib rglob[1] but this
+    function is consistently faster.
+    [1] list(pathlib.Path(path).rglob('*.json'))
+    
     @param basedir: Absolute path
     @param recursive: Whether or not to recurse into subdirectories.
     @param model: list Restrict to the named model ('collection','entity','file').
@@ -27,8 +31,11 @@ def find_meta_files(basedir, recursive=False, model=None, files_first=False, for
         EXCLUDES.append('tmp')
     paths = []
     if os.path.exists(CACHE_PATH) and not force_read:
-        with open(CACHE_PATH, 'r') as f:
-            paths = [line.strip() for line in f.readlines() if '#' not in line]
+        paths = [
+            line.strip()
+            for line in fileio.read_text(CACHE_PATH).splitlines()
+            if '#' not in line
+        ]
     else:
         if recursive:
             paths = _search_recursive(basedir, model, EXCLUDES)

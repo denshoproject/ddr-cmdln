@@ -1,18 +1,6 @@
-#!/usr/bin/env python
-#
-# This file is part of ddr-cmdln/ddr
-#
-#
-
-description = """Checks collection repository for files that don't match hashes in metadata."""
-
-epilog = """
-Example:
-    $ ddr-checkbinaries /var/www/media/base/ddr-testing-141
-"""
-
-import argparse
 import os
+
+import click
 
 from DDR import config
 from DDR.identifier import Identifier
@@ -20,6 +8,22 @@ from DDR import models
 from DDR import util
 
 ALGORITHMS = ['md5', 'sha1', 'sha256']
+
+
+@click.command()
+@click.argument('repo')
+@click.option('--verbose', '-v', is_flag=True, help='Lots of output.')
+def ddrcheckbinaries(repo, verbose=False):
+    """ddrcheckbinaries - Find binaries that don't match metadata hashes.
+    
+    \b
+    Example:
+        $ ddrcheckbinaries /var/www/media/base/ddr-testing-141
+    """
+    filepaths = util.find_meta_files(
+        repo, recursive=1, model='file', force_read=True
+    )
+    hits = check_files(filepaths, verbose)
 
 
 def check_file(json_path, verbose=False):
@@ -42,7 +46,9 @@ def check_file(json_path, verbose=False):
     if not (sha256 == f.sha256):
         mismatches.append['sha256']
     # SHA256 hash from the git-annex filename
-    annex_sha256 = os.path.basename(os.path.realpath(f.path_abs)).split('--')[1]
+    annex_sha256 = os.path.basename(
+        os.path.realpath(f.path_abs)
+    ).split('--')[1]
     if not (sha256 == annex_sha256):
         mismatches.append['annex_sha256']
     
@@ -59,23 +65,3 @@ def check_files(filepaths, verbose=False):
         if mismatches:
             hits.append(mismatches)
     return hits
-
-
-def main():
-
-    parser = argparse.ArgumentParser(
-        description=description, epilog=epilog,
-        formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('repo', help='Absolute path to collection repository.')
-    parser.add_argument(
-        '-v', '--verbose', action='store_const', const=1,
-        help='Print lots of output.')
-    
-    args = parser.parse_args()
-    
-    filepaths = util.find_meta_files(args.repo, recursive=1, model='file', force_read=True)
-    hits = check_files(filepaths, args.verbose)
-
-
-if __name__ == '__main__':
-    main()

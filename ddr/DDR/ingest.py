@@ -35,8 +35,7 @@ class AddFileLogger():
         @returns log: A text file.
         """
         entry = '[{}] {} - {}\n'.format(datetime.now(config.TZ).isoformat('T'), ok, msg)
-        with open(self.logpath, 'a') as f:
-            f.write(entry)
+        fileio.append_text(entry, self.logpath)
     
     def ok(self, msg): self.entry('ok', msg)
     def not_ok(self, msg): self.entry('not ok', msg)
@@ -44,8 +43,7 @@ class AddFileLogger():
     def log(self):
         log = ''
         if os.path.exists(self.logpath):
-            with open(self.logpath, 'r') as f:
-                log = f.read()
+            log = fileio.read_text(self.logpath)
         return log
 
     def crash(self, msg, exception=Exception):
@@ -163,7 +161,8 @@ def make_access_file(src_path, access_dest_path, log):
         data = imaging.thumbnail(
             src_path,
             access_dest_path,
-            geometry=config.ACCESS_FILE_GEOMETRY
+            geometry=config.ACCESS_FILE_GEOMETRY,
+            options=config.ACCESS_FILE_OPTIONS,
         )
         # identify
         log.ok('| identify: %s' % data['analysis']['std_out'])
@@ -407,7 +406,7 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='', l
     tmp_access_path = make_access_file(src_path, access_dest_path, log)
     
     log.ok('File object')
-    file_ = file_class(path_abs=dest_path, identifier=fidentifier)
+    file_ = fidentifier.object_class().create(fidentifier, parent=entity)
     file_.basename_orig = os.path.basename(src_path)
     # add extension to path_abs
     basename_ext = os.path.splitext(file_.basename_orig)[1]
@@ -529,7 +528,7 @@ def add_external_file(entity, data, git_name, git_mail, agent='', log_path=None,
     
     if not (data.get('external') and data['external']):
         log.ok('Regular file (not external)')
-        raise Exception('Not an external (metadata-only) file: %s' % file_)
+        raise Exception('Not an external (metadata-only) file: %s' % data)
     
     log.ok('Identifier')
     # note: we can't make this until we have the sha1
@@ -542,7 +541,7 @@ def add_external_file(entity, data, git_name, git_mail, agent='', log_path=None,
     log.ok('| identifier %s' % fidentifier)
     
     log.ok('File object')
-    file_ = fidentifier.object()
+    file_ = fidentifier.object_class().create(fidentifier, parent=entity)
     # add extension to path_abs
     basename_ext = os.path.splitext(data['basename_orig'])[1]
     path_abs_ext = os.path.splitext(file_.path_abs)[1]

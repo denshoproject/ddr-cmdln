@@ -294,16 +294,14 @@ class Entity(common.DDRObject):
         return data
     
     @staticmethod
-    def create(path_abs, identifier=None):
+    def create(identifier, parent=None):
         """Creates a new Entity with initial values from module.FIELDS.
         
-        @param path_abs: str Absolute path; must end in valid DDR id.
-        @param identifier: [optional] Identifier
+        @param identifier: Identifier
+        @param parent: [optional] DDRObject parent object
         @returns: Entity object
         """
-        if not identifier:
-            identifier = Identifier(path=path_abs)
-        obj = common.create_object(identifier)
+        obj = common.create_object(identifier, parent=parent)
         obj.files = []
         return obj
     
@@ -320,7 +318,7 @@ class Entity(common.DDRObject):
         collection = identifier.collection().object()
         if not collection:
             raise Exception('Parent collection for %s does not exist.' % identifier)
-        entity = Entity.create(identifier.path_abs(), identifier)
+        entity = Entity.create(identifier)
         fileio.write_text(
             entity.dump_json(template=True),
             config.TEMPLATE_EJSON
@@ -347,28 +345,25 @@ class Entity(common.DDRObject):
         )
         return exit,status
     
-    def save(self, git_name, git_mail, agent, collection=None, cleaned_data={}, commit=True):
+    def save(self, git_name, git_mail, agent, collection=None, inheritables=[], commit=True):
         """Writes specified Entity metadata, stages, and commits.
         
         Updates .children and .file_groups if parent is another Entity.
-        Returns exit code, status message, and list of updated files.  Files list
-        is for use by e.g. batch operations that want to commit all modified files
-        in one operation rather than piecemeal.
+        Returns exit code, status message, and list of updated files.
+        Files list is for use by e.g. batch operations that want to commit
+        all modified files in one operation rather than piecemeal.
         
         @param git_name: str
         @param git_mail: str
         @param agent: str
         @param collection: Collection
-        @param cleaned_data: dict Form data (all fields required)
+        @param inheritables: list of selected inheritable fields
         @param commit: boolean
         @returns: exit,status,updated_files (int,str,list)
         """
         if not collection:
             collection = self.identifier.collection().object()
         parent = self.identifier.parent().object()
-        
-        if cleaned_data:
-            self.form_post(cleaned_data)
         
         self.children(force_read=True)
         self.write_json()
@@ -385,8 +380,8 @@ class Entity(common.DDRObject):
             parent.write_json()
             updated_files.append(parent.json_path)
         
-        inheritables = self.selected_inheritables(cleaned_data)
-        modified_ids,modified_files = self.update_inheritables(inheritables, cleaned_data)
+        # propagate inheritable changes to child objects
+        modified_ids,modified_files = self.update_inheritables(inheritables)
         if modified_files:
             updated_files = updated_files + modified_files
 
@@ -456,18 +451,6 @@ class Entity(common.DDRObject):
             files = [f for f in self._file_objects]
         self.files = sorted(files, key=lambda f: int(f.sort))
         return self._children_objects + self.files
-    
-    def update_inheritables( self, inheritables, cleaned_data ):
-        """Update specified fields of child objects.
-        
-        @param inheritables: list Names of fields that shall be inherited.
-        @param cleaned_data: dict Fieldname:value pairs.
-        @returns: tuple [changed object Ids],[changed objects' JSON files]
-        """
-        return inheritance.update_inheritables(self, 'entity', inheritables, cleaned_data)
-    
-    def inherit( self, parent ):
-        inheritance.inherit( parent, self )
 
     def load_json(self, json_text):
         """Populate Entity data from JSON-formatted text.
@@ -579,9 +562,9 @@ class Entity(common.DDRObject):
         
         TODO This should not actually write the XML! It should return XML to the code that calls it.
         """
-        with open(config.TEMPLATE_METS_JINJA2, 'r') as f:
-            template = f.read()
-        return Template(template).render(object=self)
+        return Template(
+            fileio.read_text(config.TEMPLATE_METS_JINJA2)
+        ).render(object=self)
 
     def write_xml(self):
         """Write METS XML file to disk.

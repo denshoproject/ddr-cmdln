@@ -60,16 +60,14 @@ def logprint(filename, msg):
     """Print to log file and console, with timestamp.
     """
     msg = '%s - %s\n' % (dtfmt(datetime.now()), msg)
-    with open(filename, 'a') as f:
-        f.writelines([msg])
+    fileio.append_text(msg, filename)
     print(msg.strip('\n'))
 
 def logprint_nots(filename, msg):
     """Print to log file and console, no timestamp.
     """
     msg = '%s\n' % msg
-    with open(filename, 'a') as f:
-        f.writelines([msg])
+    fileio.append_text(msg, filename)
     print(msg.strip('\n'))
 
 def find_files(basedir, filetypes):
@@ -88,9 +86,7 @@ def find_files(basedir, filetypes):
 def update_file(json_path, field_name, new_value):
     """Updates specified field in json file with a value and saves.
     """
-    with open(json_path, 'r') as f:
-        data = json.loads(f.read())
-    
+    data = json.loads(fileio.read_text(json_path))
     for field in data:
         fname = field.keys()[0]
         if fname == field_name:

@@ -11,15 +11,17 @@ if not os.path.exists(TESTING_BASE_DIR):
     os.makedirs(TESTING_BASE_DIR)
 
 MODEL_FIELDS_INHERITABLE = [
-    {'name':'id',},
-    {'name':'record_created',},
-    {'name':'record_lastmod',},
-    {'name':'status', 'inheritable':True,},
-    {'name':'public', 'inheritable':True,},
-    {'name':'title',},
+    {'model': 'collection', 'name':'id',},
+    {'model': 'collection', 'name':'record_created',},
+    {'model': 'collection', 'name':'record_lastmod',},
+    {'model': 'collection', 'name':'status', 'inheritable':True,},
+    {'model': 'collection', 'name':'public', 'inheritable':True,},
+    {'model': 'collection', 'name':'title',},
 ]
 def test_Inheritance_inheritable_fields():
-    assert inheritance.inheritable_fields(MODEL_FIELDS_INHERITABLE) == ['status','public']
+    expected = ['status','public']
+    out = inheritance.inheritable_fields(MODEL_FIELDS_INHERITABLE)
+    assert out == expected
 
 # TODO inheritance_inherit
 # TODO inheritance_selected_inheritables
@@ -77,21 +79,19 @@ def test_child_jsons():
     assert paths0 == CHILD_JSONS_EXPECTED
 
 def test_selected_field_values():
-    class Thing(object):
-        pass
-        
-    parent = Thing()
-    parent.a = 1
-    parent.b = 2
-    parent.c = 3
-    inheritables = ['a', 'b', 'c']
+    ci = identifier.Identifier('/var/www/media/ddr/ddr-testing-123')
+    parent = models.Collection(ci.path_abs(), identifier=ci)
+    parent.title = 'Testing'
+    parent.status = 'inprogress'
+    parent.public = 0
+    parent.description = 'testing'
+    inheritables = ['status', 'public']
     expected = [
-        ('a', 1),
-        ('b', 2),
-        ('c', 3),
+        ('collection.status', 'inprogress'),
+        ('collection.public', 0),
     ]
-    values = inheritance._selected_field_values(parent, inheritables)
-    assert values == expected
+    out = inheritance._selected_field_values(parent, inheritables)
+    assert out == expected
 
 SELECTED_INHERITABLES = ['a', 'b']
 SELECTED_DATA = {

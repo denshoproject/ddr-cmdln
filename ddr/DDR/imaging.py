@@ -21,6 +21,7 @@ CalledProcessError: Command 'identify /tmp/DDRWorkbenchScreenShots.docx' returne
 
 """
 
+from datetime import datetime
 import os
 import subprocess
 
@@ -28,7 +29,9 @@ import envoy
 import libxmp
 
 IDENTIFY_CMD = 'identify "{path}"'
-CONVERT_CMD  = "convert \"{src}\"[0] -resize '{geometry}' {dest}"
+CONVERT_CMD  = "convert {options} \"{src}\"[0] -resize '{geometry}' {dest}"
+CONVERT_LARGEFILE_THRESHOLD = 768 * 1000
+CONVERT_LARGEFILE_OPTIONS = '-limit memory 2GB -limit map 4GB'
 
 
 def analyze_magick(std_out, std_err):
@@ -102,7 +105,22 @@ def geometry_is_ok(geometry):
         return True
     return False
 
-def thumbnail(src, dest, geometry):
+def _convert_cmd(src, dest, geometry, options=''):
+    """Prepare ImageMagick convert command
+    
+    @param src: Absolute path to source file.
+    @param dest: Absolute path to destination file.
+    @param geometry: String (ex: '200x200')
+    @param options: str
+    @returns: str
+    """
+    if os.path.getsize(src) >= CONVERT_LARGEFILE_THRESHOLD:
+        options = CONVERT_LARGEFILE_OPTIONS
+    return CONVERT_CMD.format(
+        options=options, src=src, geometry=geometry, dest=dest
+    )
+
+def thumbnail(src, dest, geometry, options=''):
     """Attempt to make thumbnail
     
     Note: uses Imagemagick 'convert' and 'identify'.
@@ -119,11 +137,13 @@ def thumbnail(src, dest, geometry):
     assert geometry_is_ok(geometry)
     data = {
         'src': src,
+        'size_src': os.path.getsize(src),
         'dest': dest,
         'geometry': geometry,
         'analysis': None,
         'convert': None,
         'attempted': None,
+        'elapsed': None,
         'status_code': None,
         'std_out': None,
         'std_err': None,
@@ -133,15 +153,18 @@ def thumbnail(src, dest, geometry):
     }
     analysis = analyze(src)
     data['analysis'] = analysis
-    cmd = CONVERT_CMD.format(src=src, geometry=geometry, dest=dest)
+    cmd = _convert_cmd(src, dest, geometry, options)
     data['convert'] = cmd
+    start = datetime.now()
     r = envoy.run(cmd)
+    data['elapsed'] = str(datetime.now() - start)
     data['attempted'] = True
     data['status_code'] = r.status_code
     data['std_out'] = r.std_out
     data['std_err'] = r.std_err
     data['exists'] = os.path.exists(dest)
-    data['size'] = os.path.getsize(dest)
+    if os.path.exists(dest):
+        data['size'] = os.path.getsize(dest)
     data['islink'] = os.path.islink(dest)
     return data
 

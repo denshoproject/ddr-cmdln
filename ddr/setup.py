@@ -65,24 +65,24 @@ setup(
     entry_points='''
         [console_scripts]
         ddrcheck=DDR.cli.ddrcheck:ddrcheck
+        ddrcheckbinaries=DDR.cli.ddrcheckbinaries:ddrcheckbinaries
+        ddrcheckencoding=DDR.cli.ddrcheckencoding:ddrcheckencoding
+        ddrconfig=DDR.cli.ddrconfig:ddrconfig
         ddrexport=DDR.cli.ddrexport:ddrexport
         ddrindex=DDR.cli.ddrindex:ddrindex
+        ddrinfo=DDR.cli.ddrinfo:ddrinfo
         ddrimport=DDR.cli.ddrimport:ddrimport
+        ddrtransform=DDR.cli.ddrtransform:ddrtransform
     ''',
     scripts = [
         'bin/ddr',
         'bin/ddr-backup',
         'bin/ddr-batch',
-        'bin/ddr-checkencoding',
-        'bin/ddr-checkbinaries',
-        'bin/ddr-config',
         'bin/ddr-filter',
-        'bin/ddr-info',
         'bin/ddr-massupdate',
         'bin/ddr-missing',
         'bin/ddr-pubcopy',
         'bin/ddr-signatures',
-        'bin/ddr-transform',
         'bin/ddr-update',
         'bin/ddrdensho255fix',
     ],

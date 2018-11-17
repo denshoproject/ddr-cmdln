@@ -135,16 +135,14 @@ class File(common.DDRObject):
     #def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
     
     @staticmethod
-    def create(path_abs, identifier=None):
+    def create(identifier=None, parent=None):
         """Creates a new File with initial values from module.FIELDS.
         
-        @param path_abs: str Absolute path; must end in valid DDR id.
         @param identifier: [optional] Identifier
+        @param parent: [optional] DDRObject parent object
         @returns: File object
         """
-        if not identifier:
-            identifier = Identifier(path=path_abs)
-        return common.create_object(identifier)
+        return common.create_object(identifier, parent=parent)
     
     @staticmethod
     def new(identifier, git_name, git_mail, agent='cmdln'):
@@ -159,7 +157,7 @@ class File(common.DDRObject):
         parent = identifier.parent().object()
         if not parent:
             raise Exception('Parent for %s does not exist.' % identifier)
-        file_ = File.create(identifier.path_abs(), identifier)
+        file_ = File.create(identifier)
         file_.write_json()
         
         entity_file_edit(request, collection, file_, git_name, git_mail)
@@ -186,20 +184,20 @@ class File(common.DDRObject):
         )
         return exit,status
     
-    def save(self, git_name, git_mail, agent, collection=None, parent=None, cleaned_data={}, commit=True):
+    def save(self, git_name, git_mail, agent, collection=None, parent=None, inheritables=[], commit=True):
         """Writes File metadata, stages, and commits.
         
-        Updates .children and .file_groups if parent is (almost certainly) an Entity.
-        Returns exit code, status message, and list of updated files.  Files list
-        is for use by e.g. batch operations that want to commit all modified files
-        in one operation rather than piecemeal.
+        Updates .children and .file_groups if parent is (almost certainly)
+        an Entity.  Returns exit code, status message, and list of updated
+        files.  Files list is for use by e.g. batch operations that want
+        to commit all modified files in one operation rather than piecemeal.
         
         @param git_name: str
         @param git_mail: str
         @param agent: str
         @param collection: Collection
         @param parent: Entity or Segment
-        @param cleaned_data: dict Form data (all fields required)
+        @param inheritables: list of selected inheritable fields
         @param commit: boolean
         @returns: exit,status,updated_files (int,str,list)
         """
@@ -207,9 +205,6 @@ class File(common.DDRObject):
             collection = self.identifier.collection().object()
         if not parent:
             parent = self.identifier.parent().object()
-        
-        if cleaned_data:
-            self.form_post(cleaned_data)
         
         self.write_json()
         updated_files = [
@@ -221,6 +216,8 @@ class File(common.DDRObject):
             parent.children(force_read=True)
             parent.write_json()
             updated_files.append(parent.json_path)
+        
+        # files have no child object inheritors
         
         exit,status = commands.entity_update(
             git_name, git_mail,
@@ -299,7 +296,7 @@ class File(common.DDRObject):
         """
         if os.path.exists(identifier.path_abs('json')):
             return File.from_json(identifier.path_abs('json'), identifier)
-        return File.create(identifier.path_abs('json'), identifier)
+        return File.create(identifier)
     
     def parent( self ):
         i = Identifier(id=self.parent_id, base_path=self.identifier.basepath)

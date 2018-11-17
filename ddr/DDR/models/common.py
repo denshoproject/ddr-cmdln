@@ -87,13 +87,19 @@ class DDRObject(object):
         return to_dict(self, self.identifier.fields_module())
     
     def diff(self, other, ignore_fields=[]):
-        """Compares object fields with those of another object
+        """Compares object fields w those of another (instantiated) object
         
         NOTE: This function should only be used to tell IF objects differ,
         not HOW they differ.
         NOTE: Output should be treated as a boolean.
         It's currently a dict (unless the datetime error below) but the
         format is subject to change.
+        
+        NOTE: By the time an object has been instantiated, it has been
+        through all the (ddr-defs/repo_models/MODEL:)jsonload_* methods
+        and has likely been changed from its original state (e.g. topics).
+        If you want to compare an instantiated object with its state
+        in the filesystem, use diff_file.
         
         @param other: DDRObject
         @param ignore_fields: list
@@ -118,8 +124,57 @@ class DDRObject(object):
         try:
             return DeepDiff(this, that)
         except TypeError:
-            # DeepDiff crashes when trying to compare timezone-aware
-            # and timezone-ignorant datetimes. Let's consider these different
+            # DeepDiff crashes when trying to compare timezone-aware and
+            # timezone-ignorant datetimes. Let's consider these different
+            return True
+    
+    def diff_file(self, path, ignore_fields=[]):
+        """Compares object fields with those of values in .json file
+        
+        NOTE: This function should only be used to tell IF objects differ,
+        not HOW they differ.
+        NOTE: Output should be treated as a boolean.
+        It's currently a dict (unless the datetime error below) but the
+        format is subject to change.
+        
+        This function compares object's values with those of the raw .json
+        that has NOT passed through the various jsonload_* methods.
+        
+        @param path: str Absolute path to file
+        @param ignore_fields: list
+        @returns: dict
+        """
+        ignore_fields = DIFF_IGNORED + ignore_fields
+        
+        def rm_ignored(data, ignore):
+            """Remove lines containing the specified fields
+            @param data: OrderedDict
+            @param ignore: list of ignored fieldnames
+            @returns: list of dicts minus ignored fields
+            """
+            keys = data.keys()
+            for fieldname in ignore:
+                if fieldname in keys:
+                    data.pop(fieldname)
+            return data
+        
+        # load list of fields from file
+        raw = load_json_lite(path, 'entity', 'ddr-densho-12-1')
+        # remove initial metadata dict
+        raw.pop(0)
+        other = OrderedDict()
+        for item in raw:
+            key = item.keys()[0]
+            value = item[key]
+            other[key] = value
+        
+        this = rm_ignored(self.dict(), ignore_fields)
+        that = rm_ignored(other, ignore_fields)
+        try:
+            return DeepDiff(this, that)
+        except TypeError:
+            # DeepDiff crashes when trying to compare timezone-aware and
+            # timezone-ignorant datetimes. Let's consider these different
             return True
     
     #parent
@@ -159,28 +214,46 @@ class DDRObject(object):
         form_post(self, self.identifier.fields_module(), cleaned_data)
     
     def inheritable_fields( self ):
-        """Returns list of Collection/Entity object's field names marked as inheritable.
+        """Returns list of object's inheritable field names 
         
         >>> c = Collection.from_json('/tmp/ddr-testing-123')
         >>> c.inheritable_fields()
         ['status', 'public', 'rights']
+        
+        @returns: list
         """
-        module = self.identifier.fields_module()
-        return inheritance.inheritable_fields(module.FIELDS )
+        return inheritance.inheritable_fields(
+            self.identifier.fields_module().FIELDS
+        )
 
     def selected_inheritables(self, cleaned_data ):
         """Returns names of fields marked as inheritable in cleaned_data.
         
-        Fields are considered selected if dict contains key/value pairs in the form
-        'FIELD_inherit':True.
+        Fields are considered selected if dict contains key/value pairs
+        in the form 'FIELD_inherit':True.
         
         @param cleaned_data: dict Fieldname:value pairs.
         @returns: list
         """
-        return inheritance.selected_inheritables(self.inheritable_fields(), cleaned_data)
+        return inheritance.selected_inheritables(
+            self.inheritable_fields(), cleaned_data
+        )
     
-    #update_inheritables
-    #inherit
+    def update_inheritables( self, inheritables ):
+        """Update specified fields of child objects.
+        
+        @param inheritables: list Names of fields that shall be inherited.
+        @returns: tuple [changed object Ids],[changed objects' JSON files]
+        """
+        return inheritance.update_inheritables(self, inheritables)
+    
+    def inherit( self, parent ):
+        """Inherit inheritable fields from the specified parent object.
+        
+        @param parent: DDRObject
+        @returns: None
+        """
+        inheritance.inherit( parent, self )
     
     def lock( self, text ): return locking.lock(self.lock_path, text)
     def unlock( self, text ): return locking.unlock(self.lock_path, text)
@@ -329,14 +402,14 @@ class DDRObject(object):
                 d.links_download = download_path
         return d
     
-    def modified(self):
+    def is_modified(self):
         """Returns True if object non-ignored fields differ from file.
         
         @returns: boolean
         """
         if not os.path.exists(self.json_path):
             return True
-        if self.diff(Identifier(path=self.identifier.path_abs('json')).object()):
+        if self.diff_file(self.identifier.path_abs('json')):
             return True
         return False
 
@@ -347,7 +420,7 @@ class DDRObject(object):
         @param obj_metadata: dict Cached results of object_metadata.
         @param force: boolean Write even nothing looks changed.
         """
-        if force or self.modified():
+        if force or self.is_modified():
             if not os.path.exists(os.path.dirname(self.json_path)):
                 os.makedirs(os.path.dirname(self.json_path))
             fileio.write_text(
@@ -392,10 +465,9 @@ def sort_file_paths(json_paths, rank='role-eid-sort'):
         role = identifier.parts.get('role',None)
         sha1 = identifier.parts.get('sha1',None)
         sort = 0
-        with open(path, 'r') as f:
-            for line in f.readlines():
-                if 'sort' in line:
-                    sort = line.split(':')[1].replace('"','').strip()
+        for line in fileio.read_text(path).splitlines():
+            if 'sort' in line:
+                sort = line.split(':')[1].replace('"','').strip()
         eid = str(eid)
         sha1 = str(sha1)
         sort = str(sort)
@@ -413,7 +485,7 @@ def sort_file_paths(json_paths, rank='role-eid-sort'):
             paths_sorted.append(val)
     return paths_sorted
 
-def create_object(identifier):
+def create_object(identifier, parent=None):
     """Creates a new object initial values from module.FIELDS.
     
     If identifier.fields_module().FIELDS.field['default'] is non-None
@@ -423,6 +495,7 @@ def create_object(identifier):
     with a default value. Ahem.
     
     @param identifier: Identifier
+    @param parent: DDRObject (optional)
     @returns: object
     """
     object_class = identifier.object_class()
@@ -450,6 +523,14 @@ def create_object(identifier):
                 )
         elif hasattr(f, 'name') and hasattr(f, 'initial'):
             setattr(obj, f['name'], f['initial'])
+    # inherit defaults from parent
+    if (not parent) and identifier.parent():
+        try:
+            parent = identifier.parent().object()
+        except IOError:
+            parent = None
+    if parent:
+        inheritance.inherit(parent, obj)
     return obj
 
 def object_metadata(module, repo_path):
@@ -553,8 +634,7 @@ def load_json_lite(json_path, model, object_id):
     @param object_id: str
     @returns: list of dicts
     """
-    with open(json_path, 'r') as f:
-        document = json.loads(f.read())
+    document = json.loads(fileio.read_text(json_path))
     if model == 'file':
         document.append( {'id':object_id} )
     return document
@@ -773,18 +853,18 @@ def load_csv(obj, module, rowd):
     }
     # apply module's csvload_* methods to rowd data
     rowd = csvload_rowd(module, rowd)
-    obj.modified = []
+    obj.modified_fields = []
     for field,value in rowd.iteritems():
         ignored = 'ignore' in field_directives[field]
         if not ignored:
             oldvalue = getattr(obj, field, '')
             value = rowd[field]
             if value != oldvalue:
-                obj.modified.append(field)
+                obj.modified_fields.append(field)
             setattr(obj, field, value)
     # Add timezone to fields if not present
     apply_timezone(obj, module.module)
-    return obj.modified
+    return obj.modified_fields
 
 def from_csv(identifier, rowd):
     """Instantiates a File object from CSV row data.

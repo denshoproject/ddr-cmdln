@@ -42,21 +42,21 @@ def test_setup_test_collection():
     cpath = os.path.join(TESTING_BASE_DIR, oid)
     repo = git.Repo.init(cpath)
     oi = identifier.Identifier(id=oid, base_path=TESTING_BASE_DIR)
-    o = collection.Collection.create(oi.path_abs(), oi)
+    o = collection.Collection.create(oi)
     o.public = True
     o.status = 'completed'
     o.write_json()
     
     for oid,public,status in ENTITY_IDS:
         oi = identifier.Identifier(id=oid, base_path=TESTING_BASE_DIR)
-        o = entity.Entity.create(oi.path_abs(), oi)
+        o = entity.Entity.create(oi)
         o.public = public
         o.status = status
         o.write_json()
     
     for oid,public,status in FILE_IDS:
         oi = identifier.Identifier(id=oid, base_path=TESTING_BASE_DIR)
-        o = files.File.create(oi.path_abs(), oi)
+        o = files.File.create(oi)
         o.public = public
         o.status = status
         o.write_json()

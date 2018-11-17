@@ -210,7 +210,7 @@ class Index( object ):
             t = self._parent(t)
             path.append(t.title)
         path.reverse()
-        return ': '.join(path)
+        return config.VOCABS_PRECOORD_PATH_SEP.join(path)
     
     def _format( self, term ):
         """Generates thesaurus-style text output for each Term.
@@ -249,11 +249,9 @@ class Index( object ):
         if not extension in ['.json', '.csv']:
             raise Exception('Index.read only reads .json and .csv files.')
         if extension.lower() == '.json':
-            with open(path, 'r') as f:
-                self.load_json(f.read())
+            self.load_json(fileio.read_text(path))
         elif extension.lower() == '.csv':
-            with open(path, 'r') as f:
-                self.load_csv(f.read())
+            self.load_csv(fileio.read_text(path))
     
     def write( self, path):
         """Write to the specified file (.json or .csv).
@@ -264,11 +262,9 @@ class Index( object ):
         if not extension in ['.json', '.csv']:
             raise Exception('Index.read only writes .json and .csv files.')
         if extension.lower() == '.json':
-            with open(path, 'w') as f:
-                f.write(self.dump_json())
+            fileio.write_text(self.dump_json(), path)
         elif extension.lower() == '.csv':
-            with open(path, 'w') as f:
-                f.write(self.dump_csv())
+            fileio.write_text(self.dump_csv(), path)
             
     def load_json( self, text ):
         """Load terms from a JSON file.
@@ -561,8 +557,7 @@ def _get_vocab_fs(path):
     @param path: str Absolute path to vocabulary file (.json)
     """
     logging.info('getting vocab: %s' % path)
-    with open(path, 'r') as f:
-        return json.loads(f.read())
+    return json.loads(fileio.read_text(path))
 
 def _get_vocab_http(url):
     """Loads vocabulary data from vocab API.
@@ -671,6 +666,33 @@ def repair_topicdata(data, facet):
                     item['id'] = tid
                     item['term'] = THIS_MODULE.TOPICS[tid]
             # refresh term even if it's not 'bad'
+            item['term'] = THIS_MODULE.TOPICS[item['id']]
+    return data
+
+def TEMP_scrub_topicdata(data):
+    """Pretty much the same as repair_topicdata, from repo_models
+    """
+    # TEMPORARY function for fixing bad data
+    # see https://github.com/densho/ddr-cmdln/issues/43
+    if not THIS_MODULE.TOPICS:
+        # get topics so we can repair topic term (path) field
+        logging.debug('getting topics')
+        THIS_MODULE.TOPICS = {
+            str(term['id']): term['path']
+            for term in get_vocabs(config.VOCABS_URL)['topics']['terms']
+        }
+        logging.debug('ok')
+    for item in data:
+        # 'id' field is supposed to be an integer in a str
+        if (not item['id'].isdigit()) and (':' in item['id']):
+            logging.debug('Fixing topic ID')
+            logging.debug('BEFORE %s' % item)
+            tid = item['id'].split(':')[-1]
+            if tid.isdigit():
+                item['id'] = tid
+                item['term'] = THIS_MODULE.TOPICS[tid]
+            logging.debug('    -> %s' % item)
+        if THIS_MODULE.TOPICS.get(item['id']):
             item['term'] = THIS_MODULE.TOPICS[item['id']]
     return data
 
