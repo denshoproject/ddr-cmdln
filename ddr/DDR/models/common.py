@@ -87,13 +87,19 @@ class DDRObject(object):
         return to_dict(self, self.identifier.fields_module())
     
     def diff(self, other, ignore_fields=[]):
-        """Compares object fields with those of another object
+        """Compares object fields w those of another (instantiated) object
         
         NOTE: This function should only be used to tell IF objects differ,
         not HOW they differ.
         NOTE: Output should be treated as a boolean.
         It's currently a dict (unless the datetime error below) but the
         format is subject to change.
+        
+        NOTE: By the time an object has been instantiated, it has been
+        through all the (ddr-defs/repo_models/MODEL:)jsonload_* methods
+        and has likely been changed from its original state (e.g. topics).
+        If you want to compare an instantiated object with its state
+        in the filesystem, use diff_file.
         
         @param other: DDRObject
         @param ignore_fields: list
@@ -118,8 +124,57 @@ class DDRObject(object):
         try:
             return DeepDiff(this, that)
         except TypeError:
-            # DeepDiff crashes when trying to compare timezone-aware
-            # and timezone-ignorant datetimes. Let's consider these different
+            # DeepDiff crashes when trying to compare timezone-aware and
+            # timezone-ignorant datetimes. Let's consider these different
+            return True
+    
+    def diff_file(self, path, ignore_fields=[]):
+        """Compares object fields with those of values in .json file
+        
+        NOTE: This function should only be used to tell IF objects differ,
+        not HOW they differ.
+        NOTE: Output should be treated as a boolean.
+        It's currently a dict (unless the datetime error below) but the
+        format is subject to change.
+        
+        This function compares object's values with those of the raw .json
+        that has NOT passed through the various jsonload_* methods.
+        
+        @param path: str Absolute path to file
+        @param ignore_fields: list
+        @returns: dict
+        """
+        ignore_fields = DIFF_IGNORED + ignore_fields
+        
+        def rm_ignored(data, ignore):
+            """Remove lines containing the specified fields
+            @param data: OrderedDict
+            @param ignore: list of ignored fieldnames
+            @returns: list of dicts minus ignored fields
+            """
+            keys = data.keys()
+            for fieldname in ignore:
+                if fieldname in keys:
+                    data.pop(fieldname)
+            return data
+        
+        # load list of fields from file
+        raw = load_json_lite(path, 'entity', 'ddr-densho-12-1')
+        # remove initial metadata dict
+        raw.pop(0)
+        other = OrderedDict()
+        for item in raw:
+            key = item.keys()[0]
+            value = item[key]
+            other[key] = value
+        
+        this = rm_ignored(self.dict(), ignore_fields)
+        that = rm_ignored(other, ignore_fields)
+        try:
+            return DeepDiff(this, that)
+        except TypeError:
+            # DeepDiff crashes when trying to compare timezone-aware and
+            # timezone-ignorant datetimes. Let's consider these different
             return True
     
     #parent
@@ -354,7 +409,7 @@ class DDRObject(object):
         """
         if not os.path.exists(self.json_path):
             return True
-        if self.diff(Identifier(path=self.identifier.path_abs('json')).object()):
+        if self.diff_file(self.identifier.path_abs('json')):
             return True
         return False
 
