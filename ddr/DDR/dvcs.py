@@ -845,19 +845,22 @@ def annex_parse_version(text):
     data['major version'] = data['git-annex version'].split('.')[0]
     return data
 
-def annex_version(repo):
-    """Returns git-annex version; includes repository version info.
+def annex_version(repo, verbose=False):
+    """Returns git-annex version only, excludes repository version info.
     
-    If repo_path is specified, returns version of local repo's annex.
+    If verbose, returns all info including version of local repo's annex.
     example:
     'git version 1.7.10.4; git-annex version: 3.20120629; local repository version: 3; ' \
     'default repository version: 3; supported repository versions: 3; ' \
     'upgrade supported from repository versions: 0 1 2'
     
     @param repo: A GitPython Repo object.
+    @param verbose: boolean
     @returns string
     """
-    return repo.git.annex('version')
+    if verbose:
+        return repo.git.annex('version')
+    return 'git-annex version: {}'.format(repo.git.annex('version', '--raw'))
 
 def _annex_parse_description(annex_status, uuid):
     for key in annex_status.iterkeys():
