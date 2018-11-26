@@ -540,17 +540,26 @@ def object_metadata(module, repo_path):
     @param repo_path: Absolute path to root of object's repo
     @returns: dict
     """
-    repo = dvcs.repository(repo_path)
-    gitversion = '; '.join([dvcs.git_version(repo), dvcs.annex_version(repo)])
-    data = {
-        'application': 'https://github.com/densho/ddr-cmdln.git',
-        'app_commit': dvcs.latest_commit(config.INSTALL_PATH),
-        'app_release': VERSION,
-        'defs_path': modules.Module(module).path,
-        'models_commit': dvcs.latest_commit(modules.Module(module).path),
-        'git_version': gitversion,
-    }
-    return data
+    if not config.APP_METADATA:
+        config.APP_METADATA['git_version'] = '; '.join([
+            dvcs.git_version(repo),
+            dvcs.annex_version(repo)
+        ])
+        # ddr-cmdln
+        url = 'https://github.com/densho/ddr-cmdln.git'
+        config.APP_METADATA['application'] = url
+        repo = dvcs.repository(repo_path)
+        config.APP_METADATA['app_path'] = config.INSTALL_PATH
+        config.APP_METADATA['app_commit'] = dvcs.latest_commit(
+            config.INSTALL_PATH
+        )
+        config.APP_METADATA['app_release'] = VERSION
+        # ddr-defs
+        config.APP_METADATA['defs_path'] = modules.Module(module).path
+        config.APP_METADATA['models_commit'] = dvcs.latest_commit(
+            modules.Module(module).path
+        )
+    return config.APP_METADATA
 
 def is_object_metadata(data):
     """Indicate whether json_data field is the object_metadata field.

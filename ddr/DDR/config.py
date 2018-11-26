@@ -47,6 +47,8 @@ REPO_MODELS_PATH = CONFIG.get('cmdln','repo_models_path')
 if REPO_MODELS_PATH not in sys.path:
     sys.path.append(REPO_MODELS_PATH)
 
+APP_METADATA = {}
+
 MEDIA_BASE = CONFIG.get('cmdln','media_base')
 # Location of Repository 'ddr' repo, which should contain repo_models
 # for the Repository.
