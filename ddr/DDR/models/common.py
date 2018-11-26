@@ -556,7 +556,7 @@ def object_metadata(module, repo_path):
         config.APP_METADATA['app_release'] = VERSION
         # ddr-defs
         config.APP_METADATA['defs_path'] = modules.Module(module).path
-        config.APP_METADATA['models_commit'] = dvcs.latest_commit(
+        config.APP_METADATA['defs_commit'] = dvcs.latest_commit(
             modules.Module(module).path
         )
     return config.APP_METADATA

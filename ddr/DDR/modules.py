@@ -148,7 +148,10 @@ class Module(object):
     def document_commit(self, document):
         doc_metadata = getattr(document, 'object_metadata', {})
         if doc_metadata:
-            document_commit_raw = doc_metadata.get('models_commit','')
+            # defs_commit used to be called models_commit
+            document_commit_raw = doc_metadata.get('defs_commit', '')
+            if not document_commit_raw:
+                document_commit_raw = doc_metadata.get('models_commit','')
             return self._parse_commit(document_commit_raw)
         return None
 
