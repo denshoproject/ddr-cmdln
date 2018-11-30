@@ -94,9 +94,34 @@ class Exporter():
                 logging.info('%s/%s - %s' % (n+1, json_paths_len, i.id))
                 obj = object_class.from_identifier(i)
                 if obj:
-                    writer.writerow(obj.dump_csv(fields=headers))
-        
+                    csv = obj.dump_csv(fields=headers)
+                    try:
+                        writer.writerow(csv)
+                    except UnicodeDecodeError as err:
+                        nicer_unicode_decode_error(headers, obj, csv)
         return csv_path
+    
+def nicer_unicode_decode_error(headers, obj, csv):
+    """Nicer Exception msg pointing out location of UnicodeDecodeError
+    
+    List the object ID, field name, and index within the field where the error
+    can be found -- a great help to users puzzling over why their export failed.
+    
+    @param headers: list of fieldnames
+    @param obj: DDRObject
+    @param csv: list of CSV row cells
+    """
+    for n,field in enumerate(csv):
+        if isinstance(field, basestring):
+            try:
+                utf8 = field.decode('utf8', 'strict')
+            except UnicodeEncodeError as err:
+                msg = 'UnicodeEncodeError in {}, "{}" field, position {}'.format(
+                    obj.identifier.id,
+                    headers[n],
+                    err.start
+                )
+                raise Exception(msg)
 
 
 class Checker():
