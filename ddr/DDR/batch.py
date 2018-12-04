@@ -789,8 +789,9 @@ class Importer():
                 logging.debug('    writing %s' % file_.json_path)
 
                 exit,status,updated_files = file_.save(
-                    git_name, git_mail, agent,
-                    cleaned_data=obj_metadata,
+                    git_name=git_name,
+                    git_mail=git_mail,
+                    agent=agent,
                     commit=False
                 )
                 
