@@ -541,6 +541,7 @@ def object_metadata(module, repo_path):
     @returns: dict
     """
     if not config.APP_METADATA:
+        repo = dvcs.repository(repo_path)
         config.APP_METADATA['git_version'] = '; '.join([
             dvcs.git_version(repo),
             dvcs.annex_version(repo)
@@ -548,7 +549,6 @@ def object_metadata(module, repo_path):
         # ddr-cmdln
         url = 'https://github.com/densho/ddr-cmdln.git'
         config.APP_METADATA['application'] = url
-        repo = dvcs.repository(repo_path)
         config.APP_METADATA['app_path'] = config.INSTALL_PATH
         config.APP_METADATA['app_commit'] = dvcs.latest_commit(
             config.INSTALL_PATH
