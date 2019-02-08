@@ -660,13 +660,7 @@ def load_json(document, module, json_text):
     @param json_text: JSON-formatted text
     @returns: dict
     """
-    try:
-        json_data = json.loads(json_text)
-    except ValueError:
-        json_data = [
-            {'title': 'ERROR: COULD NOT READ DATA (.JSON) FILE!'},
-            {'_error': 'Error: ValueError during read load_json.'},
-        ]
+    json_data = json.loads(json_text)
     # software and commit metadata
     for field in json_data:
         if is_object_metadata(field):
