@@ -784,8 +784,8 @@ def text_to_rolepeople(text):
         )
     )
 
-ROLEPEOPLE_TEXT_TEMPLATE_W_ID = '{{ data.namepart }} [{{ data.id }}]:{{ data.role }}'
-ROLEPEOPLE_TEXT_TEMPLATE_NOID = '{{ data.namepart }}:{{ data.role }}'
+ROLEPEOPLE_TEXT_TEMPLATE_W_ID = 'namepart:{{ data.namepart }}|role:{{ data.role }}|id:{{ data.id }}'
+ROLEPEOPLE_TEXT_TEMPLATE_NOID = 'namepart:{{ data.namepart }}|role:{{ data.role }}'
 
 def rolepeople_to_text(data):
     if isinstance(data, basestring):
