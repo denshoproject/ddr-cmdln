@@ -172,6 +172,11 @@ class Checker():
     def check_csv(csv_path, cidentifier, vocabs_url):
         """Load CSV, validate headers and rows
         
+        An import file must be a valid CSV file.
+        Each row must contain a valid DDR identifier.
+        All rows must represent the same kind of object.
+        All files must be children of the same kind of parent (entity,segment).
+        
         Results dict includes:
         - 'passed'
         - 'headers'
@@ -228,7 +233,10 @@ class Checker():
     
     @staticmethod
     def check_eids(rowds, cidentifier, idservice_client):
-        """
+        """Check CSV for already existing and registered IDs
+        
+        List IDs that are registered,unregistered with ID service.
+        List IDs that already exist in the repository.
         
         Results dict includes:
         - passed
@@ -279,6 +287,7 @@ class Checker():
     def _guess_model(rowds):
         """Loops through rowds and guesses model
         
+        IMPORTANT: All rows must resolve to the same model.
         # TODO guess schema too
         
         @param rowds: list
@@ -932,7 +941,7 @@ class Importer():
             
             elapsed_round = datetime.now(config.TZ) - start_round
             elapsed_rounds.append(elapsed_round)
-            logging.debug('|   file %s' % (file_))
+            logging.debug('| file   %s' % (file_))
             logging.debug('| %s' % (elapsed_round))
                   
         elapsed = datetime.now(config.TZ) - start
