@@ -298,10 +298,10 @@ class Checker():
         if len(models) > 1:
             errors.append('More than one model type in imput file!')
         model = models[0]
-        # new files don't have their own IDs
-        # instead they have their parent entity IDs
+        # new files don't have their own IDs - they have their parent entity IDs
         # the parent entity may be duplicated
-        if (model == 'entity') and rowds and ('basename_orig' in rowds[0].keys()):
+        PARENT_MODELS = ['entity', 'segment']
+        if (model in PARENT_MODELS) and rowds and ('basename_orig' in rowds[0].keys()):
             model = 'file'
         # TODO should not know model name
         if model == 'file-role':
