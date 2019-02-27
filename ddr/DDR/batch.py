@@ -595,22 +595,49 @@ class Importer():
 
     @staticmethod
     def _fidentifiers(rowds, cidentifier):
-        """dict of File Identifiers by file ID."""
-        return {
-            rowd['id']: identifier.Identifier(
+        """Make dict of File Identifiers by file ID; exclude entity/segments
+        
+        Note: Rows for *existing* files have file IDs.
+        Rows for *new* files don't have IDs yet (no SHA yet) so have the IDs
+        of the *parents*.
+        """
+        oids = {}
+        for rowd in rowds:
+            fi = identifier.Identifier(
                 id=rowd['id'],
                 base_path=cidentifier.basepath
             )
-            for rowd in rowds
-        }
+            if fi.model == 'file':
+                oids[fi.id] = fi
+        return oids
     
     @staticmethod
-    def _fid_parents(fidentifiers):
-        """dict of File Identifier parents (entities) by file ID."""
-        return {
+    def _fid_parents(fidentifiers, rowds, cidentifier):
+        """Make dict of File Identifier parents (entities) by file ID.
+        
+        Note: Rows for *existing* files have file IDs. We can get parent IDs.
+        Rows for *new* files don't have IDs yet (no SHA yet) so the IDs
+        are those of the *parents*.
+        
+        @param fidentifiers: dict of File Identifiers by ID
+        @param rowds: list of dicts
+        @param cidentifier: Identifier
+        """
+        # existing files (these will be actual File identifiers)
+        # note: fidentifiers will be {} if all rows are for new files
+        oids = {
             fi.id: Importer._fidentifier_parent(fi)
             for fi in fidentifiers.itervalues()
         }
+        # new files (these will be the Files' parent Entity identifiers)
+        for rowd in rowds:
+            fi = identifier.Identifier(
+                id=rowd['id'],
+                base_path=cidentifier.basepath
+            )
+            if fi.model != 'file':
+                oids[fi.id] = fi
+        return oids
     
     @staticmethod
     def _eidentifiers(fid_parents):
@@ -724,7 +751,7 @@ class Importer():
         # various dicts and lists instantiated here so we don't do it
         # multiple times later
         fidentifiers = Importer._fidentifiers(rowds, cidentifier)
-        fid_parents = Importer._fid_parents(fidentifiers)
+        fid_parents = Importer._fid_parents(fidentifiers, rowds, cidentifier)
         eidentifiers = Importer._eidentifiers(fid_parents)
         entities,bad_entities = Importer._existing_bad_entities(eidentifiers)
         files = Importer._file_objects(fidentifiers)
@@ -837,14 +864,15 @@ class Importer():
 
             fid = rowd['id']
             parent_id = fid_parents[fid].id
-            file_ = files[fid]
+            file_ = files.get(fid)  # Note: no File object yet for new files
             parent = entities[parent_id]
             # If the actual file ID is not specified in the rowd
             # (ex: SHA1 not yet known),
             # the ID in the CSV will be the ID of the *parent* object.
             # In this case, file_ and parent vars will likely be wrong.
             # TODO refactor up the chain somewhere.
-            if file_.identifier.model not in identifier.NODES:
+            # NOTE: no File object yet for new files
+            if file_ and (file_.identifier.model not in identifier.NODES):
                 parent = file_
             
             logging.debug('| parent %s' % (parent))
@@ -878,14 +906,17 @@ class Importer():
                 # This will happen with e.g. transcript files when file_id is
                 # actually the Entity/Segment ID and contains no role,
                 # and when sha1 field is blank.
-                if rowd.get('role') and not file_.identifier.parts.get('role'):
+                # NOTE: no File object yet for new files
+                if file_ and (
+                        rowd.get('role') and not file_.identifier.parts.get('role')
+                ):
                     file_.identifier.parts['role'] = rowd['role']
 
                 try:
                     file_,repo2,log2 = ingest.add_local_file(
                         parent,
                         rowd['basename_orig'],
-                        file_.identifier.parts['role'],
+                        rowd['role'],
                         rowd,
                         git_name, git_mail, agent,
                         log_path=log_path,
