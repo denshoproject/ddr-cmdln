@@ -64,6 +64,7 @@ setup(
     ]},
     entry_points='''
         [console_scripts]
+        ddr2=DDR.cli.ddr:ddr
         ddrcheck=DDR.cli.ddrcheck:ddrcheck
         ddrcheckbinaries=DDR.cli.ddrcheckbinaries:ddrcheckbinaries
         ddrcheckencoding=DDR.cli.ddrcheckencoding:ddrcheckencoding
