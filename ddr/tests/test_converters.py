@@ -369,19 +369,19 @@ TEXTROLEPEOPLE_NAME_TEXT = "Watanabe, Joe"
 TEXTROLEPEOPLE_NAME_DATA = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'}
 ]
-TEXTROLEPEOPLE_NAME_OUT = 'Watanabe, Joe:author'
+TEXTROLEPEOPLE_NAME_OUT = 'namepart:Watanabe, Joe|role:author'
 
-TEXTROLEPEOPLE_SINGLE_TEXT = 'Masuda, Kikuye [42]:narrator'
+TEXTROLEPEOPLE_SINGLE_TEXT = 'namepart:Masuda, Kikuye|role:narrator|id:42'
 TEXTROLEPEOPLE_SINGLE_DATA = [
     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
 ]
 
-TEXTROLEPEOPLE_SINGLE_ID_TEXT = 'Masuda, Kikuye [42]:narrator'
+TEXTROLEPEOPLE_SINGLE_ID_TEXT = 'namepart:Masuda, Kikuye|role:narrator|id:42'
 TEXTROLEPEOPLE_SINGLE_ID_DATA = [
     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
 ]
 
-TEXTROLEPEOPLE_MULTI_TEXT = 'Watanabe, Joe:author; Masuda, Kikuye [42]:narrator'
+TEXTROLEPEOPLE_MULTI_TEXT = 'namepart:Watanabe, Joe|role:author; namepart:Masuda, Kikuye|role:narrator|id:42'
 TEXTROLEPEOPLE_MULTI_DATA = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'},
     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
@@ -403,7 +403,7 @@ TEXTROLEPEOPLE_LISTSTRS_DATA = [
     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
 ]
 
-TEXTROLEPEOPLE_MULTI_TEXT = 'Watanabe, Joe:author; Masuda, Kikuye [42]:narrator'
+TEXTROLEPEOPLE_MULTI_TEXT = 'namepart:Watanabe, Joe|role:author; namepart:Masuda, Kikuye|role:narrator|id:42'
 TEXTROLEPEOPLE_MULTI_DATA = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'},
     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},

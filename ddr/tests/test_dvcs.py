@@ -77,7 +77,6 @@ def test_annex_version():
     # test at repo root
     out = dvcs.annex_version(repo)
     assert 'git-annex version' in out
-    assert 'local repository version' in out
 
 def test_latest_commit():
     path = os.path.join(TESTING_BASE_DIR, 'testrepo')

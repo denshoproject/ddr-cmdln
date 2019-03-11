@@ -694,7 +694,9 @@ class Entity(common.DDRObject):
                         identifier_class(
                             id=fid,
                             base_path=basepath
-                        )
+                        ),
+                        # Disable inheritance in loops to avoid infinite loops.
+                        inherit=False
                     )
                 except IOError as err:
                     f['error'] = err
@@ -710,7 +712,9 @@ class Entity(common.DDRObject):
                             identifier_class(
                                 id=fid,
                                 base_path=self.identifier.basepath
-                            )
+                            ),
+                            # Disable inheritance in loops to avoid infinite loops.
+                            inherit=False
                         )
                     except IOError as err:
                         f['error'] = err

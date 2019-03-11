@@ -135,14 +135,15 @@ class File(common.DDRObject):
     #def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
     
     @staticmethod
-    def create(identifier=None, parent=None):
+    def create(identifier=None, parent=None, inherit=True):
         """Creates a new File with initial values from module.FIELDS.
         
         @param identifier: [optional] Identifier
         @param parent: [optional] DDRObject parent object
+        @param inherit: boolean Disable in loops to avoid infinite recursion
         @returns: File object
         """
-        return common.create_object(identifier, parent=parent)
+        return common.create_object(identifier, parent=parent, inherit=inherit)
     
     @staticmethod
     def new(identifier, git_name, git_mail, agent='cmdln'):
@@ -288,15 +289,16 @@ class File(common.DDRObject):
         return common.from_csv(identifier, rowd)
     
     @staticmethod
-    def from_identifier(identifier):
+    def from_identifier(identifier, inherit=True):
         """Instantiates a File object, loads data from FILE.json or creates new object.
         
         @param identifier: Identifier
+        @param inherit: boolean Disable in loops to avoid infinite recursion
         @returns: File
         """
         if os.path.exists(identifier.path_abs('json')):
             return File.from_json(identifier.path_abs('json'), identifier)
-        return File.create(identifier)
+        return File.create(identifier, inherit=inherit)
     
     def parent( self ):
         i = Identifier(id=self.parent_id, base_path=self.identifier.basepath)

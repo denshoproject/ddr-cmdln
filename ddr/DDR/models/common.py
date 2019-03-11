@@ -485,7 +485,7 @@ def sort_file_paths(json_paths, rank='role-eid-sort'):
             paths_sorted.append(val)
     return paths_sorted
 
-def create_object(identifier, parent=None):
+def create_object(identifier, parent=None, inherit=True):
     """Creates a new object initial values from module.FIELDS.
     
     If identifier.fields_module().FIELDS.field['default'] is non-None
@@ -496,6 +496,7 @@ def create_object(identifier, parent=None):
     
     @param identifier: Identifier
     @param parent: DDRObject (optional)
+    @param inherit: boolean Disable in loops to avoid infinite recursion
     @returns: object
     """
     object_class = identifier.object_class()
@@ -524,7 +525,9 @@ def create_object(identifier, parent=None):
         elif hasattr(f, 'name') and hasattr(f, 'initial'):
             setattr(obj, f['name'], f['initial'])
     # inherit defaults from parent
-    if (not parent) and identifier.parent():
+    # Disable within loops to avoid infinite recursion
+    # Ex: Loading File may trigger loading an Entity which loads Files, etc
+    if inherit and (not parent) and identifier.parent():
         try:
             parent = identifier.parent().object()
         except IOError:
@@ -752,12 +755,13 @@ def dump_json(obj, module, template=False,
             data.append(item)
     return data
 
-def from_json(model, json_path, identifier):
+def from_json(model, json_path, identifier, inherit=True):
     """Read the specified JSON file and properly instantiate object.
     
     @param model: LocalCollection, LocalEntity, or File
     @param json_path: absolute path to the object's .json file
     @param identifier: [optional] Identifier
+    @param inherit: boolean Disable in loops to avoid infinite recursion
     @returns: object
     """
     document = None
