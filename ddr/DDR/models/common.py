@@ -827,14 +827,20 @@ def csvload_rowd(module, rowd):
     # In repo_models.object.FIELDS, individual fields can be marked
     # so they are ignored (e.g. not included) when importing.
     # TODO make field_directives ONCE at start of rowds loop
+    # Other CSV fields like `access_path` (for importing custom access files)
+    # are not in repo_models.object.FIELDS at all but we still need them.
     field_directives = {
         f['name']: f['csv']['import']
         for f in module.module.FIELDS
     }
     data = {}
     for fieldname,value in rowd.iteritems():
-        ignored = 'ignore' in field_directives[fieldname]
-        if not ignored:
+        try:
+            ignored = 'ignore' in field_directives[fieldname]
+        except KeyError:
+            # Ignore rowd fields not in module.FIELDS
+            ignored = None
+        if ignored != True:
             # run csvload_* functions on field data if present
             field_data = module.function(
                 'csvload_%s' % fieldname,
@@ -854,6 +860,8 @@ def load_csv(obj, module, rowd):
     """
     # In repo_models.object.FIELDS, individual fields can be marked
     # so they are ignored (e.g. not included) when importing.
+    # Other CSV fields like `access_path` (for importing custom access files)
+    # are not in repo_models.object.FIELDS at all but we still need them.
     field_directives = {
         f['name']: f['csv']['import']
         for f in module.module.FIELDS
@@ -862,8 +870,12 @@ def load_csv(obj, module, rowd):
     rowd = csvload_rowd(module, rowd)
     obj.modified_fields = []
     for field,value in rowd.iteritems():
-        ignored = 'ignore' in field_directives[field]
-        if not ignored:
+        try:
+            ignored = 'ignore' in field_directives[field]
+        except KeyError:
+            # Ignore rowd fields not in module.FIELDS
+            ignored = None
+        if ignored != True:
             oldvalue = getattr(obj, field, '')
             value = rowd[field]
             if value != oldvalue:
