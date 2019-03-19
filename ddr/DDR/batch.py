@@ -821,6 +821,15 @@ class Importer():
                     file_.identifier.fields_module(),
                     repository.working_dir
                 )
+
+            # Custom access files
+            if rowd.get('access_path'):
+                logging.debug('    replacing access file {}'.format(
+                    rowd.get('access_path')))
+                new_annex_files = ingest.replace_access(
+                    repository, file_, rowd.get('access_path')
+                )
+                annex_files.append(new_annex_files)
             
             if modified and not dryrun:
                 logging.debug('    writing %s' % file_.json_path)
@@ -843,10 +852,11 @@ class Importer():
         elapsed = datetime.now(config.TZ) - start
         logging.debug('%s updated in %s' % (len(elapsed_rounds), elapsed))
                 
-        if git_files and not dryrun:
+        if (git_files or annex_files) and not dryrun:
             logging.info('Staging %s modified files' % len(git_files))
             start_stage = datetime.now(config.TZ)
             dvcs.stage(repository, git_files)
+            dvcs.annex_stage(repository, annex_files)
             staged = util.natural_sort(dvcs.list_staged(repository))
             for path in staged:
                 if path in git_files:

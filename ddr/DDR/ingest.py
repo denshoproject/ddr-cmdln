@@ -1,5 +1,7 @@
 from datetime import datetime
 from exceptions import Exception
+import logging
+logger = logging.getLogger(__name__)
 import os
 import shutil
 import sys
@@ -701,6 +703,25 @@ def add_access( entity, ddrfile, src_path, git_name, git_mail, agent='', log_pat
     # IMPORTANT: Files are only staged! Be sure to commit!
     # IMPORTANT: changelog is not staged!
     return file_,repo,log,'continue'
+
+def replace_access(repo, file_, src_path):
+    """Replaces existing access file and git-annex-adds new one.
+    
+    IMPORTANT: This is meant to be used in the context of a larger batch operation.
+    It STAGES files but does not commit them.  It does not prepare a changelog.
+    
+    @returns: list annex_files
+    """
+    logging.debug('replace_access({}, {}, {})'.format(repo, file_, src_path))
+    # If we just copy the new file over the top of the old one
+    # Git thinks it's a state change and doesn't see the new file
+    # so git-rm and then copy.
+    if os.path.exists(file_.access_abs):
+        logging.debug('rm {}'.format(file_.access_rel))
+        repo.git.rm('--force', file_.access_rel)
+    logging.debug('cp {} {}'.format(src_path, file_.access_rel))
+    shutil.copyfile(src_path, file_.access_abs)
+    return [file_.access_rel]
 
 def add_file_commit(entity, file_, repo, log, git_name, git_mail, agent):
     log.ok('add_file_commit(%s, %s, %s, %s, %s, %s)' % (file_, repo, log, git_name, git_mail, agent))
