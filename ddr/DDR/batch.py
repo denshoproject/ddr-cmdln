@@ -397,7 +397,12 @@ class Checker():
         valid_values = Checker._prep_valid_values(vocabs)
         # check
         logging.info('Validating headers')
-        header_errs = csvfile.validate_headers(headers, field_names, nonrequired_fields)
+        header_errs = csvfile.validate_headers(
+            headers,
+            field_names,
+            exceptions=nonrequired_fields,
+            additional=['access_path'],  # used for custom access files
+        )
         if header_errs.keys():
             for name,errs in header_errs.iteritems():
                 if errs:
@@ -798,6 +803,7 @@ class Importer():
         start = datetime.now(config.TZ)
         elapsed_rounds = []
         git_files = []
+        annex_files = []
         updated = []
         staged = []
         obj_metadata = None
@@ -820,6 +826,15 @@ class Importer():
                     file_.identifier.fields_module(),
                     repository.working_dir
                 )
+
+            # Custom access files
+            if rowd.get('access_path'):
+                logging.debug('    replacing access file {}'.format(
+                    rowd.get('access_path')))
+                new_annex_files = ingest.replace_access(
+                    repository, file_, rowd.get('access_path')
+                )
+                annex_files.append(new_annex_files)
             
             if modified and not dryrun:
                 logging.debug('    writing %s' % file_.json_path)
@@ -842,10 +857,11 @@ class Importer():
         elapsed = datetime.now(config.TZ) - start
         logging.debug('%s updated in %s' % (len(elapsed_rounds), elapsed))
                 
-        if git_files and not dryrun:
+        if (git_files or annex_files) and not dryrun:
             logging.info('Staging %s modified files' % len(git_files))
             start_stage = datetime.now(config.TZ)
             dvcs.stage(repository, git_files)
+            dvcs.annex_stage(repository, annex_files)
             staged = util.natural_sort(dvcs.list_staged(repository))
             for path in staged:
                 if path in git_files:
@@ -895,6 +911,7 @@ class Importer():
                     log_path=log_path,
                     show_staged=False
                 )
+                # Custom access files
                 if rowd.get('access_path'):
                     file_,repo3,log3,status = ingest.add_access(
                         parent, file_,
@@ -931,13 +948,23 @@ class Importer():
                         log_path=log_path,
                         show_staged=False
                     )
-                    git_files.append(file_)
                 except ingest.FileExistsException as e:
                     logging.error('ERROR: %s' % e)
                     failures.append(e)
                 except ingest.FileMissingException as e:
                     logging.error('ERROR: %s' % e)
                     failures.append(e)
+                
+                # Custom access files
+                if rowd.get('access_path'):
+                    file_,repo3,log3,status = ingest.add_access(
+                        parent, file_,
+                        rowd['access_path'],
+                        git_name, git_mail, agent,
+                        log_path=log_path,
+                        show_staged=False
+                    )
+                git_files.append(file_)
             
             elapsed_round = datetime.now(config.TZ) - start_round
             elapsed_rounds.append(elapsed_round)
