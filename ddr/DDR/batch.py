@@ -798,6 +798,7 @@ class Importer():
         start = datetime.now(config.TZ)
         elapsed_rounds = []
         git_files = []
+        annex_files = []
         updated = []
         staged = []
         obj_metadata = None
@@ -895,6 +896,7 @@ class Importer():
                     log_path=log_path,
                     show_staged=False
                 )
+                # Custom access files
                 if rowd.get('access_path'):
                     file_,repo3,log3,status = ingest.add_access(
                         parent, file_,
@@ -931,13 +933,23 @@ class Importer():
                         log_path=log_path,
                         show_staged=False
                     )
-                    git_files.append(file_)
                 except ingest.FileExistsException as e:
                     logging.error('ERROR: %s' % e)
                     failures.append(e)
                 except ingest.FileMissingException as e:
                     logging.error('ERROR: %s' % e)
                     failures.append(e)
+                
+                # Custom access files
+                if rowd.get('access_path'):
+                    file_,repo3,log3,status = ingest.add_access(
+                        parent, file_,
+                        rowd['access_path'],
+                        git_name, git_mail, agent,
+                        log_path=log_path,
+                        show_staged=False
+                    )
+                git_files.append(file_)
             
             elapsed_round = datetime.now(config.TZ) - start_round
             elapsed_rounds.append(elapsed_round)
