@@ -397,7 +397,12 @@ class Checker():
         valid_values = Checker._prep_valid_values(vocabs)
         # check
         logging.info('Validating headers')
-        header_errs = csvfile.validate_headers(headers, field_names, nonrequired_fields)
+        header_errs = csvfile.validate_headers(
+            headers,
+            field_names,
+            exceptions=nonrequired_fields,
+            additional=['access_path'],  # used for custom access files
+        )
         if header_errs.keys():
             for name,errs in header_errs.iteritems():
                 if errs:
