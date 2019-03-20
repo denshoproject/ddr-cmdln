@@ -217,6 +217,7 @@ class File(common.DDRObject):
             parent.children(force_read=True)
             parent.write_json()
             updated_files.append(parent.json_path)
+            updated_files.append(parent.changelog_path)
         
         # files have no child object inheritors
         
