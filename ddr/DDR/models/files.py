@@ -247,12 +247,15 @@ class File(common.DDRObject):
         
         # metadata jsons (rm this file, modify parent entity)
         rm_files,updated_files = entity.prep_rm_file(self)
+        
         # binary and access file
-        if not self.path_rel in rm_files:
+        if os.path.exists(self.path_abs) and not (self.path_rel in rm_files):
             rm_files.append(self.path_rel)
-        if not self.access_rel in rm_files:
+        # Note: external files and some others (ex: transcripts) may not *have*
+        # access files.
+        if os.path.exists(self.access_abs) and not (self.access_rel in rm_files):
             rm_files.append(self.access_rel)
-
+        
         #IMPORTANT: some files use same binary for master,mezz
         #we want to be able to e.g. delete mezz w/out deleting master
         
