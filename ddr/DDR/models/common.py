@@ -384,18 +384,12 @@ class DDRObject(object):
             d.facility_id = [item['id'] for item in self.facility]
             # A/V object metadata from Internet Archive
             # A/V templates
-            if archivedotorg.is_iaobject(self):
-                http_status,xml = archivedotorg.get_xml(self.identifier.id)
-                if http_status == 200:
-                    iaobject = archivedotorg.IAObject.get(
-                        self.identifier.id, http_status, xml
-                    )
-                    if iaobject:
-                        d.ia_meta = iaobject.dict()
-                        d.template = ':'.join([
-                            self.format,
-                            iaobject.mimetype.split('/')[0]
-                        ])
+            d.ia_meta = archivedotorg.get_ia_meta(self)
+            if d.ia_meta:
+                d.template = ':'.join([
+                    self.format,
+                    d.ia_meta['mimetype'].split('/')[0]
+                ])
 
         if (self.identifier.model in ['file']):
             if download_path:

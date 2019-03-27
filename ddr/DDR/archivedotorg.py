@@ -22,6 +22,30 @@ FILE_DOWNLOAD_URL = '{base}/{segmentid}/{fileid}'
 FORMATS = ['mp3', 'mp4', 'mpg', 'ogv', 'png',]
 FIELDNAMES = ['sha1','size','length','height','width','title',]
 
+DUMMY_OBJECTS = {
+    'av': 'ddr-csujad-28-1',
+    'vh': 'ddr-densho-1000-28-1',
+}
+
+
+def get_ia_meta(o):
+    """Get object record from Internet Archive; use dummy record if unpublished
+    
+    @param o: models.Entity
+    @returns: dict or None
+    """
+    if is_iaobject(o):
+        iaobject = IAObject(o.identifier.id)
+        if iaobject.http_status == 200:
+            return iaobject.dict()
+        else:
+            # Couldn't find object in IA - use a dummy
+            oid = DUMMY_OBJECTS.get(o.format, None)
+            if oid:
+                iaobject = IAObject(oid)
+                if iaobject.http_status == 200:
+                    return iaobject.dict()
+    return {}
 
 def is_iaobject(o):
     """Determines whether or not to check Internet Archive for this object
