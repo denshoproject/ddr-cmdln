@@ -531,6 +531,20 @@ def add_external_file(entity, data, git_name, git_mail, agent='', log_path=None,
     if not (data.get('external') and data['external']):
         log.ok('Regular file (not external)')
         raise Exception('Not an external (metadata-only) file: %s' % data)
+
+    # Hash the file if present in import directory
+    src_path = None
+    if os.path.exists(data['basename_orig']):
+        src_path = data['basename_orig']
+        src_size = os.path.getsize(src_path)
+        log.ok('| file size %s' % src_size)
+        data['size'] = src_size
+        md5,sha1,sha256 = checksums(src_path, log)
+        data['md5'] = md5
+        data['sha1'] = sha1
+        data['sha256'] = sha256
+        # don't need absolute path anymore
+        data['basename_orig'] = os.path.basename(src_path)
     
     log.ok('Identifier')
     # note: we can't make this until we have the sha1
