@@ -394,7 +394,31 @@ class Entity(common.DDRObject):
         )
         return exit,status,updated_files
     
-    #TODO def delete(self ...)
+    def delete(self, git_name, git_mail, agent, commit=True):
+        """Removes File metadata and file, updates parent entity, and commits.
+        
+        @param git_name: str
+        @param git_mail: str
+        @param agent: str
+        @param commit: boolean
+        @returns: exit,status,removed_files,updated_files (int,str,list,list)
+        """
+        exit = 1; status = 'unknown'; updated_files = []
+        parent = self.parent()
+        collection = self.identifier.collection().object()
+        
+        # update parent entity's references to self
+        rm_files,updated_files = parent.prep_rm_child(self)
+        
+        # write files and commit
+        status,message,updated_files = commands.entity_destroy(
+            git_name, git_mail,
+            collection, entity,
+            rm_files, updated_files,
+            agent=agent,
+            commit=commit
+        )
+        return exit, status, rm_files, updated_files
     
     @staticmethod
     def from_json(path_abs, identifier=None):
@@ -827,6 +851,50 @@ class Entity(common.DDRObject):
     
     def add_file_commit(self, file_, repo, log, git_name, git_mail, agent):
         return ingest.add_file_commit(self, file_, repo, log, git_name, git_mail, agent)
+
+    def prep_rm_child(self, child):
+        """Delete specified child and update Entity.
+        
+        IMPORTANT: Modifies entity.json and lists child entities to remove.
+        The actual file removal and commit is done by commands.entity_destroy.
+        
+        @param child: Entity
+        """
+        logger.debug('%s.rm_child(%s)' % (self, child))
+        
+        # list of files to be *removed*
+        rm_files = [
+            f for f in file_.files_rel()
+            if os.path.exists(
+                os.path.join(self.collection_path, f)
+            )
+        ]
+        logger.debug('rm_files: %s' % rm_files)
+        
+        # rm file_ from entity metadata
+        #
+        # entity._file_objects
+        self._file_objects = [
+            f for f in deepcopy(self._file_objects) if f.id != file_.id
+        ]
+        #
+        # entity.file_groups (probably unnecessary)
+        files = filegroups_to_files(self.file_groups)
+        for f in files:
+            if f.get('path_rel') and not f.get('id'):
+                # make sure each file dict has an id
+                f['id'] = os.path.basename(os.path.splitext(f['path_rel'])[0])
+        self.file_groups = files_to_filegroups(
+            # exclude the file
+            [f for f in files if f['id'] != file_.id]
+        )
+        self.write_json()
+        
+        # list of files to be *updated*
+        updated_files = ['entity.json']
+        logger.debug('updated_files: %s' % updated_files)
+        
+        return rm_files,updated_files
 
     def prep_rm_file(self, file_):
         """Delete specified file and update Entity.
