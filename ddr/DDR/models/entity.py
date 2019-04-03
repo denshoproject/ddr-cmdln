@@ -277,8 +277,11 @@ class Entity(common.DDRObject):
         }
         
         if basepath:
-            logging.debug('Checking for %s in %s' % (oidentifier.id, oidentifier.path_abs()))
-            if os.path.exists(oidentifier.path_abs()) and os.path.exists(oidentifier.path_abs('json')):
+            logging.debug('Checking for %s in %s' % (
+                oidentifier.id, oidentifier.path_abs()
+            ))
+            if os.path.exists(oidentifier.path_abs()) \
+            and os.path.exists(oidentifier.path_abs('json')):
                 data['filesystem'] = True
             else:
                 data['filesystem'] = False
@@ -507,7 +510,7 @@ class Entity(common.DDRObject):
     def dump_json(self, template=False, doc_metadata=False, obj_metadata={}):
         """Dump Entity data to JSON-formatted text.
         
-        @param template: [optional] Boolean. If true, write default values for fields.
+        @param template: [optional] Boolean. If true, write default field values.
         @param doc_metadata: boolean. Insert object_metadata().
         @param obj_metadata: dict Cached results of object_metadata.
         @returns: JSON-formatted text
@@ -584,7 +587,8 @@ class Entity(common.DDRObject):
     def dump_xml(self):
         """Dump Entity data to mets.xml file.
         
-        TODO This should not actually write the XML! It should return XML to the code that calls it.
+        TODO This should not actually write the XML! It should return XML
+        to the code that calls it.
         """
         return Template(
             fileio.read_text(config.TEMPLATE_METS_JINJA2)
@@ -816,7 +820,7 @@ class Entity(common.DDRObject):
         
         @param role
         @param sha1
-        @param newfile (optional) If present, updates existing file or appends new one.
+        @param newfile (optional) If present, updates existing file or adds new one.
         @returns 'added', 'updated', File, or None
         """
         self.load_file_objects(Identifier, File)
@@ -839,7 +843,9 @@ class Entity(common.DDRObject):
         return ingest.addfile_logger(self)
     
     def add_local_file(self, src_path, role, data, git_name, git_mail, agent=''):
-        return ingest.add_local_file(self, src_path, role, data, git_name, git_mail, agent)
+        return ingest.add_local_file(
+            self, src_path, role, data, git_name, git_mail, agent
+        )
     
     def add_external_file(self, data, git_name, git_mail, agent=''):
         return ingest.add_external_file(self, data, git_name, git_mail, agent)
@@ -850,7 +856,9 @@ class Entity(common.DDRObject):
         )
     
     def add_file_commit(self, file_, repo, log, git_name, git_mail, agent):
-        return ingest.add_file_commit(self, file_, repo, log, git_name, git_mail, agent)
+        return ingest.add_file_commit(
+            self, file_, repo, log, git_name, git_mail, agent
+        )
 
     def prep_rm_child(self, child):
         """Delete specified child and update Entity.
