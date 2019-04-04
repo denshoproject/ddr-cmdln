@@ -356,12 +356,11 @@ Example:
         )
 
     elif args.cmd == 'edelete':
-        exit,msg = entity_destroy(
+        exit,msg = entity.delete(
             args.user, args.mail,
-            cidentifier.object(), eidentifier.object(),
+            eidentifier.object(),
             agent=AGENT
         )
-
 
     elif args.cmd == 'eadd':
         files = args.files.strip().split(',')
