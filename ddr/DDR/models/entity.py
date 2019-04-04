@@ -37,133 +37,6 @@ class ListEntity( object ):
     def __repr__(self):
         return "<DDRListEntity %s>" % (self.id)
 
-# "children": [
-#   {
-#     "id": "ddr-densho-500-85-1",
-#     "title": "Gordon Hirabayashi Interview II Segment 1"
-#     "public": "1",
-#     "order": 1
-#   }
-# ],
-# "file_groups": [
-#   {
-#     "role": "master",
-#     "files": [
-#       {
-#         "id": "ddr-densho-23-1-transcript-adb451ffec",
-#         "path_rel": "ddr-densho-23-1-transcript-adb451ffec.htm",
-#         "label": "Transcript of interview",
-#         "record_created": "2016-07-29T18:00:00",
-#         "mimetype": "applications/text",
-#         "size": "12345",
-#         "public": "1",
-#         "sort": "1"
-#       }
-#     ]
-#   },
-#   {
-#     "role": "mezzanine",
-#     "files": [...]
-#   },
-#   {
-#     "role": "transcript",
-#     "files": [...]
-#   },
-# ]
-
-def filegroups_to_files(file_groups):
-    """Converts file_groups structure to list of files.
-    
-    Works with either metadata (dict) or File objects.
-    
-    @param file_groups: list of dicts
-    @return: list of File objects
-    """
-    files = []
-    for fg in file_groups:
-        files = files + fg['files']
-    return files
-
-def files_to_filegroups(files):
-    """Converts list of files to file_groups structure.
-    
-    Works with either metadata (dict) or File objects.
-    
-    @param files: list of File objects
-    @returns: list of dicts
-    """
-    def get_role(f):
-        if isinstance(f, File):
-            return getattr(f, 'role')
-        elif isinstance(f, dict) and f.get('role'):
-            return f.get('role')
-        elif isinstance(f, dict) and f.get('path_rel'):
-            fid = os.path.basename(os.path.splitext(f['path_rel'])[0])
-            fi = Identifier(id=fid)
-            return fi.idparts['role']
-        return None
-    # intermediate format
-    fgroups = {}
-    for f in files:
-        role = get_role(f)
-        if role and not fgroups.get(role):
-            fgroups[role] = []
-    for f in files:
-        role = get_role(f)
-        if role:
-            fgroups[role].append(file_to_filemeta(f))
-    # final format
-    file_groups = [
-        {
-            'role': role,
-            'files': fgroups[role],
-        }
-        for role in VALID_COMPONENTS['role']
-        if fgroups.get(role)
-    ]
-    return file_groups
-
-ENTITY_ENTITY_KEYS = [
-    'id',
-    'title',
-    'public',
-    'sort',
-    'signature_id',
-]
-
-ENTITY_FILE_KEYS = [
-    'id',
-    'path_rel',
-    'label',
-    #'record_created',
-    #'mimetype',
-    'size',
-    'public',
-    'sort',
-]
-
-def entity_to_childrenmeta(o):
-    """Given an Entity object, return the dict used in entity.json
-    
-    @param o: Entity object
-    @returns: dict
-    """
-    return {
-        key: getattr(o, key, None)
-        for key in ENTITY_ENTITY_KEYS
-    }
-
-def file_to_filemeta(f):
-    """Given a File object, return the file dict used in entity.json
-    
-    @param f: File object
-    @returns: dict
-    """
-    return {
-        key: getattr(f, key)
-        for key in ENTITY_FILE_KEYS
-    }
-
 
 class Entity(common.DDRObject):
     root = None
@@ -765,6 +638,40 @@ class Entity(common.DDRObject):
         return signature,key
 
 
+# "children": [
+#   {
+#     "id": "ddr-densho-500-85-1",
+#     "title": "Gordon Hirabayashi Interview II Segment 1"
+#     "public": "1",
+#     "order": 1
+#   }
+# ],
+# "file_groups": [
+#   {
+#     "role": "master",
+#     "files": [
+#       {
+#         "id": "ddr-densho-23-1-transcript-adb451ffec",
+#         "path_rel": "ddr-densho-23-1-transcript-adb451ffec.htm",
+#         "label": "Transcript of interview",
+#         "record_created": "2016-07-29T18:00:00",
+#         "mimetype": "applications/text",
+#         "size": "12345",
+#         "public": "1",
+#         "sort": "1"
+#       }
+#     ]
+#   },
+#   {
+#     "role": "mezzanine",
+#     "files": [...]
+#   },
+#   {
+#     "role": "transcript",
+#     "files": [...]
+#   },
+# ]
+
 def _meld_child_entity_file_meta(entities_meta, files_meta):
     """Meld 'children' and 'file_groups' from JSON
     
@@ -783,3 +690,96 @@ def _meld_child_entity_file_meta(entities_meta, files_meta):
                 for ff in sorted(f['files'], key=lambda o: int(o['sort'])):
                     children.append(ff)
     return children
+
+def filegroups_to_files(file_groups):
+    """Converts file_groups structure to list of files.
+    
+    Works with either metadata (dict) or File objects.
+    
+    @param file_groups: list of dicts
+    @return: list of File objects
+    """
+    files = []
+    for fg in file_groups:
+        files = files + fg['files']
+    return files
+
+def files_to_filegroups(files):
+    """Converts list of files to file_groups structure.
+    
+    Works with either metadata (dict) or File objects.
+    
+    @param files: list of File objects
+    @returns: list of dicts
+    """
+    def get_role(f):
+        if isinstance(f, File):
+            return getattr(f, 'role')
+        elif isinstance(f, dict) and f.get('role'):
+            return f.get('role')
+        elif isinstance(f, dict) and f.get('path_rel'):
+            fid = os.path.basename(os.path.splitext(f['path_rel'])[0])
+            fi = Identifier(id=fid)
+            return fi.idparts['role']
+        return None
+    # intermediate format
+    fgroups = {}
+    for f in files:
+        role = get_role(f)
+        if role and not fgroups.get(role):
+            fgroups[role] = []
+    for f in files:
+        role = get_role(f)
+        if role:
+            fgroups[role].append(file_to_filemeta(f))
+    # final format
+    file_groups = [
+        {
+            'role': role,
+            'files': fgroups[role],
+        }
+        for role in VALID_COMPONENTS['role']
+        if fgroups.get(role)
+    ]
+    return file_groups
+
+ENTITY_ENTITY_KEYS = [
+    'id',
+    'title',
+    'public',
+    'sort',
+    'signature_id',
+]
+
+ENTITY_FILE_KEYS = [
+    'id',
+    'path_rel',
+    'label',
+    #'record_created',
+    #'mimetype',
+    'size',
+    'public',
+    'sort',
+]
+
+def entity_to_childrenmeta(o):
+    """Given an Entity object, return the dict used in entity.json
+    
+    @param o: Entity object
+    @returns: dict
+    """
+    return {
+        key: getattr(o, key, None)
+        for key in ENTITY_ENTITY_KEYS
+    }
+
+def file_to_filemeta(f):
+    """Given a File object, return the file dict used in entity.json
+    
+    @param f: File object
+    @returns: dict
+    """
+    return {
+        key: getattr(f, key)
+        for key in ENTITY_FILE_KEYS
+    }
