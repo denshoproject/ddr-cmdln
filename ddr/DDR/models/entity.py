@@ -381,18 +381,27 @@ class Entity(common.DDRObject):
         @returns: exit,status,removed_files,updated_files (int,str,list,list)
         """
         exit = 1; status = 'unknown'; updated_files = []
-        parent = self.parent()
+        parent = self.identifier.parent().object()
         collection = self.identifier.collection().object()
         
+        # metadata jsons
+        # NOTE: child File objects are deleted in commands.entity_destroy
+        
+        # parent entity
+        parent.remove_child(self.id)
+        parent.write_json(force=True)
+        updated_files = [
+            parent.identifier.path_rel('json'),
+        ]
+        
         # write files and commit
-        status,message,updated_files = commands.entity_destroy(
+        return commands.entity_destroy(
             git_name, git_mail,
-            collection, entity,
-            rm_files, updated_files,
+            self,
+            updated_files,
             agent=agent,
             commit=commit
         )
-        return exit, status, rm_files, updated_files
     
     @staticmethod
     def from_json(path_abs, identifier=None):
