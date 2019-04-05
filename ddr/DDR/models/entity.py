@@ -14,7 +14,8 @@ from DDR.control import EntityControlFile
 from DDR import docstore
 from DDR import fileio
 from DDR import format_json
-from DDR.identifier import Identifier, ID_COMPONENTS, MODULES, VALID_COMPONENTS
+from DDR.identifier import Identifier, MODULES
+from DDR.identifier import CHILDREN, ID_COMPONENTS, NODES, VALID_COMPONENTS
 from DDR import ingest
 from DDR import inheritance
 from DDR import locking
@@ -335,6 +336,28 @@ class Entity(common.DDRObject):
             ]
         return self._children_objects
 
+    def children_counts(self):
+        """Totals number of (entity) children and each file role
+        
+        Used to produce tabs in ddrlocal UI
+        
+        @returns: dict {'children', 1, 'mezzanine':3, 'master':3, ... }
+        """
+        # set up structure
+        counts = OrderedDict()
+        counts['children'] = 0
+        for role in VALID_COMPONENTS['role']:
+            counts[role] = 0
+        # non-file objects are 'children'
+        for c in self.children():
+            if c.identifier.model not in NODES:
+                counts['children'] += 1
+        # file roles have their own counts
+        for c in self.children():
+            if c.identifier.idparts.get('role'):
+                counts[c.identifier.idparts['role']] += 1
+        return counts
+        
     def load_json(self, json_text):
         """Populate Entity data from JSON-formatted text.
         
