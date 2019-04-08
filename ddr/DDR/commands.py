@@ -524,7 +524,7 @@ def entity_create(user_name, user_mail, collection, eidentifier, updated_files, 
 
 @command
 @local_only
-def entity_destroy(user_name, user_mail, collection, entity, agent=''):
+def entity_destroy(user_name, user_mail, entity, updated_files, agent='', commit=True):
     """Command-line function for creating an entity and adding it to the collection.
     
     - check that paths exist, etc
@@ -535,32 +535,23 @@ def entity_destroy(user_name, user_mail, collection, entity, agent=''):
     
     @param user_name: Username for use in changelog, git log
     @param user_mail: User email address for use in changelog, git log
-    @param collection: Collection
     @param entity: Entity
+    @param updated_files: List of paths to updated file(s), relative to entitys.
     @param agent: (optional) Name of software making the change.
+    @param commit: (optional) Commit files after staging them.
     @return: message ('ok' if successful)
     """
-    if not os.path.exists(collection.path_abs):
-        raise Exception('collection_path not found: %s' % collection.path_abs)
-    if not os.path.exists(entity.path_abs):
-        raise Exception('entity not found: %s' % entity.path_abs)
-    
+    collection = entity.collection()
+    parent = entity.identifier.parent().object()
     repo = dvcs.repository(collection.path_abs, user_name, user_mail)
     repo.git.checkout('master')
     dvcs.remote_add(repo, collection.git_url, config.GIT_REMOTE_NAME)
-    git_files = []
+    git_files = updated_files
     
     # remove entity directory
     # NOTE: entity files must be removed at this point so the entity will be
     # properly removed from the control file
-    git = repo.git
-    git.rm('-rf', entity.path_abs)
-    
-    # update collection control
-    ccontrol = collection.control()
-    ccontrol.update_checksums(collection)
-    ccontrol.write()
-    git_files.append(ccontrol.path)
+    repo.git.rm('-rf', entity.path_abs)
     
     # prep collection log entries
     changelog_messages = ['Deleted entity {}'.format(entity.id),]
@@ -569,13 +560,14 @@ def entity_destroy(user_name, user_mail, collection, entity, agent=''):
     commit_message = dvcs.compose_commit_message(changelog_messages[0], agent=agent)
     
     # collection changelog
-    write_changelog_entry(collection.changelog_path,
+    write_changelog_entry(parent.changelog_path,
                           changelog_messages,
                           user=user_name, email=user_mail)
-    git_files.append(collection.changelog_path)
-    
+    git_files.append(parent.changelog_path)
+    dvcs.stage(repo, git_files)
     # commit
-    repo = commit_files(repo, commit_message, git_files)
+    if commit:
+        repo = commit_files(repo, commit_message, git_files)
     return 0,'ok'
 
 
