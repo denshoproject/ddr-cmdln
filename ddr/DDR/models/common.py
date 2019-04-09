@@ -11,6 +11,7 @@ import simplejson as json
 from DDR import VERSION
 from DDR import archivedotorg
 from DDR import config
+from DDR import converters
 from DDR import docstore
 from DDR import dvcs
 from DDR import fileio
@@ -81,10 +82,13 @@ class DDRObject(object):
     #from_csv
     #from_identifier
     
-    def dict(self):
+    def dict(self, json_safe=False):
         """Returns an OrderedDict of object fields data
+        
+        @param json_safe: bool Serialize e.g. datetime to text
+        @returns: OrderedDict
         """
-        return to_dict(self, self.identifier.fields_module())
+        return to_dict(self, self.identifier.fields_module(), json_safe=json_safe)
     
     def diff(self, other, ignore_fields=[]):
         """Compares object fields w those of another (instantiated) object
@@ -569,17 +573,23 @@ def is_object_metadata(data):
             return True
     return False
 
-def to_dict(document, module):
+def to_dict(document, module, json_safe=False):
     """Returns an OrderedDict containing the object fields and values.
     
     @param document: Collection, Entity, File document object
     @param module: collection, entity, files model definitions module
+    @param json_safe: bool Serialize Python objects e.g. datetime to text
     @returns: OrderedDict
     """
     data = OrderedDict()
     for f in module.FIELDS:
         fieldname = f['name']
         field_data = getattr(document, f['name'])
+        if json_safe:
+            if isinstance(field_data, Identifier):
+                field_data = str(field_data)
+            elif isinstance(field_data, datetime):
+                field_data = converters.datetime_to_text(field_data)
         data[fieldname] = field_data
     return data
 
