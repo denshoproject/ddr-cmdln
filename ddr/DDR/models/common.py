@@ -414,13 +414,11 @@ class DDRObject(object):
     def is_modified(self):
         """Returns True if object non-ignored fields differ from file.
         
-        @returns: boolean
+        @returns: dict Output of DeepDiff; no diffs -> {} which is Falsey
         """
         if not os.path.exists(self.json_path):
             return True
-        if self.diff_file(self.identifier.path_abs('json')):
-            return True
-        return False
+        return self.diff_file(self.identifier.path_abs('json'))
 
     def write_json(self, doc_metadata=True, obj_metadata={}, force=False):
         """Write Collection/Entity JSON file to disk.
