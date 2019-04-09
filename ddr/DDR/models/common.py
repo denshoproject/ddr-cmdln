@@ -27,6 +27,8 @@ INTERVIEW_SIG_REGEX = re.compile(INTERVIEW_SIG_PATTERN)
 
 DIFF_IGNORED = [
     'app_commit', 'commit',  # object metadata
+    'id',
+    'record_created', 'record_lastmod',
 ]
 
 class Path( object ):
