@@ -276,6 +276,28 @@ class Entity(common.DDRObject):
             agent=agent,
             commit=commit
         )
+
+    def dict(self, json_safe=False):
+        """Returns OrderedDict of object data
+        
+        Overrides common.DDRObject.dict and adds Entity.children, .file_groups
+        
+        @param json_safe: bool Serialize e.g. datetime to text
+        @returns: OrderedDict
+        """
+        data = common.to_dict(
+            self, self.identifier.fields_module(), json_safe=json_safe
+        )
+        data['children'] = [
+            entity_to_childrenmeta(o)
+            for o in self.children()
+            if o.identifier.model in ['entity', 'segment']
+        ]
+        data['file_groups'] = files_to_filegroups([
+            o for o in self.children()
+            if o.identifier.model == 'file'
+        ])
+        return data
     
     @staticmethod
     def from_json(path_abs, identifier=None):
