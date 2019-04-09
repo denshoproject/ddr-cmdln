@@ -324,8 +324,8 @@ ENTITY_DICT = OrderedDict([
     ('digitize_organization', ''), ('digitize_date', ''), ('credit', ''),
     ('rights', ''), ('rights_statement', ''), ('topics', ''),
     ('persons', ''), ('facility', ''), ('chronology', ''),
-    ('geography', ''), ('parent', ''), ('signature_id', ''),
-    ('notes', '')
+    ('geography', ''), ('parent', ''), ('signature_id', ''), ('notes', ''),
+    ('children', []), ('file_groups', [])
 ])
 
 def test_Entity_dict():
@@ -354,13 +354,13 @@ def test_Entity_diff():
     print('out0 %s' % out0)
     assert out0 == {}
     # change lastmod
-    o2.record_lastmod = datetime.now()
-    out1 = o1.diff(o2, ignore_fields=['record_lastmod'])
+    o2.notes = 'these are some notes'
+    out1 = o1.diff(o2)
     print('out1 %s' % out1)
-    assert out1 == {}  # no diffs
-    out2 = o1.diff(o2)
+    assert out1        # diffs present
+    out2 = o1.diff(o2, ignore_fields=['notes'])
     print('out2 %s' % out2)
-    assert out2        # diffs present
+    assert out2 == {}  # no diffs
 
 def test_Entity_is_modified():
     collection_id = 'ddr-testing-123'
@@ -384,14 +384,14 @@ def test_Entity_is_modified():
     o1 = identifier.Identifier(id=entity_id, base_path=MEDIA_BASE).object()
     print('o1 %s' % o1)
     # freshly loaded object should not be modified
-    print('o1.is_modified() %s' % o1.is_modified())
-    assert o1.is_modified() == False
-    assert o1.title == 'TITLE'
+    out1 = o1.is_modified()
+    print('out1 %s' % out1)
+    assert out1 == {}
     
     o1.title = 'new title'
     assert o1.title == 'new title'
     print('o1.is_modified() %s' % o1.is_modified())
-    assert o1.is_modified() == True
+    assert o1.is_modified()
     assert o1.title == 'new title'
     o1.write_json(doc_metadata=False)
     
@@ -399,7 +399,7 @@ def test_Entity_is_modified():
     o2 = identifier.Identifier(id=entity_id, base_path=MEDIA_BASE).object()
     # freshly loaded object should not be modified
     print('o2.is_modified() %s' % o2.is_modified())
-    assert o2.is_modified() == False
+    assert not o2.is_modified()
     assert o2.title == 'new title'
 
 # TODO Entity.parent
