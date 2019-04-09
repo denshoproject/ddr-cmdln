@@ -15,7 +15,7 @@ from DDR import converters
 from DDR import docstore
 from DDR import dvcs
 from DDR import fileio
-from DDR.identifier import Identifier, ID_COMPONENTS, MODELS_IDPARTS
+from DDR.identifier import Identifier, ID_COMPONENTS, MODELS_IDPARTS, MODULES
 from DDR.identifier import ELASTICSEARCH_CLASSES_BY_MODEL
 from DDR import inheritance
 from DDR import locking
@@ -161,6 +161,15 @@ class DDRObject(object):
                 if fieldname in keys:
                     data.pop(fieldname)
             return data
+
+        def set_empty_defaults(data, module):
+            """Set empty fields to correct defaults from module.FIELDS
+            Prevents false positives w old objects that don't use current defaults.
+            """
+            for field in module.FIELDS:
+                if (field['name'] in data.keys()) and not data[field['name']]:
+                    data[field['name']] = field['default']
+            return data
         
         # load list of fields from file
         raw = load_json_lite(path, 'entity', 'ddr-densho-12-1')
@@ -174,6 +183,8 @@ class DDRObject(object):
         
         this = rm_ignored(self.dict(), ignore_fields)
         that = rm_ignored(other, ignore_fields)
+        set_empty_defaults(this, MODULES[self.identifier.model])
+        set_empty_defaults(that, MODULES[self.identifier.model])
         try:
             return DeepDiff(this, that)
         except TypeError:
