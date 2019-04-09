@@ -126,7 +126,7 @@ class DDRObject(object):
         this = rm_ignored(self.dict(), ignore_fields)
         that = rm_ignored(other.dict(), ignore_fields)
         try:
-            return DeepDiff(this, that)
+            return DeepDiff(this, that, ignore_order=True)
         except TypeError:
             # DeepDiff crashes when trying to compare timezone-aware and
             # timezone-ignorant datetimes. Let's consider these different
@@ -186,7 +186,7 @@ class DDRObject(object):
         set_empty_defaults(this, MODULES[self.identifier.model])
         set_empty_defaults(that, MODULES[self.identifier.model])
         try:
-            return DeepDiff(this, that)
+            return DeepDiff(this, that, ignore_order=True)
         except TypeError:
             # DeepDiff crashes when trying to compare timezone-aware and
             # timezone-ignorant datetimes. Let's consider these different
