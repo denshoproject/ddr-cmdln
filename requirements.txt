@@ -8,7 +8,7 @@
 
 beautifulsoup4==4.5.3     # MIT          y
 click==6.7                # BSD          y        y
-deepdiff==3.3.0           # MIT          y        y
+deepdiff==3.3.0           # MIT          y        y    3.3.0 last to support Py2.*
 elasticsearch>=2.0.0,<3.0.0     # Apache y        y
 elasticsearch-dsl>=2.0.0,<3.0.0 # Apache y        y
 envoy==0.0.3              # MIT          y             TODO replace!
@@ -25,7 +25,7 @@ unicodecsv==0.14.1        # BSD          y        y
 
 bpython
 coverage
-pytest>=2.8.0,<4
+pytest
 pytest-cov
 pytest-testmon
 pytest-xdist

@@ -39,24 +39,19 @@ def test_is_iaobject():
     assert out3 == False
 
 def test_iaobject_get():
-    o0 = archivedotorg.IAObject().get(
+    o0 = archivedotorg.IAObject(
         'ddr-densho-1000-1-1', 200, SEGMENT_XML
     )
     out0 = str(o0)
     out1 = o0.xml_url
     assert out0 == '<DDR.archivedotorg.IAObject ddr-densho-1000-1-1>'
     assert out1 == 'https://archive.org/download/ddr-densho-1000-1-1/ddr-densho-1000-1-1_files.xml'
-    
-    o1 = archivedotorg.IAObject().get(
-        'ddr-densho-1000-1-1', 200, SEGMENT_XML_NO_FILES
-    )
-    assert o1 == None
 
 def test_file_url():
     FORMATS = archivedotorg.FORMATS
-    o = archivedotorg.IAObject()
-    o.id = 'ddr-densho-1000-1-1'
-    o.soup = BeautifulSoup(SEGMENT_XML, 'html.parser')
+    o = archivedotorg.IAObject(
+        'ddr-densho-1000-1-1', 200, SEGMENT_XML
+    )
     for tag in o.soup('file', source='original'):
         if os.path.splitext(tag['name'])[1].replace('.','') in FORMATS:
             pass
@@ -67,8 +62,9 @@ def test_file_url():
 #def test_iaobject_get_xml():
 
 def test_iaobject_get_original():
-    o = archivedotorg.IAObject()
-    o.id = 'ddr-densho-1000-1-1'
+    o = archivedotorg.IAObject(
+        'ddr-densho-1000-1-1', 200, SEGMENT_XML
+    )
     o.soup = BeautifulSoup(SEGMENT_XML, 'html.parser')
     out0 = o._get_original()
     expected0 = 'ddr-densho-1000-1-1-mezzanine-0762419626.mpg'
@@ -86,8 +82,9 @@ def test_iaobject_get_original():
         out2 = o._get_original()
 
 def test_iaobject_original_file():
-    o = archivedotorg.IAObject()
-    o.id = 'ddr-densho-1000-1-1'
+    o = archivedotorg.IAObject(
+        'ddr-densho-1000-1-1', 200, SEGMENT_XML
+    )
     o.xml_url = archivedotorg._xml_url(o.id)
     o.xml = SEGMENT_XML
     o.soup = BeautifulSoup(SEGMENT_XML, 'html.parser')
@@ -102,7 +99,7 @@ def test_iaobject_original_file():
     expected = '<DDR.archivedotorg.IAFile ddr-densho-1000-1-1-mezzanine-0762419626.mpg>'
 
 def test_iaobject_dict():
-    o = archivedotorg.IAObject().get(
+    o = archivedotorg.IAObject(
         'ddr-densho-1000-1-1', 200, SEGMENT_XML
     )
     out = o.dict()

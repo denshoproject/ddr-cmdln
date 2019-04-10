@@ -38,7 +38,7 @@ def make_rowds(rows, row_start=0, row_end=9999999):
             errors.append(msg)
     return headers,rowds,errors
 
-def validate_headers(headers, field_names, exceptions):
+def validate_headers(headers, field_names, exceptions, additional):
     """Validates headers and crashes if problems.
     
     >>> model = 'entity'
@@ -57,6 +57,7 @@ def validate_headers(headers, field_names, exceptions):
     @param headers: List of field names
     @param field_names: List of field names
     @param exceptions: List of nonrequired field names
+    @param additional: List of nonrequired fields which may appear
     """
     missing_headers = [
         field for field in field_names
@@ -65,7 +66,8 @@ def validate_headers(headers, field_names, exceptions):
     ]
     bad_headers = [
         header for header in headers
-        if header not in field_names
+        if (header not in field_names)
+        and (header not in additional)
     ]
     errs = {}
     if missing_headers:

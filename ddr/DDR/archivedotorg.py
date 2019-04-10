@@ -22,6 +22,30 @@ FILE_DOWNLOAD_URL = '{base}/{segmentid}/{fileid}'
 FORMATS = ['mp3', 'mp4', 'mpg', 'ogv', 'png',]
 FIELDNAMES = ['sha1','size','length','height','width','title',]
 
+DUMMY_OBJECTS = {
+    'av': 'ddr-csujad-28-1',
+    'vh': 'ddr-densho-1000-28-1',
+}
+
+
+def get_ia_meta(o):
+    """Get object record from Internet Archive; use dummy record if unpublished
+    
+    @param o: models.Entity
+    @returns: dict or None
+    """
+    if is_iaobject(o):
+        iaobject = IAObject(o.identifier.id)
+        if iaobject.http_status == 200:
+            return iaobject.dict()
+        else:
+            # Couldn't find object in IA - use a dummy
+            oid = DUMMY_OBJECTS.get(o.format, None)
+            if oid:
+                iaobject = IAObject(oid)
+                if iaobject.http_status == 200:
+                    return iaobject.dict()
+    return {}
 
 def is_iaobject(o):
     """Determines whether or not to check Internet Archive for this object
@@ -51,8 +75,7 @@ class IAObject():
             self.id
         )
 
-    @staticmethod
-    def get(oid, http_status=None, xml=None):
+    def __init__(self, oid, http_status=None, xml=None, *args, **kwargs):
         """Get segment file metadata from Archive.org
          
         @param oid: str object ID
@@ -60,29 +83,34 @@ class IAObject():
         @param xml: str (optional)
         @returns: dict
         """
-        o = IAObject()
-        o.id = oid
-        o.xml_url = _xml_url(o.id)
+        self.id = oid
+        self.xml_url = _xml_url(self.id)
         if http_status and xml:
-            o.http_status,o.xml = http_status,xml
+            self.http_status,self.xml = http_status,xml
         else:
-            o.http_status,o.xml = get_xml(oid)
-        o.soup = BeautifulSoup(o.xml, 'html.parser')
-        o.original = o._get_original()
-        if not o.original:
+            self.http_status,self.xml = get_xml(oid)
+        self.soup = BeautifulSoup(self.xml, 'html.parser')
+        self.original = self._get_original()
+        if not self.original:
             # interview entities don't have any actual files
             return None
-        o._gather_files_meta()
-        o._assign_mimetype()
-        return o
+        self._gather_files_meta()
+        self._assign_mimetype()
     
     def _get_original(self):
-        """
-        Archive.org objects correspond to the DDR *Entity* or *Segment*, not *File*.
-        Archive.org objects have many files, each marked as "original" or "derivative".
+        """Returns filename of original master object
+        
+        Archive.org objects correspond to DDR *Entity* or *Segment*, not *File*.
+        Archive.org objects have files, each marked "original" or "derivative".
         Many files marked "original" are not actually original, e.g. *.asr.srt.
         One file marked "original" *should* be the one uploaded by Densho.
         Files uploaded by Densho are in a limited set of formats.
+        
+        NO: <file name="ddr-densho-1000-210-1-mezzanine-a709bc73aa.asr.js" source="original">
+        NO: <file name="ddr-densho-1000-210-1-mezzanine-a709bc73aa.mp3" source="derivative">
+        YES: <file name="ddr-densho-1000-210-1-mezzanine-a709bc73aa.mpg" source="original">
+        
+        @returns: str Filename
         """
         files = [
             tag for tag in self.soup('file', source='original')
@@ -96,32 +124,24 @@ class IAObject():
         return orig['name']
     
     def _gather_files_meta(self):
+        """Populate self.files with info for supported formats
+        """
         for format_ in FORMATS:
             for tag in self.soup.files.children:
                 if isinstance(tag, Tag) and (format_ in tag['name']):
-                    self.files[format_] = self._file_meta(format_, tag)
-    
-    def _file_meta(self, format_, tag):
-        f = IAFile()
-        f.name = tag['name']
-        f.format = format_
-        f.url = _file_url(self.id, tag)
-        f.mimetype,f.encoding = mimetypes.guess_type(tag['name'])
-        for field in FIELDNAMES:
-            f._fields.append(field)
-            try:
-                setattr(f, field, tag.find(field).contents[0])
-            except AttributeError:
-                setattr(f, field, '')
-        return f
+                    self.files[format_] = IAFile(self.id, format_, tag)
     
     def _assign_mimetype(self):
+        """Assign self the mimetype of the original file
+        """
         for format_,f in self.files.iteritems():
             if f.name == self.original:
                 self.mimetype = f.mimetype
                 break
     
     def original_file(self):
+        """
+        """
         base,ext = os.path.splitext(self.original)
         ext = ext.replace('.','')
         return self.files[ext]
@@ -146,6 +166,18 @@ class IAFile():
     mimetype = ''
     encoding = ''
     _fields = []
+    
+    def __init__(self, oid, format_, tag):
+        self.name = tag['name']
+        self.format = format_
+        self.url = _file_url(oid, tag)
+        self.mimetype,self.encoding = mimetypes.guess_type(tag['name'])
+        for field in FIELDNAMES:
+            self._fields.append(field)
+            try:
+                setattr(self, field, tag.find(field).contents[0])
+            except AttributeError:
+                setattr(self, field, '')
     
     def __repr__(self):
         return "<%s.%s %s>" % (

@@ -217,6 +217,7 @@ class File(common.DDRObject):
             parent.children(force_read=True)
             parent.write_json()
             updated_files.append(parent.json_path)
+            updated_files.append(parent.changelog_path)
         
         # files have no child object inheritors
         
@@ -245,7 +246,12 @@ class File(common.DDRObject):
             collection = self.identifier.collection().object()
         
         # metadata jsons (rm this file, modify parent entity)
-        rm_files,updated_files = entity.prep_rm_file(self)
+        rm_files = [
+            f for f in self.files_rel()
+            if os.path.exists(
+                os.path.join(self.collection_path, f)
+            )
+        ]
         
         # binary and access file
         if os.path.exists(self.path_abs) and not (self.path_rel in rm_files):
@@ -257,6 +263,13 @@ class File(common.DDRObject):
         
         #IMPORTANT: some files use same binary for master,mezz
         #we want to be able to e.g. delete mezz w/out deleting master
+        
+        # parent entity
+        entity.remove_child(self.id)
+        entity.write_json(force=True)
+        updated_files = [
+            'entity.json'  # TODO should be entity.identifier.path_rel('json')
+        ]
         
         # write files and commit
         status,message,updated_files = commands.file_destroy(

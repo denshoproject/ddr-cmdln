@@ -14,7 +14,8 @@ from DDR.control import EntityControlFile
 from DDR import docstore
 from DDR import fileio
 from DDR import format_json
-from DDR.identifier import Identifier, ID_COMPONENTS, MODULES, VALID_COMPONENTS
+from DDR.identifier import Identifier, MODULES
+from DDR.identifier import CHILDREN, ID_COMPONENTS, NODES, VALID_COMPONENTS
 from DDR import ingest
 from DDR import inheritance
 from DDR import locking
@@ -24,6 +25,7 @@ from DDR import modules
 from DDR import util
 
 ENTITY_FILES_PREFIX = 'files'
+
 
 class ListEntity( object ):
     identifier = None
@@ -36,155 +38,6 @@ class ListEntity( object ):
     def __repr__(self):
         return "<DDRListEntity %s>" % (self.id)
 
-# "children": [
-#   {
-#     "id": "ddr-densho-500-85-1",
-#     "title": "Gordon Hirabayashi Interview II Segment 1"
-#     "public": "1",
-#     "order": 1
-#   }
-# ],
-# "file_groups": [
-#   {
-#     "role": "master",
-#     "files": [
-#       {
-#         "id": "ddr-densho-23-1-transcript-adb451ffec",
-#         "path_rel": "ddr-densho-23-1-transcript-adb451ffec.htm",
-#         "label": "Transcript of interview",
-#         "record_created": "2016-07-29T18:00:00",
-#         "mimetype": "applications/text",
-#         "size": "12345",
-#         "public": "1",
-#         "sort": "1"
-#       }
-#     ]
-#   },
-#   {
-#     "role": "mezzanine",
-#     "files": [...]
-#   },
-#   {
-#     "role": "transcript",
-#     "files": [...]
-#   },
-# ]
-
-def filegroups_to_files(file_groups):
-    """Converts file_groups structure to list of files.
-    
-    Works with either metadata (dict) or File objects.
-    
-    @param file_groups: list of dicts
-    @return: list of File objects
-    """
-    files = []
-    for fg in file_groups:
-        files = files + fg['files']
-    return files
-
-def files_to_filegroups(files, to_dict=False):
-    """Converts list of files to file_groups structure.
-    
-    Works with either metadata (dict) or File objects.
-    
-    @param files: list
-    @returns: list of dicts
-    """
-    def get_role(f):
-        if isinstance(f, File):
-            return getattr(f, 'role')
-        elif isinstance(f, dict) and f.get('role'):
-            return f.get('role')
-        elif isinstance(f, dict) and f.get('path_rel'):
-            fid = os.path.basename(os.path.splitext(f['path_rel'])[0])
-            fi = Identifier(id=fid)
-            return fi.idparts['role']
-        return None
-    # intermediate format
-    fgroups = {}
-    for f in files:
-        role = get_role(f)
-        if not fgroups.get(role):
-            fgroups[role] = []
-    for f in files:
-        role = get_role(f)
-        if role:
-            if to_dict:
-                fgroups[role].append(file_to_filemeta(f))
-            else:
-                fgroups[role].append(f)
-    # final format
-    file_groups = [
-        {
-            'role': role,
-            'files': fgroups[role],
-        }
-        for role in VALID_COMPONENTS['role']
-        if fgroups.get(role)
-    ]
-    return file_groups
-
-ENTITY_ENTITY_KEYS = [
-    'id',
-    'title',
-    'public',
-    'sort',
-    'signature_id',
-]
-
-ENTITY_FILE_KEYS = [
-    'id',
-    'path_rel',
-    'label',
-    #'record_created',
-    #'mimetype',
-    'size',
-    'public',
-    'sort',
-]
-
-def entity_to_childrenmeta(o):
-    """Given an Entity object, return the dict used in entity.json
-    
-    @param o: Entity object
-    @returns: dict
-    """
-    data = {}
-    if isinstance(o, dict):
-        for key in ENTITY_ENTITY_KEYS:
-            val = None
-            if hasattr(o, key):
-                val = getattr(o, key, None)
-            elif o.get(key,None):
-                val = o[key]
-            if val != None:
-                data[key] = val
-    elif isinstance(o, Entity):
-        for key in ENTITY_ENTITY_KEYS:
-            data[key] = getattr(o, key, None)
-    return data
-
-def file_to_filemeta(f):
-    """Given a File object, return the file dict used in entity.json
-    
-    @param f: File object
-    @returns: dict
-    """
-    fd = {}
-    if isinstance(f, dict):
-        for key in ENTITY_FILE_KEYS:
-            val = None
-            if hasattr(f, key):
-                val = getattr(f, key, None)
-            elif f.get(key,None):
-                val = f[key]
-            if val != None:
-                fd[key] = val
-    elif isinstance(f, File):
-        for key in ENTITY_FILE_KEYS:
-            fd[key] = getattr(f, key)
-    return fd
 
 class Entity(common.DDRObject):
     root = None
@@ -207,12 +60,10 @@ class Entity(common.DDRObject):
     control_path_rel = None
     mets_path_rel = None
     files_path_rel = None
-    children_meta = []
-    files_dict = {}
-    file_groups = []
-    _children_objects = 0
-    _file_objects = 0
-    _file_objects_loaded = 0
+    _entities_meta = []
+    _files_meta = []
+    _children_meta = []
+    _children_objects = []
     signature_id = ''
     
     def __init__( self, path_abs, id=None, identifier=None ):
@@ -248,9 +99,6 @@ class Entity(common.DDRObject):
         self.control_path_rel = i.path_rel('control')
         self.mets_path_rel = i.path_rel('mets')
         self.files_path_rel = i.path_rel('files')
-        
-        self._children_objects = []
-        self._file_objects = []
 
     @staticmethod
     def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
@@ -277,8 +125,11 @@ class Entity(common.DDRObject):
         }
         
         if basepath:
-            logging.debug('Checking for %s in %s' % (oidentifier.id, oidentifier.path_abs()))
-            if os.path.exists(oidentifier.path_abs()) and os.path.exists(oidentifier.path_abs('json')):
+            logging.debug('Checking for %s in %s' % (
+                oidentifier.id, oidentifier.path_abs()
+            ))
+            if os.path.exists(oidentifier.path_abs()) \
+            and os.path.exists(oidentifier.path_abs('json')):
                 data['filesystem'] = True
             else:
                 data['filesystem'] = False
@@ -394,7 +245,59 @@ class Entity(common.DDRObject):
         )
         return exit,status,updated_files
     
-    #TODO def delete(self ...)
+    def delete(self, git_name, git_mail, agent, commit=True):
+        """Removes File metadata and file, updates parent entity, and commits.
+        
+        @param git_name: str
+        @param git_mail: str
+        @param agent: str
+        @param commit: boolean
+        @returns: exit,status,removed_files,updated_files (int,str,list,list)
+        """
+        exit = 1; status = 'unknown'; updated_files = []
+        parent = self.identifier.parent().object()
+        collection = self.identifier.collection().object()
+        
+        # metadata jsons
+        # NOTE: child File objects are deleted in commands.entity_destroy
+        
+        # parent entity
+        parent.remove_child(self.id)
+        parent.write_json(force=True)
+        updated_files = [
+            parent.identifier.path_rel('json'),
+        ]
+        
+        # write files and commit
+        return commands.entity_destroy(
+            git_name, git_mail,
+            self,
+            updated_files,
+            agent=agent,
+            commit=commit
+        )
+
+    def dict(self, json_safe=False):
+        """Returns OrderedDict of object data
+        
+        Overrides common.DDRObject.dict and adds Entity.children, .file_groups
+        
+        @param json_safe: bool Serialize e.g. datetime to text
+        @returns: OrderedDict
+        """
+        data = common.to_dict(
+            self, self.identifier.fields_module(), json_safe=json_safe
+        )
+        data['children'] = [
+            entity_to_childrenmeta(o)
+            for o in self.children()
+            if o.identifier.model in ['entity', 'segment']
+        ]
+        data['file_groups'] = files_to_filegroups([
+            o for o in self.children()
+            if o.identifier.model == 'file'
+        ])
+        return data
     
     @staticmethod
     def from_json(path_abs, identifier=None):
@@ -435,23 +338,48 @@ class Entity(common.DDRObject):
     def children( self, role=None, quick=None, force_read=False ):
         """Return list of Entity's children; regenerate list if specified.
         
-        @param role: str Restrict list to specified role
+        @param role: str Restrict list to specified File role
         @param quick: bool Not used
         @param force_read: bool Scan entity dir for file jsons
         @returns: list of File objects, sorted
         """
-        self.load_children_objects(Identifier, Entity, force_read=force_read)
-        self.load_file_objects(Identifier, File, force_read=force_read)
+        if force_read or not self._children_objects:
+            od = OrderedDict()
+            for d in self._children_meta:
+                o = Identifier(
+                    d['id'], base_path=self.identifier.basepath).object()
+                od[o.id] = o
+            self._children_objects = od.values()
         if role:
-            files = [
-                f for f in self._file_objects
-                if hasattr(f,'role') and (f.role == role)
+            return [
+                o
+                for o in self._children_objects
+                if hasattr(o, 'role') and (o.role == role)
             ]
-        else:
-            files = [f for f in self._file_objects]
-        self.files = sorted(files, key=lambda f: int(f.sort))
-        return self._children_objects + self.files
+        return self._children_objects
 
+    def children_counts(self):
+        """Totals number of (entity) children and each file role
+        
+        Used to produce tabs in ddrlocal UI
+        
+        @returns: dict {'children', 1, 'mezzanine':3, 'master':3, ... }
+        """
+        # set up structure
+        counts = OrderedDict()
+        counts['children'] = 0
+        for role in VALID_COMPONENTS['role']:
+            counts[role] = 0
+        # non-file objects are 'children'
+        for c in self.children():
+            if c.identifier.model not in NODES:
+                counts['children'] += 1
+        # file roles have their own counts
+        for c in self.children():
+            if c.identifier.idparts.get('role'):
+                counts[c.identifier.idparts['role']] += 1
+        return counts
+        
     def load_json(self, json_text):
         """Populate Entity data from JSON-formatted text.
         
@@ -460,35 +388,28 @@ class Entity(common.DDRObject):
         module = self.identifier.fields_module()
         json_data = common.load_json(self, module, json_text)
         # special cases
-        # files or file_groups -> self.files
-        self.files = []
+        # children and files/file_groups -> ._children_meta
         for fielddict in json_data:
             for fieldname,data in fielddict.iteritems():
                 if (fieldname in ['children', 'children_meta']) and data:
-                    self.children_meta = data
-                elif (fieldname == 'file_groups') and data:
-                    self.files_dict = {
-                        d['role']: d['files']
-                        for d in data
-                    }
-                    self.file_groups = [
-                        {'role': role, 'files': self.files_dict.get(role, [])}
-                        for role in VALID_COMPONENTS['role']
-                    ]
-                    self.files = filegroups_to_files(data)
-                elif (fieldname == 'files') and data:
-                    self.files = data
-        self.rm_file_duplicates()
+                    self._entities_meta = data
+                elif (fieldname in ['files', 'file_groups']) and data:
+                    self._files_meta = data
+        self._children_meta = _meld_child_entity_file_meta(
+            self._entities_meta,
+            self._files_meta
+        )
 
     def dump_json(self, template=False, doc_metadata=False, obj_metadata={}):
         """Dump Entity data to JSON-formatted text.
         
-        @param template: [optional] Boolean. If true, write default values for fields.
+        @param template: [optional] Boolean. If true, write default field values.
         @param doc_metadata: boolean. Insert object_metadata().
         @param obj_metadata: dict Cached results of object_metadata.
         @returns: JSON-formatted text
         """
         module = self.identifier.fields_module()
+        self.children(force_read=True)
         data = common.dump_json(self, module,
                          exceptions=['files', 'filemeta'],
                          template=template,)
@@ -498,10 +419,17 @@ class Entity(common.DDRObject):
             data.insert(0, common.object_metadata(module, self.parent_path))
         
         data.append({
-            'children': [entity_to_childrenmeta(o) for o in self.children_meta]
+            'children': [
+                entity_to_childrenmeta(o)
+                for o in self.children()
+                if o.identifier.model in ['entity', 'segment']
+            ]
         })
         data.append({
-            'file_groups': files_to_filegroups(self._file_objects, to_dict=1)
+            'file_groups': files_to_filegroups([
+                o for o in self.children()
+                if o.identifier.model == 'file'
+            ])
         })
         return format_json(data)
     
@@ -560,7 +488,8 @@ class Entity(common.DDRObject):
     def dump_xml(self):
         """Dump Entity data to mets.xml file.
         
-        TODO This should not actually write the XML! It should return XML to the code that calls it.
+        TODO This should not actually write the XML! It should return XML
+        to the code that calls it.
         """
         return Template(
             fileio.read_text(config.TEMPLATE_METS_JINJA2)
@@ -613,24 +542,6 @@ class Entity(common.DDRObject):
                 checksums.append( (cs, os.path.basename(fpath)) )
         return checksums
     
-    def _children_paths(self, rel=False):
-        """Searches filesystem for (entity) childrens' metadata files, returns relative paths.
-        @param rel: bool Return relative paths
-        @returns: list
-        """
-        if os.path.exists(self.files_path):
-            prefix_path = 'THISWILLNEVERMATCHANYTHING'
-            if rel:
-                prefix_path = '{}/'.format(os.path.normpath(self.files_path))
-            return sorted(
-                [
-                    f.replace(prefix_path, '')
-                    for f in util.find_meta_files(self.files_path, recursive=True)
-                ],
-                key=lambda f: util.natural_order_string(f)
-            )
-        return []
-    
     def _file_paths(self, rel=False):
         """Searches filesystem for childrens' metadata files, returns relative paths.
         @param rel: bool Return relative paths
@@ -649,150 +560,26 @@ class Entity(common.DDRObject):
             )
         return []
     
-    def load_children_objects(self, identifier_class, object_class, force_read=False):
-        """Regenerates list of file info dicts with list of File objects
-        
-        TODO Don't call in loop - causes all file .JSONs to be loaded!
-        
-        @param force_read: bool Traverse filesystem if true.
-        @returns: None
-        """
-        if force_read or (not hasattr(self, '_children_objects')):
-            self._children_objects = [
-                object_class.from_identifier(
-                    identifier_class(
-                        path=os.path.dirname(json_path)
-                    )
-                )
-                for json_path in self._children_paths()
-                if util.path_matches_model(json_path, self.identifier.model)
-            ]
-            self.children_meta = [
-                entity_to_childrenmeta(o)
-                for o in self._children_objects
-            ]
-        return self._children_objects
-    
-    def load_file_objects(self, identifier_class, object_class, force_read=False):
-        """Regenerates list of file info dicts with list of File objects
-        
-        NOTE: if file_groups contains pointer to nonexistent file, insert a dict
-        containing the error message rather than crashing.
-        TODO Don't call in loop - causes all file .JSONs to be loaded!
-        
-        @param force_read: bool Traverse filesystem if true.
-        @returns: None
-        """
-        self._file_objects = []
-        if force_read:
-            # filesystem
-            for json_path in self._file_paths():
-                fid = os.path.splitext(os.path.basename(json_path))[0]
-                basepath = self.identifier.basepath
-                try:
-                    file_ = object_class.from_identifier(
-                        identifier_class(
-                            id=fid,
-                            base_path=basepath
-                        ),
-                        # Disable inheritance in loops to avoid infinite loops.
-                        inherit=False
-                    )
-                except IOError as err:
-                    f['error'] = err
-                    file_ = {'id': fid, 'error': err}
-                self._file_objects.append(file_)
-        else:
-            for f in self.files:
-                if f and f.get('path_rel',None):
-                    basename = os.path.basename(f['path_rel'])
-                    fid = os.path.splitext(basename)[0]
-                    try:
-                        file_ = object_class.from_identifier(
-                            identifier_class(
-                                id=fid,
-                                base_path=self.identifier.basepath
-                            ),
-                            # Disable inheritance in loops to avoid infinite loops.
-                            inherit=False
-                        )
-                    except IOError as err:
-                        f['error'] = err
-                        file_ = {'id': fid, 'error': err}
-                    self._file_objects.append(file_)
-        # keep track of how many times this gets loaded...
-        self._file_objects_loaded = self._file_objects_loaded + 1
-    
-    def detect_file_duplicates( self, role ):
-        """Returns list of file dicts that appear in Entity.files more than once
+    def detect_children_duplicates(self):
+        """Returns list of objects that appear in Entity.children more than once
         
         NOTE: This function looks only at the list of file dicts in entity.json;
         it does not examine the filesystem.
+        @returns: list
         """
         duplicates = []
-        for x,f in enumerate(self.files):
-            for y,f2 in enumerate(self.files):
-                if (f != f2) and (f['path_rel'] == f2['path_rel']) and (f2 not in duplicates):
-                    duplicates.append(f)
+        for x,c in enumerate(self.children()):
+            for y,c2 in enumerate(self.children()):
+                if (c != c2) and (c.path_rel == c2.path_rel) and (c2 not in duplicates):
+                    duplicates.append(c)
         return duplicates
     
-    def rm_file_duplicates( self ):
-        """Remove duplicates from the Entity.files (._files) list of dicts.
-        
-        Technically, it rebuilds the last without the duplicates.
-        NOTE: See note for detect_file_duplicates().
-        """
-        # regenerate files list
-        new_files = []
-        for f in self.files:
-            if f not in new_files:
-                new_files.append(f)
-        self.files = new_files
-        # reload objects
-        self.load_file_objects(Identifier, File)
-    
-    def _children_meta(self):
-        """
-        children = [
-            {
-                "id": "ddr-densho-500-85-1",
-                "sort": 1,
-                "public": "1",
-                "title": "Gordon Hirabayashi Interview II Segment 1"
-            },
-            {
-                "id": "ddr-densho-500-85-2",
-                "sort": 2,
-                "public": "1",
-                "title": "Gordon Hirabayashi Interview II Segment 2"
-            },
-            ...
-        ]
-        """
-        children = []
-        for child in self.children():
-            if isinstance(child, File):
-                children.append({
-                    "id": child.id,
-                    "order": child.sort,
-                    "public": child.public,
-                    "title": child.label,
-                })
-            elif isinstance(child, Entity):
-                children.append({
-                    "id": child.id,
-                    "order": child.sort,
-                    "public": child.public,
-                    "title": child.title,
-                })
-        return children
-        
     def file( self, role, sha1, newfile=None ):
         """Given a SHA1 hash, get the corresponding file dict.
         
         @param role
         @param sha1
-        @param newfile (optional) If present, updates existing file or appends new one.
+        @param newfile (optional) If present, updates existing file or adds new one.
         @returns 'added', 'updated', File, or None
         """
         self.load_file_objects(Identifier, File)
@@ -815,7 +602,9 @@ class Entity(common.DDRObject):
         return ingest.addfile_logger(self)
     
     def add_local_file(self, src_path, role, data, git_name, git_mail, agent=''):
-        return ingest.add_local_file(self, src_path, role, data, git_name, git_mail, agent)
+        return ingest.add_local_file(
+            self, src_path, role, data, git_name, git_mail, agent
+        )
     
     def add_external_file(self, data, git_name, git_mail, agent=''):
         return ingest.add_external_file(self, data, git_name, git_mail, agent)
@@ -826,51 +615,25 @@ class Entity(common.DDRObject):
         )
     
     def add_file_commit(self, file_, repo, log, git_name, git_mail, agent):
-        return ingest.add_file_commit(self, file_, repo, log, git_name, git_mail, agent)
-
-    def prep_rm_file(self, file_):
-        """Delete specified file and update Entity.
-        
-        IMPORTANT: This function modifies entity.json and lists files to remove.
-        The actual file removal and commit is done by commands.file_destroy.
-        
-        @param file_: File
-        """
-        logger.debug('%s.rm_file(%s)' % (self, file_))
-        
-        # list of files to be *removed*
-        rm_files = [
-            f for f in file_.files_rel()
-            if os.path.exists(
-                os.path.join(self.collection_path, f)
-            )
-        ]
-        logger.debug('rm_files: %s' % rm_files)
-        
-        # rm file_ from entity metadata
-        #
-        # entity._file_objects
-        self._file_objects = [
-            f for f in deepcopy(self._file_objects) if f.id != file_.id
-        ]
-        #
-        # entity.file_groups (probably unnecessary)
-        files = filegroups_to_files(self.file_groups)
-        for f in files:
-            if f.get('path_rel') and not f.get('id'):
-                # make sure each file dict has an id
-                f['id'] = os.path.basename(os.path.splitext(f['path_rel'])[0])
-        self.file_groups = files_to_filegroups(
-            # exclude the file
-            [f for f in files if f['id'] != file_.id]
+        return ingest.add_file_commit(
+            self, file_, repo, log, git_name, git_mail, agent
         )
-        self.write_json()
+
+    def remove_child(self, object_id):
+        """Remove child entity from this Entity's children list.
         
-        # list of files to be *updated*
-        updated_files = ['entity.json']
-        logger.debug('updated_files: %s' % updated_files)
-        
-        return rm_files,updated_files
+        @param object_id: str Child object ID
+        """
+        logger.debug('%s.remove_child(%s)' % (self, object_id))
+        self.children()
+        copy_meta = [
+            o for o in self._children_meta if not o['id'] == object_id
+        ]
+        self._children_meta = copy_meta
+        copy_objects = [
+            o for o in self._children_objects if not o.id == object_id
+        ]
+        self._children_objects = copy_objects
     
     def ddrpublic_template_key(self):
         """Combine factors for ddrpublic template selection into key
@@ -918,3 +681,150 @@ class Entity(common.DDRObject):
                 entity.format, signature.mimetype.split('/')[0]
             ])
         return signature,key
+
+
+# "children": [
+#   {
+#     "id": "ddr-densho-500-85-1",
+#     "title": "Gordon Hirabayashi Interview II Segment 1"
+#     "public": "1",
+#     "order": 1
+#   }
+# ],
+# "file_groups": [
+#   {
+#     "role": "master",
+#     "files": [
+#       {
+#         "id": "ddr-densho-23-1-transcript-adb451ffec",
+#         "path_rel": "ddr-densho-23-1-transcript-adb451ffec.htm",
+#         "label": "Transcript of interview",
+#         "record_created": "2016-07-29T18:00:00",
+#         "mimetype": "applications/text",
+#         "size": "12345",
+#         "public": "1",
+#         "sort": "1"
+#       }
+#     ]
+#   },
+#   {
+#     "role": "mezzanine",
+#     "files": [...]
+#   },
+#   {
+#     "role": "transcript",
+#     "files": [...]
+#   },
+# ]
+
+def _meld_child_entity_file_meta(entities_meta, files_meta):
+    """Meld 'children' and 'file_groups' from JSON
+    
+    @param entities_meta: list
+    @param files_meta: list
+    """
+    children = []
+    # entities,segments
+    for e in sorted(entities_meta, key=lambda o: int(o['sort'])):
+        children.append(e)
+    # files
+    for role in VALID_COMPONENTS['role']: # list in roles order
+        for f in files_meta:
+            if f['role'] == role:
+                # sort within role
+                for ff in sorted(f['files'], key=lambda o: int(o['sort'])):
+                    children.append(ff)
+    return children
+
+def filegroups_to_files(file_groups):
+    """Converts file_groups structure to list of files.
+    
+    Works with either metadata (dict) or File objects.
+    
+    @param file_groups: list of dicts
+    @return: list of File objects
+    """
+    files = []
+    for fg in file_groups:
+        files = files + fg['files']
+    return files
+
+def files_to_filegroups(files):
+    """Converts list of files to file_groups structure.
+    
+    Works with either metadata (dict) or File objects.
+    
+    @param files: list of File objects
+    @returns: list of dicts
+    """
+    def get_role(f):
+        if isinstance(f, File):
+            return getattr(f, 'role')
+        elif isinstance(f, dict) and f.get('role'):
+            return f.get('role')
+        elif isinstance(f, dict) and f.get('path_rel'):
+            fid = os.path.basename(os.path.splitext(f['path_rel'])[0])
+            fi = Identifier(id=fid)
+            return fi.idparts['role']
+        return None
+    # intermediate format
+    fgroups = {}
+    for f in files:
+        role = get_role(f)
+        if role and not fgroups.get(role):
+            fgroups[role] = []
+    for f in files:
+        role = get_role(f)
+        if role:
+            fgroups[role].append(file_to_filemeta(f))
+    # final format
+    file_groups = [
+        {
+            'role': role,
+            'files': fgroups[role],
+        }
+        for role in VALID_COMPONENTS['role']
+        if fgroups.get(role)
+    ]
+    return file_groups
+
+ENTITY_ENTITY_KEYS = [
+    'id',
+    'title',
+    'public',
+    'sort',
+    'signature_id',
+]
+
+ENTITY_FILE_KEYS = [
+    'id',
+    'path_rel',
+    'label',
+    #'record_created',
+    #'mimetype',
+    'size',
+    'public',
+    'sort',
+]
+
+def entity_to_childrenmeta(o):
+    """Given an Entity object, return the dict used in entity.json
+    
+    @param o: Entity object
+    @returns: dict
+    """
+    return {
+        key: getattr(o, key, None)
+        for key in ENTITY_ENTITY_KEYS
+    }
+
+def file_to_filemeta(f):
+    """Given a File object, return the file dict used in entity.json
+    
+    @param f: File object
+    @returns: dict
+    """
+    return {
+        key: getattr(f, key)
+        for key in ENTITY_FILE_KEYS
+    }

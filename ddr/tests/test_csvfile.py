@@ -56,10 +56,11 @@ def test_validate_headers():
     headers0 = ['id', 'title']
     field_names0 = ['id', 'title', 'notused']
     exceptions = ['notused']
+    additional = []
     
     # UNIX style silent if everything's OK
     expected0 = {}
-    out0 = csvfile.validate_headers(headers0, field_names0, exceptions)
+    out0 = csvfile.validate_headers(headers0, field_names0, exceptions, additional)
     assert out0 == expected0
     # missing header
     headers1 = ['id']
@@ -67,7 +68,7 @@ def test_validate_headers():
     expected1 = {
         'Missing headers': ['title'],
     }
-    out1 = csvfile.validate_headers(headers1, field_names1, exceptions)
+    out1 = csvfile.validate_headers(headers1, field_names1, exceptions, additional)
     assert out1 == expected1
     # bad header
     headers2 = ['id', 'title', 'badheader']
@@ -75,7 +76,14 @@ def test_validate_headers():
     expected2 = {
         'Bad headers': ['badheader'],
     }
-    out2 = csvfile.validate_headers(headers2, field_names2, exceptions)
+    out2 = csvfile.validate_headers(headers2, field_names2, exceptions, additional)
+    assert out2 == expected2
+    # note
+    headers3 = ['id', 'title', 'note']
+    field_names3 = ['id', 'title', 'this is a note']
+    additional = ['note']
+    expected3 = {}
+    out2 = csvfile.validate_headers(headers2, field_names2, exceptions, additional)
     assert out2 == expected2
 
 def test_account_row():
