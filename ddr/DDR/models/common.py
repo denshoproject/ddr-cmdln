@@ -11,10 +11,11 @@ import simplejson as json
 from DDR import VERSION
 from DDR import archivedotorg
 from DDR import config
+from DDR import converters
 from DDR import docstore
 from DDR import dvcs
 from DDR import fileio
-from DDR.identifier import Identifier, ID_COMPONENTS, MODELS_IDPARTS
+from DDR.identifier import Identifier, ID_COMPONENTS, MODELS_IDPARTS, MODULES
 from DDR.identifier import ELASTICSEARCH_CLASSES_BY_MODEL
 from DDR import inheritance
 from DDR import locking
@@ -26,6 +27,8 @@ INTERVIEW_SIG_REGEX = re.compile(INTERVIEW_SIG_PATTERN)
 
 DIFF_IGNORED = [
     'app_commit', 'commit',  # object metadata
+    'id',
+    'record_created', 'record_lastmod',
 ]
 
 class Path( object ):
@@ -81,10 +84,13 @@ class DDRObject(object):
     #from_csv
     #from_identifier
     
-    def dict(self):
+    def dict(self, json_safe=False):
         """Returns an OrderedDict of object fields data
+        
+        @param json_safe: bool Serialize e.g. datetime to text
+        @returns: OrderedDict
         """
-        return to_dict(self, self.identifier.fields_module())
+        return to_dict(self, self.identifier.fields_module(), json_safe=json_safe)
     
     def diff(self, other, ignore_fields=[]):
         """Compares object fields w those of another (instantiated) object
@@ -122,7 +128,7 @@ class DDRObject(object):
         this = rm_ignored(self.dict(), ignore_fields)
         that = rm_ignored(other.dict(), ignore_fields)
         try:
-            return DeepDiff(this, that)
+            return DeepDiff(this, that, ignore_order=True)
         except TypeError:
             # DeepDiff crashes when trying to compare timezone-aware and
             # timezone-ignorant datetimes. Let's consider these different
@@ -157,6 +163,15 @@ class DDRObject(object):
                 if fieldname in keys:
                     data.pop(fieldname)
             return data
+
+        def set_empty_defaults(data, module):
+            """Set empty fields to correct defaults from module.FIELDS
+            Prevents false positives w old objects that don't use current defaults.
+            """
+            for field in module.FIELDS:
+                if (field['name'] in data.keys()) and not data[field['name']]:
+                    data[field['name']] = field['default']
+            return data
         
         # load list of fields from file
         raw = load_json_lite(path, 'entity', 'ddr-densho-12-1')
@@ -170,8 +185,10 @@ class DDRObject(object):
         
         this = rm_ignored(self.dict(), ignore_fields)
         that = rm_ignored(other, ignore_fields)
+        set_empty_defaults(this, MODULES[self.identifier.model])
+        set_empty_defaults(that, MODULES[self.identifier.model])
         try:
-            return DeepDiff(this, that)
+            return DeepDiff(this, that, ignore_order=True)
         except TypeError:
             # DeepDiff crashes when trying to compare timezone-aware and
             # timezone-ignorant datetimes. Let's consider these different
@@ -399,13 +416,11 @@ class DDRObject(object):
     def is_modified(self):
         """Returns True if object non-ignored fields differ from file.
         
-        @returns: boolean
+        @returns: dict Output of DeepDiff; no diffs -> {} which is Falsey
         """
         if not os.path.exists(self.json_path):
             return True
-        if self.diff_file(self.identifier.path_abs('json')):
-            return True
-        return False
+        return self.diff_file(self.identifier.path_abs('json'))
 
     def write_json(self, doc_metadata=True, obj_metadata={}, force=False):
         """Write Collection/Entity JSON file to disk.
@@ -569,17 +584,23 @@ def is_object_metadata(data):
             return True
     return False
 
-def to_dict(document, module):
+def to_dict(document, module, json_safe=False):
     """Returns an OrderedDict containing the object fields and values.
     
     @param document: Collection, Entity, File document object
     @param module: collection, entity, files model definitions module
+    @param json_safe: bool Serialize Python objects e.g. datetime to text
     @returns: OrderedDict
     """
     data = OrderedDict()
     for f in module.FIELDS:
         fieldname = f['name']
         field_data = getattr(document, f['name'])
+        if json_safe:
+            if isinstance(field_data, Identifier):
+                field_data = str(field_data)
+            elif isinstance(field_data, datetime):
+                field_data = converters.datetime_to_text(field_data)
         data[fieldname] = field_data
     return data
 
