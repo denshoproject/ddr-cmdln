@@ -466,7 +466,6 @@ class Entity(common.DDRObject):
             self.record_created = datetime.now(config.TZ)
         if modified and hasattr(self, 'record_lastmod'):
             self.record_lastmod = datetime.now(config.TZ)
-        self.rm_file_duplicates()
         return modified
 
     def dump_csv(self, fields=[]):
