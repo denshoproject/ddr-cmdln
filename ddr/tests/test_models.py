@@ -311,6 +311,7 @@ def test_Entity__init__():
 # TODO Entity.create
 # TODO Entity.from_identifier
 # TODO Entity.from_json
+# TODO Entity.from_csv
 
 ENTITY_DICT = OrderedDict([
     ('id', 'ddr-testing-123-456'),
@@ -404,6 +405,7 @@ def test_Entity_is_modified():
 
 # TODO Entity.parent
 # TODO Entity.children
+# TODO Entity.children_counts
 # TODO Entity.labels_values
 # TODO Entity.inheritable_fields
 # TODO Entity.selected_inheritables
@@ -444,6 +446,8 @@ def test_Entity_locking():
 # TODO Entity.dump_json
 # TODO Entity.write_json
 # TODO Entity.post_json
+# TODO Entity.load_csv
+# TODO Entity.dump_csv
 
 def test_Entity_changelog():
     collection_id = 'ddr-testing-123'
@@ -457,23 +461,29 @@ def test_Entity_changelog():
 
 # TODO Entity.control
 # TODO Entity.mets
-# TODO Entity.dump_mets
-# TODO Entity.write_mets
+# TODO Entity.dump_xml
+# TODO Entity.write_xml
 
 def test_Entity_checksum_algorithms():
     assert models.Entity.checksum_algorithms() == ['md5', 'sha1', 'sha256']
 
+# TODO Entity.checksum_algorithms
 # TODO Entity.checksums
 # TODO Entity.file_paths
-# TODO Entity.load_file_objects
-# TODO Entity.detect_file_duplicates
-# TODO Entity.rm_file_duplicates
+# TODO Entity.detect_children_duplicates
 # TODO Entity.file
 # TODO Entity.addfile_logger
-# TODO Entity.add_file
+# TODO Entity.add_local_file
+# TODO Entity.add_external_file
 # TODO Entity.add_access
 # TODO Entity.add_file_commit
-# TODO Entity.prep_rm_file
+# TODO Entity.remove_child
+# TODO Entity.ddrpublic_template_key
+# TODO meld_child_entity_file_meta
+# TODO filegroups_to_files
+# TODO files_to_filegroups
+# TODO entity_to_childrenmeta
+# TODO file_to_filemeta
 
 
 # TODO File.__init__
