@@ -83,7 +83,7 @@ class DDRObject(object):
 
     def __lt__(self, other):
         """Enable Pythonic sorting"""
-        return self.identifier._key() < other.identifier._key()
+        return self.identifier.id_sort < other.identifier.id_sort
     
     #exists
     #create
