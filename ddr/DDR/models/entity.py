@@ -39,6 +39,14 @@ class ListEntity( object ):
     def __repr__(self):
         return "<DDRListEntity %s>" % (self.id)
 
+# attrs used in Entity.file_groups
+ENTITY_ENTITY_KEYS = [
+    'id',
+    'title',
+    'public',
+    'sort',
+    'signature_id',
+]
 
 @total_ordering
 class Entity(common.DDRObject):
@@ -290,7 +298,7 @@ class Entity(common.DDRObject):
             commit=commit
         )
 
-    def dict(self, json_safe=False):
+    def dict(self, file_groups=False, json_safe=False):
         """Returns OrderedDict of object data
         
         Overrides common.DDRObject.dict and adds Entity.children, .file_groups
@@ -298,6 +306,11 @@ class Entity(common.DDRObject):
         @param json_safe: bool Serialize e.g. datetime to text
         @returns: OrderedDict
         """
+        if file_groups:
+            return {
+                key: getattr(self, key)
+                for key in ENTITY_ENTITY_KEYS
+            }
         data = common.to_dict(
             self, self.identifier.fields_module(), json_safe=json_safe
         )
@@ -788,7 +801,9 @@ def files_to_filegroups(files):
     for f in files:
         role = get_role(f)
         if role:
-            fgroups[role].append(file_to_filemeta(f))
+            fgroups[role].append(
+                f.dict(file_groups=1)
+            )
     # final format
     file_groups = [
         {
@@ -800,25 +815,6 @@ def files_to_filegroups(files):
     ]
     return file_groups
 
-ENTITY_ENTITY_KEYS = [
-    'id',
-    'title',
-    'public',
-    'sort',
-    'signature_id',
-]
-
-ENTITY_FILE_KEYS = [
-    'id',
-    'path_rel',
-    'label',
-    #'record_created',
-    #'mimetype',
-    'size',
-    'public',
-    'sort',
-]
-
 def entity_to_childrenmeta(o):
     """Given an Entity object, return the dict used in entity.json
     
@@ -828,15 +824,4 @@ def entity_to_childrenmeta(o):
     return {
         key: getattr(o, key, None)
         for key in ENTITY_ENTITY_KEYS
-    }
-
-def file_to_filemeta(f):
-    """Given a File object, return the file dict used in entity.json
-    
-    @param f: File object
-    @returns: dict
-    """
-    return {
-        key: getattr(f, key)
-        for key in ENTITY_FILE_KEYS
     }

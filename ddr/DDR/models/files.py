@@ -36,6 +36,18 @@ FILE_KEYS = ['path_rel',
              'access_rel',
              'xmp',]
 
+# attrs used in Entity.file_groups
+ENTITY_FILE_KEYS = [
+    'id',
+    'path_rel',
+    'label',
+    #'record_created',
+    #'mimetype',
+    'size',
+    'public',
+    'sort',
+]
+
 @total_ordering
 class File(common.DDRObject):
     id = None
@@ -534,7 +546,15 @@ class File(common.DDRObject):
                 f[key] = getattr(self, key, None)
         return f
         
-    def dict( self ):
+    def dict(self, file_groups=False):
+        """
+        @param file_groups: bool If True return dict for Entity.file_groups
+        """
+        if file_groups:
+            return {
+                key: getattr(self, key)
+                for key in ENTITY_FILE_KEYS
+            }
         return self.__dict__
         
     @staticmethod

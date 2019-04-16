@@ -483,7 +483,6 @@ def test_Entity_checksum_algorithms():
 # TODO filegroups_to_files
 # TODO files_to_filegroups
 # TODO entity_to_childrenmeta
-# TODO file_to_filemeta
 
 
 # TODO File.__init__
