@@ -362,7 +362,7 @@ class Entity(common.DDRObject):
 #        return Collection.from_identifier(cidentifier)
    
     def children( self, role=None, quick=None, force_read=False ):
-        """Return list of Entity's children; regenerate list if specified.
+        """List Entity's child objects,files; optionally regenerate list
         
         @param role: str Restrict list to specified File role
         @param quick: bool Not used
@@ -370,12 +370,25 @@ class Entity(common.DDRObject):
         @returns: list of File objects, sorted
         """
         if force_read or not self._children_objects:
-            od = OrderedDict()
-            for d in self._children_meta:
-                o = Identifier(
-                    d['id'], base_path=self.identifier.basepath).object()
-                od[o.id] = o
-            self._children_objects = od.values()
+            # read objects from filesystem
+            objects = sorted([
+                Identifier(path).object() for path in self._children_paths()
+            ])
+            # TODO replace hard-coded models
+            # entities,segments
+            self._children_objects = [
+                o
+                for o in objects
+                if o.identifier.model in ['entity', 'segment']
+            ]
+            # files
+            for o in objects:
+                if o.identifier.model in ['file']:
+                    self._children_objects.append(o)
+            self._children_meta = [
+                o.dict(file_groups=True)
+                for o in self._children_objects
+            ]
         if role:
             return [
                 o
@@ -566,6 +579,24 @@ class Entity(common.DDRObject):
             if cs:
                 checksums.append( (cs, os.path.basename(fpath)) )
         return checksums
+    
+    def _children_paths(self, rel=False):
+        """Searches filesystem for (entity) childrens' metadata files, returns relati
+        @param rel: bool Return relative paths
+        @returns: list
+        """
+        if os.path.exists(self.files_path):
+            prefix_path = 'THISWILLNEVERMATCHANYTHING'
+            if rel:
+                prefix_path = '{}/'.format(os.path.normpath(self.files_path))
+            return sorted(
+                [
+                    f.replace(prefix_path, '')
+                    for f in util.find_meta_files(self.files_path, recursive=True)
+                ],
+                key=lambda f: util.natural_order_string(f)
+            )
+        return []
     
     def _file_paths(self, rel=False):
         """Searches filesystem for childrens' metadata files, returns relative paths.
