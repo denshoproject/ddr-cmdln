@@ -1,6 +1,7 @@
 # coding: utf-8
 
 from collections import OrderedDict
+from functools import total_ordering
 import importlib
 import os
 import re
@@ -870,6 +871,7 @@ KWARG_KEYS = [
     'base_path',
 ]
 
+@total_ordering
 class Identifier(object):
     raw = None
     method = None
@@ -1039,16 +1041,22 @@ class Identifier(object):
     def __repr__(self):
         return "<%s.%s %s:%s>" % (self.__module__, self.__class__.__name__, self.model, self.id)
     
+    # NOTE: uses functools.total_ordering to derive the rest of rich comparisons
+    # from __eq__ and __lt__.  Might be a performance problem.
+    # https://docs.python.org/2/library/functools.html#functools.total_ordering
+    def __eq__(self, other):
+        """Enable Pythonic sorting"""
+        return self.path_abs() == other.path_abs()
+    
+    def __lt__(self, other):
+        """Enable Pythonic sorting"""
+        return self._key() < other._key()
+    
     def _key(self):
         """Key for Pythonic object sorting.
         Integer components are returned as ints, enabling natural sorting.
         """
         return self.parts.values()
-    
-    def __lt__(self, other):
-        """Enables Pythonic sorting; see Identifier._key.
-        """
-        return self._key() < other._key()
 
     @staticmethod
     def nextable(model):
