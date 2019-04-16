@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from copy import deepcopy
 from datetime import datetime
+from functools import total_ordering
 import logging
 logger = logging.getLogger(__name__)
 import os
@@ -39,6 +40,7 @@ class ListEntity( object ):
         return "<DDRListEntity %s>" % (self.id)
 
 
+@total_ordering
 class Entity(common.DDRObject):
     root = None
     id = None
@@ -99,6 +101,17 @@ class Entity(common.DDRObject):
         self.control_path_rel = i.path_rel('control')
         self.mets_path_rel = i.path_rel('mets')
         self.files_path_rel = i.path_rel('files')
+
+    def __lt__(self, other):
+        """Enable Pythonic sorting"""
+        return self._key() < other._key()
+    
+    def _key(self):
+        """Key for Pythonic object sorting.
+        Returns tuple of self.sort,self.identifier.id_sort
+        (self.sort takes precedence over ID sort)
+        """
+        return self.sort,self.identifier.id_sort
 
     @staticmethod
     def exists(oidentifier, basepath=None, gitolite=None, idservice=None):

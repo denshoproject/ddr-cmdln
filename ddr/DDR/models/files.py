@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from functools import total_ordering
 import mimetypes
 mimetypes.init()
 import os
@@ -35,6 +36,7 @@ FILE_KEYS = ['path_rel',
              'access_rel',
              'xmp',]
 
+@total_ordering
 class File(common.DDRObject):
     id = None
     idparts = None
@@ -130,6 +132,17 @@ class File(common.DDRObject):
         self.access_rel = i.path_rel('access')
         
         self.basename = os.path.basename(self.path_abs)
+
+    def __lt__(self, other):
+        """Enable Pythonic sorting"""
+        return self._key() < other._key()
+    
+    def _key(self):
+        """Key for Pythonic object sorting.
+        Returns tuple of self.sort,self.identifier.id_sort
+        (self.sort takes precedence over ID sort)
+        """
+        return self.sort,self.identifier.id_sort
 
     #@staticmethod
     #def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
