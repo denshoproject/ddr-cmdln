@@ -382,6 +382,14 @@ class Entity(common.DDRObject):
             ]
         return self._children_objects
 
+    def add_child(self, obj):
+        """Adds the Entity or File to Entity.children
+        """
+        assert obj.identifier.model in ['entity', 'segment', 'file']
+        self._children_meta.append(obj.dict(file_groups=1))
+        self._children_objects.append(obj)
+        self._children_objects = _sort_children(self._children_objects)
+        
     def children_counts(self):
         """Totals number of (entity) children and each file role
         
