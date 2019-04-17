@@ -371,24 +371,9 @@ class Entity(common.DDRObject):
         """
         if force_read or not self._children_objects:
             # read objects from filesystem
-            objects = sorted([
+            self._children_objects = _sort_children([
                 Identifier(path).object() for path in self._children_paths()
             ])
-            # TODO replace hard-coded models
-            # entities,segments
-            self._children_objects = [
-                o
-                for o in objects
-                if o.identifier.model in ['entity', 'segment']
-            ]
-            # files
-            for o in objects:
-                if o.identifier.model in ['file']:
-                    self._children_objects.append(o)
-            self._children_meta = [
-                o.dict(file_groups=True)
-                for o in self._children_objects
-            ]
         if role:
             return [
                 o
@@ -772,6 +757,27 @@ class Entity(common.DDRObject):
 #     "files": [...]
 #   },
 # ]
+
+def _sort_children(objects):
+    """Arranges children in the proper order, Entities first, then Files
+    
+    @param objects: list of Entity and File objects
+    @returns: list of objects
+    """
+    objects = sorted(objects)
+    # TODO replace hard-coded models
+    # entities,segments
+    grouped_objects = [
+        o
+        for o in objects
+        if o.identifier.model in ['entity', 'segment']
+    ]
+    # files
+    for o in objects:
+        if o.identifier.model in ['file']:
+            grouped_objects.append(o)
+    return grouped_objects
+
 
 def _meld_child_entity_file_meta(entities_meta, files_meta):
     """Meld 'children' and 'file_groups' from JSON
