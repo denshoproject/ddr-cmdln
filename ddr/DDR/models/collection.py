@@ -291,19 +291,17 @@ class Collection(common.DDRObject):
                 # fake Entity with just enough info for lists
                 entity_json_path = os.path.join(path,'entity.json')
                 if os.path.exists(entity_json_path):
+                    with open(entity_json_path, 'r') as f:
+                        data = json.loads(f.read())
                     e = ListEntity()
                     e.identifier = Identifier(path=path)
                     e.id = e.identifier.id
-                    for line in fileio.read_text(entity_json_path).split('\n'):
-                        if '"title":' in line:
-                            e.title = json.loads('{%s}' % line)['title']
-                        elif '"signature_id":' in line:
-                            e.signature_id = json.loads('{%s}' % line)['signature_id']
-                            e.signature_abs = common.signature_abs(e, self.identifier.basepath)
-                        if e.title and e.signature_id:
-                            # stop once we have what we need so we don't waste time
-                            # and have entity.children as separate ghost entities
-                            break
+                    for line in data[1:]:
+                        if 'title' in line.keys():
+                            e.title = line['title']
+                        elif 'signature_id' in line.keys():
+                            e.signature_id = line['signature_id']
+                    e.signature_abs = common.signature_abs(e, self.identifier.basepath)
                     entities.append(e)
             else:
                 entity = Entity.from_identifier(Identifier(path=path))
