@@ -1,6 +1,7 @@
 # coding: utf-8
 
 from collections import OrderedDict
+from functools import total_ordering
 import importlib
 import os
 import re
@@ -587,6 +588,22 @@ def set_idparts(i, groupdict, components=ID_COMPONENTS, types=COMPONENT_TYPES):
     for key,val in i.parts.items():
         i.parts[key] = types[key](val)
 
+def set_idparts_sort(i, valid_components=VALID_COMPONENTS):
+    """Ensure non-numeric idparts components sort in order of VALID_COMPONENTS
+    
+    Prefix each component with its index in VALID_COMPONENTS
+    Call after set_idparts
+    """
+    i.id_sort = []
+    for key,val in i.parts.items():
+        if key in valid_components.keys():
+            try:
+                i.id_sort.append( valid_components[key].index(val) )
+            except:
+                i.id_sort.append(0)
+        else:
+            i.id_sort.append( val )
+
 class IdentifierFormatException(Exception):
     pass
 
@@ -870,6 +887,7 @@ KWARG_KEYS = [
     'base_path',
 ]
 
+@total_ordering
 class Identifier(object):
     raw = None
     method = None
@@ -877,6 +895,7 @@ class Identifier(object):
     parts = OrderedDict()
     basepath = None
     id = None
+    id_sort = None
     
     @staticmethod
     def wellformed(idtype, text, models=MODELS):
@@ -945,6 +964,7 @@ class Identifier(object):
             raise MalformedIDException('Malformed ID: "%s"' % object_id)
         self.model = model
         set_idparts(self, groupdict)
+        set_idparts_sort(self, VALID_COMPONENTS)
         if base_path and not self.basepath:
             self.basepath = base_path
     
@@ -974,6 +994,7 @@ class Identifier(object):
         self.parts = OrderedDict(id_components)
         id_components.insert(0, ('model', self.model))
         self.idparts = OrderedDict(id_components)
+        set_idparts_sort(self, VALID_COMPONENTS)
         self.id = format_id(self, self.model)
         if base_path and not self.basepath:
             self.basepath = base_path
@@ -1001,6 +1022,7 @@ class Identifier(object):
             raise MalformedPathException('Malformed path: "%s"' % path_abs)
         self.model = model
         set_idparts(self, groupdict)
+        set_idparts_sort(self, VALID_COMPONENTS)
         self.id = format_id(self, self.model)
     
     def _from_url(self, url, base_path=None):
@@ -1032,6 +1054,7 @@ class Identifier(object):
             raise MalformedURLException('Malformed URL: "%s"' % url)
         self.model = model
         set_idparts(self, groupdict)
+        set_idparts_sort(self, VALID_COMPONENTS)
         self.id = format_id(self, self.model)
         if base_path and not self.basepath:
             self.basepath = base_path
@@ -1039,16 +1062,22 @@ class Identifier(object):
     def __repr__(self):
         return "<%s.%s %s:%s>" % (self.__module__, self.__class__.__name__, self.model, self.id)
     
+    # NOTE: uses functools.total_ordering to derive the rest of rich comparisons
+    # from __eq__ and __lt__.  Might be a performance problem.
+    # https://docs.python.org/2/library/functools.html#functools.total_ordering
+    def __eq__(self, other):
+        """Enable Pythonic sorting"""
+        return self.path_abs() == other.path_abs()
+    
+    def __lt__(self, other):
+        """Enable Pythonic sorting"""
+        return self._key() < other._key()
+    
     def _key(self):
         """Key for Pythonic object sorting.
         Integer components are returned as ints, enabling natural sorting.
         """
-        return self.parts.values()
-    
-    def __lt__(self, other):
-        """Enables Pythonic sorting; see Identifier._key.
-        """
-        return self._key() < other._key()
+        return self.id_sort
 
     @staticmethod
     def nextable(model):

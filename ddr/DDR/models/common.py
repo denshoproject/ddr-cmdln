@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from copy import deepcopy
 from datetime import datetime
+from functools import total_ordering
 import os
 import re
 
@@ -62,6 +63,7 @@ class Stub(object):
         return []
 
 
+@total_ordering
 class DDRObject(object):
     
     def __repr__(self):
@@ -74,7 +76,15 @@ class DDRObject(object):
         return "<%s.%s %s:%s>" % (
             self.__module__, self.__class__.__name__, self.identifier.model, self.id
         )
+    
+    def __eq__(self, other):
+        """Enable Pythonic sorting"""
+        return self.identifier.path_abs() == other.identifier.path_abs()
 
+    def __lt__(self, other):
+        """Enable Pythonic sorting"""
+        return self.identifier.id_sort < other.identifier.id_sort
+    
     #exists
     #create
     #new

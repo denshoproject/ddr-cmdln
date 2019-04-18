@@ -443,8 +443,8 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='', l
         log.not_ok('no access file')
     
     log.ok('Attaching file to entity')
-    entity._file_objects.append(file_)
-    if file_ in entity._file_objects:
+    entity.add_child(file_)
+    if file_ in entity.children():
         log.ok('| done')
     else:
         log.crash('Could not add file to entity.files!')
@@ -577,7 +577,7 @@ def add_external_file(entity, data, git_name, git_mail, agent='', log_path=None,
     file_.write_json()
     
     log.ok('Attaching file to entity')
-    entity.load_file_objects(identifier.Identifier, fidentifier.object_class(), force_read=True)
+    entity.add_child(file_)
     #if file_ in entity.files:
     #    log.ok('| done')
     #else:
