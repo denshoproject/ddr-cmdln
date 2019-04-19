@@ -361,9 +361,10 @@ class Entity(common.DDRObject):
 #        cidentifier = self.identifier.parent()
 #        return Collection.from_identifier(cidentifier)
    
-    def children( self, role=None, quick=None, force_read=False ):
+    def children(self, models=None, role=None, quick=None, force_read=False):
         """List Entity's child objects,files; optionally regenerate list
         
+        @param model: list Restrict to specified model(s)
         @param role: str Restrict list to specified File role
         @param quick: bool Not used
         @param force_read: bool Scan entity dir for file jsons
@@ -374,7 +375,13 @@ class Entity(common.DDRObject):
             self._children_objects = _sort_children([
                 Identifier(path).object() for path in self._children_paths()
             ])
-        if role:
+        if models:
+            return [
+                o
+                for o in self._children_objects
+                if o.identifier.model in models
+            ]
+        elif role:
             return [
                 o
                 for o in self._children_objects
