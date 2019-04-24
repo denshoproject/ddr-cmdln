@@ -776,33 +776,19 @@ def _sort_children(objects):
     return grouped_objects
 
 def files_to_filegroups(files):
-    """Converts list of files to file_groups structure.
+    """Converts list of File objects to file_groups structure.
     
-    Works with either metadata (dict) or File objects.
-    
-    @param files: list of File objects
+    @param files: list
     @returns: list of dicts
     """
-    def get_role(f):
-        if isinstance(f, File):
-            return getattr(f, 'role')
-        elif isinstance(f, dict) and f.get('role'):
-            return f.get('role')
-        elif isinstance(f, dict) and f.get('path_rel'):
-            fid = os.path.basename(os.path.splitext(f['path_rel'])[0])
-            fi = Identifier(id=fid)
-            return fi.idparts['role']
-        return None
     # intermediate format
     fgroups = {}
     for f in files:
-        role = get_role(f)
-        if role and not fgroups.get(role):
-            fgroups[role] = []
+        if f.role and not fgroups.get(f.role):
+            fgroups[f.role] = []
     for f in files:
-        role = get_role(f)
-        if role:
-            fgroups[role].append(
+        if f.role:
+            fgroups[f.role].append(
                 f.dict(file_groups=1)
             )
     # final format
