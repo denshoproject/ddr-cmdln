@@ -269,12 +269,6 @@ FILEMETA_DATA = {
 #    FILEGROUPS_DATA['ddr-densho-23-1-master-adb451ffec'],
 #]
 
-#def test_filegroups_to_files():
-#    out0 = models.entity.filegroups_to_files(FILEGROUPS_META)
-#    out1 = models.entity.filegroups_to_files(FILEGROUPS_OBJECTS)
-#    assert out0 == FILES_META
-#    assert out1 == FILES_OBJECTS
-# 
 #def test_files_to_filegroups():
 #    out0 = models.entity.files_to_filegroups(FILES_META)
 #    print('FILES_META\n%s' % FILES_META)
@@ -479,8 +473,6 @@ def test_Entity_checksum_algorithms():
 # TODO Entity.add_file_commit
 # TODO Entity.remove_child
 # TODO Entity.ddrpublic_template_key
-# TODO meld_child_entity_file_meta
-# TODO filegroups_to_files
 # TODO files_to_filegroups
 # TODO entity_to_childrenmeta
 
