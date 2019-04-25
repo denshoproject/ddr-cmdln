@@ -3,6 +3,7 @@ from copy import deepcopy
 from datetime import datetime
 import json
 import os
+import random
 import shutil
 
 from DDR import config
@@ -268,23 +269,6 @@ FILEMETA_DATA = {
 #    FILEGROUPS_DATA['ddr-densho-23-1-mezzanine-adb451ffec'],
 #    FILEGROUPS_DATA['ddr-densho-23-1-master-adb451ffec'],
 #]
-
-#def test_filegroups_to_files():
-#    out0 = models.entity.filegroups_to_files(FILEGROUPS_META)
-#    out1 = models.entity.filegroups_to_files(FILEGROUPS_OBJECTS)
-#    assert out0 == FILES_META
-#    assert out1 == FILES_OBJECTS
-# 
-#def test_files_to_filegroups():
-#    out0 = models.entity.files_to_filegroups(FILES_META)
-#    print('FILES_META\n%s' % FILES_META)
-#    print('FILEGROUPS_META\n%s' % FILEGROUPS_META)
-#    print('out0\n%s' % out0)
-#    assert out0 == FILEGROUPS_META
-#    out1 = models.entity.files_to_filegroups(FILES_OBJECTS)
-#    print('FILEGROUPS_OBJECTS\n%s' % FILEGROUPS_OBJECTS)
-#    print('out1\n%s' % out1)
-#    assert out1 == FILEGROUPS_OBJECTS
     
 def test_Entity__init__():
     collection_id = 'ddr-testing-123'
@@ -326,7 +310,8 @@ ENTITY_DICT = OrderedDict([
     ('rights', ''), ('rights_statement', ''), ('topics', ''),
     ('persons', ''), ('facility', ''), ('chronology', ''),
     ('geography', ''), ('parent', ''), ('signature_id', ''), ('notes', ''),
-    ('children', []), ('file_groups', [])
+    ('children', []),
+    ('file_groups', []),
 ])
 
 def test_Entity_dict():
@@ -404,8 +389,6 @@ def test_Entity_is_modified():
     assert o2.title == 'new title'
 
 # TODO Entity.parent
-# TODO Entity.children
-# TODO Entity.children_counts
 # TODO Entity.labels_values
 # TODO Entity.inheritable_fields
 # TODO Entity.selected_inheritables
@@ -477,12 +460,184 @@ def test_Entity_checksum_algorithms():
 # TODO Entity.add_external_file
 # TODO Entity.add_access
 # TODO Entity.add_file_commit
-# TODO Entity.remove_child
-# TODO Entity.ddrpublic_template_key
-# TODO meld_child_entity_file_meta
-# TODO filegroups_to_files
-# TODO files_to_filegroups
-# TODO entity_to_childrenmeta
+
+CHILDREN_ENTITY = models.entity.Entity(
+    '/var/www/media/ddr/ddr-test-123/files/ddr-test-123-456'
+)
+CHILDREN_ENTITY.public = 1
+CHILDREN_ENTITY.signature_id = 'ddr-test-123-456-mezzanine-abc123'
+CHILDREN_ENTITY.sort = 123
+CHILDREN_ENTITY.title = 'Some Entity!'
+
+CHILDREN_FIDS = [
+    'ddr-testing-123-456-mezzanine-a1b2c3',
+    'ddr-testing-123-456-mezzanine-abc123',
+    'ddr-testing-123-456-master-a1b2c3',
+    'ddr-testing-123-456-master-abc123',
+    'ddr-testing-123-456-transcript-abc123',
+]
+CHILDREN_FILES = [
+    models.files.File(fi)
+    for fi in [
+        identifier.Identifier(os.path.join(CHILDREN_ENTITY.files_path, fid))
+        for fid in CHILDREN_FIDS
+    ]
+]
+
+CHILDREN_COUNTS = OrderedDict()
+CHILDREN_COUNTS['children'] = 0
+CHILDREN_COUNTS['mezzanine'] = 2
+CHILDREN_COUNTS['master'] = 2
+CHILDREN_COUNTS['transcript'] = 1
+CHILDREN_COUNTS['gloss'] = 0
+CHILDREN_COUNTS['preservation'] = 0
+CHILDREN_COUNTS['administrative'] = 0
+
+CHILDREN_FILEGROUPS = [
+    {
+        'role': 'mezzanine',
+        'files': [
+            {
+                'id': 'ddr-testing-123-456-mezzanine-a1b2c3',
+                'label': '', 'public': 0, 'size': None, 'sort': 1,
+                'path_rel': 'files/ddr-testing-123-456/files/ddr-testing-123-456-mezzanine-a1b2c3',
+            },
+            {
+                'id': 'ddr-testing-123-456-mezzanine-abc123',
+                'label': '', 'public': 0, 'size': None, 'sort': 1,
+                'path_rel': 'files/ddr-testing-123-456/files/ddr-testing-123-456-mezzanine-abc123',
+            },
+        ],
+    },
+    {
+        'role': 'master',
+        'files': [
+            {
+                'id': 'ddr-testing-123-456-master-a1b2c3',
+                'label': '', 'public': 0, 'size': None, 'sort': 1,
+                'path_rel': 'files/ddr-testing-123-456/files/ddr-testing-123-456-master-a1b2c3',
+            },
+            {
+                'id': 'ddr-testing-123-456-master-abc123',
+                'label': '', 'public': 0, 'size': None, 'sort': 1,
+                'path_rel': 'files/ddr-testing-123-456/files/ddr-testing-123-456-master-abc123',
+            },
+        ],
+    },
+    {
+        'role': 'transcript',
+        'files': [
+            {
+                'id': 'ddr-testing-123-456-transcript-abc123',
+                'label': '', 'public': 0, 'size': None, 'sort': 1,
+                'path_rel': 'files/ddr-testing-123-456/files/ddr-testing-123-456-transcript-abc123',
+            }
+        ],
+    }
+]
+
+def test_ddrpublic_template_key():
+    # normal(?)
+    e0 = deepcopy(CHILDREN_ENTITY)
+    e0.format = 'img'
+    e0._children_objects = deepcopy(CHILDREN_FILES)
+    for f in e0._children_objects:
+        f.mimetype == 'image/jpeg'
+    signature0,key0 = e0.ddrpublic_template_key()
+    print(signature0,key0)
+    assert signature0.id == 'ddr-test-123-456-mezzanine-abc123'
+    assert key0 == 'img:'
+
+    # entity.signature_id is blank
+    e1 = deepcopy(CHILDREN_ENTITY)
+    e1.signature_id = None
+    e1.format = 'img'
+    e1._children_objects = deepcopy(CHILDREN_FILES)
+    for f in e1.children(role='mezzanine'):
+        f.mimetype = 'image/jpeg'
+    signature1,key1 = e1.ddrpublic_template_key()
+    print(signature1,key1)
+    assert signature1.id == 'ddr-testing-123-456-mezzanine-a1b2c3'
+    assert key1 == 'img:image'
+
+    # no mezzanines
+    e2 = deepcopy(CHILDREN_ENTITY)
+    e2.signature_id = None
+    e2.format = 'img'
+    children = [
+        f for f in CHILDREN_FILES
+        if 'mezzanine' not in f.id
+    ]
+    e2._children_objects = children
+    signature2,key2 = e2.ddrpublic_template_key()
+    print(signature2,key2)
+    assert signature2 == None
+    assert key2 == None
+
+    # TODO signature belongs to segment mezzanine
+
+
+def test_children():
+    e = deepcopy(CHILDREN_ENTITY)
+    e._children_objects = deepcopy(CHILDREN_FILES)
+    e.add_child(CHILDREN_ENTITY)
+    # models=
+    out0 = e.children(models=['entity','segments'])
+    assert out0 == [CHILDREN_ENTITY]
+    # role=
+    expected1 = [CHILDREN_FILES[-1]]
+    out1 = e.children(role='transcript')
+    assert out1 == expected1
+
+def test_add_child():
+    e = deepcopy(CHILDREN_ENTITY)
+    assert e._children_objects == []
+    e.add_child(CHILDREN_FILES[0])
+    assert e._children_objects == [
+        CHILDREN_FILES[0]
+    ]
+
+def test_remove_child():
+    e = deepcopy(CHILDREN_ENTITY)
+    e._children_objects = [
+        CHILDREN_FILES[0]
+    ]
+    e.remove_child(CHILDREN_FILES[0].id)
+    assert e._children_objects == []
+
+def test_children_counts():
+    e = deepcopy(CHILDREN_ENTITY)
+    e._children_objects = deepcopy(CHILDREN_FILES)
+    e.add_child(CHILDREN_ENTITY)
+    CHILDREN_COUNTS['children'] = 1
+    out = e.children_counts()
+    print(out)
+    assert out == CHILDREN_COUNTS
+
+def test_sort_children():
+    objects = [CHILDREN_ENTITY] + CHILDREN_FILES
+    object_ids = [CHILDREN_ENTITY.id] + [o.id for o in CHILDREN_FILES]
+    shuffled = deepcopy(objects)
+    random.shuffle(shuffled)
+    objects_sorted = models.entity._sort_children(shuffled)
+    sorted_ids = [o.id for o in objects_sorted]
+    print(sorted_ids)
+    assert sorted_ids == object_ids
+
+def test_files_to_filegroups():
+    out = models.entity.files_to_filegroups(CHILDREN_FILES)
+    assert out == CHILDREN_FILEGROUPS
+    
+def test_entity_to_childrenmeta():
+    expected = {
+        'id': CHILDREN_ENTITY.id,
+        'public': CHILDREN_ENTITY.public,
+        'signature_id': CHILDREN_ENTITY.signature_id,
+        'sort': CHILDREN_ENTITY.sort,
+        'title': CHILDREN_ENTITY.title,
+    }
+    out = models.entity.entity_to_childrenmeta(CHILDREN_ENTITY)
+    assert out == expected
 
 
 # TODO File.__init__

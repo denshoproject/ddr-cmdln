@@ -39,7 +39,7 @@ class ListEntity( object ):
     def __repr__(self):
         return "<DDRListEntity %s>" % (self.id)
 
-# attrs used in Entity.file_groups
+# attrs used in METS Entity file_groups
 ENTITY_ENTITY_KEYS = [
     'id',
     'title',
@@ -72,7 +72,6 @@ class Entity(common.DDRObject):
     files_path_rel = None
     _entities_meta = []
     _files_meta = []
-    _children_meta = []
     _children_objects = []
     signature_id = ''
     
@@ -220,7 +219,7 @@ class Entity(common.DDRObject):
     def save(self, git_name, git_mail, agent, collection=None, inheritables=[], commit=True):
         """Writes specified Entity metadata, stages, and commits.
         
-        Updates .children and .file_groups if parent is another Entity.
+        Updates .children if parent is another Entity.
         Returns exit code, status message, and list of updated files.
         Files list is for use by e.g. batch operations that want to commit
         all modified files in one operation rather than piecemeal.
@@ -247,7 +246,7 @@ class Entity(common.DDRObject):
         ]
         
         if parent and isinstance(parent, Entity):
-            # update parent .children and .file_groups
+            # update parent.children
             parent.children(force_read=True)
             parent.write_json()
             updated_files.append(parent.json_path)
@@ -301,7 +300,7 @@ class Entity(common.DDRObject):
     def dict(self, file_groups=False, json_safe=False):
         """Returns OrderedDict of object data
         
-        Overrides common.DDRObject.dict and adds Entity.children, .file_groups
+        Overrides common.DDRObject.dict and adds METS Entity children,file_groups
         
         @param json_safe: bool Serialize e.g. datetime to text
         @returns: OrderedDict
@@ -393,7 +392,6 @@ class Entity(common.DDRObject):
         """Adds the Entity or File to Entity.children
         """
         assert obj.identifier.model in ['entity', 'segment', 'file']
-        self._children_meta.append(obj.dict(file_groups=1))
         self._children_objects.append(obj)
         self._children_objects = _sort_children(self._children_objects)
         
@@ -426,18 +424,6 @@ class Entity(common.DDRObject):
         """
         module = self.identifier.fields_module()
         json_data = common.load_json(self, module, json_text)
-        # special cases
-        # children and files/file_groups -> ._children_meta
-        for fielddict in json_data:
-            for fieldname,data in fielddict.iteritems():
-                if (fieldname in ['children', 'children_meta']) and data:
-                    self._entities_meta = data
-                elif (fieldname in ['files', 'file_groups']) and data:
-                    self._files_meta = data
-        self._children_meta = _meld_child_entity_file_meta(
-            self._entities_meta,
-            self._files_meta
-        )
 
     def dump_json(self, template=False, doc_metadata=False, obj_metadata={}):
         """Dump Entity data to JSON-formatted text.
@@ -682,10 +668,6 @@ class Entity(common.DDRObject):
         """
         logger.debug('%s.remove_child(%s)' % (self, object_id))
         self.children()
-        copy_meta = [
-            o for o in self._children_meta if not o['id'] == object_id
-        ]
-        self._children_meta = copy_meta
         copy_objects = [
             o for o in self._children_objects if not o.id == object_id
         ]
@@ -704,37 +686,34 @@ class Entity(common.DDRObject):
         """
         entity = self
         try:
-            signature = Identifier(entity.signature_id, config.MEDIA_BASE).object()
+            signature = Identifier(
+                entity.signature_id, config.MEDIA_BASE
+            ).object()
         except:
             signature = None
 
         # VH entities may not have a valid signature
         if not signature:
             def first_mezzanine(entity):
-                for fg in entity.file_groups:
-                    if fg['role'] == 'mezzanine':
-                        files = sorted(fg['files'], key=lambda file: file['sort'])
-                        if files:
-                            return files[0]
+                for f in entity.children(role='mezzanine'):
+                    return f
                 return None
                 
             # use child entity if exists and has mezzanine file
-            if entity.children_meta:
-                for c in entity.children_meta:
-                    e = Identifier(c['id'], config.MEDIA_BASE).object()
-                    if first_mezzanine(e):
-                        entity = e
+            if entity.children(models=['entity','segment']):
+                for c in entity.children(models=['entity','segment']):
+                    if first_mezzanine(c):
+                        entity = c
                         break
             # get signature image
-            mezzanine = first_mezzanine(entity)
-            if mezzanine:
-                signature = Identifier(mezzanine['id'], config.MEDIA_BASE).object()
+            signature = first_mezzanine(entity)
         
         # prepare decision table key
         key = None
         if signature:
             key = ':'.join([
-                entity.format, signature.mimetype.split('/')[0]
+                getattr(entity, 'format', ''),
+                signature.mimetype.split('/')[0]
             ])
         return signature,key
 
@@ -793,67 +772,20 @@ def _sort_children(objects):
             grouped_objects.append(o)
     return grouped_objects
 
-
-def _meld_child_entity_file_meta(entities_meta, files_meta):
-    """Meld 'children' and 'file_groups' from JSON
-    
-    @param entities_meta: list
-    @param files_meta: list
-    """
-    children = []
-    # entities,segments
-    for e in sorted(entities_meta, key=lambda o: int(o['sort'])):
-        children.append(e)
-    # files
-    for role in VALID_COMPONENTS['role']: # list in roles order
-        for f in files_meta:
-            if f['role'] == role:
-                # sort within role
-                for ff in sorted(f['files'], key=lambda o: int(o['sort'])):
-                    children.append(ff)
-    return children
-
-def filegroups_to_files(file_groups):
-    """Converts file_groups structure to list of files.
-    
-    Works with either metadata (dict) or File objects.
-    
-    @param file_groups: list of dicts
-    @return: list of File objects
-    """
-    files = []
-    for fg in file_groups:
-        files = files + fg['files']
-    return files
-
 def files_to_filegroups(files):
-    """Converts list of files to file_groups structure.
+    """Converts list of File objects to METS file_groups structure.
     
-    Works with either metadata (dict) or File objects.
-    
-    @param files: list of File objects
+    @param files: list
     @returns: list of dicts
     """
-    def get_role(f):
-        if isinstance(f, File):
-            return getattr(f, 'role')
-        elif isinstance(f, dict) and f.get('role'):
-            return f.get('role')
-        elif isinstance(f, dict) and f.get('path_rel'):
-            fid = os.path.basename(os.path.splitext(f['path_rel'])[0])
-            fi = Identifier(id=fid)
-            return fi.idparts['role']
-        return None
     # intermediate format
     fgroups = {}
     for f in files:
-        role = get_role(f)
-        if role and not fgroups.get(role):
-            fgroups[role] = []
+        if f.role and not fgroups.get(f.role):
+            fgroups[f.role] = []
     for f in files:
-        role = get_role(f)
-        if role:
-            fgroups[role].append(
+        if f.role:
+            fgroups[f.role].append(
                 f.dict(file_groups=1)
             )
     # final format

@@ -36,7 +36,7 @@ FILE_KEYS = ['path_rel',
              'access_rel',
              'xmp',]
 
-# attrs used in Entity.file_groups
+# attrs used in METS Entity file_groups
 ENTITY_FILE_KEYS = [
     'id',
     'path_rel',
@@ -213,7 +213,7 @@ class File(common.DDRObject):
     def save(self, git_name, git_mail, agent, collection=None, parent=None, inheritables=[], commit=True):
         """Writes File metadata, stages, and commits.
         
-        Updates .children and .file_groups if parent is (almost certainly)
+        Updates .children if parent is (almost certainly)
         an Entity.  Returns exit code, status message, and list of updated
         files.  Files list is for use by e.g. batch operations that want
         to commit all modified files in one operation rather than piecemeal.
@@ -238,7 +238,7 @@ class File(common.DDRObject):
         ]
 
         if parent and (parent.identifier.model in ['entity','segment']):
-            # update parent .children and .file_groups
+            # update parent.children
             parent.children(force_read=True)
             parent.write_json()
             updated_files.append(parent.json_path)
@@ -548,7 +548,7 @@ class File(common.DDRObject):
         
     def dict(self, file_groups=False):
         """
-        @param file_groups: bool If True return dict for Entity.file_groups
+        @param file_groups: bool If True return dict for METS Entity file_groups
         """
         if file_groups:
             return {
