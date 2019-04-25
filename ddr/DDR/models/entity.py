@@ -686,37 +686,34 @@ class Entity(common.DDRObject):
         """
         entity = self
         try:
-            signature = Identifier(entity.signature_id, config.MEDIA_BASE).object()
+            signature = Identifier(
+                entity.signature_id, config.MEDIA_BASE
+            ).object()
         except:
             signature = None
 
         # VH entities may not have a valid signature
         if not signature:
             def first_mezzanine(entity):
-                for fg in entity.file_groups:
-                    if fg['role'] == 'mezzanine':
-                        files = sorted(fg['files'], key=lambda file: file['sort'])
-                        if files:
-                            return files[0]
+                for f in entity.children(role='mezzanine'):
+                    return f
                 return None
                 
             # use child entity if exists and has mezzanine file
-            if entity.children_meta:
-                for c in entity.children_meta:
-                    e = Identifier(c['id'], config.MEDIA_BASE).object()
-                    if first_mezzanine(e):
-                        entity = e
+            if entity.children(models=['entity','segment']):
+                for c in entity.children(models=['entity','segment']):
+                    if first_mezzanine(c):
+                        entity = c
                         break
             # get signature image
-            mezzanine = first_mezzanine(entity)
-            if mezzanine:
-                signature = Identifier(mezzanine['id'], config.MEDIA_BASE).object()
+            signature = first_mezzanine(entity)
         
         # prepare decision table key
         key = None
         if signature:
             key = ':'.join([
-                entity.format, signature.mimetype.split('/')[0]
+                getattr(entity, 'format', ''),
+                signature.mimetype.split('/')[0]
             ])
         return signature,key
 

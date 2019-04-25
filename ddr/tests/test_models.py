@@ -460,7 +460,6 @@ def test_Entity_checksum_algorithms():
 # TODO Entity.add_external_file
 # TODO Entity.add_access
 # TODO Entity.add_file_commit
-# TODO Entity.ddrpublic_template_key
 
 CHILDREN_ENTITY = models.entity.Entity(
     '/var/www/media/ddr/ddr-test-123/files/ddr-test-123-456'
@@ -536,6 +535,47 @@ CHILDREN_FILEGROUPS = [
         ],
     }
 ]
+
+def test_ddrpublic_template_key():
+    # normal(?)
+    e0 = deepcopy(CHILDREN_ENTITY)
+    e0.format = 'img'
+    e0._children_objects = deepcopy(CHILDREN_FILES)
+    for f in e0._children_objects:
+        f.mimetype == 'image/jpeg'
+    signature0,key0 = e0.ddrpublic_template_key()
+    print(signature0,key0)
+    assert signature0.id == 'ddr-test-123-456-mezzanine-abc123'
+    assert key0 == 'img:'
+
+    # entity.signature_id is blank
+    e1 = deepcopy(CHILDREN_ENTITY)
+    e1.signature_id = None
+    e1.format = 'img'
+    e1._children_objects = deepcopy(CHILDREN_FILES)
+    for f in e1.children(role='mezzanine'):
+        f.mimetype = 'image/jpeg'
+    signature1,key1 = e1.ddrpublic_template_key()
+    print(signature1,key1)
+    assert signature1.id == 'ddr-testing-123-456-mezzanine-a1b2c3'
+    assert key1 == 'img:image'
+
+    # no mezzanines
+    e2 = deepcopy(CHILDREN_ENTITY)
+    e2.signature_id = None
+    e2.format = 'img'
+    children = [
+        f for f in CHILDREN_FILES
+        if 'mezzanine' not in f.id
+    ]
+    e2._children_objects = children
+    signature2,key2 = e2.ddrpublic_template_key()
+    print(signature2,key2)
+    assert signature2 == None
+    assert key2 == None
+
+    # TODO signature belongs to segment mezzanine
+
 
 def test_children():
     e = deepcopy(CHILDREN_ENTITY)
