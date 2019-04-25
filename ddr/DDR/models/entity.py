@@ -39,7 +39,7 @@ class ListEntity( object ):
     def __repr__(self):
         return "<DDRListEntity %s>" % (self.id)
 
-# attrs used in Entity.file_groups
+# attrs used in METS Entity file_groups
 ENTITY_ENTITY_KEYS = [
     'id',
     'title',
@@ -219,7 +219,7 @@ class Entity(common.DDRObject):
     def save(self, git_name, git_mail, agent, collection=None, inheritables=[], commit=True):
         """Writes specified Entity metadata, stages, and commits.
         
-        Updates .children and .file_groups if parent is another Entity.
+        Updates .children if parent is another Entity.
         Returns exit code, status message, and list of updated files.
         Files list is for use by e.g. batch operations that want to commit
         all modified files in one operation rather than piecemeal.
@@ -246,7 +246,7 @@ class Entity(common.DDRObject):
         ]
         
         if parent and isinstance(parent, Entity):
-            # update parent .children and .file_groups
+            # update parent.children
             parent.children(force_read=True)
             parent.write_json()
             updated_files.append(parent.json_path)
@@ -300,7 +300,7 @@ class Entity(common.DDRObject):
     def dict(self, file_groups=False, json_safe=False):
         """Returns OrderedDict of object data
         
-        Overrides common.DDRObject.dict and adds Entity.children, .file_groups
+        Overrides common.DDRObject.dict and adds METS Entity children,file_groups
         
         @param json_safe: bool Serialize e.g. datetime to text
         @returns: OrderedDict
@@ -776,7 +776,7 @@ def _sort_children(objects):
     return grouped_objects
 
 def files_to_filegroups(files):
-    """Converts list of File objects to file_groups structure.
+    """Converts list of File objects to METS file_groups structure.
     
     @param files: list
     @returns: list of dicts
