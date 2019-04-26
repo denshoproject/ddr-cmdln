@@ -24,6 +24,8 @@ APP_COMMITS = {}
 def repository(path, user_name=None, user_mail=None):
     """
     @param collection_path: Absolute path to collection repo.
+    @param user_name: str
+    @param user_mail: str
     @return: GitPython repo object
     """
     repo = git.Repo(path, search_parent_directories=True)
@@ -33,6 +35,37 @@ def repository(path, user_name=None, user_mail=None):
         return repo
     return repo
 
+def initialize_repository(path, user_name=None, user_mail=None):
+    """Runs Git and git-annex init and checks out master
+    
+    @param collection_path: Absolute path to collection repo.
+    @param user_name: str
+    @param user_mail: str
+    @return: GitPython repo object
+    """
+    logging.debug('initialize_repository(%s, %s, %s)' % (
+        path, user_name, user_mail
+    ))
+    if not os.path.exists(path):
+        os.makedirs(path)
+    # initialize
+    repo = git.Repo.init(path)
+    # create master
+    # we have to write a file before we can checkout master, because ???
+    # This function just creates an empty file ...
+    tmpfile = os.path.join(path, 'README')
+    msg = '%s - created %s\n' % (os.path.basename(path), datetime.now())
+    with open(tmpfile, 'w') as f:
+        f.write(msg)
+    repo.index.add([tmpfile])
+    repo.index.commit('initial commit')
+    repo.git.annex('init')
+    #repo.git.checkout('master')
+    if user_name and user_mail:
+        git_set_configs(repo, user_name, user_mail)
+        annex_set_configs(repo, user_name, user_mail)
+    return repo
+    
 
 # git info -------------------------------------------------------------
 
