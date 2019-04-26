@@ -22,22 +22,31 @@ TEST_FILES_DIR = os.path.join(
 )
 TEST_FILES_TMP = 'ddrimport'
 
-@pytest.fixture
-def test_files_dir(tmpdir):
-    dest_dir = str(tmpdir / TEST_FILES_TMP)
-    shutil.copytree(TEST_FILES_DIR, dest_dir)
+
+@pytest.fixture(scope="session")
+def test_files_dir(tmpdir_factory):
+    fn = tmpdir_factory.mktemp(TEST_FILES_TMP)
+    dest_dir = str(fn)
+    #shutil.copytree(TEST_FILES_DIR, dest_dir, dirs_exist_ok=True)
+    for f in os.listdir(TEST_FILES_DIR):
+        shutil.copy(
+            os.path.join(TEST_FILES_DIR, f),
+            dest_dir
+        )
     return dest_dir
 
-@pytest.fixture
-def collection(tmpdir):
-    collection_path = str(tmpdir / COLLECTION_ID)
-    if os.path.exists(collection_path):
+@pytest.fixture(scope="session")
+def collection(tmpdir_factory):
+    fn = tmpdir_factory.mktemp('repo').join(COLLECTION_ID)
+    collection_path = str(fn)
+    collection_json = os.path.join(collection_path, 'collection.json')
+    if os.path.exists(collection_json):
         return identifier.Identifier(collection_path).object()
     else:
         repo = dvcs.initialize_repository(
             collection_path, GIT_USER, GIT_MAIL
         )
-        ci = identifier.Identifier(COLLECTION_ID, str(tmpdir))
+        ci = identifier.Identifier(collection_path)
         collection = Collection.create(ci)
         collection.save(GIT_USER, GIT_MAIL, AGENT)
         return collection
