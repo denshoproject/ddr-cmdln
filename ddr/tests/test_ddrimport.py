@@ -51,7 +51,30 @@ def collection(tmpdir_factory):
         collection.save(GIT_USER, GIT_MAIL, AGENT)
         return collection
 
-#def test_import_entities(tmpdir, collection, test_files_dir):
+EXPECTED_ENTITY_IDS = [
+    'ddr-testing-123-1',
+    'ddr-testing-123-2',
+    'ddr-testing-123-3',
+    'ddr-testing-123-4',
+    'ddr-testing-123-4-1',
+    'ddr-testing-123-5',
+    'ddr-testing-123-6',
+]
+
+def test_import_entities(tmpdir, collection, test_files_dir):
+    entity_csv_path = os.path.join(
+        test_files_dir, 'ddrimport-entity-new.csv'
+    )
+    out = batch.Importer.import_entities(
+        entity_csv_path,
+        collection.identifier,
+        VOCABS_URL,
+        GIT_USER, GIT_MAIL, AGENT
+    )
+    print(out)
+    out_ids = [o.id for o in out]
+    assert out_ids == EXPECTED_ENTITY_IDS
+
 #def test_update_entities(tmpdir, collection, test_files_dir):
 #def test_import_files(tmpdir, collection, test_files_dir):
 #def test_update_files(tmpdir, collection, test_files_dir):
