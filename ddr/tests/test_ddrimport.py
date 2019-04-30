@@ -75,6 +75,19 @@ def test_import_entities(tmpdir, collection, test_files_dir):
     out_ids = [o.id for o in out]
     assert out_ids == EXPECTED_ENTITY_IDS
 
-#def test_update_entities(tmpdir, collection, test_files_dir):
+def test_update_entities(tmpdir, collection, test_files_dir):
+    entity_csv_path = os.path.join(
+        test_files_dir, 'ddrimport-entity-update.csv'
+    )
+    out = batch.Importer.import_entities(
+        entity_csv_path,
+        collection.identifier,
+        VOCABS_URL,
+        GIT_USER, GIT_MAIL, AGENT
+    )
+    print(out)
+    out_ids = [o.id for o in out]
+    assert out_ids == EXPECTED_ENTITY_IDS
+
 #def test_import_files(tmpdir, collection, test_files_dir):
 #def test_update_files(tmpdir, collection, test_files_dir):
