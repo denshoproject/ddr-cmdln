@@ -142,6 +142,8 @@ def access_path(file_class, tmp_path_renamed):
     )
 
 def copy_to_workdir(src_path, tmp_path, tmp_path_renamed, log):
+    if not os.path.exists(os.path.dirname(tmp_path)):
+        os.makedirs(os.path.dirname(tmp_path))
     log.ok('| cp %s %s' % (src_path, tmp_path))
     shutil.copy(src_path, tmp_path)
     os.chmod(tmp_path, 0644)
@@ -320,7 +322,8 @@ def stage_files(entity, git_files, annex_files, new_files, log, show_staged=True
             log.crash('Add file aborted, see log file for details: %s' % log.logpath)
     return repo
 
-def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='', log_path=None, show_staged=True):
+def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='',
+                   tmp_dir=config.MEDIA_BASE, log_path=None, show_staged=True):
     """Add a "normal" file to entity
     
     "Normal" files are those in which a binary file is added to the repository
@@ -351,9 +354,10 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='', l
         log = addfile_logger(identifier=entity.identifier)
     
     log.ok('------------------------------------------------------------------------')
-    log.ok('DDR.models.Entity.add_file: START')
+    log.ok('DDR.models.Entity.add_local_file: START')
     log.ok('entity: %s' % entity.id)
     log.ok('data: %s' % data)
+    log.ok('src_path: %s' % src_path)
     
     log.ok('Examining source file')
     check_dir('| src_path', src_path, log, mkdir=False, perm=os.R_OK)
@@ -382,12 +386,11 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='', l
         data.pop('id')
     
     dest_path = destination_path(src_path, entity.files_path, fidentifier)
-    tmp_path = temporary_path(src_path, config.MEDIA_BASE, fidentifier)
-    tmp_dir = os.path.dirname(tmp_path)
+    tmp_path = temporary_path(src_path, tmp_dir, fidentifier)
     tmp_path_renamed = temporary_path_renamed(tmp_path, dest_path)
     access_dest_path = access_path(file_class, tmp_path_renamed)
     dest_dir = os.path.dirname(dest_path)
-         
+    
     log.ok('Checking files/dirs')
     if os.path.exists(dest_path):
         log.crash(
@@ -524,7 +527,7 @@ def add_external_file(entity, data, git_name, git_mail, agent='', log_path=None,
         log = addfile_logger(identifier=entity.identifier)
     
     log.ok('------------------------------------------------------------------------')
-    log.ok('DDR.models.Entity.add_file: START')
+    log.ok('DDR.models.Entity.add_external_file: START')
     log.ok('entity: %s' % entity.id)
     log.ok('data: %s' % data)
     
