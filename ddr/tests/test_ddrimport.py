@@ -153,7 +153,29 @@ def test_import_files(tmpdir, collection, test_files_dir):
     assert staged == expected
 
     
-#def test_update_files(tmpdir, collection, test_files_dir):
+# TODO confirm that file updates update the parents
+def test_update_files(tmpdir, collection, test_files_dir):
+    file_csv_path = os.path.join(
+        test_files_dir, 'ddrimport-file-update.csv'
+    )
+    rewrite_file_paths(file_csv_path, test_files_dir)
+    log_path = os.path.join(
+        test_files_dir, 'ddrimport-file-update.log'
+    )
+    out = batch.Importer.import_files(
+        file_csv_path,
+        collection.identifier,
+        VOCABS_URL,
+        GIT_USER, GIT_MAIL, AGENT,
+        log_path=log_path,
+        tmp_dir=test_files_dir,
+    )
+    repo = dvcs.repository(collection.path_abs)
+    expected = sorted(EXPECTED_STAGED)
+    staged = sorted(dvcs.list_staged(repo))
+    print('expected %s' % expected)
+    print('staged %s' % staged)
+    assert staged == expected
 
 def rewrite_file_paths(path, test_files_dir):
     """Load the import CSV, prepend pytest tmpdir to basename_orig
