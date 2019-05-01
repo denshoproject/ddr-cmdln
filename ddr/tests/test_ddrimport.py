@@ -8,6 +8,7 @@ import pytest
 
 from DDR import batch
 from DDR import config
+from DDR import fileio
 from DDR import dvcs
 from DDR import identifier
 from DDR.models import Collection
@@ -89,5 +90,83 @@ def test_update_entities(tmpdir, collection, test_files_dir):
     out_ids = [o.id for o in out]
     assert out_ids == EXPECTED_ENTITY_IDS
 
-#def test_import_files(tmpdir, collection, test_files_dir):
+EXPECTED_STAGED = [
+    'files/ddr-testing-123-1/entity.json',
+    'files/ddr-testing-123-1/changelog',
+    'files/ddr-testing-123-1/mets.xml',
+    'files/ddr-testing-123-1/files/ddr-testing-123-1-administrative-775f8d2cce-a.jpg',
+    'files/ddr-testing-123-1/files/ddr-testing-123-1-administrative-775f8d2cce.json',
+    'files/ddr-testing-123-1/files/ddr-testing-123-1-administrative-775f8d2cce.pdf',
+    'files/ddr-testing-123-1/files/ddr-testing-123-1-master-684e15e967-a.jpg',
+    'files/ddr-testing-123-1/files/ddr-testing-123-1-master-684e15e967.json',
+    'files/ddr-testing-123-1/files/ddr-testing-123-1-master-684e15e967.tif',
+    'files/ddr-testing-123-2/entity.json',
+    'files/ddr-testing-123-2/changelog',
+    'files/ddr-testing-123-2/mets.xml',
+    'files/ddr-testing-123-2/files/ddr-testing-123-2-master-b9773b9aef.json',
+    'files/ddr-testing-123-2/files/ddr-testing-123-2-mezzanine-775f8d2cce.json',
+    'files/ddr-testing-123-2/files/ddr-testing-123-2-mezzanine-de47cb83a4.json',
+    'files/ddr-testing-123-3/entity.json',
+    'files/ddr-testing-123-3/changelog',
+    'files/ddr-testing-123-3/mets.xml',
+    'files/ddr-testing-123-4/entity.json',
+    'files/ddr-testing-123-4/changelog',
+    'files/ddr-testing-123-4/mets.xml',
+    'files/ddr-testing-123-4/files/ddr-testing-123-4-1/changelog',
+    'files/ddr-testing-123-4/files/ddr-testing-123-4-1/entity.json',
+    'files/ddr-testing-123-4/files/ddr-testing-123-4-1/files/ddr-testing-123-4-1-transcript-de47cb83a4.json',
+    'files/ddr-testing-123-4/files/ddr-testing-123-4-1/mets.xml',
+    'files/ddr-testing-123-5/entity.json',
+    'files/ddr-testing-123-5/changelog',
+    'files/ddr-testing-123-5/mets.xml',
+    'files/ddr-testing-123-5/files/ddr-testing-123-5-master-ea2f8d4f4d.json',
+    'files/ddr-testing-123-5/files/ddr-testing-123-5-mezzanine-ea2f8d4f4d.json',
+    'files/ddr-testing-123-5/files/ddr-testing-123-5-transcript-775f8d2cce.json',
+    'files/ddr-testing-123-6/entity.json',
+    'files/ddr-testing-123-6/changelog',
+    'files/ddr-testing-123-6/mets.xml',
+    'files/ddr-testing-123-6/files/ddr-testing-123-6-master-9bd65ab22c.json',
+]
+
+# TODO confirm that file updates update the parents
+def test_import_files(tmpdir, collection, test_files_dir):
+    file_csv_path = os.path.join(
+        test_files_dir, 'ddrimport-file-new.csv'
+    )
+    rewrite_file_paths(file_csv_path, test_files_dir)
+    log_path = os.path.join(
+        test_files_dir, 'ddrimport-file-new.log'
+    )
+    out = batch.Importer.import_files(
+        file_csv_path,
+        collection.identifier,
+        VOCABS_URL,
+        GIT_USER, GIT_MAIL, AGENT,
+        log_path=log_path,
+        tmp_dir=test_files_dir,
+    )
+    repo = dvcs.repository(collection.path_abs)
+    expected = sorted(EXPECTED_STAGED)
+    staged = sorted(dvcs.list_staged(repo))
+    print('expected %s' % expected)
+    print('staged %s' % staged)
+    assert staged == expected
+
+    
 #def test_update_files(tmpdir, collection, test_files_dir):
+
+def rewrite_file_paths(path, test_files_dir):
+    """Load the import CSV, prepend pytest tmpdir to basename_orig
+    """
+    rows = fileio.read_csv(path)
+    headers = rows.pop(0)
+    
+    basename_index = headers.index('basename_orig')
+    for row in rows:
+        src = os.path.join(
+            test_files_dir, row[basename_index]
+        )
+        row[basename_index] = src
+        print(src)
+    
+    fileio.write_csv(path, headers, rows)
