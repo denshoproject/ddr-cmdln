@@ -59,6 +59,7 @@ def test_setup_test_collection():
         o = files.File.create(oi)
         o.public = public
         o.status = status
+        o.sha1 = oi.idparts['sha1']
         o.write_json()
 
 def test_pick_signatures():
