@@ -546,16 +546,20 @@ class File(common.DDRObject):
                 f[key] = getattr(self, key, None)
         return f
         
-    def dict(self, file_groups=False):
+    def dict(self, file_groups=False, json_safe=False):
         """
         @param file_groups: bool If True return dict for METS Entity file_groups
+        @param json_safe: bool Serialize e.g. datetime to text
+        @returns: OrderedDict
         """
         if file_groups:
             return {
                 key: getattr(self, key)
                 for key in ENTITY_FILE_KEYS
             }
-        return self.__dict__
+        return common.to_dict(
+            self, self.identifier.fields_module(), json_safe=json_safe
+        )
         
     @staticmethod
     def access_filename( src_abs ):
