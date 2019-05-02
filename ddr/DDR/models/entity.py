@@ -578,7 +578,10 @@ class Entity(common.DDRObject):
             return sorted(
                 [
                     f.replace(prefix_path, '')
-                    for f in util.find_meta_files(self.files_path, recursive=True)
+                    for f in util.find_meta_files(
+                            self.files_path,
+                            recursive=False  # only direct children, no descendants
+                    )
                 ],
                 key=lambda f: util.natural_order_string(f)
             )
