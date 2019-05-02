@@ -566,19 +566,15 @@ class Entity(common.DDRObject):
                 checksums.append( (cs, os.path.basename(fpath)) )
         return checksums
     
-    def _children_paths(self, rel=False):
-        """Searches filesystem for (entity) childrens' metadata files, returns relati
-        @param rel: bool Return relative paths
+    def _children_paths(self):
+        """Searches filesystem for (entity) childrens' .jsons, returns paths
+        
         @returns: list
         """
         if os.path.exists(self.files_path):
-            prefix_path = 'THISWILLNEVERMATCHANYTHING'
-            if rel:
-                prefix_path = '{}/'.format(os.path.normpath(self.files_path))
             return sorted(
                 [
-                    f.replace(prefix_path, '')
-                    for f in util.find_meta_files(
+                    f for f in util.find_meta_files(
                             self.files_path,
                             recursive=False  # only direct children, no descendants
                     )
