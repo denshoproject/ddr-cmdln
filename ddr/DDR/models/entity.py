@@ -574,10 +574,10 @@ class Entity(common.DDRObject):
         if os.path.exists(self.files_path):
             return sorted(
                 [
-                    f for f in util.find_meta_files(
-                            self.files_path,
-                            recursive=False  # only direct children, no descendants
-                    )
+                    f
+                    for f in util.find_meta_files(self.files_path, recursive=True)
+                    # only direct children, no descendants
+                    if Identifier(f).parent_id() == self.id
                 ],
                 key=lambda f: util.natural_order_string(f)
             )
