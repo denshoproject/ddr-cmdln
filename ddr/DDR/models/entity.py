@@ -434,7 +434,7 @@ class Entity(common.DDRObject):
         @returns: JSON-formatted text
         """
         module = self.identifier.fields_module()
-        self.children(force_read=True)
+        self.children()
         data = common.dump_json(self, module,
                          exceptions=['files', 'filemeta'],
                          template=template,)
