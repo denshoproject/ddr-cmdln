@@ -394,6 +394,18 @@ class Entity(common.DDRObject):
         assert obj.identifier.model in ['entity', 'segment', 'file']
         self._children_objects.append(obj)
         self._children_objects = _sort_children(self._children_objects)
+
+    def remove_child(self, object_id):
+        """Remove child entity from this Entity's children list.
+        
+        @param object_id: str Child object ID
+        """
+        logger.debug('%s.remove_child(%s)' % (self, object_id))
+        self.children()
+        copy_objects = [
+            o for o in self._children_objects if not o.id == object_id
+        ]
+        self._children_objects = copy_objects
         
     def children_counts(self):
         """Totals number of (entity) children and each file role
@@ -434,7 +446,7 @@ class Entity(common.DDRObject):
         @returns: JSON-formatted text
         """
         module = self.identifier.fields_module()
-        self.children(force_read=True)
+        self.children()
         data = common.dump_json(self, module,
                          exceptions=['files', 'filemeta'],
                          template=template,)
@@ -659,18 +671,6 @@ class Entity(common.DDRObject):
         return ingest.add_file_commit(
             self, file_, repo, log, git_name, git_mail, agent
         )
-
-    def remove_child(self, object_id):
-        """Remove child entity from this Entity's children list.
-        
-        @param object_id: str Child object ID
-        """
-        logger.debug('%s.remove_child(%s)' % (self, object_id))
-        self.children()
-        copy_objects = [
-            o for o in self._children_objects if not o.id == object_id
-        ]
-        self._children_objects = copy_objects
     
     def ddrpublic_template_key(self):
         """Combine factors for ddrpublic template selection into key
