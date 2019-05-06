@@ -36,20 +36,12 @@ JSON_FIELDS = {
     'sort': 1,
 }
 
-# TODO derive this from repo_models/identifiers.py!
+# Valid component values from ddr-defs/repo_models/identifier.py
+# file-role['component']['valid']
 ROLE_NUMBERS = {
-    'mezzanine': 0,
-    'master': 1,
-    'transcript': 2,
+    role: n
+    for n,role in enumerate(identifier.VALID_COMPONENTS['role'])
 }
-    
-# TODO derive this from repo_models/identifiers.py!
-MODELS_DOWN = [
-    'collection',
-    'entity',
-    'segment',
-    'file',
-]
 
 class SigIdentifier(identifier.Identifier):
     """Subclass of Identifier used for finding/assigning object signature files

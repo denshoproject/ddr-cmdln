@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from functools import total_ordering
 import mimetypes
 mimetypes.init()
 import os
@@ -35,6 +36,19 @@ FILE_KEYS = ['path_rel',
              'access_rel',
              'xmp',]
 
+# attrs used in METS Entity file_groups
+ENTITY_FILE_KEYS = [
+    'id',
+    'path_rel',
+    'label',
+    #'record_created',
+    #'mimetype',
+    'size',
+    'public',
+    'sort',
+]
+
+@total_ordering
 class File(common.DDRObject):
     id = None
     idparts = None
@@ -131,6 +145,17 @@ class File(common.DDRObject):
         
         self.basename = os.path.basename(self.path_abs)
 
+    def __lt__(self, other):
+        """Enable Pythonic sorting"""
+        return self._key() < other._key()
+    
+    def _key(self):
+        """Key for Pythonic object sorting.
+        Returns tuple of self.sort,self.identifier.id_sort
+        (self.sort takes precedence over ID sort)
+        """
+        return self.sort,self.identifier.id_sort
+
     #@staticmethod
     #def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
     
@@ -188,7 +213,7 @@ class File(common.DDRObject):
     def save(self, git_name, git_mail, agent, collection=None, parent=None, inheritables=[], commit=True):
         """Writes File metadata, stages, and commits.
         
-        Updates .children and .file_groups if parent is (almost certainly)
+        Updates .children if parent is (almost certainly)
         an Entity.  Returns exit code, status message, and list of updated
         files.  Files list is for use by e.g. batch operations that want
         to commit all modified files in one operation rather than piecemeal.
@@ -213,7 +238,7 @@ class File(common.DDRObject):
         ]
 
         if parent and (parent.identifier.model in ['entity','segment']):
-            # update parent .children and .file_groups
+            # update parent.children
             parent.children(force_read=True)
             parent.write_json()
             updated_files.append(parent.json_path)
@@ -521,8 +546,20 @@ class File(common.DDRObject):
                 f[key] = getattr(self, key, None)
         return f
         
-    def dict( self ):
-        return self.__dict__
+    def dict(self, file_groups=False, json_safe=False):
+        """
+        @param file_groups: bool If True return dict for METS Entity file_groups
+        @param json_safe: bool Serialize e.g. datetime to text
+        @returns: OrderedDict
+        """
+        if file_groups:
+            return {
+                key: getattr(self, key)
+                for key in ENTITY_FILE_KEYS
+            }
+        return common.to_dict(
+            self, self.identifier.fields_module(), json_safe=json_safe
+        )
         
     @staticmethod
     def access_filename( src_abs ):
