@@ -726,7 +726,9 @@ class Importer():
         return False
     
     @staticmethod
-    def import_files(csv_path, cidentifier, vocabs_url, git_name, git_mail, agent, row_start=0, row_end=9999999, log_path=None, dryrun=False):
+    def import_files(csv_path, cidentifier, vocabs_url, git_name, git_mail,
+                     agent, row_start=0, row_end=9999999,
+                     tmp_dir=config.MEDIA_BASE, log_path=None, dryrun=False):
         """Adds or updates files from a CSV file
         
         TODO how to handle excluded fields like XMP???
@@ -792,7 +794,8 @@ class Importer():
             rowds_new,
             fid_parents, entities, files,
             git_name, git_mail, agent,
-            log_path, dryrun
+            log_path, dryrun,
+            tmp_dir=tmp_dir
         )
         logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
         
@@ -875,7 +878,9 @@ class Importer():
         return git_files
     
     @staticmethod
-    def _add_new_files(rowds, fid_parents, entities, files, git_name, git_mail, agent, log_path, dryrun):
+    def _add_new_files(rowds, fid_parents, entities, files, git_name,
+                       git_mail, agent, log_path, dryrun,
+                       tmp_dir=config.MEDIA_BASE):
         if log_path:
             logging.info('addfile logging to %s' % log_path)
         git_files = []
@@ -945,6 +950,7 @@ class Importer():
                         rowd['role'],
                         rowd,
                         git_name, git_mail, agent,
+                        tmp_dir=tmp_dir,
                         log_path=log_path,
                         show_staged=False
                     )

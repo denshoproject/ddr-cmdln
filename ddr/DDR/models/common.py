@@ -553,6 +553,8 @@ def create_object(identifier, parent=None, inherit=True):
             parent = None
     if parent:
         inheritance.inherit(parent, obj)
+    obj.identifier = identifier
+    obj.id = identifier.id
     return obj
 
 def object_metadata(module, repo_path):
