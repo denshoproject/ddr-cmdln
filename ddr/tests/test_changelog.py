@@ -1,16 +1,12 @@
 from datetime import datetime
 import os
 
+import pytest
 import pytz
 
-from DDR import config
 from DDR import changelog
 
-
 TZ = pytz.utc
-TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'changelog')
-if not os.path.exists(TESTING_BASE_DIR):
-    os.makedirs(TESTING_BASE_DIR)
 
 
 def test_is_old_entry():
@@ -79,8 +75,8 @@ def test_load_template():
     expected = '{changes}\n-- {user} <{email}>  {date} \n'
     assert changelog.load_template(changelog.CHANGELOG_TEMPLATE) == expected
 
-def test_write_changelog_entry():
-    path = os.path.join(TESTING_BASE_DIR, 'changelog-%s' % datetime.now(TZ).strftime('%Y%m%d-%H%M%S'))
+def test_write_changelog_entry(tmpdir):
+    path = str(tmpdir / 'changelog')
     user = 'gjost'
     mail = 'gjost@densho.org'
     messages = ['testing', 'testing', '123']

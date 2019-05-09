@@ -6,14 +6,11 @@ import os
 import random
 import shutil
 
-from DDR import config
+import pytest
+
 from DDR import models
 from DDR import identifier
 
-TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'models')
-if not os.path.exists(TESTING_BASE_DIR):
-    os.makedirs(TESTING_BASE_DIR)
-MEDIA_BASE = os.path.join(TESTING_BASE_DIR, 'ddr')
 
 class TestModule(object):
     __name__ = 'TestModule'
@@ -109,11 +106,11 @@ def test_load_json():
 
 # Collection
 
-def test_Collection__init__():
+def test_Collection__init__(tmpdir):
     cid = 'ddr-testing-123'
-    path_abs = os.path.join(MEDIA_BASE, cid)
+    path_abs = str(tmpdir / cid)
     c = models.Collection(path_abs)
-    assert c.root == MEDIA_BASE
+    assert c.root == str(tmpdir)
     assert c.id == 'ddr-testing-123'
     assert c.path == path_abs
     assert c.path_abs == path_abs
@@ -149,9 +146,9 @@ def test_Collection__init__():
 # Collection.lock
 # Collection.unlock
 # Collection.locked
-def test_Collection_locking():
+def test_Collection_locking(tmpdir):
     cid = 'ddr-testing-123'
-    path_abs = os.path.join(MEDIA_BASE, cid)
+    path_abs = str(tmpdir / cid)
     c = models.Collection(path_abs)
     text = 'testing'
     # prep
@@ -270,15 +267,15 @@ FILEMETA_DATA = {
 #    FILEGROUPS_DATA['ddr-densho-23-1-master-adb451ffec'],
 #]
     
-def test_Entity__init__():
+def test_Entity__init__(tmpdir):
     collection_id = 'ddr-testing-123'
     entity_id = 'ddr-testing-123-456'
-    collection_path = os.path.join(MEDIA_BASE, collection_id)
+    collection_path = str(tmpdir / collection_id)
     path_abs = os.path.join(collection_path, 'files', entity_id)
     e = models.Entity(path_abs)
     assert e.parent_path == collection_path
     assert e.parent_id == collection_id
-    assert e.root == MEDIA_BASE
+    assert e.root == str(tmpdir)
     assert e.id == 'ddr-testing-123-456'
     assert e.path == path_abs
     assert e.path_abs == path_abs
@@ -314,10 +311,10 @@ ENTITY_DICT = OrderedDict([
     ('file_groups', []),
 ])
 
-def test_Entity_dict():
+def test_Entity_dict(tmpdir):
     collection_id = 'ddr-testing-123'
     entity_id = 'ddr-testing-123-456'
-    collection_path = os.path.join(MEDIA_BASE, collection_id)
+    collection_path = str(tmpdir / collection_id)
     path_abs = os.path.join(collection_path, 'files', entity_id)
     ei = identifier.Identifier(path_abs)
     o = models.Entity.create(ei)
@@ -327,10 +324,10 @@ def test_Entity_dict():
     print(out)
     assert out == ENTITY_DICT
 
-def test_Entity_diff():
+def test_Entity_diff(tmpdir):
     collection_id = 'ddr-testing-123'
     entity_id = 'ddr-testing-123-456'
-    collection_path = os.path.join(MEDIA_BASE, collection_id)
+    collection_path = str(tmpdir / collection_id)
     path_abs = os.path.join(collection_path, 'files', entity_id)
     ei = identifier.Identifier(path_abs)
     o1 = models.Entity.create(ei)
@@ -348,10 +345,10 @@ def test_Entity_diff():
     print('out2 %s' % out2)
     assert out2 == {}  # no diffs
 
-def test_Entity_is_modified():
+def test_Entity_is_modified(tmpdir):
     collection_id = 'ddr-testing-123'
     entity_id = 'ddr-testing-123-456'
-    collection_path = os.path.join(MEDIA_BASE, collection_id)
+    collection_path = str(tmpdir / collection_id)
     path_abs = os.path.join(collection_path, 'files', entity_id)
     
     print('NEW DOCUMENT')
@@ -367,7 +364,7 @@ def test_Entity_is_modified():
     o0.write_json(doc_metadata=False)
     
     print('EXISTING DOCUMENT')
-    o1 = identifier.Identifier(id=entity_id, base_path=MEDIA_BASE).object()
+    o1 = identifier.Identifier(id=entity_id, base_path=str(tmpdir)).object()
     print('o1 %s' % o1)
     # freshly loaded object should not be modified
     out1 = o1.is_modified()
@@ -382,7 +379,7 @@ def test_Entity_is_modified():
     o1.write_json(doc_metadata=False)
     
     # existing document
-    o2 = identifier.Identifier(id=entity_id, base_path=MEDIA_BASE).object()
+    o2 = identifier.Identifier(id=entity_id, base_path=str(tmpdir)).object()
     # freshly loaded object should not be modified
     print('o2.is_modified() %s' % o2.is_modified())
     assert not o2.is_modified()
@@ -398,10 +395,10 @@ def test_Entity_is_modified():
 # Entity.lock
 # Entity.unlock
 # Entity.locked
-def test_Entity_locking():
+def test_Entity_locking(tmpdir):
     collection_id = 'ddr-testing-123'
     entity_id = 'ddr-testing-123-456'
-    collection_path = os.path.join(MEDIA_BASE, collection_id)
+    collection_path = str(tmpdir / collection_id)
     path_abs = os.path.join(collection_path, 'files', entity_id)
     e = models.Entity(path_abs)
     text = 'testing'
@@ -432,10 +429,10 @@ def test_Entity_locking():
 # TODO Entity.load_csv
 # TODO Entity.dump_csv
 
-def test_Entity_changelog():
+def test_Entity_changelog(tmpdir):
     collection_id = 'ddr-testing-123'
     entity_id = 'ddr-testing-123-456'
-    collection_path = os.path.join(MEDIA_BASE, collection_id)
+    collection_path = str(tmpdir / collection_id)
     path_abs = os.path.join(collection_path, 'files', entity_id)
     e = models.Entity(path_abs)
     changelog_path = os.path.join(path_abs, 'changelog')

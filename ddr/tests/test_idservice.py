@@ -1,14 +1,7 @@
-import os
-
 from bs4 import BeautifulSoup
 
-from DDR import config
 from DDR import identifier
 from DDR import idservice
-
-TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'idservice')
-#if not os.path.exists(TESTING_BASE_DIR):
-#    os.makedirs(TESTING_BASE_DIR)
 
 # TODO test_session
 # TODO test__get_csrf_token

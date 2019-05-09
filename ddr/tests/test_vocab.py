@@ -2,14 +2,11 @@ from datetime import datetime
 import json
 import os
 
-from DDR import config
+import pytest
+
 from DDR import fileio
 from DDR import identifier
 from DDR import vocab
-
-TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'vocab')
-if not os.path.exists(TESTING_BASE_DIR):
-    os.makedirs(TESTING_BASE_DIR)
 
 # Index.add
 # Index.terms
@@ -74,8 +71,8 @@ def test_objects():
 # Term._flatten
 # Term.json
 
-def test_csv():
-    filename = os.path.join(TESTING_BASE_DIR, 'vocab-index-%s' % datetime.now().strftime('%Y%m%d-%H%M%S'))
+def test_csv(tmpdir):
+    filename = str(tmpdir / 'vocab-index')
     filename_csv = '%s.csv' % filename
     # prep
     terms_csv = TERMS_CSV.strip()
@@ -92,8 +89,8 @@ def test_csv():
     # clean up
     os.remove(filename_csv)
 
-def test_json():
-    filename = os.path.join(TESTING_BASE_DIR, 'vocab-index-%s' % datetime.now().strftime('%Y%m%d-%H%M%S'))
+def test_json(tmpdir):
+    filename = str(tmpdir / 'vocab-index')
     filename_json = '%s.json' % filename
     # prep
     with open(filename_json, 'w') as f0:

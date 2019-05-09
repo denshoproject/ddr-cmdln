@@ -1,18 +1,13 @@
 import os
 
-from DDR import config
 from DDR import fileio
-
-TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'fileio')
-if not os.path.exists(TESTING_BASE_DIR):
-    os.makedirs(TESTING_BASE_DIR)
 
 
 TEXT = '{"a": 1, "b": 2}'
 
-def test_read_text():
+def test_read_text(tmpdir):
     # TODO test bad chars
-    path = os.path.join(TESTING_BASE_DIR, 'read_text.json')
+    path = str(tmpdir / 'read_text.json')
     with open(path, 'w') as f:
         f.write(TEXT)
     # regular
@@ -24,9 +19,9 @@ def test_read_text():
     # clean up
     os.remove(path)
 
-def test_write_text():
+def test_write_text(tmpdir):
     # TODO test bad chars
-    path = os.path.join(TESTING_BASE_DIR, 'write_text.json')
+    path = str(tmpdir / 'write_text.json')
     # regular
     fileio.write_text(TEXT, path)
     with open(path, 'r') as f:
@@ -46,8 +41,8 @@ APPEND_TEXT = [
     '002',
 ]
 
-def test_append_text():
-    path = os.path.join(TESTING_BASE_DIR, 'append_text.json')
+def test_append_text(tmpdir):
+    path = str(tmpdir / 'append_text.json')
     if os.path.exists(path):
         os.remove(path)
     # before start
@@ -63,7 +58,6 @@ def test_append_text():
     # clean up
     os.remove(path)
 
-CSV_PATH = os.path.join(TESTING_BASE_DIR, 'write_csv.csv')
 CSV_HEADERS = ['id', 'title', 'description']
 CSV_ROWS = [
     ['ddr-test-123', 'thing 1', 'nothing here'],
@@ -74,7 +68,8 @@ CSV_FILE = '"id","title","description"\r\n"ddr-test-123","thing 1","nothing here
 # TODO test_csv_writer
 # TODO test_csv_reader
 
-def test_write_csv():
+def test_write_csv(tmpdir):
+    CSV_PATH = str(tmpdir / 'write_csv.csv')
     # prep
     if os.path.exists(CSV_PATH):
         os.remove(CSV_PATH)
@@ -88,7 +83,8 @@ def test_write_csv():
     if os.path.exists(CSV_PATH):
         os.remove(CSV_PATH)
 
-def test_read_csv():
+def test_read_csv(tmpdir):
+    CSV_PATH = str(tmpdir / 'write_csv.csv')
     # prep
     if os.path.exists(CSV_PATH):
         os.remove(CSV_PATH)

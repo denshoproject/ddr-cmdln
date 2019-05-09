@@ -1,20 +1,14 @@
 # -*- coding: utf-8 -*-
 
 from collections import OrderedDict
-import os
 
 import envoy
 import git
 from nose.tools import assert_raises
 
-from DDR import config
 from DDR import csvfile
 from DDR import identifier
 from DDR import modules
-
-TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'csvfile')
-#if not os.path.exists(TESTING_BASE_DIR):
-#    os.makedirs(TESTING_BASE_DIR)
 
 
 def test_make_row_dict():
