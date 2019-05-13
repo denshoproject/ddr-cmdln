@@ -6,6 +6,7 @@ import os
 import random
 import shutil
 
+from deepdiff import DeepDiff
 import pytest
 
 from DDR import models
@@ -307,8 +308,8 @@ ENTITY_DICT = OrderedDict([
     ('rights', ''), ('rights_statement', ''), ('topics', ''),
     ('persons', ''), ('facility', ''), ('chronology', ''),
     ('geography', ''), ('parent', ''), ('signature_id', ''), ('notes', ''),
-    ('children', []),
-    ('file_groups', []),
+    #('children', []),
+    #('file_groups', []),
 ])
 
 def test_Entity_dict(tmpdir):
@@ -321,7 +322,9 @@ def test_Entity_dict(tmpdir):
     o.record_created = datetime(2018, 9, 20, 12, 23, 21, 227561)
     o.record_lastmod = datetime(2018, 9, 20, 12, 23, 21, 227582)
     out = o.dict()
-    print(out)
+    # exclude .children and .file_groups from comparison
+    out.pop('children')
+    out.pop('file_groups')
     assert out == ENTITY_DICT
 
 def test_Entity_diff(tmpdir):
@@ -587,12 +590,19 @@ def test_children():
     assert out1 == expected1
 
 def test_add_child():
+    new_child = CHILDREN_FILES[0]
     e = deepcopy(CHILDREN_ENTITY)
-    assert e._children_objects == []
-    e.add_child(CHILDREN_FILES[0])
-    assert e._children_objects == [
-        CHILDREN_FILES[0]
-    ]
+    before = deepcopy(e._children_objects)
+    e.add_child(new_child)
+    after = deepcopy(e._children_objects)
+    diff = DeepDiff(before, after, ignore_order=True)
+    assert diff
+    assert diff.get('iterable_item_added')
+    assert diff['iterable_item_added'].get('root[0]')
+    added = diff['iterable_item_added']['root[0]']
+    assert added not in before
+    assert added in after
+    assert added.id == new_child.id
 
 def test_remove_child():
     e = deepcopy(CHILDREN_ENTITY)
