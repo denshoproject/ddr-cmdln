@@ -18,7 +18,7 @@ from DDR.identifier import Identifier, ID_COMPONENTS
 from DDR import inheritance
 from DDR import locking
 from DDR.models import common
-from DDR.models.entity import ListEntity
+from DDR.models.entity import ListEntity, Entity
 from DDR import modules
 from DDR import util
 

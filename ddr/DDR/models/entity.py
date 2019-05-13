@@ -531,10 +531,14 @@ class Entity(common.DDRObject):
             fileio.read_text(config.TEMPLATE_METS_JINJA2)
         ).render(object=self)
 
-    def write_xml(self):
+    def write_xml(self, path=None):
         """Write METS XML file to disk.
+        
+        @param path: str Alternate absolute file path
         """
-        fileio.write_text(self.dump_xml(), self.mets_path)
+        if not path:
+            path = self.mets_path
+        fileio.write_text(self.dump_xml(), path)
     
     # specific to Entity
     
