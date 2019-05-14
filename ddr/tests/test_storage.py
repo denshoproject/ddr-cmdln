@@ -2,12 +2,10 @@ from datetime import datetime
 import os
 import shutil
 
+import pytest
+
 from DDR import config
 from DDR import storage
-
-TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'storage')
-if not os.path.exists(TESTING_BASE_DIR):
-    os.makedirs(TESTING_BASE_DIR)
 
 """
 NOTE: Some of the functions in DDR.storage are impossible to test reliably
@@ -91,33 +89,34 @@ def test_nfs_devices():
     assert out == expected
 
 FIND_STORE_DIRS = [
-    os.path.join(TESTING_BASE_DIR, 'find_store_dirs', 'tmp'),
-    os.path.join(TESTING_BASE_DIR, 'find_store_dirs', 'ddr-test-123'),
-    os.path.join(TESTING_BASE_DIR, 'find_store_dirs', 'ddr-test-123', '.git'),
-    os.path.join(TESTING_BASE_DIR, 'find_store_dirs', 'ddr-test-124'),
-    os.path.join(TESTING_BASE_DIR, 'find_store_dirs', 'ddr-test-124', '.git'),
+    'tmp',
+    'ddr-test-123',
+    'ddr-test-123', '.git',
+    'ddr-test-124',
+    'ddr-test-124', '.git',
 ]
 FIND_STORE_FILES = [
-    os.path.join(TESTING_BASE_DIR, 'find_store_dirs', 'tmp', 'whatever'),
-    os.path.join(TESTING_BASE_DIR, 'find_store_dirs', 'ddr-test-123', 'collection.json'),
-    os.path.join(TESTING_BASE_DIR, 'find_store_dirs', 'ddr-test-124', 'collection.json'),
+    ('tmp', 'whatever'),
+    ('ddr-test-123', 'collection.json'),
+    ('ddr-test-124', 'collection.json'),
 ]
 
-def test_find_store_dirs():
-    basedir = os.path.join(TESTING_BASE_DIR, 'find_store_dirs')
-    if os.path.exists(basedir):
-        shutil.rmtree(basedir)
+def test_find_store_dirs(tmpdir):
+    basedir = str(tmpdir / 'find_store_dirs')
     os.makedirs(basedir)
     for d in FIND_STORE_DIRS:
-        os.makedirs(d)
-    for fn in FIND_STORE_FILES:
-        with open(fn, 'w') as f:
+        path = os.path.join(basedir, d)
+        if not os.path.exists(path):
+            os.makedirs(path)
+    for d,f in FIND_STORE_FILES:
+        path = os.path.join(basedir, d, f)
+        with open(path, 'w') as f:
             f.write('testing')
     EXPECTED = [
-        os.path.join(TESTING_BASE_DIR, 'find_store_dirs/ddr-test-123'),
-        os.path.join(TESTING_BASE_DIR, 'find_store_dirs/ddr-test-124'),
+        str(tmpdir / 'find_store_dirs/ddr-test-123'),
+        str(tmpdir / 'find_store_dirs/ddr-test-124'),
     ]
-    assert storage.find_store_dirs(TESTING_BASE_DIR, 'collection.json', levels=2) == EXPECTED
+    assert storage.find_store_dirs(basedir, 'collection.json', levels=2) == EXPECTED
 
 # TODO local_stores
 # TODO nfs_stores
