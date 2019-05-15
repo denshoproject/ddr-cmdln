@@ -1,18 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import os
-
 import envoy
 import git
 from nose.tools import assert_raises
 
 from DDR import batch
-from DDR import config
 from DDR import identifier
-
-TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'batch')
-#if not os.path.exists(TESTING_BASE_DIR):
-#    os.makedirs(TESTING_BASE_DIR)
 
 
 class TestExporter():

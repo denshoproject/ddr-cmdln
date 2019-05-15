@@ -9,9 +9,6 @@ import git
 from DDR import config
 from DDR import dvcs
 
-TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'dvcs')
-if not os.path.exists(TESTING_BASE_DIR):
-    os.makedirs(TESTING_BASE_DIR)
 
 def make_repo(path, files=[]):
     repo = git.Repo.init(path)
@@ -36,12 +33,12 @@ def cleanup_repo(path):
 # TODO git_set_configs
 # TODO annex_set_configs
 
-def test_repository():
+def test_repository(tmpdir):
     """Tests that repository config values are set correctly"""
     # git_set_configs
     # annex_set_configs
     # repository
-    path = os.path.join(TESTING_BASE_DIR, 'ddr-test-%s' % datetime.now(config.TZ).strftime('%Y%m%d-%H%M%S'))
+    path = str(tmpdir / 'ddr-test')
     user = 'gjost'
     mail = 'gjost@densho.org'
     repo = git.Repo.init(path)
@@ -56,8 +53,8 @@ def test_repository():
     assert user_items.get('email') == mail
     assert annex_items.get('sshcaching') == 'false'
 
-def test_git_version():
-    path = os.path.join(TESTING_BASE_DIR, 'testgitversion')
+def test_git_version(tmpdir):
+    path = str(tmpdir / 'testgitversion')
     # rm existing
     if os.path.exists(path):
         shutil.rmtree(path)
@@ -67,8 +64,8 @@ def test_git_version():
     out = dvcs.git_version(repo)
     assert 'git version' in out
 
-def test_annex_version():
-    path = os.path.join(TESTING_BASE_DIR, 'testgitversion')
+def test_annex_version(tmpdir):
+    path = str(tmpdir / 'testgitversion')
     # rm existing
     if os.path.exists(path):
         shutil.rmtree(path)
@@ -78,8 +75,8 @@ def test_annex_version():
     out = dvcs.annex_version(repo)
     assert 'git-annex version' in out
 
-def test_latest_commit():
-    path = os.path.join(TESTING_BASE_DIR, 'testrepo')
+def test_latest_commit(tmpdir):
+    path = str(tmpdir / 'testrepo')
     # rm existing
     if os.path.exists(path):
         shutil.rmtree(path)
@@ -158,8 +155,8 @@ def test_annex_set_description():
     assert dvcs.annex_set_description(drive_label=None, hostname=hn, partner_host=ph, mail=ml) == hn
     # TODO Test doesn't cover all possibile combinations!!!
 
-def test_annex_set_description():
-    path = os.path.join(TESTING_BASE_DIR, 'test-repo')
+def test_annex_set_description(tmpdir):
+    path = str(tmpdir / 'test-repo')
     
     repo = make_repo(path, ['testing'])
     annex_init(repo)
@@ -218,8 +215,8 @@ STATUS_SHORT = [
     STATUS_SHORT_0,
 ]
 
-def test_repo_status():
-    path = os.path.join(TESTING_BASE_DIR, 'test-repo')
+def test_repo_status(tmpdir):
+    path = str(tmpdir / 'test-repo')
     repo = make_repo(path, ['testing'])
     out0 = dvcs.repo_status(repo, short=False)
     out1 = dvcs.repo_status(repo, short=True)
@@ -245,8 +242,8 @@ bloom filter size: 16 mebibytes (0% full)
 backend usage: 
 """
 
-def test_annex_status():
-    path = os.path.join(TESTING_BASE_DIR, 'test-repo')
+def test_annex_status(tmpdir):
+    path = str(tmpdir / 'test-repo')
     repo = make_repo(path, ['testing'])
     annex_init(repo)
     status = dvcs.annex_status(repo)
@@ -534,8 +531,8 @@ def test_local_exists():
     assert dvcs.local_exists('/tmp') == 1
     assert dvcs.local_exists('/abcde12345') == 0
     
-def test_is_clone():
-    basedir = os.path.join(TESTING_BASE_DIR, 'test-ddr-dvcs')
+def test_is_clone(tmpdir):
+    basedir = str(tmpdir / 'test-ddr-dvcs')
     path0 = os.path.join(basedir, 'testrepo0')
     path1 = os.path.join(basedir, 'testrepo1')
     path2 = os.path.join(basedir, 'clone')
@@ -557,9 +554,9 @@ def test_is_clone():
     assert dvcs.is_clone(path1, path2, 1) == 1
     assert dvcs.is_clone(path1, '/tmp', 1) == -1
 
-def test_remotes():
-    path_orig = os.path.join(TESTING_BASE_DIR, 'testrepo1')
-    path_clon = os.path.join(TESTING_BASE_DIR, 'clone')
+def test_remotes(tmpdir):
+    path_orig = str(tmpdir / 'testrepo1')
+    path_clon = str(tmpdir / 'clone')
     # rm existing
     if os.path.exists(path_orig):
         shutil.rmtree(path_orig)
@@ -590,8 +587,8 @@ def test_remotes():
 # TODO repos_remotes
 
 # TODO Fix this test - gives wildly inconsistent results
-#def test_annex_file_targets():
-#    path = os.path.join(TESTING_BASE_DIR, 'test-repo')
+#def test_annex_file_targets(tmpdir):
+#    path = str(tmpdir / 'test-repo')
 #    repo = make_repo(path, ['testing'])
 #    annex_init(repo)
 #    for filename in ['test1', 'test2']:
@@ -604,12 +601,12 @@ def test_remotes():
 #    targets_rel = dvcs.annex_file_targets(repo, relative=True)
 #    expected_abs = [
 #        (
-#            os.path.join(TESTING_BASE_DIR, 'test-repo/test1'),              # symlink
-#            os.path.join(TESTING_BASE_DIR, 'test-repo/.git/annex/objects')  # target
+#            str(tmpdir / 'test-repo/test1'),              # symlink
+#            str(tmpdir / 'test-repo/.git/annex/objects')  # target
 #        ),
 #        (
-#            os.path.join(TESTING_BASE_DIR, 'test-repo/test2'),
-#            os.path.join(TESTING_BASE_DIR, 'test-repo/.git/annex/objects')
+#            str(tmpdir / 'test-repo/test2'),
+#            str(tmpdir / 'test-repo/.git/annex/objects')
 #        )
 #    ]
 #    expected_rel = [

@@ -432,21 +432,24 @@ class DDRObject(object):
             return True
         return self.diff_file(self.identifier.path_abs('json'))
 
-    def write_json(self, doc_metadata=True, obj_metadata={}, force=False):
+    def write_json(self, doc_metadata=True, obj_metadata={}, force=False, path=None):
         """Write Collection/Entity JSON file to disk.
         
         @param doc_metadata: boolean
         @param obj_metadata: dict Cached results of object_metadata.
         @param force: boolean Write even nothing looks changed.
+        @param path: str Alternate absolute file path
         """
         if force or self.is_modified():
-            if not os.path.exists(os.path.dirname(self.json_path)):
-                os.makedirs(os.path.dirname(self.json_path))
+            if not path:
+                path = self.json_path
+            if not os.path.exists(os.path.dirname(path)):
+                os.makedirs(os.path.dirname(path))
             fileio.write_text(
                 self.dump_json(
                     doc_metadata=doc_metadata, obj_metadata=obj_metadata
                 ),
-                self.json_path
+                path
             )
     
     #post_json
