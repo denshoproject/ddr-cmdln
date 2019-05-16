@@ -213,13 +213,12 @@ class Checker():
         header_errs,rowds_errs = Checker._validate_csv_file(
             module, vocabs, headers, rowds, model
         )
-        if (not model_errs) and (not header_errs) and (not csv_errs) and (not rowds_errs):
+        if model_errs or header_errs or csv_errs or rowds_errs:
+            logging.error('NOTE: Line numbers in errors may not be exact.')
+            logging.error('      Numbering starts at zero and may not include header row.')
+        else:
             passed = True
             logging.info('ok')
-        else:
-            logging.error('FAIL')
-            logging.error('NOTE: Line numbers may not be exact.')
-            logging.error('      Numbering starts at zero and may not include header row.')
         return {
             'passed': passed,
             'headers': headers,
@@ -406,12 +405,11 @@ class Checker():
         if header_errs.keys():
             for name,errs in header_errs.iteritems():
                 if errs:
-                    logging.error(name)
                     for err in errs:
-                        logging.error('* %s' % err)
-            logging.error('FAIL')
+                        logging.error('* %s: "%s"' % (name, err))
+            logging.error('headers FAIL')
         else:
-            logging.info('ok')
+            logging.info('headers ok')
         logging.info('Validating rows')
         find_dupes = True
         if model and (model == 'file'):
@@ -420,12 +418,11 @@ class Checker():
         if rowds_errs.keys():
             for name,errs in rowds_errs.iteritems():
                 if errs:
-                    logging.error(name)
                     for err in errs:
-                        logging.error('* %s' % err)
-            logging.error('FAIL')
+                        logging.error('* %s: "%s"' % (name, err))
+            logging.error('rows FAIL')
         else:
-            logging.info('ok')
+            logging.info('rows ok')
         return [header_errs, rowds_errs]
 
 class ModifiedFilesError(Exception):
