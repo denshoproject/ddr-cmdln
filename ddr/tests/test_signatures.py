@@ -31,7 +31,7 @@ FILE_IDS = [
 ]
 
 SIGNATURES = [
-    #('ddr-testing-123', 'ddr-testing-123-1-mezzanine-abc123'),
+    ('ddr-testing-123',   'ddr-testing-123-1-mezzanine-abc123'),
     ('ddr-testing-123-1', 'ddr-testing-123-1-mezzanine-abc123'),
     ('ddr-testing-123-2', 'ddr-testing-123-2-mezzanine-abc124'),
     ('ddr-testing-123-3', 'ddr-testing-123-3-mezzanine-a1b2c3'),
@@ -47,6 +47,8 @@ def collection(tmpdir_factory):
     )
     ci = identifier.Identifier(collection_path)
     collection = models.collection.Collection.create(ci)
+    collection.public = True
+    collection.status = 'completed'
     collection.write_json()
     for oid,public,status in ENTITY_IDS:
         oi = identifier.Identifier(id=oid, base_path=collection.identifier.basepath)
@@ -67,12 +69,25 @@ def test_00_pick_signatures(tmpdir, collection):
     paths = util.find_meta_files(
         collection.path_abs, recursive=True, force_read=True, testing=True
     )
+    print('paths')
+    for x in paths:
+        print(x)
     parents = signatures.choose(paths)
+    print('parents')
+    for x in parents:
+        print(x)
     updates = signatures.find_updates(parents)
+    print('updates')
+    for x in updates:
+        print(x)
     files_written = signatures.write_updates(updates)
-
-def test_01_check_signatures(tmpdir, collection):
-    for oid,sid in SIGNATURES:
+    print('files_written')
+    for x in files_written:
+        print(x)
+    
+    for oid,expected in SIGNATURES:
         oi = identifier.Identifier(id=oid, base_path=collection.identifier.basepath)
         o = oi.object()
-        assert sid == o.signature_id
+        print('expected ',expected)
+        print('o.signature_id ',o.signature_id)
+        assert o.signature_id == expected
