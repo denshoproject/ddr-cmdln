@@ -64,10 +64,15 @@ def validate_headers(headers, field_names, exceptions, additional):
         if (field not in exceptions)
         and (field not in headers)
     ]
+    def header_or_empty(header):
+        # mark blank headers as [blank]
+        if header:
+            return header
+        return '[empty]'
     bad_headers = [
-        header for header in headers
-        if (header not in field_names)
-        and (header not in additional)
+        header_or_empty(header)
+        for header in headers
+        if (header not in field_names) and (header not in additional)
     ]
     errs = {}
     if missing_headers:
