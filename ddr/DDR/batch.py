@@ -340,7 +340,7 @@ class Checker():
             recursive=True, force_read=True
         )
         existing_ids = [
-            identifier.Identifier(path=path)
+            identifier.Identifier(path=path).id
             for path in metadata_paths
         ]
         new_ids = [rowd['id'] for rowd in rowds]
