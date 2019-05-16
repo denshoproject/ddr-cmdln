@@ -120,13 +120,16 @@ class SigIdentifier(identifier.Identifier):
         #print('%s model:%s public:%s status:%s' % (
         #    self.id, self.model, self.public, self.status
         #))
-        if self.model in identifier.NODES:
-            if self.public:
-                return True
-        else:
-            if self.public and (self.status == 'completed'):
-                return True
-        return False
+
+        ## 2019-05-15 geoff.froh decides .public and .status no longer required
+        #if self.model in identifier.NODES:
+        #    if self.public:
+        #        return True
+        #else:
+        #    if self.public and (self.status == 'completed'):
+        #        return True
+        #return False
+        return True
     
     def _signature_id(self):
         """Follow chain of object signatures to end, return last object.id

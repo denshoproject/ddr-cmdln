@@ -18,16 +18,16 @@ AGENT = 'pytest'
 COLLECTION_ID = 'ddr-testing-123'
 ENTITY_IDS = [
     ('ddr-testing-123-1', True, 'completed'),
-    ('ddr-testing-123-2', True, 'completed'),
-    ('ddr-testing-123-3', True, 'completed'),
+    ('ddr-testing-123-2', False, 'completed'),
+    ('ddr-testing-123-3', True, 'inprocess'),
 ]
 FILE_IDS = [
-    ('ddr-testing-123-1-mezzanine-abc123', True, 'completed'),
-    ('ddr-testing-123-1-master-abc123',    True, 'completed'),
-    ('ddr-testing-123-2-mezzanine-abc124', True, 'completed'),
-    ('ddr-testing-123-2-master-abc124',    True, 'completed'),
-    ('ddr-testing-123-3-mezzanine-a1b2c3', True, 'completed'),
-    ('ddr-testing-123-3-master-a1b2c3',    True, 'completed'),
+    ('ddr-testing-123-1-mezzanine-abc123', False, 'completed'),
+    ('ddr-testing-123-1-master-abc123',    False, 'completed'),
+    ('ddr-testing-123-2-mezzanine-abc124', True, 'inprocess'),
+    ('ddr-testing-123-2-master-abc124',    True, 'inprocess'),
+    ('ddr-testing-123-3-mezzanine-a1b2c3', False, 'inprocess'),
+    ('ddr-testing-123-3-master-a1b2c3',    False, 'inprocess'),
 ]
 
 SIGNATURES = [
