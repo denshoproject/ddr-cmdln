@@ -597,19 +597,15 @@ def file_destroy(user_name, user_mail, collection, entity, rm_files, updated_fil
     dvcs.remote_add(repo, collection.git_url, config.GIT_REMOTE_NAME)
     
     # updated file paths are relative to collection root
-    git_files = [os.path.join('files', entity.id, f) for f in updated_files]
+    git_files = [
+        f for f in updated_files
+    ]
     
     # remove the files
     # NOTE: File must be removed from filesystem at this point
     # so the File will be properly removed from the control file
     for f in rm_files:
         repo.git.rm('-rf', f)
-    
-    # update entity control
-    econtrol = entity.control()
-    econtrol.update_checksums(entity)
-    econtrol.write()
-    git_files.append(econtrol.path_rel)
     
     # update entity changelog
     changelog_files = [
