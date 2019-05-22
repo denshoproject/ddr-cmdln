@@ -647,6 +647,41 @@ def test_entity_to_childrenmeta():
     assert out == expected
 
 
+def test_file_import_actions():
+    rowd00a = {
+        'external': False,
+    }
+    expected00a = models.files.FILE_IMPORT_ACTIONS['noexternal,noattrs']
+    out00a = models.files.import_actions(rowd00a)
+    assert out00a == expected00a
+    rowd00b = {
+        'external': 0,
+        'md5':'', 'sha1':'', 'sha256':'', 'size':'',
+    }
+    expected00b = models.files.FILE_IMPORT_ACTIONS['noexternal,noattrs']
+    out00b = models.files.import_actions(rowd00b)
+    assert out00b == expected00b
+    rowd01 = {
+        'external': False,
+        'md5':'abc', 'sha1':'abc', 'sha256':'abc', 'size':'abc',
+    }
+    expected01 = models.files.FILE_IMPORT_ACTIONS['noexternal,attrs']
+    out01 = models.files.import_actions(rowd01)
+    assert out01 == expected01
+    rowd10 = {
+        'external': True,
+    }
+    expected10 = models.files.FILE_IMPORT_ACTIONS['external,noattrs']
+    out10 = models.files.import_actions(rowd10)
+    assert out10 == expected10
+    rowd11 = {
+        'external': True,
+        'md5':'abc', 'sha1':'abc', 'sha256':'abc', 'size':'abc',
+    }
+    expected11 = models.files.FILE_IMPORT_ACTIONS['external,attrs']
+    out11 = models.files.import_actions(rowd11)
+    assert out11 == expected11
+
 # TODO File.__init__
 # TODO File.__repr__
 # TODO File.from_identifer

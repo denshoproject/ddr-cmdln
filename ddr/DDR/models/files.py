@@ -48,6 +48,74 @@ ENTITY_FILE_KEYS = [
     'sort',
 ]
 
+FILE_BINARY_FIELDS = [
+    'sha1', 'sha256', 'md5', 'size', 'mimetype',
+]
+
+# Decision table for various ways to process file data for batch operations
+#
+# +--external
+# |+-attrs present
+# || LABEL               ACTIONS
+# 00 new-internal        Binary in repo; calc bin attrs (ignore CSV attrs)
+# 01 new-internal        Binary in repo; calc bin attrs (ignore CSV attrs)
+# 10 new-external-bin    Binary external; calc bin attrs; rename bin w fileID
+# 11 new-external-nobin  Binary external; use CSV attrs; dont process local file
+#
+FILE_IMPORT_ACTIONS = {
+    'noexternal,noattrs': {
+        'label': 'new-internal',
+        'attrs': 'calculate',
+        'ingest': True,
+        'rename': False,
+    },
+    'noexternal,attrs': {
+        'label': 'new-internal',
+        'attrs': 'calculate',
+        'ingest': True,
+        'rename': False,
+    },
+    'external,noattrs': {
+        'label': 'new-internal-bin',
+        'attrs': 'calculate',
+        'ingest': False,
+        'rename': True,
+    },
+    'external,attrs': {
+        'label': 'new-internal-nobin',
+        'attrs': 'fromcsv',
+        'ingest': False,
+        'rename': False,
+    },
+}
+
+def import_actions(rowd):
+    """Decide actions when importing file from CSV
+    
+    @param rowd: dict Row from CSV; see DDR.batch and DDR.csvfile
+    @returns: dict
+    """
+    factors = []
+    
+    if rowd.get('external') and rowd['external']:
+        factors.append('external')
+    else:
+        factors.append('noexternal')
+    
+    bin_attrs = [
+        fieldname for fieldname in FILE_BINARY_FIELDS if rowd.get(fieldname)
+    ]
+    if bin_attrs:
+        factors.append('attrs')
+    else:
+        factors.append('noattrs')
+    
+    key = ','.join(factors)
+    if FILE_IMPORT_ACTIONS.get(key):
+        return FILE_IMPORT_ACTIONS[key]
+    raise Exception('Cannot decide file ingest actions.')
+
+
 @total_ordering
 class File(common.DDRObject):
     id = None
