@@ -322,7 +322,7 @@ def stage_files(entity, git_files, annex_files, new_files, log, show_staged=True
             log.crash('Add file aborted, see log file for details: %s' % log.logpath)
     return repo
 
-def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='',
+def add_local_file(entity, data, git_name, git_mail, agent='',
                    tmp_dir=config.MEDIA_BASE, log_path=None, show_staged=True):
     """Add a "normal" file to entity
     
@@ -336,9 +336,8 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='',
     
     IMPORTANT: Files are only staged! Be sure to commit!
     
-    @param src_path: Absolute path to an uploadable file.
-    @param role: Keyword of a file role.
-    @param data: 
+    @param entity: Entity object
+    @param data: dict
     @param git_name: Username of git committer.
     @param git_mail: Email of git committer.
     @param agent: str (optional) Name of software making the change.
@@ -357,38 +356,23 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='',
     log.ok('DDR.models.Entity.add_local_file: START')
     log.ok('entity: %s' % entity.id)
     log.ok('data: %s' % data)
-    log.ok('src_path: %s' % src_path)
     
-    log.ok('Examining source file')
-    check_dir('| src_path', src_path, log, mkdir=False, perm=os.R_OK)
-    
-    src_size = os.path.getsize(src_path)
-    log.ok('| file size %s' % src_size)
-    # TODO check free space on dest
-    
-    md5,sha1,sha256 = checksums(src_path, log)
-    
-    log.ok('| extracting XMP data')
-    xmp = imaging.extract_xmp(src_path)
-    
-    log.ok('Identifier')
-    # note: we can't make this until we have the sha1
-    idparts = {
-        'role': role,
-        'sha1': sha1[:10],
-    }
-    log.ok('| idparts %s' % idparts)
-    fidentifier = entity.identifier.child('file', idparts, entity.identifier.basepath)
-    log.ok('| identifier %s' % fidentifier)
-    file_class = fidentifier.object_class()
-    # remove 'id' from forms/CSV data so it doesn't overwrite file_.id later
-    if data.get('id'):
-        data.pop('id')
+    src_path = data.pop('basename_orig')
+    src_size,md5,sha1,sha256,xmp = file_info(src_path, log)
+
+    fidentifier = file_identifier(entity, data, sha1, log)
+    file_ = file_object(
+        fidentifier, entity, data,
+        src_path, src_size, md5, sha1, sha256, xmp,
+        log
+    )
     
     dest_path = destination_path(src_path, entity.files_path, fidentifier)
     tmp_path = temporary_path(src_path, tmp_dir, fidentifier)
     tmp_path_renamed = temporary_path_renamed(tmp_path, dest_path)
-    access_dest_path = access_path(file_class, tmp_path_renamed)
+    access_dest_path = access_path(
+        fidentifier.object_class(), tmp_path_renamed
+    )
     dest_dir = os.path.dirname(dest_path)
     
     log.ok('Checking files/dirs')
@@ -410,33 +394,6 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='',
         log.not_ok('Access tmpfile already exists: %s' % access_dest_path)
     tmp_access_path = make_access_file(src_path, access_dest_path, log)
     
-    log.ok('File object')
-    file_ = fidentifier.object_class().create(fidentifier, parent=entity)
-    file_.basename_orig = os.path.basename(src_path)
-    # add extension to path_abs
-    basename_ext = os.path.splitext(file_.basename_orig)[1]
-    path_abs_ext = os.path.splitext(file_.path_abs)[1]
-    if basename_ext and not path_abs_ext:
-        file_.path_abs = file_.path_abs + basename_ext
-        log.ok('| basename_ext %s' % basename_ext)
-    file_.size = src_size
-    file_.role = role
-    file_.sha1 = sha1
-    file_.md5 = md5
-    file_.sha256 = sha256
-    file_.xmp = xmp
-    log.ok('| file_ %s' % file_)
-    log.ok('| file_.basename_orig: %s' % file_.basename_orig)
-    log.ok('| file_.path_abs: %s' % file_.path_abs)
-    log.ok('| file_.size: %s' % file_.size)
-    # form data
-    for field in data:
-        setattr(file_, field, data[field])
-    # Batch import CSV files often have the ID of the file-role or entity
-    # instead of the file. Add file ID again to make sure the field has
-    # the correct value.
-    file_.id = fidentifier.id
-    
     log.ok('Attaching access file')
     if tmp_access_path and os.path.exists(tmp_access_path):
         file_.set_access(tmp_access_path, entity)
@@ -445,6 +402,11 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='',
     else:
         log.not_ok('no access file')
     
+    # WE ARE NOW MAKING CHANGES TO THE REPO ------------------------
+    
+    log.ok('Writing file metadata')
+    tmp_file_json = write_object_metadata(file_, tmp_dir, log)
+    
     log.ok('Attaching file to entity')
     entity.add_child(file_)
     if file_ in entity.children():
@@ -452,11 +414,8 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='',
     else:
         log.crash('Could not add file to entity.files!')
     
-    log.ok('Writing object metadata')
-    tmp_file_json = write_object_metadata(file_, tmp_dir, log)
+    log.ok('Writing entity metadata')
     # write entity.json after adding binaries and updating file.json
-    
-    # WE ARE NOW MAKING CHANGES TO THE REPO ------------------------
     
     log.ok('Moving files to dest_dir')
     new_files = [
@@ -496,7 +455,67 @@ def add_local_file(entity, src_path, role, data, git_name, git_mail, agent='',
     # IMPORTANT: changelog is not staged!
     return file_,repo,log
 
-def add_external_file(entity, data, git_name, git_mail, agent='', log_path=None, show_staged=True):
+def file_info(src_path, log):
+    log.ok('Examining source file')
+    check_dir('| src_path', src_path, log, mkdir=False, perm=os.R_OK)
+    size = os.path.getsize(src_path)
+    log.ok('| file size %s' % size)
+    # TODO check free space on dest
+    log.ok('| hashing')
+    md5,sha1,sha256 = checksums(src_path, log)
+    log.ok('| md5 %s' % md5)
+    log.ok('| sha1 %s' % sha1)
+    log.ok('| sha256 %s' % sha256)
+    log.ok('| extracting XMP data')
+    xmp = imaging.extract_xmp(src_path)
+    return size,md5,sha1,sha256,xmp
+
+def file_identifier(entity, data, sha1, log):
+    log.ok('Identifier')
+    # note: we can't make this until we have the sha1
+    idparts = entity.identifier.idparts
+    idparts['model'] = 'file'
+    idparts['role'] = data['role']
+    idparts['sha1'] = sha1[:10]
+    log.ok('| idparts %s' % idparts)
+    fidentifier = identifier.Identifier(idparts, entity.identifier.basepath)
+    log.ok('| identifier %s' % fidentifier)
+    return fidentifier
+
+def file_object(fidentifier, entity, data, src_path, src_size, md5, sha1, sha256, xmp, log):
+    log.ok('File object')
+    file_ = fidentifier.object_class().create(fidentifier, parent=entity)
+    file_.basename_orig = os.path.basename(src_path)
+    # add extension to path_abs
+    basename_ext = os.path.splitext(file_.basename_orig)[1]
+    path_abs_ext = os.path.splitext(file_.path_abs)[1]
+    if basename_ext and not path_abs_ext:
+        file_.path_abs = file_.path_abs + basename_ext
+        log.ok('| basename_ext %s' % basename_ext)
+    file_.size = src_size
+    file_.role = data['role']
+    file_.sha1 = sha1
+    file_.md5 = md5
+    file_.sha256 = sha256
+    file_.xmp = xmp
+    log.ok('| file_ %s' % file_)
+    log.ok('| file_.basename_orig: %s' % file_.basename_orig)
+    log.ok('| file_.path_abs: %s' % file_.path_abs)
+    log.ok('| file_.size: %s' % file_.size)
+    # remove 'id' from forms/CSV data so it doesn't overwrite file_.id later
+    if data.get('id'):
+        data.pop('id')
+    # form data
+    for field in data:
+        setattr(file_, field, data[field])
+    # Batch import CSV files often have the ID of the file-role or entity
+    # instead of the file. Add file ID again to make sure the field has
+    # the correct value.
+    file_.id = fidentifier.id
+    return file_
+
+def add_external_file(entity, data, git_name, git_mail, agent='',
+                      log_path=None, show_staged=True):
     """Add external-binary (i.e. metadata-only) file to entity
     
     "External" files are those in which no binary file is ingested, only metadata.
@@ -534,45 +553,23 @@ def add_external_file(entity, data, git_name, git_mail, agent='', log_path=None,
     if not (data.get('external') and data['external']):
         log.ok('Regular file (not external)')
         raise Exception('Not an external (metadata-only) file: %s' % data)
-
-    # Hash the file if present in import directory
-    src_path = None
-    if os.path.exists(data['basename_orig']):
-        src_path = data['basename_orig']
-        src_size = os.path.getsize(src_path)
-        log.ok('| file size %s' % src_size)
-        data['size'] = src_size
-        md5,sha1,sha256 = checksums(src_path, log)
-        data['md5'] = md5
-        data['sha1'] = sha1
-        data['sha256'] = sha256
+    
+    src_path = data.get('basename_orig')
+    if src_path:
+        src_size,md5,sha1,sha256,xmp = file_info(src_path, log)
+    else:
         # don't need absolute path anymore
         data['basename_orig'] = os.path.basename(src_path)
+        src_size = data['size']
+        md5,sha1,sha256 = data['md5'], data['sha1'], data['sha256']
+        xmp = data['xmp']
     
-    log.ok('Identifier')
-    # note: we can't make this until we have the sha1
-    idparts = entity.identifier.idparts
-    idparts['model'] = 'file'
-    idparts['role'] = data['role']
-    idparts['sha1'] = data['sha1'][:10]
-    log.ok('| idparts %s' % idparts)
-    fidentifier = identifier.Identifier(idparts, entity.identifier.basepath)
-    log.ok('| identifier %s' % fidentifier)
-    
-    log.ok('File object')
-    file_ = fidentifier.object_class().create(fidentifier, parent=entity)
-    # add extension to path_abs
-    basename_ext = os.path.splitext(data['basename_orig'])[1]
-    path_abs_ext = os.path.splitext(file_.path_abs)[1]
-    if basename_ext and not path_abs_ext:
-        file_.path_abs = file_.path_abs + basename_ext
-        log.ok('| basename_ext %s' % basename_ext)
-    for field in data:
-        setattr(file_, field, data[field])
-    # Batch import CSV files often have the ID of the file-role or entity
-    # instead of the file. Add file ID again to make sure the field has
-    # the correct value.
-    file_.id = fidentifier.id
+    fidentifier = file_identifier(entity, data, sha1, log)
+    file_ = file_object(
+        fidentifier, entity, data,
+        src_path, src_size, md5, sha1, sha256, xmp,
+        log
+    )
     
     # WE ARE NOW MAKING CHANGES TO THE REPO ------------------------
     
@@ -581,10 +578,10 @@ def add_external_file(entity, data, git_name, git_mail, agent='', log_path=None,
     
     log.ok('Attaching file to entity')
     entity.add_child(file_)
-    #if file_ in entity.files:
-    #    log.ok('| done')
-    #else:
-    #    log.crash('Could not add file to entity.files!')
+    if file_ in entity.children():
+        log.ok('| done')
+    else:
+        log.crash('Could not add file to entity.files!')
     
     log.ok('Writing entity metadata')
     entity.write_json()

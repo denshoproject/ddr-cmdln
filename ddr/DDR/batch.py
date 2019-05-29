@@ -943,8 +943,6 @@ class Importer():
                 try:
                     file_,repo2,log2 = ingest.add_local_file(
                         parent,
-                        rowd['basename_orig'],
-                        rowd['role'],
                         rowd,
                         git_name, git_mail, agent,
                         tmp_dir=tmp_dir,
