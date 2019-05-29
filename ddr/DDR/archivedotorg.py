@@ -128,16 +128,13 @@ class IAObject():
         """
         for format_ in FORMATS:
             for tag in self.soup.files.children:
-                if isinstance(tag, Tag) and (format_ in tag['name']):
+                if isinstance(tag, Tag) and (tag['name'].endswith(format_)):
                     self.files[format_] = IAFile(self.id, format_, tag)
     
     def _assign_mimetype(self):
         """Assign self the mimetype of the original file
         """
-        for format_,f in self.files.iteritems():
-            if f.name == self.original:
-                self.mimetype = f.mimetype
-                break
+        self.mimetype = mimetypes.guess_type(self.original)[0]
     
     def original_file(self):
         """
