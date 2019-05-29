@@ -468,6 +468,8 @@ def _is_listofdicts(data):
     return False
 
 def text_to_dicts(text, terms, separator=';'):
+    if _is_listofdicts(text):
+        return text
     text = normalize_string(text)
     if not text:
         return []

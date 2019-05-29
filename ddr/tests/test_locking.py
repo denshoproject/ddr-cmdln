@@ -1,18 +1,14 @@
-from datetime import datetime
 import os
 
-from DDR import config
-from DDR import locking
+import pytest
 
-TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'locking')
-if not os.path.exists(TESTING_BASE_DIR):
-    os.makedirs(TESTING_BASE_DIR)
+from DDR import locking
 
 # locking.lock
 # locking.unlock
 # locking.locked
-def test_locking():
-    lock_path = os.path.join(TESTING_BASE_DIR, 'test-lock-%s' % datetime.now(config.TZ).strftime('%Y%m%dT%H%M%S'))
+def test_locking(tmpdir):
+    lock_path = str(tmpdir / 'test-lock')
     text = 'we are locked. go away.'
     # before locking
     assert locking.locked(lock_path) == False

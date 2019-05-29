@@ -1,17 +1,11 @@
 from datetime import datetime
 import json
-import os
 
 from nose.tools import assert_raises
 from nose.plugins.attrib import attr
 
-from DDR import config
 from DDR import docstore
 from DDR import identifier
-
-TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'docstore')
-#if not os.path.exists(TESTING_BASE_DIR):
-#    os.makedirs(TESTING_BASE_DIR)
 
 """
 NOTE: You can disable tests requiring Elasticseach server:

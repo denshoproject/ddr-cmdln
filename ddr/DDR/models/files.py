@@ -293,7 +293,7 @@ class File(common.DDRObject):
         entity.remove_child(self.id)
         entity.write_json(force=True)
         updated_files = [
-            'entity.json'  # TODO should be entity.identifier.path_rel('json')
+            entity.identifier.path_rel('json'),
         ]
         
         # write files and commit

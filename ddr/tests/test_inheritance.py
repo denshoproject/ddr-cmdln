@@ -1,14 +1,11 @@
 import os
 import shutil
 
-from DDR import config
+import pytest
+
 from DDR import identifier
 from DDR import inheritance
 from DDR import models
-
-TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'inheritance')
-if not os.path.exists(TESTING_BASE_DIR):
-    os.makedirs(TESTING_BASE_DIR)
 
 MODEL_FIELDS_INHERITABLE = [
     {'model': 'collection', 'name':'id',},
@@ -50,9 +47,9 @@ CHILD_JSONS_EXPECTED = [
     'files/ddr-test-123-2/files/ddr-test-123-2-master-abc123.json',
 ]
 
-def test_child_jsons():
+def test_child_jsons(tmpdir):
     pass
-    basedir = os.path.join(TESTING_BASE_DIR, 'child_jsons')
+    basedir = str(tmpdir / 'child_jsons')
     if os.path.exists(basedir):
         shutil.rmtree(basedir, ignore_errors=1)
     

@@ -1,20 +1,14 @@
 # -*- coding: utf-8 -*-
 
 from collections import OrderedDict
-import os
 
 import envoy
 import git
 from nose.tools import assert_raises
 
-from DDR import config
 from DDR import csvfile
 from DDR import identifier
 from DDR import modules
-
-TESTING_BASE_DIR = os.path.join(config.TESTING_BASE_DIR, 'csvfile')
-#if not os.path.exists(TESTING_BASE_DIR):
-#    os.makedirs(TESTING_BASE_DIR)
 
 
 def test_make_row_dict():
@@ -85,6 +79,13 @@ def test_validate_headers():
     expected3 = {}
     out2 = csvfile.validate_headers(headers2, field_names2, exceptions, additional)
     assert out2 == expected2
+    # ignored header
+    headers4 = ['MEMO', 'id', 'title']
+    field_names4 = ['MEMO', 'id', 'title']
+    additional = ['note']
+    expected4 = {}
+    out4 = csvfile.validate_headers(headers4, field_names4, exceptions, additional)
+    assert out4 == expected4
 
 def test_account_row():
     required_fields0 = ['id', 'title']

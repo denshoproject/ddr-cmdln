@@ -59,15 +59,40 @@ def validate_headers(headers, field_names, exceptions, additional):
     @param exceptions: List of nonrequired field names
     @param additional: List of nonrequired fields which may appear
     """
+    
+    def ignore_header(header):
+        if header.isupper():
+            return True
+        return False
+    
+    def header_is_bad(header):
+        if (header not in field_names) \
+        and (header not in additional) \
+        and (not ignore_header(header)):
+            return True
+        return False
+    
+    def header_or_empty(header):
+        # mark blank headers as [blank]
+        if header:
+            return header
+        return '[empty]'
+    
     missing_headers = [
-        field for field in field_names
+        field
+        for field in field_names
         if (field not in exceptions)
         and (field not in headers)
     ]
+    ignored_headers = [
+        header
+        for header in headers
+        if ignore_header(header)
+    ]
     bad_headers = [
-        header for header in headers
-        if (header not in field_names)
-        and (header not in additional)
+        header_or_empty(header)
+        for header in headers
+        if header_is_bad(header)
     ]
     errs = {}
     if missing_headers:
