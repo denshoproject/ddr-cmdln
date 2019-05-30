@@ -69,6 +69,20 @@ def coerce_text(data):
     return data
 
 
+# boolean --------------------------------------------------------------
+
+def text_to_boolean(value):
+    if value:
+        if isinstance(value, int) and value:
+            return True
+        elif isinstance(value, basestring):
+            if value.isdigit() and int(value):
+                return True
+            if value in ['true', 'True']:
+                return True
+    return False
+
+
 # datetime -------------------------------------------------------------
 #
 # format = '%Y-%m-%dT%H:%M:%S'

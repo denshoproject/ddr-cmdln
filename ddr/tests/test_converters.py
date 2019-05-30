@@ -62,8 +62,24 @@ def test_coerce_text():
     # datetime
     assert converters.coerce_text(COERCE_TEXT_DATA1) == COERCE_TEXT_EXPECTED1
     assert converters.coerce_text(COERCE_TEXT_EXPECTED1) == COERCE_TEXT_EXPECTED1
-    
 
+
+TEXT_TO_BOOLEAN = [
+    (None,    False),
+    (0,       False),
+    ('0',     False),
+    ('false', False),
+    ('False', False),
+    (1,       True),
+    ('1',     True),
+    ('true',  True),
+    ('True',  True),
+]
+
+def test_text_to_boolean():
+    for input_,expected in TEXT_TO_BOOLEAN:
+        print('%s (%s) -> %s' % (input_, type(input_), expected))
+        assert converters.text_to_boolean(input_) == expected
 
 TEXT_DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S'
 TEXT_DATETIME_TEXT0 = '2016-08-31T15:42:17'
