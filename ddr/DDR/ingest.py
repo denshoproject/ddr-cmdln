@@ -15,6 +15,55 @@ from DDR import identifier
 from DDR import imaging
 from DDR import util
 
+FILE_BINARY_FIELDS = [
+    'sha1', 'sha256', 'md5', 'size', 'mimetype',
+]
+
+# Decision table for various ways to process file data for batch operations
+#
+# +--external
+# |+-attrs present
+# || LABEL               ACTIONS
+# 00 new-internal        Binary in repo; calc bin attrs (ignore CSV attrs)
+# 01 new-internal        Binary in repo; calc bin attrs (ignore CSV attrs)
+# 10 new-external-bin    Binary external; calc bin attrs; rename bin w fileID
+# 11 new-external-nobin  Binary external; use CSV attrs; dont process local file
+#
+FILE_IMPORT_ACTIONS = {
+'local,noattrs':   {'label':'new-internal',       'attrs':'calculate', 'ingest':1, 'rename':0, 'access':1},
+'local,attrs':     {'label':'new-internal',       'attrs':'calculate', 'ingest':1, 'rename':0, 'access':1},
+'external,noattrs':{'label':'new-internal-bin',   'attrs':'calculate', 'ingest':0, 'rename':1, 'access':0},
+'external,attrs':  {'label':'new-internal-nobin', 'attrs':'fromcsv',   'ingest':0, 'rename':0, 'access':0},
+}
+
+def import_actions(rowd):
+    """Decide actions when importing file from CSV
+    
+    @param rowd: dict Row from CSV; see DDR.batch and DDR.csvfile
+    @returns: dict
+    """
+    factors = []
+    
+    # external
+    if rowd.get('external') and rowd['external']:
+        factors.append('external')
+    else:
+        factors.append('local')
+    
+    # file attrs
+    bin_attrs = [
+        fieldname for fieldname in FILE_BINARY_FIELDS if rowd.get(fieldname)
+    ]
+    if bin_attrs:
+        factors.append('attrs')
+    else:
+        factors.append('noattrs')
+    
+    key = ','.join(factors)
+    if FILE_IMPORT_ACTIONS.get(key):
+        return FILE_IMPORT_ACTIONS[key]
+    raise Exception('Cannot decide file ingest actions.')
+
 
 class FileExistsException(Exception):
     pass
