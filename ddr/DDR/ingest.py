@@ -102,6 +102,102 @@ class AddFileLogger():
         self.not_ok(msg)
         raise exception(msg)
 
+
+def add_file(rowd, entity, git_name, git_mail, agent,
+             tmp_dir=config.MEDIA_BASE, log_path=None, show_staged=True):
+    """Add local or external file, with or without access.
+    
+    @param rowd: dict Row from a CSV import file in dict form.
+    @param entity: Entity object
+    @param git_name: Username of git committer.
+    @param git_mail: Email of git committer.
+    @param agent: str (optional) Name of software making the change.
+    @param log_path: str (optional) Absolute path to addfile log
+    @param show_staged: boolean Log list of staged files
+    @return File,repo,log
+    """
+    f = None
+    repo = None
+    if log_path:
+        log = addfile_logger(log_path=log_path)
+    else:
+        log = addfile_logger(identifier=entity.identifier)
+    
+    log.ok('------------------------------------------------------------------------')
+    log.ok('DDR.models.Entity.add_local_file: START')
+    log.ok('rowd: %s' % rowd)
+    log.ok('parent: %s' % entity.id)
+    
+    actions = import_actions(rowd)
+    log.ok('actions %s' % actions)
+    
+    src_path = rowd.pop('basename_orig')
+    
+    if actions['attrs'] == 'calculate':
+        src_size,md5,sha1,sha256,xmp = file_info(src_path, log)
+    elif actions['attrs'] == 'fromcsv':
+        src_size = rowd['size']
+        md5,sha1,sha256 = rowd['md5'], rowd['sha1'], rowd['sha256']
+        xmp = rowd.get('xmp')
+    
+    fidentifier = file_identifier(entity, rowd, sha1, log)
+    file_ = file_object(
+        fidentifier, entity, rowd,
+        src_path, src_size, md5, sha1, sha256, xmp,
+        log
+    )
+    file_.external = rowd['external']
+    
+    if actions['rename']:
+        rename_in_place(src_path, os.path.basename(fidentifier.path_abs()), log)
+    
+    dest_path = destination_path(src_path, entity.files_path, fidentifier)
+    tmp_path = temporary_path(src_path, tmp_dir, fidentifier)
+    tmp_path_renamed = temporary_path_renamed(tmp_path, dest_path)
+    dest_dir = os.path.dirname(dest_path)
+    access_dest_path = access_path(
+        file_.identifier.object_class(), tmp_path_renamed
+    )
+    
+    if actions['ingest']:
+        copy_to_file_path(file_, src_path, dest_dir, dest_path, log)
+    
+    tmp_access_path = None
+    if actions['access']:
+        tmp_access_path = make_access_file(src_path, access_dest_path, log)
+        log.ok('Attaching access file')
+        if tmp_access_path and os.path.exists(tmp_access_path):
+            file_.set_access(tmp_access_path, entity)
+            log.ok('| file_.access_rel: %s' % file_.access_rel)
+            log.ok('| file_.access_abs: %s' % file_.access_abs)
+        else:
+            log.not_ok('no access file')
+    
+    log.ok('Writing file and entity rowd')
+    exit,status,git_files = file_.save(
+        git_name, git_mail, agent, parent=entity, commit=False
+    )
+    
+    log.ok('Staging files')
+    if file_.external:
+        annex_files = []
+    else:
+        annex_files = [file_.path_abs]
+    if file_.access_abs and os.path.exists(file_.access_abs):
+        annex_files.append(file_.access_abs)
+    git_files_rel = [
+        path.replace('%s/' % file_.collection_path, '') for path in git_files
+    ]
+    annex_files_rel = [
+        path.replace('%s/' % file_.collection_path, '') for path in annex_files
+    ]
+    repo = stage_files(
+        entity, git_files_rel, annex_files_rel, [], log, show_staged=show_staged
+    )
+    # IMPORTANT: Files are only staged! Be sure to commit!
+    # IMPORTANT: changelog is not staged!
+    return file_,repo,log
+
 def _log_path(identifier, base_dir=config.LOG_DIR):
     """Generates path to collection addfiles.log.
     
@@ -139,7 +235,7 @@ def addfile_logger(identifier=None, log_path=None, base_dir=config.LOG_DIR):
     return log
 
 def check_dir(label, path, log, mkdir=False, perm=os.W_OK):
-    log.ok('check dir %s (%s)' % (path, label))
+    log.ok('| check dir %s (%s)' % (path, label))
     if mkdir and not os.path.exists(path):
         os.makedirs(path)
     if not os.path.exists(path):
@@ -208,7 +304,25 @@ def copy_to_workdir(src_path, tmp_path, tmp_path_renamed, log):
     if not os.path.exists(tmp_path_renamed) and not os.path.exists(tmp_path):
         log.crash('File rename failed: %s -> %s' % (tmp_path, tmp_path_renamed))
 
+def copy_to_file_path(file_, src_path, dest_dir, dest_path, log):
+    log.ok('Copying to work dir')
+    log.ok('| cp %s %s' % (src_path, file_.path_abs))
+    if not os.path.exists(file_.entity_files_path):
+        os.makedirs(file_.entity_files_path)
+    shutil.copy(src_path, file_.path_abs)
+    os.chmod(file_.path_abs, 0644)
+    if os.path.exists(file_.path_abs):
+        log.ok('| done')
+    else:
+        log.crash('Copy failed!')
+        raise Exception(
+            'Failed to copy file(s) to destination repo'
+        )
+ 
 def make_access_file(src_path, access_dest_path, log):
+    log.ok('Making access file')
+    if os.path.exists(access_dest_path):
+        log.not_ok('Access tmpfile already exists: %s' % access_dest_path)
     log.ok('| %s' % access_dest_path)
     try:
         data = imaging.thumbnail(
@@ -294,6 +408,14 @@ def move_existing_files_back(files, log):
     if not os.path.exists(entity.json_path):
         log.crash('Failed to place entity.json in destination repo')
 
+def rename_in_place(source, new_name, log):
+    """Rename original file in-place
+    """
+    src_dir = os.path.dirname(source)
+    dest = os.path.join(src_dir, os.path.basename(new_name))
+    log.ok('| mv %s %s' % (source, dest))
+    shutil.move(source, dest)
+
 def predict_staged(already, planned):
     """Predict which files will be staged, accounting for modifications
     
@@ -311,6 +433,14 @@ def predict_staged(already, planned):
     return total
 
 def stage_files(entity, git_files, annex_files, new_files, log, show_staged=True):
+    """
+    @param entity: DDR.models.entities.Entity
+    @param git_files: list
+    @param annex_files: list
+    @param new_files: list of tuples [(tmp,dest), ...]
+    @param log: AddFileLogger
+    @param show_staged: bool
+    """
     # TODO move to DDR.dvcs?
     repo = dvcs.repository(entity.collection_path)
     log.ok('| repo %s' % repo)
@@ -324,27 +454,30 @@ def stage_files(entity, git_files, annex_files, new_files, log, show_staged=True
     stage_already = dvcs.list_staged(repo)
     stage_predicted = predict_staged(stage_already, stage_planned)
     stage_new = [x for x in stage_planned if x not in stage_already]
-    log.ok('| %s files to stage:' % len(stage_planned))
+    log.ok('| staging %s files:' % len(stage_planned))
     for sp in stage_planned:
         log.ok('|   %s' % sp)
+    
     stage_ok = False
     staged = []
     try:
-        log.ok('git stage')
+        log.ok('| git stage')
         dvcs.stage(repo, git_files)
-        log.ok('annex stage')
+        log.ok('| annex stage')
         dvcs.annex_stage(repo, annex_files)
-        log.ok('ok')
         staged = dvcs.list_staged(repo)
+        log.ok('| ok')
     except:
         # FAILED! print traceback to addfile log
         log.not_ok(traceback.format_exc().strip())
     finally:
+        log.ok('| finally')
         if show_staged:
             log.ok('| %s files staged:' % len(staged))
             log.ok('show_staged %s' % show_staged)
             for sp in staged:
                 log.ok('|   %s' % sp)
+        
         if len(staged) == len(stage_predicted):
             log.ok('| %s files staged (%s new, %s modified)' % (
                 len(staged), len(stage_new), len(stage_already))
@@ -355,6 +488,7 @@ def stage_files(entity, git_files, annex_files, new_files, log, show_staged=True
                 len(staged), len(stage_predicted))
             )
         if not stage_ok:
+            # TODO remove new_files cleanup
             log.not_ok('File staging aborted. Cleaning up')
             # try to pick up the pieces
             # mv files back to tmp_dir
