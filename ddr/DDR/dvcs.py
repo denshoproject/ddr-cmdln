@@ -310,6 +310,14 @@ def list_conflicted(repo):
     stdout = repo.git.ls_files('--unmerged')
     return _parse_list_conflicted(stdout)
 
+def git_status(repo):
+    return {
+        'staged': list_staged(repo),
+        'modified': list_modified(repo),
+        'untracked': list_untracked(repo),
+        'conflicted': list_conflicted(repo),
+    }
+
 
 # git state ------------------------------------------------------------
 
