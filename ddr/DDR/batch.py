@@ -907,70 +907,19 @@ class Importer():
             logging.debug('| parent %s' % (parent))
             
             if not dryrun:
-                
-                # external files (no binary except maybe access file)
-                if Importer._rowd_is_external(rowd):
-                    file_,repo2,log2 = ingest.add_external_file(
-                        parent,
-                        rowd,
+                file_,repo2,log2 = ingest.add_file(
+                    rowd, parent,
+                    git_name, git_mail, agent,
+                    tmp_dir=tmp_dir, log_path=log_path, show_staged=False
+                )
+                # TODO integrate into ingest.add_file
+                if rowd.get('access_path'):
+                    file_,repo3,log3,status = ingest.add_access(
+                        parent, file_, rowd['access_path'],
                         git_name, git_mail, agent,
-                        tmp_dir=tmp_dir,
-                        log_path=log_path,
-                        show_staged=False
+                        log_path=log_path, show_staged=False
                     )
-                    # Custom access files
-                    if rowd.get('access_path'):
-                        file_,repo3,log3,status = ingest.add_access(
-                            parent, file_,
-                            rowd['access_path'],
-                            git_name, git_mail, agent,
-                            log_path=log_path,
-                            show_staged=False
-                        )
-                    git_files.append(file_)
-                
-                else:
-                    # normal files
-                    # ingest
-                    # TODO make sure this updates entity.files
-                    
-                    # TODO refactor this?
-                    # Add role if file.ID doesn't have it
-                    # This will happen with e.g. transcript files when file_id is
-                    # actually the Entity/Segment ID and contains no role,
-                    # and when sha1 field is blank.
-                    # NOTE: no File object yet for new files
-                    if file_ and (
-                            rowd.get('role') and not file_.identifier.parts.get('role')
-                    ):
-                        file_.identifier.parts['role'] = rowd['role']
-                    
-                    try:
-                        file_,repo2,log2 = ingest.add_local_file(
-                            parent,
-                            rowd,
-                            git_name, git_mail, agent,
-                            tmp_dir=tmp_dir,
-                            log_path=log_path,
-                            show_staged=False
-                        )
-                    except ingest.FileExistsException as e:
-                        logging.error('ERROR: %s' % e)
-                        failures.append(e)
-                    except ingest.FileMissingException as e:
-                        logging.error('ERROR: %s' % e)
-                        failures.append(e)
-                    
-                    # Custom access files
-                    if rowd.get('access_path'):
-                        file_,repo3,log3,status = ingest.add_access(
-                            parent, file_,
-                            rowd['access_path'],
-                            git_name, git_mail, agent,
-                            log_path=log_path,
-                            show_staged=False
-                        )
-                    git_files.append(file_)
+                git_files.append(file_)
             
             elapsed_round = datetime.now(config.TZ) - start_round
             elapsed_rounds.append(elapsed_round)
