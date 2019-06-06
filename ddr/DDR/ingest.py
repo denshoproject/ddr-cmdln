@@ -307,7 +307,7 @@ def predict_staged(already, planned):
     @returns: list
     """
     additions = [path for path in planned if path not in already]
-    total = already + additions
+    total = sorted(list(set(already + additions)))
     return total
 
 def stage_files(entity, git_files, annex_files, new_files, log, show_staged=True):
