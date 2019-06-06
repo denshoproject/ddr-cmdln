@@ -85,7 +85,7 @@ class AddFileLogger():
         @param msg: Text message.
         @returns log: A text file.
         """
-        entry = '[{}] {} - {}\n'.format(datetime.now(config.TZ).isoformat('T'), ok, msg)
+        entry = '[{}] {} - {}'.format(datetime.now(config.TZ).isoformat('T'), ok, msg)
         fileio.append_text(entry, self.logpath)
     
     def ok(self, msg): self.entry('ok', msg)
