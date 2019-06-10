@@ -87,6 +87,7 @@ class IDServiceClient():
         r = requests.post(
             config.IDSERVICE_LOGOUT_URL,
             headers=self._auth_headers(),
+            timeout=config.REQUESTS_TIMEOUT
         )
         return r.status_code,r.reason
     
@@ -98,6 +99,7 @@ class IDServiceClient():
         r = requests.get(
             config.IDSERVICE_USERINFO_URL,
             headers=self._auth_headers(),
+            timeout=config.REQUESTS_TIMEOUT
         )
         try:
             data = json.loads(r.content)
@@ -120,10 +122,10 @@ class IDServiceClient():
         )
         if register:
             # POST - register new ID
-            r = requests.post(url, headers=self._auth_headers())
+            r = requests.post(url, headers=self._auth_headers(), timeout=config.REQUESTS_TIMEOUT)
         else:
             # GET - just find out what next ID is
-            r = requests.get(url, headers=self._auth_headers())
+            r = requests.get(url, headers=self._auth_headers(), timeout=config.REQUESTS_TIMEOUT)
         objectid = None
         if r.status_code in [200,201]:
             objectid = r.json()['id']
@@ -134,7 +136,7 @@ class IDServiceClient():
     def check_object_id(object_id):
         url = '%s/objectids/%s/' % (config.IDSERVICE_API_BASE, object_id)
         try:
-            r = requests.get(url)
+            r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
             status = r.status_code
         except:
             status = 500
@@ -152,7 +154,7 @@ class IDServiceClient():
         @returns: (status_code,reason,object_ids)
         """
         url = '%s/objectids/%s/children/' % (config.IDSERVICE_API_BASE, object_id)
-        r = requests.get(url)
+        r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
         oids = []
         if r.status_code == 200:
             oids = [o['id'] for o in json.loads(r.text)]
@@ -184,6 +186,7 @@ class IDServiceClient():
             config.IDSERVICE_CHECKIDS_URL.format(objectid=cidentifier.id),
             headers=self._auth_headers(),
             data={'object_ids': entity_ids},
+            timeout=config.REQUESTS_TIMEOUT
         )
         data = json.loads(r.text)
         #logging.debug(data)
@@ -201,6 +204,7 @@ class IDServiceClient():
             config.IDSERVICE_REGISTERIDS_URL.format(objectid=cidentifier.id),
             headers=self._auth_headers(),
             data={'object_ids': entity_ids},
+            timeout=config.REQUESTS_TIMEOUT
         )
         data = json.loads(r.text)
         logging.debug(data)

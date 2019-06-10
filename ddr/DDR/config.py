@@ -99,6 +99,8 @@ TEMPLATE_METS_JINJA2 = os.path.join(REPO_MODELS_PATH, 'templates', 'mets.xml.j2'
 TEMPLATE_CJSON = CONFIG.get('cmdln','template_cjson')
 TEMPLATE_EJSON = CONFIG.get('cmdln','template_ejson')
 
+REQUESTS_TIMEOUT = 30
+
 CGIT_URL = CONFIG.get('workbench','cgit_url')
 GIT_REMOTE_NAME = 'origin'  # CONFIG.get('workbench','remote')
 GITOLITE = CONFIG.get('workbench','gitolite')

@@ -1132,7 +1132,7 @@ class Cgit():
     def __init__(self, cgit_url=config.CGIT_URL):
         self.url = cgit_url
     
-    def collection_title(self, repo, session, timeout=5):
+    def collection_title(self, repo, session, timeout=config.REQUESTS_TIMEOUT):
         """Gets collection title from CGit
         
         Requests plain blob of collection.json, reads 'title' field.
