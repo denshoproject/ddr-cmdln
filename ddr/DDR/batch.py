@@ -17,7 +17,6 @@ import shutil
 import sys
 import traceback
 
-import requests
 import simplejson as json
 
 from DDR import config
