@@ -24,7 +24,7 @@ GIT_USER = 'gjost'
 GIT_MAIL = 'gjost@densho.org'
 AGENT = 'pytest'
 TEST_FILES_DIR = os.path.join(
-    os.getcwd(), 'ddr-cmdln/ddr/tests/ddrimport'
+    os.getcwd(), 'ddr-cmdln-assets'
 )
 
 TEST_CID       = 'ddr-testing-123'
