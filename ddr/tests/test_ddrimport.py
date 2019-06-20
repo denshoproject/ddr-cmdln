@@ -18,11 +18,24 @@ VOCABS_URL = config.VOCABS_URL
 GIT_USER = 'gjost'
 GIT_MAIL = 'gjost@densho.org'
 AGENT = 'pytest'
-TEST_FILES_DIR = os.path.join(
+TEST_CSV_DIR = os.path.join(
     os.getcwd(), 'ddr-cmdln/ddr/tests/ddrimport'
+)
+TEST_FILES_DIR = os.path.join(
+    os.getcwd(), 'ddr-cmdln-assets'
 )
 TEST_FILES_TMP = 'ddrimport'
 
+
+@pytest.fixture(scope="session")
+def test_csv_dir(tmpdir_factory):
+    fn = tmpdir_factory.mktemp(TEST_FILES_TMP)
+    dest_dir = str(fn)
+    #shutil.copytree(TEST_CSV_DIR, dest_dir, dirs_exist_ok=True)
+    for f in os.listdir(TEST_CSV_DIR):
+        src_file = os.path.join(TEST_CSV_DIR, f)
+        shutil.copy(src_file, dest_dir)
+    return dest_dir
 
 @pytest.fixture(scope="session")
 def test_files_dir(tmpdir_factory):
@@ -30,10 +43,10 @@ def test_files_dir(tmpdir_factory):
     dest_dir = str(fn)
     #shutil.copytree(TEST_FILES_DIR, dest_dir, dirs_exist_ok=True)
     for f in os.listdir(TEST_FILES_DIR):
-        shutil.copy(
-            os.path.join(TEST_FILES_DIR, f),
-            dest_dir
-        )
+        src_file = os.path.join(TEST_FILES_DIR, f)
+        if not os.path.isfile(src_file):
+            continue
+        shutil.copy(src_file, dest_dir)
     return dest_dir
 
 @pytest.fixture(scope="session")
@@ -62,9 +75,9 @@ EXPECTED_ENTITY_IDS = [
     'ddr-testing-123-6',
 ]
 
-def test_import_entities(tmpdir, collection, test_files_dir):
+def test_import_entities(tmpdir, collection, test_csv_dir, test_files_dir):
     entity_csv_path = os.path.join(
-        test_files_dir, 'ddrimport-entity-new.csv'
+        test_csv_dir, 'ddrimport-entity-new.csv'
     )
     out = batch.Importer.import_entities(
         entity_csv_path,
@@ -76,9 +89,9 @@ def test_import_entities(tmpdir, collection, test_files_dir):
     out_ids = [o.id for o in out]
     assert out_ids == EXPECTED_ENTITY_IDS
 
-def test_update_entities(tmpdir, collection, test_files_dir):
+def test_update_entities(tmpdir, collection, test_csv_dir, test_files_dir):
     entity_csv_path = os.path.join(
-        test_files_dir, 'ddrimport-entity-update.csv'
+        test_csv_dir, 'ddrimport-entity-update.csv'
     )
     out = batch.Importer.import_entities(
         entity_csv_path,
@@ -129,9 +142,9 @@ EXPECTED_STAGED = [
 ]
 
 # TODO confirm that file updates update the parents
-def test_import_files(tmpdir, collection, test_files_dir):
+def test_import_files(tmpdir, collection, test_csv_dir, test_files_dir):
     file_csv_path = os.path.join(
-        test_files_dir, 'ddrimport-file-new.csv'
+        test_csv_dir, 'ddrimport-file-new.csv'
     )
     rewrite_file_paths(file_csv_path, test_files_dir)
     log_path = os.path.join(
@@ -154,9 +167,9 @@ def test_import_files(tmpdir, collection, test_files_dir):
 
     
 # TODO confirm that file updates update the parents
-def test_update_files(tmpdir, collection, test_files_dir):
+def test_update_files(tmpdir, collection, test_csv_dir, test_files_dir):
     file_csv_path = os.path.join(
-        test_files_dir, 'ddrimport-file-update.csv'
+        test_csv_dir, 'ddrimport-file-update.csv'
     )
     rewrite_file_paths(file_csv_path, test_files_dir)
     log_path = os.path.join(
