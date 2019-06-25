@@ -1229,8 +1229,7 @@ class Updater():
         logging.info('Finding metadata files %s' % cidentifier.path_abs())
         paths = util.find_meta_files(
             cidentifier.path_abs(),
-            recursive=True, force_read=True,
-            testing=True  # otherwise will be excluded if basedir is under /tmp
+            recursive=True, force_read=True
         )
         num = len(paths)
         logging.info('%s paths' % num)

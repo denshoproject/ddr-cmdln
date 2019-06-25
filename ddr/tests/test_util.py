@@ -70,20 +70,20 @@ def test_find_meta_files(tmpdir):
         cleaned.sort()
         return cleaned
     
-    paths0 = clean(util.find_meta_files(sampledir, recursive=True, force_read=True, testing=1))
+    paths0 = clean(util.find_meta_files(sampledir, recursive=True, force_read=True))
     assert paths0 == META_ALL
 
     for model in ['collection', 'entity', 'file']:
-        paths2 = clean(util.find_meta_files(sampledir, model=model, recursive=True, force_read=True, testing=1))
+        paths2 = clean(util.find_meta_files(sampledir, model=model, recursive=True, force_read=True))
         assert paths2 == META_MODEL[model]
     
-    paths3 = clean(util.find_meta_files(sampledir, recursive=False, force_read=True, testing=1))
+    paths3 = clean(util.find_meta_files(sampledir, recursive=False, force_read=True))
     assert paths3 == META_MODEL['collection']
     
-    paths4 = clean(util.find_meta_files(sampledir, recursive=True, force_read=True, files_first=True, testing=1))
+    paths4 = clean(util.find_meta_files(sampledir, recursive=True, force_read=True, files_first=True))
     assert paths4 == META_ALL
     
-    paths5 = clean(util.find_meta_files(sampledir, recursive=True, force_read=False, testing=1))
+    paths5 = clean(util.find_meta_files(sampledir, recursive=True, force_read=False))
     assert paths5 == META_ALL
 
 

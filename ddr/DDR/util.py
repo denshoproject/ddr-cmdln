@@ -6,7 +6,7 @@ from DDR import config
 from DDR import identifier
 
 
-def find_meta_files(basedir, recursive=False, model=None, files_first=False, force_read=False, testing=False):
+def find_meta_files(basedir, recursive=False, model=None, files_first=False, force_read=False):
     """Lists absolute paths to .json files in basedir; saves copy if requested.
     
     Skips/excludes .git directories.
@@ -21,14 +21,11 @@ def find_meta_files(basedir, recursive=False, model=None, files_first=False, for
     @param model: list Restrict to the named model ('collection','entity','file').
     @param files_first: If True, list files,entities,collections; otherwise sort.
     @param force_read: If True, always searches for files instead of using cache.
-    @param testing: boolean Allow 'tmp' in paths.
     @returns: list of paths
     """
     CACHE_FILENAME = '.metadata_files'
     CACHE_PATH = os.path.join(basedir, CACHE_FILENAME)
     EXCLUDES = ['.git', '*~']
-    if not testing:
-        EXCLUDES.append('tmp')
     paths = []
     if os.path.exists(CACHE_PATH) and not force_read:
         paths = [
