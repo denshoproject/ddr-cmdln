@@ -66,6 +66,8 @@ def test_coerce_text():
 
 TEXT_TO_BOOLEAN = [
     (None,    False),
+    (False,   False),
+    (True,    True),
     (0,       False),
     ('0',     False),
     ('false', False),

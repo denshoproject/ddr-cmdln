@@ -73,7 +73,9 @@ def coerce_text(data):
 
 def text_to_boolean(value):
     if value:
-        if isinstance(value, int) and value:
+        if isinstance(value, bool):
+            return value
+        elif isinstance(value, int) and value:
             return True
         elif isinstance(value, basestring):
             if value.isdigit() and int(value):
