@@ -90,6 +90,18 @@ def test_import_entities(tmpdir, collection, test_csv_dir, test_files_dir):
     print(out)
     out_ids = [o.id for o in out]
     assert out_ids == EXPECTED_ENTITY_IDS
+    # save and commit
+    git_files = []
+    for o in out:
+        exit,status,updated_files = o.save(
+            'pytest', 'pytest@densho.org', 'pytest',
+            collection=collection,
+            commit=False
+        )
+        print(o, status)
+        git_files += updated_files
+    repo = dvcs.repository(collection.path_abs)
+    commit = repo.index.commit('test_import_entities')
 
 def test_update_entities(tmpdir, collection, test_csv_dir, test_files_dir):
     entity_csv_path = os.path.join(
@@ -104,51 +116,43 @@ def test_update_entities(tmpdir, collection, test_csv_dir, test_files_dir):
     print(out)
     out_ids = [o.id for o in out]
     assert out_ids == EXPECTED_ENTITY_IDS
+    # save and commit
+    git_files = []
+    for o in out:
+        exit,status,updated_files = o.save(
+            'pytest', 'pytest@densho.org', 'pytest',
+            collection=collection,
+            commit=False
+        )
+        print(o, status)
+        git_files += updated_files
+    repo = dvcs.repository(collection.path_abs)
+    commit = repo.index.commit('test_update_entities')
 
-EXPECTED_STAGED = [
-    'files/ddr-testing-123-1/changelog',
-    'files/ddr-testing-123-1/entity.json',
-    'files/ddr-testing-123-1/mets.xml',
-    'files/ddr-testing-123-1/files/ddr-testing-123-1-administrative-775f8d2cce-a.jpg',
+EXPECTED_IMPORT_FILES = [
     'files/ddr-testing-123-1/files/ddr-testing-123-1-administrative-775f8d2cce.json',
     'files/ddr-testing-123-1/files/ddr-testing-123-1-administrative-775f8d2cce.pdf',
-    'files/ddr-testing-123-1/files/ddr-testing-123-1-master-684e15e967-a.jpg',
+    'files/ddr-testing-123-1/files/ddr-testing-123-1-administrative-775f8d2cce-a.jpg',
     'files/ddr-testing-123-1/files/ddr-testing-123-1-master-684e15e967.json',
     'files/ddr-testing-123-1/files/ddr-testing-123-1-master-684e15e967.tif',
-    'files/ddr-testing-123-2/changelog',
-    'files/ddr-testing-123-2/entity.json',
-    'files/ddr-testing-123-2/mets.xml',
-    'files/ddr-testing-123-2/files/ddr-testing-123-2-master-b9773b9aef-a.jpg',
-    'files/ddr-testing-123-2/files/ddr-testing-123-2-master-b9773b9aef.jpg',
+    'files/ddr-testing-123-1/files/ddr-testing-123-1-master-684e15e967-a.jpg',
     'files/ddr-testing-123-2/files/ddr-testing-123-2-master-b9773b9aef.json',
-    'files/ddr-testing-123-2/files/ddr-testing-123-2-mezzanine-775f8d2cce-a.jpg',
+    'files/ddr-testing-123-2/files/ddr-testing-123-2-master-b9773b9aef.jpg',
+    'files/ddr-testing-123-2/files/ddr-testing-123-2-master-b9773b9aef-a.jpg',
     'files/ddr-testing-123-2/files/ddr-testing-123-2-mezzanine-775f8d2cce.json',
     'files/ddr-testing-123-2/files/ddr-testing-123-2-mezzanine-775f8d2cce.pdf',
-    'files/ddr-testing-123-2/files/ddr-testing-123-2-mezzanine-de47cb83a4.htm',
+    'files/ddr-testing-123-2/files/ddr-testing-123-2-mezzanine-775f8d2cce-a.jpg',
     'files/ddr-testing-123-2/files/ddr-testing-123-2-mezzanine-de47cb83a4.json',
-    'files/ddr-testing-123-3/changelog',
-    'files/ddr-testing-123-3/entity.json',
-    'files/ddr-testing-123-3/mets.xml',
-    'files/ddr-testing-123-4/changelog',
-    'files/ddr-testing-123-4/entity.json',
-    'files/ddr-testing-123-4/mets.xml',
-    'files/ddr-testing-123-4/files/ddr-testing-123-4-1/changelog',
-    'files/ddr-testing-123-4/files/ddr-testing-123-4-1/entity.json',
-    'files/ddr-testing-123-4/files/ddr-testing-123-4-1/mets.xml',
-    'files/ddr-testing-123-4/files/ddr-testing-123-4-1/files/ddr-testing-123-4-1-transcript-de47cb83a4.htm',
+    'files/ddr-testing-123-2/files/ddr-testing-123-2-mezzanine-de47cb83a4.htm',
     'files/ddr-testing-123-4/files/ddr-testing-123-4-1/files/ddr-testing-123-4-1-transcript-de47cb83a4.json',
-    'files/ddr-testing-123-5/changelog',
-    'files/ddr-testing-123-5/entity.json',
-    'files/ddr-testing-123-5/mets.xml',
+    'files/ddr-testing-123-4/files/ddr-testing-123-4-1/files/ddr-testing-123-4-1-transcript-de47cb83a4.htm',
     'files/ddr-testing-123-5/files/ddr-testing-123-5-master-ea2f8d4f4d.json',
+    'files/ddr-testing-123-5/files/ddr-testing-123-5-master-ea2f8d4f4d.mp3',
     'files/ddr-testing-123-5/files/ddr-testing-123-5-mezzanine-ea2f8d4f4d.json',
     'files/ddr-testing-123-5/files/ddr-testing-123-5-mezzanine-ea2f8d4f4d.mp3',
-    'files/ddr-testing-123-5/files/ddr-testing-123-5-transcript-775f8d2cce-a.jpg',
     'files/ddr-testing-123-5/files/ddr-testing-123-5-transcript-775f8d2cce.json',
     'files/ddr-testing-123-5/files/ddr-testing-123-5-transcript-775f8d2cce.pdf',
-    'files/ddr-testing-123-6/changelog',
-    'files/ddr-testing-123-6/entity.json',
-    'files/ddr-testing-123-6/mets.xml',
+    'files/ddr-testing-123-5/files/ddr-testing-123-5-transcript-775f8d2cce-a.jpg',
     'files/ddr-testing-123-6/files/ddr-testing-123-6-master-9bd65ab22c.json',
     'files/ddr-testing-123-6/files/ddr-testing-123-6-master-9bd65ab22c.mp4',
 ]
@@ -171,13 +175,40 @@ def test_import_files(tmpdir, collection, test_csv_dir, test_files_dir):
         tmp_dir=test_files_dir,
     )
     repo = dvcs.repository(collection.path_abs)
-    staged = dvcs.list_staged(repo)
-    print('staged %s' % staged)
-    ddiff = DeepDiff(staged, EXPECTED_STAGED, ignore_order=True)
-    print('DDIFF')
-    print(ddiff)
-    assert not ddiff
-    
+    staged = sorted(dvcs.list_staged(repo))
+    # test
+    unstaged = []
+    for path in EXPECTED_IMPORT_FILES:
+        if path not in staged:
+            unstaged.append(path)
+    unstaged = sorted(unstaged)
+    for n,path in enumerate(unstaged):
+        print('UNSTAGED %s %s' % (n+1, path))
+    print(repo)
+    print(log_path)
+    assert not unstaged
+    # save and commit
+    repo = dvcs.repository(collection.path_abs)
+    commit = repo.index.commit('test_import_files')
+
+EXPECTED_UPDATE_FILES = [
+    'files/ddr-testing-123-1/changelog',
+    'files/ddr-testing-123-1/files/ddr-testing-123-1-administrative-775f8d2cce.json',
+    'files/ddr-testing-123-1/files/ddr-testing-123-1-master-684e15e967.json',
+    'files/ddr-testing-123-2/changelog',
+    'files/ddr-testing-123-2/files/ddr-testing-123-2-master-b9773b9aef.json',
+    'files/ddr-testing-123-2/files/ddr-testing-123-2-mezzanine-775f8d2cce.json',
+    'files/ddr-testing-123-2/files/ddr-testing-123-2-mezzanine-de47cb83a4.json',
+    'files/ddr-testing-123-4/files/ddr-testing-123-4-1/changelog',
+    'files/ddr-testing-123-4/files/ddr-testing-123-4-1/files/ddr-testing-123-4-1-transcript-de47cb83a4.json',
+    'files/ddr-testing-123-5/changelog',
+    'files/ddr-testing-123-5/files/ddr-testing-123-5-master-ea2f8d4f4d.json',
+    'files/ddr-testing-123-5/files/ddr-testing-123-5-mezzanine-ea2f8d4f4d.json',
+    'files/ddr-testing-123-5/files/ddr-testing-123-5-transcript-775f8d2cce.json',
+    'files/ddr-testing-123-6/changelog',
+    'files/ddr-testing-123-6/files/ddr-testing-123-6-master-9bd65ab22c.json',
+]
+
 # TODO confirm that file updates update the parents
 def test_update_files(tmpdir, collection, test_csv_dir, test_files_dir):
     file_csv_path = os.path.join(
@@ -197,11 +228,23 @@ def test_update_files(tmpdir, collection, test_csv_dir, test_files_dir):
     )
     repo = dvcs.repository(collection.path_abs)
     staged = sorted(dvcs.list_staged(repo))
-    print('staged %s' % staged)
-    ddiff = DeepDiff(staged, EXPECTED_STAGED, ignore_order=True)
-    print('DDIFF')
-    print(ddiff)
-    assert not ddiff
+    # test
+    unstaged = []
+    for path in EXPECTED_UPDATE_FILES:
+        if path not in staged:
+            unstaged.append(path)
+    unstaged = sorted(unstaged)
+    for n,path in enumerate(unstaged):
+        print('UNSTAGED %s %s' % (n+1, path))
+    print(repo)
+    print(log_path)
+    assert not unstaged
+    # save and commit
+    repo = dvcs.repository(collection.path_abs)
+    commit = repo.index.commit('test_update_files')
+
+
+# helpers
 
 def rewrite_file_paths(path, test_files_dir):
     """Load the import CSV, prepend pytest tmpdir to basename_orig
