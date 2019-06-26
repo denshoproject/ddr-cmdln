@@ -133,6 +133,7 @@ def add_file(rowd, entity, git_name, git_mail, agent,
     
     src_path = rowd.pop('basename_orig')
     
+    log.ok('Actions: attrs %s' % actions['attrs'])
     if actions['attrs'] == 'calculate':
         src_size,md5,sha1,sha256,xmp = file_info(src_path, log)
     elif actions['attrs'] == 'fromcsv':
@@ -140,34 +141,32 @@ def add_file(rowd, entity, git_name, git_mail, agent,
         md5,sha1,sha256 = rowd['md5'], rowd['sha1'], rowd['sha256']
         xmp = rowd.get('xmp')
     
-    fidentifier = file_identifier(entity, rowd, sha1, log)
     file_ = file_object(
-        fidentifier, entity, rowd,
-        src_path, src_size, md5, sha1, sha256, xmp,
+        file_identifier(entity, rowd, sha1, log),
+        entity, rowd,
+        src_path, src_size,
+        md5, sha1, sha256, xmp,
         log
     )
-    file_.external = rowd['external']
     
+    log.ok('Actions: rename %s' % actions['rename'])
     if actions['rename']:
-        rename_in_place(src_path, os.path.basename(fidentifier.path_abs()), log)
+        rename_in_place(src_path, os.path.basename(file_.identifier.path_abs()), log)
     
-    dest_path = destination_path(src_path, entity.files_path, fidentifier)
-    tmp_path = temporary_path(src_path, tmp_dir, fidentifier)
-    tmp_path_renamed = temporary_path_renamed(tmp_path, dest_path)
-    dest_dir = os.path.dirname(dest_path)
-    access_dest_path = access_path(
-        file_.identifier.object_class(), tmp_path_renamed
-    )
+    annex_files = []
     
+    log.ok('Actions: ingest %s' % actions['ingest'])
     if actions['ingest']:
-        copy_to_file_path(file_, src_path, dest_dir, dest_path, log)
+        copy_to_file_path(file_, src_path, log)
+        annex_files.append(file_.path_abs)
     
-    tmp_access_path = None
+    log.ok('Actions: access %s' % actions['access'])
     if actions['access']:
-        tmp_access_path = make_access_file(src_path, access_dest_path, log)
+        access_path = make_access_file(src_path, file_.access_abs, log)
         log.ok('Attaching access file')
-        if tmp_access_path and os.path.exists(tmp_access_path):
-            file_.set_access(tmp_access_path, entity)
+        if access_path and os.path.exists(access_path):
+            file_.set_access(access_path, entity)
+            annex_files.append(file_.access_abs)
             log.ok('| file_.access_rel: %s' % file_.access_rel)
             log.ok('| file_.access_abs: %s' % file_.access_abs)
         else:
@@ -179,20 +178,13 @@ def add_file(rowd, entity, git_name, git_mail, agent,
     )
     
     log.ok('Staging files')
-    if file_.external:
-        annex_files = []
-    else:
-        annex_files = [file_.path_abs]
-    if file_.access_abs and os.path.exists(file_.access_abs):
-        annex_files.append(file_.access_abs)
-    git_files_rel = [
-        path.replace('%s/' % file_.collection_path, '') for path in git_files
-    ]
-    annex_files_rel = [
-        path.replace('%s/' % file_.collection_path, '') for path in annex_files
-    ]
     repo = stage_files(
-        entity, git_files_rel, annex_files_rel, [], log, show_staged=show_staged
+        entity,
+        [path.replace('%s/' % file_.collection_path, '') for path in git_files],
+        [path.replace('%s/' % file_.collection_path, '') for path in annex_files],
+        [],
+        log,
+        show_staged=show_staged
     )
     # IMPORTANT: Files are only staged! Be sure to commit!
     # IMPORTANT: changelog is not staged!
@@ -304,8 +296,8 @@ def copy_to_workdir(src_path, tmp_path, tmp_path_renamed, log):
     if not os.path.exists(tmp_path_renamed) and not os.path.exists(tmp_path):
         log.crash('File rename failed: %s -> %s' % (tmp_path, tmp_path_renamed))
 
-def copy_to_file_path(file_, src_path, dest_dir, dest_path, log):
-    log.ok('Copying to work dir')
+def copy_to_file_path(file_, src_path, log):
+    log.ok('Copying')
     log.ok('| cp %s %s' % (src_path, file_.path_abs))
     if not os.path.exists(file_.entity_files_path):
         os.makedirs(file_.entity_files_path)
@@ -318,7 +310,7 @@ def copy_to_file_path(file_, src_path, dest_dir, dest_path, log):
         raise Exception(
             'Failed to copy file(s) to destination repo'
         )
- 
+
 def make_access_file(src_path, access_dest_path, log):
     log.ok('Making access file')
     if os.path.exists(access_dest_path):
