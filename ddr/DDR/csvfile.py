@@ -17,16 +17,16 @@ def make_row_dict(headers, row):
     """
     d = OrderedDict()
     for n in range(0, len(row)):
-        d[headers[n]] = row[n]
+        d[headers[n]] = _strip_str(row[n])
     return d
-
+    
 def make_rowds(rows, row_start=0, row_end=9999999):
     """Takes list of rows (from csv lib) and turns into list of rowds (dicts)
     
     @param rows: list
     @returns: (headers, list of OrderedDicts, list of errors)
     """
-    headers = rows.pop(0)
+    headers = [_strip_str(data) for data in rows.pop(0)]
     rowds = []
     errors = []
     for n,row in enumerate(rows[row_start:row_end]):
@@ -47,6 +47,11 @@ def make_rows(rowds):
     headers = rowds[0].keys()
     rows = [rowd.values() for rowd in rowds]
     return headers,rows
+
+def _strip_str(data):
+    if isinstance(data, basestring):
+        data = data.strip()
+    return data
 
 def validate_headers(headers, field_names, exceptions, additional):
     """Validates headers and crashes if problems.
