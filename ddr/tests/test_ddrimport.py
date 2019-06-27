@@ -9,6 +9,7 @@ import pytest
 
 from DDR import batch
 from DDR import config
+from DDR import csvfile
 from DDR import fileio
 from DDR import dvcs
 from DDR import identifier
@@ -205,15 +206,11 @@ def test_update_files(tmpdir, collection, test_csv_dir, test_files_dir):
 def rewrite_file_paths(path, test_files_dir):
     """Load the import CSV, prepend pytest tmpdir to basename_orig
     """
-    rows = fileio.read_csv(path)
-    headers = rows.pop(0)
-    
-    basename_index = headers.index('basename_orig')
-    for row in rows:
+    headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(path))
+    for rowd in rowds:
         src = os.path.join(
-            test_files_dir, row[basename_index]
+            test_files_dir, rowd['basename_orig']
         )
-        row[basename_index] = src
-        print(src)
-    
+        rowd['basename_orig'] = src
+    headers,rows = csvfile.make_rows(rowds)
     fileio.write_csv(path, headers, rows)

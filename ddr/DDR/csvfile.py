@@ -37,6 +37,16 @@ def make_rowds(rows, row_start=0, row_end=9999999):
             msg = 'row %s: %s' % (n, str(err))
             errors.append(msg)
     return headers,rowds,errors
+    
+def make_rows(rowds):
+    """Takes list of rowds (dicts) and turns into list of rows (for writing CSV)
+    
+    @param rowds: list of dicts
+    @returns: headers,rows
+    """
+    headers = rowds[0].keys()
+    rows = [rowd.values() for rowd in rowds]
+    return headers,rows
 
 def validate_headers(headers, field_names, exceptions, additional):
     """Validates headers and crashes if problems.
