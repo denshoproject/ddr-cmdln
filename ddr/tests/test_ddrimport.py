@@ -129,7 +129,7 @@ def test_update_entities(tmpdir, collection, test_csv_dir, test_files_dir):
     repo = dvcs.repository(collection.path_abs)
     commit = repo.index.commit('test_update_entities')
 
-EXPECTED_IMPORT_FILES = [
+EXPECTED_FILES_IMPORT_INTERNAL = [
     'files/ddr-testing-123-1/files/ddr-testing-123-1-administrative-775f8d2cce.json',
     'files/ddr-testing-123-1/files/ddr-testing-123-1-administrative-775f8d2cce.pdf',
     'files/ddr-testing-123-1/files/ddr-testing-123-1-administrative-775f8d2cce-a.jpg',
@@ -158,13 +158,13 @@ EXPECTED_IMPORT_FILES = [
 ]
 
 # TODO confirm that file updates update the parents
-def test_import_files(tmpdir, collection, test_csv_dir, test_files_dir):
+def test_files_import_internal(tmpdir, collection, test_csv_dir, test_files_dir):
     file_csv_path = os.path.join(
-        test_csv_dir, 'ddrimport-file-new.csv'
+        test_csv_dir, 'ddrimport-files-import-internal.csv'
     )
     rewrite_file_paths(file_csv_path, test_files_dir)
     log_path = os.path.join(
-        test_files_dir, 'ddrimport-file-new.log'
+        test_files_dir, 'ddrimport-files-import-internal.log'
     )
     out = batch.Importer.import_files(
         file_csv_path,
@@ -178,7 +178,7 @@ def test_import_files(tmpdir, collection, test_csv_dir, test_files_dir):
     staged = sorted(dvcs.list_staged(repo))
     # test
     unstaged = []
-    for path in EXPECTED_IMPORT_FILES:
+    for path in EXPECTED_FILES_IMPORT_INTERNAL:
         if path not in staged:
             unstaged.append(path)
     unstaged = sorted(unstaged)
@@ -189,7 +189,48 @@ def test_import_files(tmpdir, collection, test_csv_dir, test_files_dir):
     assert not unstaged
     # save and commit
     repo = dvcs.repository(collection.path_abs)
-    commit = repo.index.commit('test_import_files')
+    commit = repo.index.commit('test_files_import_internal')
+
+EXPECTED_FILES_IMPORT_INTERNAL_NOHASHES = [
+    'files/ddr-testing-123-1/files/ddr-testing-123-1-mezzanine-b9773b9aef.json',
+    'files/ddr-testing-123-1/files/ddr-testing-123-1-mezzanine-b9773b9aef.jpg',
+    'files/ddr-testing-123-1/files/ddr-testing-123-1-mezzanine-b9773b9aef-a.jpg',
+]
+
+def test_files_import_internal_nohashes(tmpdir, collection, test_csv_dir, test_files_dir):
+    """test CSV with hash columns (sha1/sha256/md5/size) removed
+    """
+    file_csv_path = os.path.join(
+        test_csv_dir, 'ddrimport-files-import-internal-nohashes.csv'
+    )
+    rewrite_file_paths(file_csv_path, test_files_dir)
+    log_path = os.path.join(
+        test_files_dir, 'ddrimport-files-import-internal-nohashes.log'
+    )
+    out = batch.Importer.import_files(
+        file_csv_path,
+        collection.identifier,
+        VOCABS_URL,
+        GIT_USER, GIT_MAIL, AGENT,
+        log_path=log_path,
+        tmp_dir=test_files_dir,
+    )
+    repo = dvcs.repository(collection.path_abs)
+    staged = sorted(dvcs.list_staged(repo))
+    # test
+    unstaged = []
+    for path in EXPECTED_FILES_IMPORT_INTERNAL_NOHASHES:
+        if path not in staged:
+            unstaged.append(path)
+    unstaged = sorted(unstaged)
+    for n,path in enumerate(unstaged):
+        print('UNSTAGED %s %s' % (n+1, path))
+    print(repo)
+    print(log_path)
+    assert not unstaged
+    # save and commit
+    repo = dvcs.repository(collection.path_abs)
+    commit = repo.index.commit('test_files_import_internal_nohashes')
 
 EXPECTED_UPDATE_FILES = [
     'files/ddr-testing-123-1/changelog',
