@@ -131,6 +131,76 @@ def test_update_entities(tmpdir, collection, test_csv_dir, test_files_dir):
     dvcs.stage(repo, git_files)
     commit = repo.index.commit('test_update_entities')
 
+EXPECTED_FILES_IMPORT_EXTERNAL = [
+    'files/ddr-testing-123-2/files/ddr-testing-123-2-master-b9773b9aef.json',
+]
+
+def test_files_import_external(tmpdir, collection, test_csv_dir, test_files_dir):
+    """Test importing *external* files
+    """
+    print('collection_path %s' % collection.path_abs)
+    file_csv_path = os.path.join(
+        test_csv_dir, 'ddrimport-files-import-external.csv'
+    )
+    rewrite_file_paths(file_csv_path, test_files_dir)
+    log_path = os.path.join(
+        test_files_dir, 'ddrimport-files-import-external.log'
+    )
+    out = batch.Importer.import_files(
+        file_csv_path,
+        collection.identifier,
+        VOCABS_URL,
+        GIT_USER, GIT_MAIL, AGENT,
+        log_path=log_path,
+        tmp_dir=test_files_dir,
+    )
+    # save and commit
+    repo = dvcs.repository(collection.path_abs)
+    commit = repo.index.commit('test_files_import_external')
+    print('commit %s' % commit)
+
+def test_files_import_external_emptyhashes(tmpdir, collection, test_csv_dir, test_files_dir):
+    """Test importing *external* files with *empty* hashes - should fail
+    """
+    print('collection_path %s' % collection.path_abs)
+    file_csv_path = os.path.join(
+        test_csv_dir, 'ddrimport-files-import-external-emptyhashes.csv'
+    )
+    rewrite_file_paths(file_csv_path, test_files_dir)
+    log_path = os.path.join(
+        test_files_dir, 'ddrimport-files-import-external-emptyhashes.log'
+    )
+    with pytest.raises(Exception):
+        out = batch.Importer.import_files(
+            file_csv_path,
+            collection.identifier,
+            VOCABS_URL,
+            GIT_USER, GIT_MAIL, AGENT,
+            log_path=log_path,
+            tmp_dir=test_files_dir,
+        )
+
+def test_files_import_external_nohashes(tmpdir, collection, test_csv_dir, test_files_dir):
+    """Test importing *external* files with *not* hash cols - should fail
+    """
+    print('collection_path %s' % collection.path_abs)
+    file_csv_path = os.path.join(
+        test_csv_dir, 'ddrimport-files-import-external-nohashes.csv'
+    )
+    rewrite_file_paths(file_csv_path, test_files_dir)
+    log_path = os.path.join(
+        test_files_dir, 'ddrimport-files-import-external-nohashes.log'
+    )
+    with pytest.raises(Exception):
+        out = batch.Importer.import_files(
+            file_csv_path,
+            collection.identifier,
+            VOCABS_URL,
+            GIT_USER, GIT_MAIL, AGENT,
+            log_path=log_path,
+            tmp_dir=test_files_dir,
+        )
+
 EXPECTED_FILES_IMPORT_INTERNAL = [
     'files/ddr-testing-123-1/files/ddr-testing-123-1-administrative-775f8d2cce.json',
     'files/ddr-testing-123-1/files/ddr-testing-123-1-administrative-775f8d2cce.pdf',
