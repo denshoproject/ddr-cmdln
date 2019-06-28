@@ -101,6 +101,7 @@ def test_import_entities(tmpdir, collection, test_csv_dir, test_files_dir):
         print(o, status)
         git_files += updated_files
     repo = dvcs.repository(collection.path_abs)
+    dvcs.stage(repo, git_files)
     commit = repo.index.commit('test_import_entities')
 
 def test_update_entities(tmpdir, collection, test_csv_dir, test_files_dir):
@@ -127,6 +128,7 @@ def test_update_entities(tmpdir, collection, test_csv_dir, test_files_dir):
         print(o, status)
         git_files += updated_files
     repo = dvcs.repository(collection.path_abs)
+    dvcs.stage(repo, git_files)
     commit = repo.index.commit('test_update_entities')
 
 EXPECTED_FILES_IMPORT_INTERNAL = [
