@@ -246,19 +246,6 @@ def test_files_import_internal(tmpdir, collection, test_csv_dir, test_files_dir)
         log_path=log_path,
         tmp_dir=test_files_dir,
     )
-    repo = dvcs.repository(collection.path_abs)
-    staged = sorted(dvcs.list_staged(repo))
-    # test
-    unstaged = []
-    for path in EXPECTED_FILES_IMPORT_INTERNAL:
-        if path not in staged:
-            unstaged.append(path)
-    unstaged = sorted(unstaged)
-    for n,path in enumerate(unstaged):
-        print('UNSTAGED %s %s' % (n+1, path))
-    print(repo)
-    print(log_path)
-    assert not unstaged
     # save and commit
     repo = dvcs.repository(collection.path_abs)
     commit = repo.index.commit('test_files_import_internal')
@@ -287,19 +274,6 @@ def test_files_import_internal_nohashes(tmpdir, collection, test_csv_dir, test_f
         log_path=log_path,
         tmp_dir=test_files_dir,
     )
-    repo = dvcs.repository(collection.path_abs)
-    staged = sorted(dvcs.list_staged(repo))
-    # test
-    unstaged = []
-    for path in EXPECTED_FILES_IMPORT_INTERNAL_NOHASHES:
-        if path not in staged:
-            unstaged.append(path)
-    unstaged = sorted(unstaged)
-    for n,path in enumerate(unstaged):
-        print('UNSTAGED %s %s' % (n+1, path))
-    print(repo)
-    print(log_path)
-    assert not unstaged
     # save and commit
     repo = dvcs.repository(collection.path_abs)
     commit = repo.index.commit('test_files_import_internal_nohashes')
