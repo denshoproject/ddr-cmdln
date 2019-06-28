@@ -176,15 +176,13 @@ def add_file(rowd, entity, git_name, git_mail, agent,
     exit,status,git_files = file_.save(
         git_name, git_mail, agent, parent=entity, commit=False
     )
-    
+
     log.ok('Staging files')
     repo = stage_files(
         entity,
         [path.replace('%s/' % file_.collection_path, '') for path in git_files],
         [path.replace('%s/' % file_.collection_path, '') for path in annex_files],
-        [],
-        log,
-        show_staged=show_staged
+        log, show_staged=show_staged
     )
     # IMPORTANT: Files are only staged! Be sure to commit!
     # IMPORTANT: changelog is not staged!
@@ -496,6 +494,74 @@ def stage_files(entity, git_files, annex_files, new_files, log, show_staged=True
             log.not_ok('finished cleanup. good luck...')
             log.crash('Add file aborted, see log file for details: %s' % log.logpath)
     return repo
+
+def stage_files(entity, git_files, annex_files, log, show_staged=True):
+    """Stage files; check before and after to ensure all files get staged
+
+    @param entity: DDR.models.entities.Entity
+    @param git_files: list
+    @param annex_files: list
+    @param log: AddFileLogger
+    @param show_staged: bool
+    @returns: repo
+    """
+    repo = dvcs.repository(entity.collection_path)
+    log.ok('| repo %s' % repo)
+    
+    log.ok('| BEFORE staging')
+    staged_before,modified_before,untracked_before = repo_status(repo, log)
+    
+    stage_these = sorted(list(set(git_files + annex_files)))
+    log.ok('| staging %s files:' % len(stage_these))
+    for path in stage_these:
+        log.ok('|   %s' % path)
+    
+    stage_ok = False
+    staged = []
+    try:
+        log.ok('| git stage')
+        dvcs.stage(repo, git_files)
+        log.ok('| annex stage')
+        dvcs.annex_stage(repo, annex_files)
+        log.ok('| ok')
+    except:
+        # FAILED! print traceback to addfile log
+        log.not_ok(traceback.format_exc().strip())
+        
+    log.ok('| AFTER staging')
+    staged_after,modified_after,untracked_after = repo_status(repo, log)
+    
+    # Crash if not staged
+    still_modified = [path for path in stage_these if path in modified_after]
+    if still_modified:
+        log.not_ok('These files are still modified')
+        for path in still_modified:
+            log.not_ok('| %s' % path)
+        log.crash('Add file aborted, see log file for details: %s' % log.logpath)
+    
+    return repo
+
+def repo_status(repo, log):
+    """Logs staged, modified, and untracked files and returns same
+    
+    @param repo
+    @param log
+    @returns: staged,modified,untracked
+    """
+    log.ok('| %s' % repo)
+    staged = dvcs.list_staged(repo)
+    modified = dvcs.list_modified(repo)
+    untracked = dvcs.list_untracked(repo)
+    log.ok('|   %s staged, %s modified, %s untracked' % (
+        len(staged), len(modified), len(untracked),
+    ))
+    for path in staged:
+        log.ok('|   staged: %s' % path)
+    for path in modified:
+        log.ok('|   modified: %s' % path)
+    for path in untracked:
+        log.ok('|   untracked: %s' % path)
+    return staged, modified, untracked
 
 def add_local_file(entity, data, git_name, git_mail, agent='',
                    tmp_dir=config.MEDIA_BASE, log_path=None, show_staged=True):
