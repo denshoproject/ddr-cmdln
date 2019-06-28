@@ -14,6 +14,7 @@ from DDR import fileio
 from DDR import dvcs
 from DDR import identifier
 from DDR.models import Collection
+from DDR import util
 
 COLLECTION_ID = 'ddr-testing-123'
 VOCABS_URL = config.VOCABS_URL
@@ -158,6 +159,8 @@ def test_files_import_external(tmpdir, collection, test_csv_dir, test_files_dir)
     repo = dvcs.repository(collection.path_abs)
     commit = repo.index.commit('test_files_import_external')
     print('commit %s' % commit)
+    # test hashes present
+    check_file_hashes(collection.path_abs)
 
 def test_files_import_external_emptyhashes(tmpdir, collection, test_csv_dir, test_files_dir):
     """Test importing *external* files with *empty* hashes - should fail
@@ -249,6 +252,8 @@ def test_files_import_internal(tmpdir, collection, test_csv_dir, test_files_dir)
     # save and commit
     repo = dvcs.repository(collection.path_abs)
     commit = repo.index.commit('test_files_import_internal')
+    # test hashes present
+    check_file_hashes(collection.path_abs)
 
 EXPECTED_FILES_IMPORT_INTERNAL_NOHASHES = [
     'files/ddr-testing-123-1/files/ddr-testing-123-1-mezzanine-b9773b9aef.json',
@@ -277,6 +282,8 @@ def test_files_import_internal_nohashes(tmpdir, collection, test_csv_dir, test_f
     # save and commit
     repo = dvcs.repository(collection.path_abs)
     commit = repo.index.commit('test_files_import_internal_nohashes')
+    # test hashes present
+    check_file_hashes(collection.path_abs)
 
 EXPECTED_UPDATE_FILES = [
     'files/ddr-testing-123-1/changelog',
@@ -344,3 +351,18 @@ def rewrite_file_paths(path, test_files_dir):
         rowd['basename_orig'] = src
     headers,rows = csvfile.make_rows(rowds)
     fileio.write_csv(path, headers, rows)
+
+def check_file_hashes(collection_path):
+    """Check that hashes are present in file JSONs
+    """
+    paths = util.find_meta_files(
+        collection_path, recursive=True, model='file', force_read=True
+    )
+    for path in paths:
+        f = identifier.Identifier(path).object()
+        if not f.sha1 and f.sha256 and f.md5 and f.size:
+            print('f.sha1   %s' % f.sha1)
+            print('f.sha256 %s' % f.sha256)
+            print('f.md5    %s' % f.md5)
+            print('f.size   %s' % f.size)
+            raise Exception('Hash data missing')
