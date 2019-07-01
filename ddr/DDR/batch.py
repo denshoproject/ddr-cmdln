@@ -36,6 +36,9 @@ from DDR import vocab
 
 COLLECTION_FILES_PREFIX = 'files'
 
+# TODO get these from ddr-defs/repo_modules/file.py
+FILE_UPDATE_IGNORE_FIELDS = ['sha1', 'sha256', 'md5', 'size']
+
 
 class Exporter():
     
@@ -738,6 +741,7 @@ class Importer():
         @param agent: str
         @param log_path: str Absolute path to addfile log for all files
         @param dryrun: boolean
+        @returns: list git_files
         """
         logging.info('batch import files ----------------------------')
         
@@ -813,7 +817,13 @@ class Importer():
                 n+1, len_rowds, rowd['id'], rowd['basename_orig']
             ))
             start_round = datetime.now(config.TZ)
-
+            
+            # remove ignored fields (hashes)
+            # Users should not be able to modify hash and file size values
+            # after initial file import.
+            for field in FILE_UPDATE_IGNORE_FIELDS:
+                rowd.pop(field)
+            
             fid = rowd['id']
             eid = fid_parents[fid].id
             entity = entities[eid]
