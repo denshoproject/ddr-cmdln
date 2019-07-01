@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from collections import OrderedDict
 import os
 import shutil
 
@@ -305,6 +306,7 @@ EXPECTED_UPDATE_FILES = [
 
 # TODO confirm that file updates update the parents
 def test_update_files(tmpdir, collection, test_csv_dir, test_files_dir):
+    hashes_before = collect_hashes(collection.path_abs)
     file_csv_path = os.path.join(
         test_csv_dir, 'ddrimport-file-update.csv'
     )
@@ -336,6 +338,11 @@ def test_update_files(tmpdir, collection, test_csv_dir, test_files_dir):
     # save and commit
     repo = dvcs.repository(collection.path_abs)
     commit = repo.index.commit('test_update_files')
+    # test hashes present
+    check_file_hashes(collection.path_abs)
+    # test hashes not modified
+    hashes_after = collect_hashes(collection.path_abs)
+    check_hashes(hashes_before, hashes_after)
 
 
 # helpers
@@ -366,3 +373,45 @@ def check_file_hashes(collection_path):
             print('f.md5    %s' % f.md5)
             print('f.size   %s' % f.size)
             raise Exception('Hash data missing')
+
+def collect_hashes(collection_path):
+    """Make dict of existing file hash data
+    
+    @param collection_path: str
+    @returns: dict {file_id: {'sha1':..., 'sha256':..., 'md5':..., 'size':...}
+    """
+    paths = util.find_meta_files(
+        collection_path, recursive=True, model='file', force_read=True
+    )
+    data = OrderedDict()
+    for path in paths:
+        o = identifier.Identifier(path).object()
+        data[o.id] = OrderedDict()
+        data[o.id]['sha1'] = o.sha1
+        data[o.id]['sha256'] = o.sha256
+        data[o.id]['md5'] = o.md5
+        data[o.id]['size'] = o.size
+    return data
+
+def check_hashes(before, after):
+    """Check if file hashes modified during file-update from CSV
+    
+    @param before: dict
+    @param after: dict
+    @returns: bool True if modified
+    """
+    keys_changed = False
+    hashes_changed = False
+    if not after.keys() == before.keys():
+        keys_changed = True
+        print('KEYS CHANGED: %s' % oid)
+        print('BEFORE %s' % before.keys())
+        print('AFTER  %s' % after.keys())
+    assert after.keys() == before.keys()
+    for oid in before.keys():
+        if not before[oid] == after[oid]:
+            hashes_changed = True
+            print('HASHES CHANGED: %s' % oid)
+            print('BEFORE %s' % before[oid])
+            print('AFTER  %s' % after[oid])
+    assert not (keys_changed or hashes_changed)
