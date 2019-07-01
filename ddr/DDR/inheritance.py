@@ -13,7 +13,7 @@ def _child_jsons( path, testing=False ):
     """
     return [
         p for p in util.find_meta_files(
-            basedir=path, recursive=True, testing=testing
+            basedir=path, recursive=True
         )
         if os.path.dirname(p) != path
     ]

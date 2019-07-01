@@ -175,7 +175,10 @@ def extract_xmp(path_abs):
     @return dict NOTE: this is not an XML file!
     """
     xmpfile = libxmp.files.XMPFiles()
-    xmpfile.open_file(path_abs, open_read=True)
+    try:
+        xmpfile.open_file(path_abs, open_read=True)
+    except:
+        return None
     xmp = xmpfile.get_xmp()
     if xmp:
         xml = xmp.serialize_to_unicode()

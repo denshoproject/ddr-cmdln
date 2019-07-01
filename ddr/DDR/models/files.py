@@ -48,6 +48,7 @@ ENTITY_FILE_KEYS = [
     'sort',
 ]
 
+
 @total_ordering
 class File(common.DDRObject):
     id = None
@@ -233,10 +234,14 @@ class File(common.DDRObject):
             parent = self.identifier.parent().object()
         
         self.write_json()
+        # list of files to stage
         updated_files = [
             self.json_path,
         ]
-
+        if self.present():
+            updated_files.append(self.path_abs)
+        if self.access_present():
+            updated_files.append(self.access_abs)
         if parent and (parent.identifier.model in ['entity','segment']):
             # update parent.children
             parent.children(force_read=True)
