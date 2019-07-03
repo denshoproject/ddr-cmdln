@@ -16,7 +16,7 @@ from DDR import imaging
 from DDR import util
 
 FILE_BINARY_FIELDS = [
-    'sha1', 'sha256', 'md5', 'size', 'mimetype',
+    'sha1', 'sha256', 'md5', 'size',
 ]
 
 # Decision table for various ways to process file data for batch operations
