@@ -151,7 +151,7 @@ def add_file(rowd, entity, git_name, git_mail, agent,
     
     log.ok('Actions: rename %s' % actions['rename'])
     if actions['rename']:
-        rename_in_place(src_path, os.path.basename(file_.identifier.path_abs()), log)
+        copy_in_place(src_path, file_, log)
     
     annex_files = []
     
@@ -405,6 +405,17 @@ def rename_in_place(source, new_name, log):
     dest = os.path.join(src_dir, os.path.basename(new_name))
     log.ok('| mv %s %s' % (source, dest))
     shutil.move(source, dest)
+
+def copy_in_place(src_path, file_, log):
+    """Make copy of original file in same dir
+    """
+    base,ext = os.path.splitext(src_path)
+    dest = os.path.join(
+        os.path.dirname(base),
+        os.path.basename(file_.identifier.path_abs()) + ext
+    )
+    log.ok('| cp %s %s' % (src_path, dest))
+    shutil.copy(src_path, dest)
 
 def predict_staged(already, planned):
     """Predict which files will be staged, accounting for modifications

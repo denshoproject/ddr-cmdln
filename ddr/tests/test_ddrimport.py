@@ -205,6 +205,106 @@ def test_files_import_external_nohashes_nofile(tmpdir, collection, test_csv_dir,
             tmp_dir=test_files_dir,
         )
 
+def test_files_import_external_nohashes_rename(tmpdir, collection,
+                                               test_csv_dir, test_files_dir):
+    """Test importing *external* files with *no* hash cols but binaries present
+    
+    If file is external, binary is present, and no hash cols, rename binary in place
+    
+    ddr-testing-123-1-master-684e15e967
+    ddr-testing-123-2-master-b9773b9aef
+    """
+    print('collection_path %s' % collection.path_abs)
+    file_csv_path = os.path.join(
+        test_csv_dir, 'ddrimport-files-import-external-nohashes-rename.csv'
+    )
+    print('file_csv_path %s' % file_csv_path)
+    rewrite_file_paths(file_csv_path, test_files_dir)
+    log_path = os.path.join(
+        test_files_dir, 'ddrimport-files-import-external-nohashes-rename.log'
+    )
+    print('log_path %s' % log_path)
+
+    print('test_files_dir %s' % test_files_dir)
+    for path in os.listdir(test_files_dir):
+        print(path)
+    
+    # copy test files so later tests don't crash
+    # replace basename_orig in CSV with copied file
+    # and rewrite CSV
+    headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(file_csv_path))
+    renamed_files = []
+    copied_files = []
+    ingested_files = []
+    access_files = []
+    for rowd in rowds:
+        print(rowd)
+        src_file = os.path.join(test_files_dir, rowd['basename_orig'])
+        path,ext = os.path.splitext(src_file)
+        dest_file = path + '-rename' + ext
+        print('shutil.copy(%s, %s)' % (src_file, dest_file))
+        shutil.copy(src_file, dest_file)
+        if os.path.exists(dest_file):
+            renamed_files.append(os.path.basename(dest_file))
+        else:
+            print('could not copy')
+            assert False
+        rowd['basename_orig'] = dest_file
+        # figure out new file ID
+        sha1 = util.file_hash(dest_file, 'sha1')[:10]
+        idparts = rowd['id'].split('-') + [rowd['role']] + [sha1]
+        final_file = '-'.join(idparts) + ext
+        final_access = '-'.join(idparts + ['a.jpg'])
+        copied_files.append(final_file)
+        ingested_files.append(final_file)
+        access_files.append(final_access)
+    headers,rows = csvfile.make_rows(rowds)
+    fileio.write_csv(file_csv_path, headers, rows)
+    
+    out = batch.Importer.import_files(
+        file_csv_path,
+        collection.identifier,
+        VOCABS_URL,
+        GIT_USER, GIT_MAIL, AGENT,
+        log_path=log_path,
+        tmp_dir=test_files_dir,
+    )
+    # save and commit
+    repo = dvcs.repository(collection.path_abs)
+
+    print('STAGED FILES')
+    staged_files = sorted([path for path in dvcs.list_staged(repo)])
+    for path in staged_files:
+        print('  %s' % path)
+    
+    # after import_files, we expect to see
+    offenses = 0
+    # assert final_file in os.listdir(test_files_dir)
+
+    print('test_files_dir')
+    test_files = [path for path in os.listdir(test_files_dir)]
+    for path in copied_files:
+        print(path)
+        if path not in test_files:
+            print('RENAMED SRC FILE NOT PRESENT %s' % path)
+            offenses += 1
+    # assert files not ingested
+    # assert no access files created
+    for path in staged_files:
+        if os.path.basename(path) in ingested_files:
+            print('ERROR %s HAS BEEN IMPORTED!!' % path)
+            offenses += 1
+        if os.path.basename(path) in access_files:
+            print('ERROR %s ACCESS FILE GENERATED!!' % path)
+            offenses += 1
+    
+    commit = repo.index.commit('test_files_import_external_nohashes_rename')
+    print('commit %s' % commit)
+    if offenses:
+        assert False
+    # test hashes present
+    check_file_hashes(collection.path_abs)
+
 EXPECTED_FILES_IMPORT_INTERNAL = [
     'files/ddr-testing-123-1/files/ddr-testing-123-1-administrative-775f8d2cce.json',
     'files/ddr-testing-123-1/files/ddr-testing-123-1-administrative-775f8d2cce.pdf',
