@@ -163,16 +163,16 @@ def test_files_import_external(tmpdir, collection, test_csv_dir, test_files_dir)
     # test hashes present
     check_file_hashes(collection.path_abs)
 
-def test_files_import_external_emptyhashes(tmpdir, collection, test_csv_dir, test_files_dir):
-    """Test importing *external* files with *empty* hashes - should fail
+def test_files_import_external_emptyhashes_nofile(tmpdir, collection, test_csv_dir, test_files_dir):
+    """Test importing *external* files with *empty* hashes and no files - should fail
     """
     print('collection_path %s' % collection.path_abs)
     file_csv_path = os.path.join(
-        test_csv_dir, 'ddrimport-files-import-external-emptyhashes.csv'
+        test_csv_dir, 'ddrimport-files-import-external-emptyhashes-nofile.csv'
     )
     rewrite_file_paths(file_csv_path, test_files_dir)
     log_path = os.path.join(
-        test_files_dir, 'ddrimport-files-import-external-emptyhashes.log'
+        test_files_dir, 'ddrimport-files-import-external-emptyhashes-nofile.log'
     )
     with pytest.raises(Exception):
         out = batch.Importer.import_files(
@@ -184,16 +184,16 @@ def test_files_import_external_emptyhashes(tmpdir, collection, test_csv_dir, tes
             tmp_dir=test_files_dir,
         )
 
-def test_files_import_external_nohashes(tmpdir, collection, test_csv_dir, test_files_dir):
-    """Test importing *external* files with *not* hash cols - should fail
+def test_files_import_external_nohashes_nofile(tmpdir, collection, test_csv_dir, test_files_dir):
+    """Test importing *external* files with *no* hash cols and no files - should fail
     """
     print('collection_path %s' % collection.path_abs)
     file_csv_path = os.path.join(
-        test_csv_dir, 'ddrimport-files-import-external-nohashes.csv'
+        test_csv_dir, 'ddrimport-files-import-external-nohashes-nofile.csv'
     )
     rewrite_file_paths(file_csv_path, test_files_dir)
     log_path = os.path.join(
-        test_files_dir, 'ddrimport-files-import-external-nohashes.log'
+        test_files_dir, 'ddrimport-files-import-external-nohashes-nofile.log'
     )
     with pytest.raises(Exception):
         out = batch.Importer.import_files(
