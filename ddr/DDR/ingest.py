@@ -20,49 +20,55 @@ FILE_BINARY_FIELDS = [
 ]
 
 # Decision table for various ways to process file data for batch operations
-#
-# +--external
-# |+-attrs present
-# || LABEL               ACTIONS
-# 00 new-internal        Binary in repo; calc bin attrs (ignore CSV attrs)
-# 01 new-internal        Binary in repo; calc bin attrs (ignore CSV attrs)
-# 10 new-external-bin    Binary external; calc bin attrs; rename bin w fileID
-# 11 new-external-nobin  Binary external; use CSV attrs; dont process local file
-#
+# +---binary present
+# |+--external
+# ||+-attrs present
+# ||| KEY                    LABEL              ACTIONS
+# 000 nobin,local,noattrs    ERROR
+# 001 nobin,local,attrs      ERROR
+# 010 nobin,external,noattrs ERROR
+# 011 nobin,external,attrs   new-external-nobin Binary external; use CSV attrs; dont process local file
+# 100 bin,local,noattrs      new-internal       Binary in repo; calc bin attrs (ignore CSV attrs)
+# 101 bin,local,attrs        new-internal       Binary in repo; calc bin attrs (ignore CSV attrs)
+# 110 bin,external,noattrs   new-external-bin   Binary external; calc bin attrs; rename bin w fileID
+# 111 bin,external,attrs     new-external-bin   Binary external; calc bin attrs; rename bin w fileID
+
 FILE_IMPORT_ACTIONS = {
-'local,noattrs':   {'label':'new-internal',       'attrs':'calculate', 'ingest':1, 'rename':0, 'access':1},
-'local,attrs':     {'label':'new-internal',       'attrs':'calculate', 'ingest':1, 'rename':0, 'access':1},
-'external,noattrs':{'label':'new-internal-bin',   'attrs':'calculate', 'ingest':0, 'rename':1, 'access':0},
-'external,attrs':  {'label':'new-internal-nobin', 'attrs':'fromcsv',   'ingest':0, 'rename':0, 'access':0},
+'nobin,external,attrs':{'label':'new-external-nobin', 'attrs':'fromcsv',   'ingest':0, 'rename':0, 'access':0},
+'bin,local,noattrs':   {'label':'new-internal',       'attrs':'calculate', 'ingest':1, 'rename':0, 'access':1},
+'bin,local,attrs':     {'label':'new-internal',       'attrs':'calculate', 'ingest':1, 'rename':0, 'access':1},
+'bin,external,noattrs':{'label':'new-external-bin',   'attrs':'calculate', 'ingest':0, 'rename':1, 'access':0},
+'bin,external,attrs':  {'label':'new-external-bin',   'attrs':'calculate', 'ingest':0, 'rename':1, 'access':0},
 }
 
-def import_actions(rowd):
+def import_actions(rowd, file_present):
     """Decide actions when importing file from CSV
     
     @param rowd: dict Row from CSV; see DDR.batch and DDR.csvfile
+    @param file_present: bool Whether or not binary is present in filesystem
     @returns: dict
     """
     factors = []
-    
+    # binary present
+    if file_present: factors.append('bin')
+    else:            factors.append('nobin')
     # external
-    if rowd.get('external') and rowd['external']:
-        factors.append('external')
-    else:
-        factors.append('local')
-    
+    external = rowd.get('external') and rowd['external']
+    if external: factors.append('external')
+    else:        factors.append('local')
     # file attrs
     bin_attrs = [
-        fieldname for fieldname in FILE_BINARY_FIELDS if rowd.get(fieldname)
+        fieldname
+        for fieldname in FILE_BINARY_FIELDS
+        if rowd.get(fieldname) and rowd[fieldname]
     ]
-    if bin_attrs:
-        factors.append('attrs')
-    else:
-        factors.append('noattrs')
-    
+    if bin_attrs: factors.append('attrs')
+    else:         factors.append('noattrs')
+    # DECIDE
     key = ','.join(factors)
     if FILE_IMPORT_ACTIONS.get(key):
         return FILE_IMPORT_ACTIONS[key]
-    raise Exception('Cannot decide file ingest actions.')
+    raise Exception('No file ingest action for "%s".' % key)
 
 
 class FileExistsException(Exception):
@@ -128,10 +134,10 @@ def add_file(rowd, entity, git_name, git_mail, agent,
     log.ok('rowd: %s' % rowd)
     log.ok('parent: %s' % entity.id)
     
-    actions = import_actions(rowd)
-    log.ok('actions %s' % actions)
-    
     src_path = rowd.pop('basename_orig')
+    
+    actions = import_actions(rowd, os.path.exists(src_path))
+    log.ok('actions %s' % actions)
     
     log.ok('Actions: attrs %s' % actions['attrs'])
     if actions['attrs'] == 'calculate':

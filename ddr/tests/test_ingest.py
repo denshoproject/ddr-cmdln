@@ -82,35 +82,35 @@ def test_file_import_actions():
     rowd00a = {
         'external': False,
     }
-    expected00a = ingest.FILE_IMPORT_ACTIONS['local,noattrs']
-    out00a = ingest.import_actions(rowd00a)
+    expected00a = ingest.FILE_IMPORT_ACTIONS['bin,local,noattrs']
+    out00a = ingest.import_actions(rowd00a, True)
     assert out00a == expected00a
     rowd00b = {
         'external': 0,
         'md5':'', 'sha1':'', 'sha256':'', 'size':'',
     }
-    expected00b = ingest.FILE_IMPORT_ACTIONS['local,noattrs']
-    out00b = ingest.import_actions(rowd00b)
+    expected00b = ingest.FILE_IMPORT_ACTIONS['bin,local,noattrs']
+    out00b = ingest.import_actions(rowd00b, True)
     assert out00b == expected00b
     rowd01 = {
         'external': False,
         'md5':'abc', 'sha1':'abc', 'sha256':'abc', 'size':'abc',
     }
-    expected01 = ingest.FILE_IMPORT_ACTIONS['local,attrs']
-    out01 = ingest.import_actions(rowd01)
+    expected01 = ingest.FILE_IMPORT_ACTIONS['bin,local,attrs']
+    out01 = ingest.import_actions(rowd01, True)
     assert out01 == expected01
     rowd10 = {
         'external': True,
     }
-    expected10 = ingest.FILE_IMPORT_ACTIONS['external,noattrs']
-    out10 = ingest.import_actions(rowd10)
+    expected10 = ingest.FILE_IMPORT_ACTIONS['bin,external,noattrs']
+    out10 = ingest.import_actions(rowd10,True)
     assert out10 == expected10
     rowd11 = {
         'external': True,
         'md5':'abc', 'sha1':'abc', 'sha256':'abc', 'size':'abc',
     }
-    expected11 = ingest.FILE_IMPORT_ACTIONS['external,attrs']
-    out11 = ingest.import_actions(rowd11)
+    expected11 = ingest.FILE_IMPORT_ACTIONS['bin,external,attrs']
+    out11 = ingest.import_actions(rowd11, True)
     assert out11 == expected11
 
 def test_log_path(tmpdir, logpath, entity_identifier):
