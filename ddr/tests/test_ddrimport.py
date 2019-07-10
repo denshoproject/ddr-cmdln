@@ -467,7 +467,7 @@ def check_file_hashes(collection_path):
     )
     for path in paths:
         f = identifier.Identifier(path).object()
-        if not f.sha1 and f.sha256 and f.md5 and f.size:
+        if not (f.sha1 and f.sha256 and f.md5 and f.size):
             print('f.sha1   %s' % f.sha1)
             print('f.sha256 %s' % f.sha256)
             print('f.md5    %s' % f.md5)
