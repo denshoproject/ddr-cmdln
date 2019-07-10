@@ -544,22 +544,27 @@ def file_object(fidentifier, entity, data, src_path, src_size, md5, sha1, sha256
     if basename_ext and not path_abs_ext:
         file_.path_abs = file_.path_abs + basename_ext
         log.ok('| basename_ext %s' % basename_ext)
-    file_.size = src_size
     file_.role = data['role']
-    file_.sha1 = sha1
-    file_.md5 = md5
-    file_.sha256 = sha256
-    file_.xmp = xmp
     log.ok('| file_ %s' % file_)
     log.ok('| file_.basename_orig: %s' % file_.basename_orig)
     log.ok('| file_.path_abs: %s' % file_.path_abs)
-    log.ok('| file_.size: %s' % file_.size)
+    log.ok('| file_.mimetype: %s' % file_.mimetype)
     # remove 'id' from forms/CSV data so it doesn't overwrite file_.id later
     if data.get('id'):
         data.pop('id')
     # form data
     for field in data:
         setattr(file_, field, data[field])
+    # args
+    file_.size = src_size
+    file_.sha1 = sha1
+    file_.md5 = md5
+    file_.sha256 = sha256
+    file_.xmp = xmp
+    log.ok('| file_.size:   %s' % file_.size)
+    log.ok('| file_.sha1:   %s' % file_.sha1)
+    log.ok('| file_.md5:    %s' % file_.md5)
+    log.ok('| file_.sha256: %s' % file_.sha256)
     # Batch import CSV files often have the ID of the file-role or entity
     # instead of the file. Add file ID again to make sure the field has
     # the correct value.
