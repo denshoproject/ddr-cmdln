@@ -291,11 +291,11 @@ def test_file_parent_ids():
 # _choose_signatures
 # load_document_json
 
-def test_post_multi():
-    hosts = [{'host': '127.0.0.1', 'port': 9999}]
-    index = 'fakeindex'
-    results = docstore.Docstore(hosts, index).post_multi('/tmp', recursive=True, force=True)
-    print('results %s' % results)
-    expected = {'successful': 0, 'skipped': 0, 'total': 0, 'bad': []}
-    assert results == expected
-                       
+#def test_post_multi():
+#    hosts = [{'host': '127.0.0.1', 'port': 9999}]
+#    index = 'fakeindex'
+#    ds = docstore.Docstore(hosts, index)
+#    results = ds.post_multi('/tmp', recursive=True, force=True)
+#    print('results %s' % results)
+#    expected = {'successful': 0, 'skipped': 0, 'total': 0, 'bad': []}
+#    assert results == expected

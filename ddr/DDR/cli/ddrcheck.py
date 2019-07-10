@@ -16,7 +16,7 @@ def ddrcheck(collection_path):
     print('Gathering files in %s' % collection_path)
     paths = util.find_meta_files(
         collection_path, recursive=1,
-        model=None, files_first=False, force_read=False, testing=0
+        model=None, files_first=False, force_read=False
     )
     print('Checking files...')
     for item in util.validate_paths(paths):

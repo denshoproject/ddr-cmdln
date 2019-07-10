@@ -35,6 +35,9 @@ from DDR import vocab
 
 COLLECTION_FILES_PREFIX = 'files'
 
+# TODO get these from ddr-defs/repo_modules/file.py
+FILE_UPDATE_IGNORE_FIELDS = ['sha1', 'sha256', 'md5', 'size']
+
 
 class Exporter():
     
@@ -737,6 +740,7 @@ class Importer():
         @param agent: str
         @param log_path: str Absolute path to addfile log for all files
         @param dryrun: boolean
+        @returns: list git_files
         """
         logging.info('batch import files ----------------------------')
         
@@ -812,7 +816,13 @@ class Importer():
                 n+1, len_rowds, rowd['id'], rowd['basename_orig']
             ))
             start_round = datetime.now(config.TZ)
-
+            
+            # remove ignored fields (hashes)
+            # Users should not be able to modify hash and file size values
+            # after initial file import.
+            for field in FILE_UPDATE_IGNORE_FIELDS:
+                rowd.pop(field)
+            
             fid = rowd['id']
             eid = fid_parents[fid].id
             entity = entities[eid]
@@ -885,7 +895,9 @@ class Importer():
         elapsed_rounds = []
         len_rowds = len(rowds)
         for n,rowd in enumerate(rowds):
-            logging.info('+ %s/%s - %s (%s)' % (n+1, len_rowds, rowd['id'], rowd['basename_orig']))
+            logging.info('+ %s/%s - %s (%s)' % (
+                n+1, len_rowds, rowd['id'], rowd['basename_orig']
+            ))
             start_round = datetime.now(config.TZ)
 
             fid = rowd['id']
@@ -903,68 +915,18 @@ class Importer():
             
             logging.debug('| parent %s' % (parent))
             
-            # external files (no binary except maybe access file)
-            if Importer._rowd_is_external(rowd) and not dryrun:
-                file_,repo2,log2 = ingest.add_external_file(
-                    parent,
-                    rowd,
+            if not dryrun:
+                file_,repo2,log2 = ingest.add_file(
+                    rowd, parent,
                     git_name, git_mail, agent,
-                    log_path=log_path,
-                    show_staged=False
+                    tmp_dir=tmp_dir, log_path=log_path, show_staged=False
                 )
-                # Custom access files
+                # TODO integrate into ingest.add_file
                 if rowd.get('access_path'):
                     file_,repo3,log3,status = ingest.add_access(
-                        parent, file_,
-                        rowd['access_path'],
+                        parent, file_, rowd['access_path'],
                         git_name, git_mail, agent,
-                        log_path=log_path,
-                        show_staged=False
-                    )
-                git_files.append(file_)
-            
-            # normal files
-            elif not dryrun:
-                # ingest
-                # TODO make sure this updates entity.files
-                
-                # TODO refactor this?
-                # Add role if file.ID doesn't have it
-                # This will happen with e.g. transcript files when file_id is
-                # actually the Entity/Segment ID and contains no role,
-                # and when sha1 field is blank.
-                # NOTE: no File object yet for new files
-                if file_ and (
-                        rowd.get('role') and not file_.identifier.parts.get('role')
-                ):
-                    file_.identifier.parts['role'] = rowd['role']
-
-                try:
-                    file_,repo2,log2 = ingest.add_local_file(
-                        parent,
-                        rowd['basename_orig'],
-                        rowd['role'],
-                        rowd,
-                        git_name, git_mail, agent,
-                        tmp_dir=tmp_dir,
-                        log_path=log_path,
-                        show_staged=False
-                    )
-                except ingest.FileExistsException as e:
-                    logging.error('ERROR: %s' % e)
-                    failures.append(e)
-                except ingest.FileMissingException as e:
-                    logging.error('ERROR: %s' % e)
-                    failures.append(e)
-                
-                # Custom access files
-                if rowd.get('access_path'):
-                    file_,repo3,log3,status = ingest.add_access(
-                        parent, file_,
-                        rowd['access_path'],
-                        git_name, git_mail, agent,
-                        log_path=log_path,
-                        show_staged=False
+                        log_path=log_path, show_staged=False
                     )
                 git_files.append(file_)
             
@@ -1276,8 +1238,7 @@ class Updater():
         logging.info('Finding metadata files %s' % cidentifier.path_abs())
         paths = util.find_meta_files(
             cidentifier.path_abs(),
-            recursive=True, force_read=True,
-            testing=True  # otherwise will be excluded if basedir is under /tmp
+            recursive=True, force_read=True
         )
         num = len(paths)
         logging.info('%s paths' % num)
