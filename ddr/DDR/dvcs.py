@@ -310,6 +310,14 @@ def list_conflicted(repo):
     stdout = repo.git.ls_files('--unmerged')
     return _parse_list_conflicted(stdout)
 
+def git_status(repo):
+    return {
+        'staged': list_staged(repo),
+        'modified': list_modified(repo),
+        'untracked': list_untracked(repo),
+        'conflicted': list_conflicted(repo),
+    }
+
 
 # git state ------------------------------------------------------------
 
@@ -1132,7 +1140,7 @@ class Cgit():
     def __init__(self, cgit_url=config.CGIT_URL):
         self.url = cgit_url
     
-    def collection_title(self, repo, session, timeout=5):
+    def collection_title(self, repo, session, timeout=config.REQUESTS_TIMEOUT):
         """Gets collection title from CGit
         
         Requests plain blob of collection.json, reads 'title' field.

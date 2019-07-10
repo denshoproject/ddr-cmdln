@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import OrderedDict
+from copy import deepcopy
 
 import envoy
 import git
@@ -14,13 +15,27 @@ from DDR import modules
 def test_make_row_dict():
     headers0 = ['id', 'created', 'lastmod', 'title', 'description']
     row0 = ['id', 'then', 'now', 'title', 'descr']
-    out0 = {
-        'id': 'id',
-        'created': 'then',
-        'lastmod': 'now',
-        'title': 'title', 'description': 'descr',
-    }
-    assert csvfile.make_row_dict(headers0, row0) == out0
+    expected0 = OrderedDict()
+    expected0['id'] = 'id'
+    expected0['created'] = 'then'
+    expected0['lastmod'] = 'now'
+    expected0['title'] = 'title'
+    expected0['description'] = 'descr'
+    out0 = csvfile.make_row_dict(headers0, row0)
+    print('expected0 %s' % expected0)
+    print('out0      %s' % out0)
+    assert out0 == expected0
+    # strip whitespace from rows
+    headers1 = ['id', 'created', 'lastmod']
+    row1 = ['id', ' then', 'now ']
+    expected1 = OrderedDict()
+    expected1['id'] = 'id'
+    expected1['created'] = 'then'
+    expected1['lastmod'] = 'now'
+    out1 = csvfile.make_row_dict(headers1, row1)
+    print('expected1 %s' % expected1)
+    print('out1      %s' % out1)
+    assert out1 == expected1
 
 def test_make_rowds():
     rows0 = [
@@ -45,6 +60,15 @@ def test_make_rowds():
     out = csvfile.make_rowds(rows0)
     print(out)
     assert out == expected
+    # strip whitespace from headers
+    rows1 = [
+        ['id', ' created', 'lastmod ', '  title', 'description   '],
+        ['id0', 'then', 'now', 'title0', 'descr0'],
+        ['id1', 'later', 'later', 'title1', 'descr1'],
+    ]
+    out1 = csvfile.make_rowds(rows1)
+    print(out1)
+    assert out1 == expected
 
 def test_validate_headers():
     headers0 = ['id', 'title']

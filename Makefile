@@ -17,10 +17,12 @@ PACKAGE_COMMIT := $(shell git log -1 --pretty="%h")
 PACKAGE_TIMESTAMP := $(shell git log -1 --pretty="%ad" --date=short | tr -d -)
 
 SRC_REPO_CMDLN=https://github.com/densho/ddr-cmdln.git
+SRC_REPO_CMDLN_ASSETS=https://github.com/densho/ddr-cmdln-assets.git
 SRC_REPO_DEFS=https://github.com/densho/ddr-defs.git
 
 INSTALL_BASE=/opt
 INSTALL_CMDLN=$(INSTALL_BASE)/ddr-cmdln
+INSTALL_CMDLN_ASSETS=$(INSTALL_BASE)/ddr-cmdln-assets
 INSTALL_DEFS=$(INSTALL_CMDLN)/ddr-defs
 
 VIRTUALENV=$(INSTALL_CMDLN)/venv/ddrcmdln
@@ -188,6 +190,11 @@ get-ddr-cmdln:
 	if test -d $(INSTALL_CMDLN); \
 	then cd $(INSTALL_CMDLN) && git pull; \
 	else cd $(INSTALL_BASE) && git clone $(SRC_REPO_CMDLN); \
+	fi
+	@echo "get-ddr-cmdln-assets"
+	if test -d $(INSTALL_CMDLN_ASSETS); \
+	then cd $(INSTALL_CMDLN_ASSETS) && git pull; \
+	else git clone $(SRC_REPO_CMDLN_ASSETS); \
 	fi
 
 setup-ddr-cmdln:

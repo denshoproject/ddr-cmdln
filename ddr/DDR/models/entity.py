@@ -659,12 +659,10 @@ class Entity(common.DDRObject):
         return ingest.addfile_logger(self)
     
     def add_local_file(self, src_path, role, data, git_name, git_mail, agent=''):
-        return ingest.add_local_file(
-            self, src_path, role, data, git_name, git_mail, agent
-        )
-    
+        return ingest.add_file(data, self, git_name, git_mail, agent)
+
     def add_external_file(self, data, git_name, git_mail, agent=''):
-        return ingest.add_external_file(self, data, git_name, git_mail, agent)
+        return ingest.add_file(data, self, git_name, git_mail, agent)
     
     def add_access(self, ddrfile, src_file, git_name, git_mail, agent=''):
         return ingest.add_access(

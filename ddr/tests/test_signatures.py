@@ -67,7 +67,7 @@ def collection(tmpdir_factory):
 
 def test_00_pick_signatures(tmpdir, collection):
     paths = util.find_meta_files(
-        collection.path_abs, recursive=True, force_read=True, testing=True
+        collection.path_abs, recursive=True, force_read=True
     )
     print('paths')
     for x in paths:

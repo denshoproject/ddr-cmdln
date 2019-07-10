@@ -646,7 +646,6 @@ def test_entity_to_childrenmeta():
     out = models.entity.entity_to_childrenmeta(CHILDREN_ENTITY)
     assert out == expected
 
-
 # TODO File.__init__
 # TODO File.__repr__
 # TODO File.from_identifer
