@@ -463,10 +463,13 @@ def stage_files(entity, git_files, annex_files, log, show_staged=True):
     stage_ok = False
     staged = []
     try:
-        log.ok('| git stage')
-        dvcs.stage(repo, git_files)
         log.ok('| annex stage')
+        # Stage annex files (binaries) before non-binary git files
+        # else binaries might end up in .git/objects/ which would be NOT GOOD
         dvcs.annex_stage(repo, annex_files)
+        log.ok('| git stage')
+        # If git_files contains binaries they are already staged by now.
+        dvcs.stage(repo, git_files)
         log.ok('| ok')
     except:
         # FAILED! print traceback to addfile log

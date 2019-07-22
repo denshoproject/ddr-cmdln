@@ -869,8 +869,11 @@ class Importer():
         if (git_files or annex_files) and not dryrun:
             logging.info('Staging %s modified files' % len(git_files))
             start_stage = datetime.now(config.TZ)
-            dvcs.stage(repository, git_files)
+            # Stage annex files (binaries) before non-binary git files
+            # else binaries might end up in .git/objects/ which would be BAD
             dvcs.annex_stage(repository, annex_files)
+            # If git_files contains binaries they are already staged by now.
+            dvcs.stage(repository, git_files)
             staged = util.natural_sort(dvcs.list_staged(repository))
             for path in staged:
                 if path in git_files:
