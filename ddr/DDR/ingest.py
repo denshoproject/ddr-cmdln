@@ -451,6 +451,12 @@ def stage_files(entity, git_files, annex_files, log, show_staged=True):
     """
     repo = dvcs.repository(entity.collection_path)
     log.ok('| repo %s' % repo)
+
+    # Remove any files in git_files that are in annex_files
+    git_files = [
+        path for path in git_files
+        if path not in annex_files
+    ]
     
     log.ok('| BEFORE staging')
     staged_before,modified_before,untracked_before = repo_status(repo, log)
