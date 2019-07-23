@@ -162,6 +162,10 @@ def test_files_import_external(tmpdir, collection, test_csv_dir, test_files_dir)
     print('commit %s' % commit)
     # test hashes present
     check_file_hashes(collection.path_abs)
+    # ensure no binaries in .git/objects
+    print('log_path %s' % log_path)
+    assert not find_binaries_in_git_objects(repo)
+    assert not find_missing_annex_binaries(repo)
 
 def test_files_import_external_emptyhashes_nofile(tmpdir, collection, test_csv_dir, test_files_dir):
     """Test importing *external* files with *empty* hashes and no files - should fail
@@ -304,6 +308,10 @@ def test_files_import_external_nohashes_rename(tmpdir, collection,
         assert False
     # test hashes present
     check_file_hashes(collection.path_abs)
+    # ensure no binaries in .git/objects
+    print('log_path %s' % log_path)
+    assert not find_binaries_in_git_objects(repo)
+    assert not find_missing_annex_binaries(repo)
 
 EXPECTED_FILES_IMPORT_INTERNAL = [
     'files/ddr-testing-123-1/files/ddr-testing-123-1-administrative-775f8d2cce.json',
@@ -355,6 +363,10 @@ def test_files_import_internal(tmpdir, collection, test_csv_dir, test_files_dir)
     commit = repo.index.commit('test_files_import_internal')
     # test hashes present
     check_file_hashes(collection.path_abs)
+    # ensure no binaries in .git/objects
+    print('log_path %s' % log_path)
+    assert not find_binaries_in_git_objects(repo)
+    assert not find_missing_annex_binaries(repo)
 
 EXPECTED_FILES_IMPORT_INTERNAL_NOHASHES = [
     'files/ddr-testing-123-1/files/ddr-testing-123-1-mezzanine-b9773b9aef.json',
@@ -385,6 +397,10 @@ def test_files_import_internal_nohashes(tmpdir, collection, test_csv_dir, test_f
     commit = repo.index.commit('test_files_import_internal_nohashes')
     # test hashes present
     check_file_hashes(collection.path_abs)
+    # ensure no binaries in .git/objects
+    print('log_path %s' % log_path)
+    assert not find_binaries_in_git_objects(repo)
+    assert not find_missing_annex_binaries(repo)
 
 EXPECTED_UPDATE_FILES = [
     'files/ddr-testing-123-1/changelog',
@@ -443,7 +459,10 @@ def test_update_files(tmpdir, collection, test_csv_dir, test_files_dir):
     # test hashes not modified
     hashes_after = collect_hashes(collection.path_abs)
     check_hashes(hashes_before, hashes_after)
-
+    # ensure no binaries in .git/objects
+    print('log_path %s' % log_path)
+    assert not find_binaries_in_git_objects(repo)
+    assert not find_missing_annex_binaries(repo)
 
 # helpers
 
@@ -515,3 +534,55 @@ def check_hashes(before, after):
             print('BEFORE %s' % before[oid])
             print('AFTER  %s' % after[oid])
     assert not (keys_changed or hashes_changed)
+
+def find_binaries_in_git_objects(repo):
+    """Find binaries mistakenly placed into .git/objects
+    """
+    files = [
+        identifier.Identifier(path_json).object()
+        for path_json in util.find_meta_files(
+            repo.working_dir, recursive=True, model='file', force_read=True
+        )
+    ]
+    binaries_in_git_objects = [
+        f.path_rel for f in files
+        if (not f.external) and dvcs.file_in_git_objects(repo, f.path_rel)
+    ]
+    accessfiles_in_git_objects = [
+        f.access_rel for f in files
+        if os.path.exists(f.access_abs)
+        and dvcs.file_in_git_objects(repo, f.path_rel)
+    ]
+    binaries = binaries_in_git_objects + accessfiles_in_git_objects
+    if binaries:
+        print('Found binaries in %s' % os.path.join(
+            repo.working_dir, '.git/objects/'
+        ))
+        for path in binaries:
+            print(path)
+    return binaries
+
+def find_missing_annex_binaries(repo):
+    """Find binaries that are not placed in .git/annex
+    """
+    files = [
+        identifier.Identifier(path_json).object()
+        for path_json in util.find_meta_files(
+            repo.working_dir, recursive=True, model='file', force_read=True
+        )
+    ]
+    binaries_missing = [
+        f.path_rel for f in files
+        if (not f.external) and (not dvcs.file_in_git_annex(repo, f.path_rel))
+    ]
+    accessfiles_missing = [
+        f.access_rel for f in files
+        if (os.path.exists(f.access_abs))
+        and (not dvcs.file_in_git_annex(repo, f.path_rel))
+    ]
+    missing = binaries_missing + accessfiles_missing
+    if missing:
+        print('Binaries missing from git-annex')
+        for path in missing:
+            print(path)
+    return missing

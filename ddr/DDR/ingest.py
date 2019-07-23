@@ -451,6 +451,12 @@ def stage_files(entity, git_files, annex_files, log, show_staged=True):
     """
     repo = dvcs.repository(entity.collection_path)
     log.ok('| repo %s' % repo)
+
+    # Remove any files in git_files that are in annex_files
+    git_files = [
+        path for path in git_files
+        if path not in annex_files
+    ]
     
     log.ok('| BEFORE staging')
     staged_before,modified_before,untracked_before = repo_status(repo, log)
@@ -463,10 +469,13 @@ def stage_files(entity, git_files, annex_files, log, show_staged=True):
     stage_ok = False
     staged = []
     try:
-        log.ok('| git stage')
-        dvcs.stage(repo, git_files)
         log.ok('| annex stage')
+        # Stage annex files (binaries) before non-binary git files
+        # else binaries might end up in .git/objects/ which would be NOT GOOD
         dvcs.annex_stage(repo, annex_files)
+        log.ok('| git stage')
+        # If git_files contains binaries they are already staged by now.
+        dvcs.stage(repo, git_files)
         log.ok('| ok')
     except:
         # FAILED! print traceback to addfile log

@@ -10,6 +10,7 @@ import socket
 from dateutil import parser
 import envoy
 import git
+from git.exc import GitCommandError
 import requests
 import simplejson as json
 
@@ -317,6 +318,50 @@ def git_status(repo):
         'untracked': list_untracked(repo),
         'conflicted': list_conflicted(repo),
     }
+
+def file_in_git_objects(repo, path_rel):
+    """True if the (binary) file is in .git/objects
+    
+    `git hash-object $PATH` returns a SHA1 hash of a given path.
+    This works for any object including git-annex objects, so this function also
+    checks to see if the file is present is in .git/objects/.
+    
+    IMPORTANT: This function only works with relatively new files
+    that have not yet been collected into packfiles!
+    https://git-scm.com/docs/user-manual.html#pack-files
+    
+    @param repo
+    @param path_rel: str
+    @returns: bool
+    """
+    os.chdir(repo.working_dir)
+    try:
+        sha = repo.git.hash_object(path_rel)
+    except GitCommandError as err:
+        return False
+    git_objects_path = os.path.join(
+        '.git/objects', sha[:2], sha[2:]
+    )
+    return os.path.exists(git_objects_path)
+
+def file_in_git_annex(repo, path_rel):
+    """True if file is an annex file
+    
+    Wrapper around `git annex lookupkey $PATH` which returns a unique identifier
+    if git-annex knows about the file. (By default this is a SHA256E key).
+    This works for both locked and unlocked repositories.
+    
+    @param repo
+    @param path_rel: str
+    @returns: bool
+    """
+    os.chdir(repo.working_dir)
+    try:
+        key = repo.git.annex('lookupkey', path_rel)
+        return True
+    except GitCommandError as err:
+        key = None
+    return False
 
 
 # git state ------------------------------------------------------------
