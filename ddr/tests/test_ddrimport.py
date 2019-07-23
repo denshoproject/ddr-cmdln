@@ -548,13 +548,19 @@ def find_binaries_in_git_objects(repo):
         f.path_rel for f in files
         if (not f.external) and dvcs.file_in_git_objects(repo, f.path_rel)
     ]
-    if binaries_in_git_objects:
+    accessfiles_in_git_objects = [
+        f.access_rel for f in files
+        if os.path.exists(f.access_abs)
+        and dvcs.file_in_git_objects(repo, f.path_rel)
+    ]
+    binaries = binaries_in_git_objects + accessfiles_in_git_objects
+    if binaries:
         print('Found binaries in %s' % os.path.join(
             repo.working_dir, '.git/objects/'
         ))
-        for path in binaries_in_git_objects:
+        for path in binaries:
             print(path)
-    return binaries_in_git_objects
+    return binaries
 
 def find_missing_annex_binaries(repo):
     """Find binaries that are not placed in .git/annex
@@ -569,8 +575,14 @@ def find_missing_annex_binaries(repo):
         f.path_rel for f in files
         if (not f.external) and (not dvcs.file_in_git_annex(repo, f.path_rel))
     ]
-    if binaries_missing:
+    accessfiles_missing = [
+        f.access_rel for f in files
+        if (os.path.exists(f.access_abs))
+        and (not dvcs.file_in_git_annex(repo, f.path_rel))
+    ]
+    missing = binaries_missing + accessfiles_missing
+    if missing:
         print('Binaries missing from git-annex')
-        for path in binaries_missing:
+        for path in missing:
             print(path)
-    return binaries_missing
+    return missing
