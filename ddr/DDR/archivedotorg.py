@@ -7,6 +7,8 @@ from bs4 import BeautifulSoup
 from bs4.element import Tag
 import requests
 
+from DDR import config
+
 IA_DOWNLOAD_URL = 'https://archive.org/download'
 
 # Models that should always be checked for IA content
@@ -208,7 +210,7 @@ def get_xml(oid):
     @param oid: str object ID
     @returns: http_status,xml int,str
     """
-    r = requests.get(_xml_url(oid))
+    r = requests.get(_xml_url(oid), timeout=config.REQUESTS_TIMEOUT)
     if r.status_code == 200:
         return r.status_code,r.text
     return r.status_code,''

@@ -565,7 +565,7 @@ def _get_vocab_http(url):
     @param path: str URL of vocabulary file (.json)
     """
     logging.info('getting vocab: %s' % url)
-    r = requests.get(url)
+    r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
     if r.status_code != 200:
         raise Exception(
             '%s vocabulary file missing: %s' % (vocab.capitalize(), url))
@@ -581,7 +581,7 @@ def _get_vocabs_all_fs(base, exclude='index'):
 def _get_vocabs_all_http(base_url):
     # get list of vocabs
     url = os.path.join(base_url, 'index.json')
-    r = requests.get(url)
+    r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
     if r.status_code != 200:
         raise Exception(
             'Cannot load vocabulary index: %s' % (url))

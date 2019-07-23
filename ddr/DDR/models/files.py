@@ -48,6 +48,7 @@ ENTITY_FILE_KEYS = [
     'sort',
 ]
 
+
 @total_ordering
 class File(common.DDRObject):
     id = None
@@ -213,10 +214,12 @@ class File(common.DDRObject):
     def save(self, git_name, git_mail, agent, collection=None, parent=None, inheritables=[], commit=True):
         """Writes File metadata, stages, and commits.
         
-        Updates .children if parent is (almost certainly)
-        an Entity.  Returns exit code, status message, and list of updated
-        files.  Files list is for use by e.g. batch operations that want
+        Updates .children if parent is (almost certainly) an Entity.
+        Returns exit code, status message, and list of *updated* files.
+        
+        Updated files list is for use by e.g. batch operations that want
         to commit all modified files in one operation rather than piecemeal.
+        IMPORTANT: This list only includes METADATA files, NOT binaries.
         
         @param git_name: str
         @param git_mail: str
@@ -233,10 +236,10 @@ class File(common.DDRObject):
             parent = self.identifier.parent().object()
         
         self.write_json()
+        # list of files to stage
         updated_files = [
             self.json_path,
         ]
-
         if parent and (parent.identifier.model in ['entity','segment']):
             # update parent.children
             parent.children(force_read=True)
