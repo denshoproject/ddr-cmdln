@@ -1,2 +1,2 @@
-DDRTESTING,ORIGINALID,id,external,role,basename_orig,mimetype,public,rights,sort,thumb,label,digitize_person,tech_notes,external_urls,links,,
-jpg,ddr-densho-266-1-master-05e4af4c9a,ddr-testing-123-2,True,master,nonexistent-file,image/jpeg,1,nocc,1,-1,Front cover,"Oiye, Caitlin","BookdriveCapture 5.6.1, Canon EOS Rebel t3i",,,
+DDRTESTING,ORIGINALID,id,external,role,basename_orig,mimetype,public,rights,sort,label,digitize_person,tech_notes,external_urls,links
+jpg,ddr-densho-266-1-master-05e4af4c9a,ddr-testing-123-2,True,master,nonexistent-file,image/jpeg,1,nocc,1,Front cover,"Oiye, Caitlin","BookdriveCapture 5.6.1, Canon EOS Rebel t3i",,

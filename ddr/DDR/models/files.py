@@ -32,7 +32,6 @@ FILE_KEYS = ['path_rel',
              'public',
              'sort',
              'label',
-             'thumb',
              'access_rel',
              'xmp',]
 
@@ -80,7 +79,6 @@ class File(common.DDRObject):
     public = 0
     sort = 1
     label = ''
-    thumb = -1
     # access file path relative to /
     # not saved; constructed on instantiation
     access_size = None
