@@ -80,6 +80,7 @@ def filter_files(files, args):
         if (ftype == 'access') and args.access: copy = True
         if (ftype == 'mezzanine') and args.mezzanine: copy = True
         if (ftype == 'transcript') and args.transcript: copy = True
+        if (ftype == 'administrative') and args.administrative: copy = True
         if (ftype == 'master') and args.master: copy = True
         if copy:
             to_copy.append(f)
@@ -106,6 +107,7 @@ def main():
     parser.add_argument('-a', '--access', action='store_const', const=1, help='git-annex copy access files.')
     parser.add_argument('-m', '--mezzanine', action='store_const', const=1, help='git-annex copy mezzanine files.')
     parser.add_argument('-t', '--transcript', action='store_const', const=1, help='git-annex copy transcript')
+    parser.add_argument('-A', '--administrative', action='store_const', const=1, help='git-annex administrative files.')
     parser.add_argument('-M', '--master', action='store_const', const=1, help='git-annex copy master files.')
     args = parser.parse_args()
     
@@ -113,7 +115,7 @@ def main():
     if args.destbase == args.collection:
         print('ddrfilter: error: Source and destination are the same!')
         sys.exit(1)
-    if not (args.access or args.mezzanine or args.master):
+    if not (args.access or args.mezzanine or args.transcript or args.administrative or args.master):
         print('ddrfilter: error: No file type(s) selected!')
         sys.exit(1)
     
@@ -128,6 +130,7 @@ def main():
     if args.access:    logprint(LOG, 'Copying access')
     if args.mezzanine: logprint(LOG, 'Copying mezzanine')
     if args.transcript: logprint(LOG, 'Copying transcript')
+    if args.administrative: logprint(LOG, 'Copying administrative')
     if args.master:    logprint(LOG, 'Copying master')
     
     # if collection dir doesn't exist in destdir, mkdir
