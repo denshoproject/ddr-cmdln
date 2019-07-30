@@ -63,37 +63,82 @@ def logprint_nots(filename, msg):
 
 def find_files(collection_path):
     """List files using git-annex-find.
+    
+    Only includes files present in local filesystem.
+    This avoids rsync errors for missing files.
     """
-    return util.find_meta_files(
-        collection_path, model='file', recursive=True, force_read=True
-    )
+    os.chdir(collection_path)
+    r0 = envoy.run('git annex find')
+    files = r0.std_out.strip().split('\n')
+    # strip out blank lines
+    return [path for path in files if path]
 
-def filter_files(files, roles):
+def filter_files(files, roles, force, LOG):
     """Binary and access files for each File in roles
     """
-    to_copy = []
-    for path_rel in files:
-        oi = identifier.Identifier(path_rel, config.MEDIA_BASE)
-        role = oi.idparts.get('role')
-        if role and (role in roles):
-            o = oi.object()
-            to_copy.append(o.path_rel)
-            to_copy.append(o.access_rel)
-    return sorted(list(set(to_copy)))
+    logprint(LOG, '%s files in filesystem' % len(files))
+    
+    # load objects
+    # extract file IDs from list of files, rm duplicates
+    oids = sorted(list(set([
+        os.path.splitext(os.path.basename(
+            path.replace(config.ACCESS_FILE_SUFFIX, '')
+        ))[0]
+        for path in files
+    ])))
+    objects = [
+        identifier.Identifier(oid, config.MEDIA_BASE).object()
+        for oid in oids
+    ]
+    logprint(LOG, '%s file objects' % len(objects))
+    # only keep objects for specified role(s)
+    role_files = [o for o in objects if o.identifier.idparts['role'] in roles]
+    logprint(LOG, '%s %s file objects' % (
+        len(role_files),
+        ','.join(roles)
+    ))
+    # only objects which are publishable
+    publishable = get_publishable(role_files, force)
+    logprint(LOG, '%s publishable objects' % len(publishable))
+    
+    # list binaries and access files
+    binaries = [o.path_rel for o in publishable]
+    accesses = [o.access_rel for o in publishable]
+    paths = sorted(list(set(binaries + accesses)))
+    logprint(LOG, '%s files' % len(paths))
+    return paths
+
+def get_publishable(files, force):
+    # list files that are publishable; cache parent Entities for speed
+    parents = {}
+    for f in files:
+        if not parents.get(f.id):
+            parents[f.id] = f.parent()
+    return [f for f in files if can_publish(f, force, parents)]
+
+def can_publish(file_, force, parents):
+    if force:
+        return True
+    parent = parents[file_.id]
+    if (file_.public == 1) \
+    and (parent.public == 1) \
+    and (parent.status == 'completed'):
+        return True
+    return False
 
 def rsync_files(to_copy, collection_path, destdir, LOG):
     os.chdir(collection_path)
     errs = []
-    for f in to_copy:
+    for n,f in enumerate(to_copy):
         src = os.path.join(collection_path, f)
         src = f
         dest = os.path.join(destdir, f)
         cmd = 'rsync --copy-links %s %s/' % (src, destdir)
-        logprint(LOG, cmd)
+        logprint(LOG, '%s/%s %s' % (n, len(to_copy), cmd))
         r1 = envoy.run(cmd)
         if r1.status_code:
             logprint(LOG, 'STATUS {}'.format(r1.status_code))
-            errs.append(src)
+            errs.append((r1.status_code,src))
     return errs
 
 
@@ -107,6 +152,7 @@ def main():
     parser.add_argument('-t', '--transcript', action='store_const', const=1, help='git-annex copy transcript')
     parser.add_argument('-A', '--administrative', action='store_const', const=1, help='git-annex administrative files.')
     parser.add_argument('-M', '--master', action='store_const', const=1, help='git-annex copy master files.')
+    parser.add_argument('-f', '--force', action='store_const', const=1, help='Publish all files regardless of status.')
     args = parser.parse_args()
     
     # check args
@@ -137,12 +183,13 @@ def main():
     logprint(LOG, 'Copying {}'.format(', '.join(roles)))
     
     files = find_files(args.collection)
-    to_copy = filter_files(files, roles)
+    to_copy = filter_files(files, roles, args.force, LOG)
     errs = rsync_files(to_copy, args.collection, destdir, LOG)
     if errs:
         logprint(LOG, '%s FAILS:' % len(errs))
         for path in errs:
             logprint(LOG, path)
+        logprint(LOG, 'Note: Numbers represent rsync exit codes')
     
     finished = datetime.now()
     elapsed = finished - started
