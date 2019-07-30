@@ -4,30 +4,6 @@
 #
 #  
 
-description = """Copies binaries from a collection into a destination directory for publication."""
-
-epilog = """
-This command copies specified types of binaries from a collection to a
-destination folder.  Destination files are in a very simple hierarchy (just
-files within a single directory per collection) that is suitable for use by
-ddr-public.
-
-ddr-pubcopy produces a very simple file layout:
-
-    $BASE/$COLLECTION_ID/$FILENAME
-
-IMPORTANT: You are responsible for making sure that the destination base
-directory is available and writable.
-
-IMPORTANT: This command does not check whether files are published!
-Use *after* filtering a collection.
-
-EXAMPLES
-
-     $ ddr-pubcopy -mtM /var/www/media/ddr/ddr-test-123 /media/USBHARDDRIVE
-
-ddr-public - ddr-pubcopy"""
-
 import argparse
 from datetime import datetime
 import logging
@@ -41,6 +17,27 @@ from DDR import fileio
 from DDR import identifier
 from DDR import util
 
+ALL_ROLES = ','.join(identifier.VALID_COMPONENTS['role'])
+
+DESCRIPTION = """Copies binaries from a collection into a destination directory for publication."""
+
+EPILOG = """
+This command copies specified types of binaries from a collection to a
+destination folder.  Destination files are in a very simple hierarchy (just
+files within a single directory per collection) that is suitable for use by
+ddr-public.
+
+ddr-pubcopy produces a very simple file layout:
+    $BASE/$COLLECTION_ID/$FILENAME
+
+EXAMPLE
+     $ ddr-pubcopy mezzanine,transcript /var/www/media/ddr/ddr-test-123 /media/USBHARDDRIVE
+
+FILE_ROLES
+     %s
+
+ddr-public - ddr-pubcopy""" % ALL_ROLES
+    
 
 def dtfmt(dt):
     """Consistent date format.
@@ -143,24 +140,21 @@ def rsync_files(to_copy, collection_path, destdir, LOG):
 
 
 def main():
-
-    parser = argparse.ArgumentParser(description=description, epilog=epilog,
+    
+    parser = argparse.ArgumentParser(description=DESCRIPTION, epilog=EPILOG,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('roles', help='Comma-separated list of roles to publish or "all".')
     parser.add_argument('collection', help='Absolute path to source collection repository.')
     parser.add_argument('destbase', help='Absolute path to destination base directory.')
-    parser.add_argument('-m', '--mezzanine', action='store_const', const=1, help='git-annex copy mezzanine files.')
-    parser.add_argument('-t', '--transcript', action='store_const', const=1, help='git-annex copy transcript')
-    parser.add_argument('-A', '--administrative', action='store_const', const=1, help='git-annex administrative files.')
-    parser.add_argument('-M', '--master', action='store_const', const=1, help='git-annex copy master files.')
     parser.add_argument('-f', '--force', action='store_const', const=1, help='Publish all files regardless of status.')
     args = parser.parse_args()
     
     # check args
     if args.destbase == args.collection:
-        print('ddrfilter: error: Source and destination are the same!')
+        print('ddrpubcopy: error: Source and destination are the same!')
         sys.exit(1)
-    if not (args.mezzanine or args.transcript or args.administrative or args.master):
-        print('ddrfilter: error: No file type(s) selected!')
+    if not (args.roles):
+        print('ddrpubcopy: error: No file role(s)!')
         sys.exit(1)
     
     started = datetime.now()
@@ -174,12 +168,11 @@ def main():
     
     logprint(LOG, 'Source      %s' % args.collection)
     logprint(LOG, 'Destination %s' % destdir)
-
-    roles = []
-    if args.mezzanine:      roles.append('mezzanine')
-    if args.transcript:     roles.append('transcript')
-    if args.administrative: roles.append('administrative')
-    if args.master:         roles.append('master')
+    
+    if args.roles == 'all':
+        roles = [role for roles in identifier.VALID_COMPONENTS['role']]
+    else:
+        roles = args.roles.replace(' ','').split(',')
     logprint(LOG, 'Copying {}'.format(', '.join(roles)))
     
     files = find_files(args.collection)
