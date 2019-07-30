@@ -16,9 +16,6 @@ ddr-pubcopy produces a very simple file layout:
 
     $BASE/$COLLECTION_ID/$FILENAME
 
-This command uses git-annex find to generate the list of files. Thus it will
-only work with files that are phsyically present in the filesystem.
-
 IMPORTANT: You are responsible for making sure that the destination base
 directory is available and writable.
 
@@ -27,7 +24,7 @@ Use *after* filtering a collection.
 
 EXAMPLES
 
-     $ ddr-pubcopy -amM /var/www/media/ddr/ddr-test-123 /media/USBHARDDRIVE
+     $ ddr-pubcopy -mtM /var/www/media/ddr/ddr-test-123 /media/USBHARDDRIVE
 
 ddr-public - ddr-pubcopy"""
 
@@ -42,6 +39,7 @@ import envoy
 from DDR import config
 from DDR import fileio
 from DDR import identifier
+from DDR import util
 
 
 def dtfmt(dt):
@@ -66,36 +64,37 @@ def logprint_nots(filename, msg):
 def find_files(collection_path):
     """List files using git-annex-find.
     """
-    os.chdir(collection_path)
-    # git annex find
-    r0 = envoy.run('git annex find')
-    files = r0.std_out.split('\n')
-    return files
+    return util.find_meta_files(
+        collection_path, model='file', recursive=True, force_read=True
+    )
 
-def filter_files(files, args):
+def filter_files(files, roles):
+    """Binary and access files for each File in roles
+    """
     to_copy = []
-    for f in files:
-        copy = False
-        ftype = identifier.identify_filepath(f)
-        if (ftype == 'access') and args.access: copy = True
-        if (ftype == 'mezzanine') and args.mezzanine: copy = True
-        if (ftype == 'transcript') and args.transcript: copy = True
-        if (ftype == 'administrative') and args.administrative: copy = True
-        if (ftype == 'master') and args.master: copy = True
-        if copy:
-            to_copy.append(f)
-    return to_copy
+    for path_rel in files:
+        oi = identifier.Identifier(path_rel, config.MEDIA_BASE)
+        role = oi.idparts.get('role')
+        if role and (role in roles):
+            o = oi.object()
+            to_copy.append(o.path_rel)
+            to_copy.append(o.access_rel)
+    return sorted(list(set(to_copy)))
 
 def rsync_files(to_copy, collection_path, destdir, LOG):
+    os.chdir(collection_path)
+    errs = []
     for f in to_copy:
         src = os.path.join(collection_path, f)
+        src = f
         dest = os.path.join(destdir, f)
         cmd = 'rsync --copy-links %s %s/' % (src, destdir)
         logprint(LOG, cmd)
         r1 = envoy.run(cmd)
         if r1.status_code:
-            logprint(LOG, r1.status_code)
-            logprint(LOG, r1.std_out)
+            logprint(LOG, 'STATUS {}'.format(r1.status_code))
+            errs.append(src)
+    return errs
 
 
 def main():
@@ -104,7 +103,6 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('collection', help='Absolute path to source collection repository.')
     parser.add_argument('destbase', help='Absolute path to destination base directory.')
-    parser.add_argument('-a', '--access', action='store_const', const=1, help='git-annex copy access files.')
     parser.add_argument('-m', '--mezzanine', action='store_const', const=1, help='git-annex copy mezzanine files.')
     parser.add_argument('-t', '--transcript', action='store_const', const=1, help='git-annex copy transcript')
     parser.add_argument('-A', '--administrative', action='store_const', const=1, help='git-annex administrative files.')
@@ -115,7 +113,7 @@ def main():
     if args.destbase == args.collection:
         print('ddrfilter: error: Source and destination are the same!')
         sys.exit(1)
-    if not (args.access or args.mezzanine or args.transcript or args.administrative or args.master):
+    if not (args.mezzanine or args.transcript or args.administrative or args.master):
         print('ddrfilter: error: No file type(s) selected!')
         sys.exit(1)
     
@@ -123,24 +121,29 @@ def main():
     LOG = os.path.join(args.destbase, 'ddr-pubcopy.log')
     
     cid = os.path.basename(args.collection)
-    destdir = os.path.join(args.destbase, cid)
-    logprint(LOG, 'Copying from %s' % args.collection)
-    logprint(LOG, 'Copying to %s' % destdir)
-    
-    if args.access:    logprint(LOG, 'Copying access')
-    if args.mezzanine: logprint(LOG, 'Copying mezzanine')
-    if args.transcript: logprint(LOG, 'Copying transcript')
-    if args.administrative: logprint(LOG, 'Copying administrative')
-    if args.master:    logprint(LOG, 'Copying master')
-    
+    destdir = os.path.normpath(os.path.join(args.destbase, cid))
     # if collection dir doesn't exist in destdir, mkdir
     if not os.path.exists(destdir):
         os.makedirs(destdir)
     
+    logprint(LOG, 'Source      %s' % args.collection)
+    logprint(LOG, 'Destination %s' % destdir)
+
+    roles = []
+    if args.mezzanine:      roles.append('mezzanine')
+    if args.transcript:     roles.append('transcript')
+    if args.administrative: roles.append('administrative')
+    if args.master:         roles.append('master')
+    logprint(LOG, 'Copying {}'.format(', '.join(roles)))
+    
     files = find_files(args.collection)
-    to_copy = filter_files(files, args)
-    rsync_files(to_copy, args.collection, destdir, LOG)
-        
+    to_copy = filter_files(files, roles)
+    errs = rsync_files(to_copy, args.collection, destdir, LOG)
+    if errs:
+        logprint(LOG, '%s FAILS:' % len(errs))
+        for path in errs:
+            logprint(LOG, path)
+    
     finished = datetime.now()
     elapsed = finished - started
     logprint(LOG, 'DONE!')
