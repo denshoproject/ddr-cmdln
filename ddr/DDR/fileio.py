@@ -147,7 +147,7 @@ def read_csv(path, utf8_strict=False):
                 rows.append(row)
     return rows
 
-def write_csv(path, headers, rows, utf8_strict=False):
+def write_csv(path, headers, rows, append=False, utf8_strict=False):
     """Write header and list of rows to file.
     
     >>> path = '/tmp/batch-test_write_csv.csv'
@@ -164,17 +164,24 @@ def write_csv(path, headers, rows, utf8_strict=False):
     @param path: Absolute path to CSV file
     @param headers: list of strings
     @param rows: list of lists
+    @param append: boolean
     @param utf8_strict: boolean
     """
+    if append:
+        mode = 'ab'
+    else:
+        mode = 'wb'
     if utf8_strict:
-        with codecs.open(path, 'wb', 'utf-8') as f:
+        with codecs.open(path, mode, 'utf-8') as f:
             writer = csv_writer(f)
-            writer.writerow(headers)
+            if headers:
+                writer.writerow(headers)
             for row in rows:
                 writer.writerow(row)
     else:
-        with open(path, 'wb') as f:
+        with open(path, mode) as f:
             writer = csv_writer(f)
-            writer.writerow(headers)
+            if headers:
+                writer.writerow(headers)
             for row in rows:
                 writer.writerow(row)
