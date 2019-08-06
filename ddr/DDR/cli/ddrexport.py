@@ -37,6 +37,7 @@ import click
 
 from DDR import config
 from DDR import batch
+from DDR import dvcs
 from DDR import fileio
 from DDR import identifier
 from DDR import util
@@ -102,6 +103,40 @@ def file(collection, destination, blank, required, idfile, include, exclude, dry
         collection, destination,
         blank, required, idfile, include, exclude, dryrun
     )
+
+
+@ddrexport.command()
+@click.argument('collectionsdir')
+@click.argument('cidpattern')
+@click.argument('model')
+@click.argument('fieldname')
+@click.argument('csvfile')
+def fieldcsv(collectionsdir, cidpattern, model, fieldname, csvfile):
+    """Export value of specified field for all model objects in collections
+    
+    @param collectionsdir str: 
+    @param cidpattern str: 
+    @param model str: 
+    @param fieldname str: 
+    @param csvfile str: 
+    """
+    collection_paths = [
+        path for path in util.natural_sort(util.find_meta_files(
+            basedir=collectionsdir, model='collection', recursive=1, force_read=1
+        ))
+        if cidpattern in path
+    ]
+    for collection_path in collection_paths:
+        print(collection_path)
+        try:
+            batch.Exporter.export_field_csv(
+                collection=identifier.Identifier(collection_path).object(),
+                model=model,
+                fieldname=fieldname,
+                csv_path=csvfile,
+            )
+        except Exception as err:
+            print('ERROR: %s' % err)
 
 
 def export(model, collection, destination, blank, required, idfile, include, exclude, dryrun):

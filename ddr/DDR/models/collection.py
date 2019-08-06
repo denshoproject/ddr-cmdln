@@ -534,3 +534,21 @@ class Collection(common.DDRObject):
             add_id_and_hash(item)
             for item in dvcs.annex_missing_files(dvcs.repository(self.path))
         ]
+    
+    def child_field_values(self, model, fieldname):
+        """Get all values of fieldname from specified model in collection.
+        
+        @param model str
+        @param fieldname str
+        """
+        rows = []
+        paths = util.find_meta_files(self.path_abs, model=model, recursive=True)
+        for path in paths:
+            o = Identifier(path).object()
+            if getattr(o, fieldname):
+                rows.append([
+                    o.id,
+                    fieldname,
+                    getattr(o, fieldname),
+                ])
+        return rows

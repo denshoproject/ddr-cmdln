@@ -103,6 +103,28 @@ class Exporter():
                         nicer_unicode_decode_error(headers, obj, csv)
         return csv_path
     
+    @staticmethod
+    def export_field_csv(collection, model, fieldname, csv_path):
+        """Export specified field values from all entities in a collection to CSV
+        
+        @param collection: models.Collection
+        @param model: str
+        @param fieldname: str
+        @param csv_path: str
+        """
+        # only write headers to first line of CSV
+        if os.path.exists(csv_path):
+            headers = []
+        else:
+            headers = ['object_id', 'fieldname', 'value',]
+        fileio.write_csv(
+            csv_path,
+            headers,
+            collection.child_field_values(model, fieldname),
+            append=True
+        )
+
+    
 def nicer_unicode_decode_error(headers, obj, csv):
     """Nicer Exception msg pointing out location of UnicodeDecodeError
     
