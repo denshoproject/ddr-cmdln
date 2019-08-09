@@ -361,3 +361,52 @@ def test_parents_status(publishable_objects):
     test(publishable_objects, 'completed', 0)
     test(publishable_objects, 'inprocess', 0)
     test(publishable_objects, 'inprocess', 1)
+
+
+PUBLISHABLE_INPUTS_EXPECTED = [
+    (('-------', '-------', '-------', '-------', '-------'), ('----', '----', '----', '----', '----')),
+    (('-------', '-------', '-------', '-------', 'publish'), ('----', '----', '----', '----', '----')),
+    (('-------', '-------', '-------', 'publish', 'publish'), ('----', '----', '----', '----', '----')),
+    (('-------', '-------', 'publish', 'publish', 'publish'), ('----', '----', '----', '----', '----')),
+    (('-------', '-------', 'publish', 'publish', 'publish'), ('----', '----', '----', '----', '----')),
+    (('publish', 'publish', 'publish', 'publish', 'publish'), ('POST', 'POST', 'POST', 'POST', 'POST')), # OK 
+     
+    (('publish', 'publish', 'publish', 'publish', '-------'), ('POST', 'POST', 'POST', 'POST', '----')),
+    (('publish', 'publish', 'publish', '-------', '-------'), ('POST', 'POST', 'POST', '----', '----')),
+    (('publish', 'publish', '-------', '-------', '-------'), ('POST', 'POST', '----', '----', '----')),
+    (('publish', '-------', '-------', '-------', '-------'), ('POST', '----', '----', '----', '----')),
+     
+    (('publish', 'publish', 'publish', 'publish', '-------'), ('POST', 'POST', 'POST', 'POST', '----')),
+    (('publish', 'publish', 'publish', '-------', 'publish'), ('POST', 'POST', 'POST', '----', '----')),
+    (('publish', 'publish', '-------', 'publish', 'publish'), ('POST', 'POST', '----', '----', '----')),
+    (('publish', '-------', 'publish', 'publish', 'publish'), ('POST', '----', '----', '----', '----')),
+    (('-------', 'publish', 'publish', 'publish', 'publish'), ('----', '----', '----', '----', '----')),
+]
+
+def test_publishable(publishable_objects):
+    print(publishable_objects)
+    for status_public,expectations in PUBLISHABLE_INPUTS_EXPECTED:
+        #print(status_public,expectations)
+        expected = []
+        for x in expectations:
+            if x == '----':
+                x = 'SKIP'
+            expected.append(x)
+        for n,o in enumerate(publishable_objects):
+            status = status_public[n]
+            if status == 'publish':
+                o.status = 'completed'
+                o.public = 1
+            else:
+                o.status = 'inprocess'
+                o.public = 0
+            o.write_json()
+            #print(o.id, o.status, o.public)
+        paths = [o.path_abs for o in publishable_objects]
+        parents = docstore._parents_status(paths)
+        results = docstore._publishable(paths, parents, force=0)
+        out = [r['action'] for r in results]
+        #print('EXPECTED %s' % expected)
+        #print('OUT      %s %s' % (out, out == expected))
+        print(status_public,expectations, out, out == expected)
+        assert out == expected
