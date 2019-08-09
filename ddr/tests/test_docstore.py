@@ -1,11 +1,16 @@
 from datetime import datetime
 import json
+import os
+import sys
 
 from nose.tools import assert_raises
 from nose.plugins.attrib import attr
+import pytest
 
 from DDR import docstore
+from DDR import dvcs
 from DDR import identifier
+from DDR import models
 
 """
 NOTE: You can disable tests requiring Elasticseach server:
@@ -299,3 +304,37 @@ def test_file_parent_ids():
 #    print('results %s' % results)
 #    expected = {'successful': 0, 'skipped': 0, 'total': 0, 'bad': []}
 #    assert results == expected
+
+GIT_USER = 'gjost'
+GIT_MAIL = 'gjost@densho.org'
+AGENT = 'pytest'
+
+COLLECTION_IDS = [
+    'ddr-testing-123',
+    'ddr-testing-123-1',
+    'ddr-testing-123-1-master-abc123',
+    'ddr-testing-123-1-1',
+    'ddr-testing-123-1-1-master-abc123',
+]
+
+@pytest.fixture(scope="session")
+def publishable_objects(tmpdir_factory):
+    fn = tmpdir_factory.mktemp('repo').join(COLLECTION_IDS[0])
+    repo_path = str(fn)
+    repo = dvcs.initialize_repository(
+        repo_path, GIT_USER, GIT_MAIL
+    )
+    basepath = os.path.dirname(repo_path)
+    objects = []
+    for oid in COLLECTION_IDS:
+        oi = identifier.Identifier(oid, basepath)
+        model_class = identifier.class_for_name(
+            identifier.MODEL_CLASSES[oi.model]['module'],
+            identifier.MODEL_CLASSES[oi.model]['class']
+        )
+        o = model_class.create(oi)
+        if o.identifier.model == 'file':
+            o.sha1 = o.identifier.idparts['sha1']
+        o.save(GIT_USER, GIT_MAIL, AGENT)
+        objects.append(o)
+    return objects
