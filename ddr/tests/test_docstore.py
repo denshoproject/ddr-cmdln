@@ -338,3 +338,26 @@ def publishable_objects(tmpdir_factory):
         o.save(GIT_USER, GIT_MAIL, AGENT)
         objects.append(o)
     return objects
+
+def test_parents_status(publishable_objects):
+
+    def test(publishable_objects, status, public):
+        # set all to completed/public
+        for o in publishable_objects:
+            o.status = status; o.public = public
+            o.write_json()
+        parents = docstore._parents_status(
+            [o.identifier.path_abs('json') for o in publishable_objects]
+        )
+        print(parents)
+        for o in publishable_objects:
+            if not o.identifier.model == 'file':
+                p = parents[o.id]
+                print(p)
+                if not ((p['status'], p['public']) == (status,public)):
+                    assert False
+
+    test(publishable_objects, 'completed', 1)
+    test(publishable_objects, 'completed', 0)
+    test(publishable_objects, 'inprocess', 0)
+    test(publishable_objects, 'inprocess', 1)
