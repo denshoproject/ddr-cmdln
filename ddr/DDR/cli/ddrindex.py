@@ -356,7 +356,7 @@ def narrators(hosts, index, path):
 @click.option('--index','-i',
               default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
               help='Elasticsearch index.')
-@click.option('--recurse', is_flag=True, help='Delete documents under this one.')
+@click.option('--recurse','-r', is_flag=True, help='Delete documents under this one.')
 @click.option('--confirm', is_flag=True, help='Yes I really want to delete these objects.')
 @click.argument('doctype')
 @click.argument('object_id')

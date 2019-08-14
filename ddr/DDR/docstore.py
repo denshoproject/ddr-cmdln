@@ -656,7 +656,7 @@ class Docstore():
         else:
             if not parents:
                 parents = _parents_status([document.identifier.path_abs()])
-            publishable = _publishable([document.identifier.path_abs()], parents)
+            publishable = publishable([document], parents)
             public = True
         if not publishable:
             return {'status':403, 'response':'object not publishable'}
@@ -694,14 +694,16 @@ class Docstore():
         else:
             # files listed first, then entities, then collections
             paths = util.find_meta_files(path, recursive, files_first=1)
-        
-        # Store value of public,status for each collection,entity.
-        # Values will be used by entities and files to inherit these values
-        # from their parent.
-        parents = _parents_status(paths)
-        
+
+        identifiers = [Identifier(path) for path in paths]
+        parents = {
+            oi.id: oi.object()
+            for oi in identifiers
+            if oi.model is not 'file' # TODO is not leaf
+        }
+
         # Determine if paths are publishable or not
-        paths = _publishable(paths, parents, force=force)
+        paths = publishable(identifiers, parents, force=force)
         
         skipped = 0
         successful = 0
@@ -739,7 +741,7 @@ class Docstore():
             # post document
             if path['action'] == 'POST':
                 created = self.post(document, parents=parents, force=True)
-                # force=True bypasses _publishable in post() function
+                # force=True bypasses publishable in post() function
             # delete previously published items now marked incomplete/private
             elif existing_v and (path['action'] == 'SKIP'):
                 print('%s | %s/%s DELETE' % (datetime.now(config.TZ), n+1, num))
@@ -1262,69 +1264,68 @@ def _file_parent_ids(identifier):
         identifier.collection_id(),
     ]
 
-def _publishable(paths, parents, force=False):
+def publishable(identifiers, parents, force=False):
     """Determines which paths represent publishable paths and which do not.
     
-    @param paths
-    @param parents
+    @param identifiers list
+    @param parents dict: Parent objects by object ID
     @param force: boolean Just publish the damn collection already.
     @returns list of dicts, e.g. [{'path':'/PATH/TO/OBJECT', 'action':'publish'}]
     """
+    def publishable(o):
+        """Determines if individual item is publishable."""
+        # TODO Hard-coded - use identifier
+        if o.identifier.model == 'file':
+            if o.public in PUBLIC_OK:
+                return True
+        else:
+            if (o.public and o.status) \
+            and (o.public in PUBLIC_OK) \
+            and (o.status in STATUS_OK):
+                return True
+        return False
+    
     path_dicts = []
-    for path in paths:
+    for oi in identifiers:
         d = {
-            'path': path,
-            'identifier': Identifier(path=path),
+            'path': oi.path_abs(),
+            'identifier': oi,
             'action': 'UNSPECIFIED',
             'note': '',
         }
-        
+        # --force
         if force:
             d['action'] = 'POST'
             path_dicts.append(d)
             continue
-        
-        # see if item's parents are incomplete or nonpublic
-        # TODO Bad! Bad! Generalize this...
+        # check this object
+        # (don't bother checking parents if object is unpublishable)
+        canpublish = publishable(oi.object())
+        if not canpublish:
+            d['action'] = 'SKIP'
+            d['note'] = 'unpublishable'
+            path_dicts.append(d)
+            continue
+        # check parents
+        # object is unpublishable if parents are unpublishable
         UNPUBLISHABLE = []
-        for parent_id in _file_parent_ids(d['identifier']):
-            parent = parents.get(parent_id, {})
-            for x in parent.itervalues():
-                if (x not in STATUS_OK) and (x not in PUBLIC_OK):
-                    if parent_id not in UNPUBLISHABLE:
-                        UNPUBLISHABLE.append(parent_id)
+        for n,pi in enumerate(oi.lineage()[1:]):
+            canp = publishable(parents[pi.id])
+            if not publishable(parents[pi.id]):
+                UNPUBLISHABLE.append(pi.id)
         if UNPUBLISHABLE:
             d['action'] = 'SKIP'
             d['note'] = 'parent unpublishable'
             path_dicts.append(d)
             continue
-        
-        # see if item itself is incomplete or nonpublic
-        # TODO knows way too much about JSON data format
-        public = None; status = None
-        jsonpath = d['identifier'].path_abs('json')
-        document = load_json(jsonpath)
-        for field in document:
-            for k,v in field.iteritems():
-                if k == 'public':
-                    public = v
-                if k == 'status':
-                    status = v
-        if public and (public not in PUBLIC_OK):
-            d['action'] = 'SKIP'
-            d['note'] = 'not public'
-            path_dicts.append(d)
-            continue
-        elif status and (status not in STATUS_OK):
-            d['action'] = 'SKIP'
-            d['note'] = 'status'
-            path_dicts.append(d)
-            continue
-        
-        if path and d['identifier'].model:
+        # passed all the tests
+        if canpublish:
             d['action'] = 'POST'
+            path_dicts.append(d)
+            continue
+        # otherwise...
+        d['action'] = 'SKIP'
         path_dicts.append(d)
-    
     return path_dicts
 
 def _has_access_file( identifier ):
