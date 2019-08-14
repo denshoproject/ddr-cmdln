@@ -312,8 +312,8 @@ AGENT = 'pytest'
 COLLECTION_IDS = [
     'ddr-testing-123',
     'ddr-testing-123-1',
-    'ddr-testing-123-1-master-abc123',
     'ddr-testing-123-1-1',
+    'ddr-testing-123-1-master-abc123',
     'ddr-testing-123-1-1-master-abc123',
 ]
 
@@ -349,7 +349,7 @@ def test_parents_status(publishable_objects):
         parents = docstore._parents_status(
             [o.identifier.path_abs('json') for o in publishable_objects]
         )
-        print(parents)
+        print('parents %s' % parents)
         for o in publishable_objects:
             if not o.identifier.model == 'file':
                 p = parents[o.id]
@@ -363,36 +363,42 @@ def test_parents_status(publishable_objects):
     test(publishable_objects, 'inprocess', 1)
 
 
+PUBLISHABLE_IDS = [
+    'ddr-testing-123',
+    'ddr-testing-123-1',
+    'ddr-testing-123-1-master-abc123',
+]
 PUBLISHABLE_INPUTS_EXPECTED = [
-    (('-------', '-------', '-------', '-------', '-------'), ('----', '----', '----', '----', '----')),
-    (('-------', '-------', '-------', '-------', 'publish'), ('----', '----', '----', '----', '----')),
-    (('-------', '-------', '-------', 'publish', 'publish'), ('----', '----', '----', '----', '----')),
-    (('-------', '-------', 'publish', 'publish', 'publish'), ('----', '----', '----', '----', '----')),
-    (('-------', '-------', 'publish', 'publish', 'publish'), ('----', '----', '----', '----', '----')),
-    (('publish', 'publish', 'publish', 'publish', 'publish'), ('POST', 'POST', 'POST', 'POST', 'POST')), # OK 
-     
-    (('publish', 'publish', 'publish', 'publish', '-------'), ('POST', 'POST', 'POST', 'POST', '----')),
-    (('publish', 'publish', 'publish', '-------', '-------'), ('POST', 'POST', 'POST', '----', '----')),
-    (('publish', 'publish', '-------', '-------', '-------'), ('POST', 'POST', '----', '----', '----')),
-    (('publish', '-------', '-------', '-------', '-------'), ('POST', '----', '----', '----', '----')),
-     
-    (('publish', 'publish', 'publish', 'publish', '-------'), ('POST', 'POST', 'POST', 'POST', '----')),
-    (('publish', 'publish', 'publish', '-------', 'publish'), ('POST', 'POST', 'POST', '----', '----')),
-    (('publish', 'publish', '-------', 'publish', 'publish'), ('POST', 'POST', '----', '----', '----')),
-    (('publish', '-------', 'publish', 'publish', 'publish'), ('POST', '----', '----', '----', '----')),
-    (('-------', 'publish', 'publish', 'publish', 'publish'), ('----', '----', '----', '----', '----')),
+    # collection, entity, file        
+    (('publish', 'publish', 'publish'), ('POST', 'POST', 'POST')),
+    (('publish', 'publish', '-------'), ('POST', 'POST', '----')),
+    (('publish', '-------', '-------'), ('POST', '----', '----')),
+    (('-------', '-------', '-------'), ('----', '----', '----')),
+    (('-------', '-------', 'publish'), ('----', '----', '----')),
+    (('-------', 'publish', 'publish'), ('----', '----', '----')),
+    (('publish', 'publish', 'publish'), ('POST', 'POST', 'POST')),
+    # publishable items with unpublishable parents are not publishable
+    (('publish', 'publish', '-------'), ('POST', 'POST', '----')),
+    (('publish', '-------', 'publish'), ('POST', '----', '----')),
+    (('-------', 'publish', 'publish'), ('----', '----', '----')),
 ]
 
 def test_publishable(publishable_objects):
-    print(publishable_objects)
+    test_these = [o for o in publishable_objects if o.id in PUBLISHABLE_IDS]
+    print('test_these %s' % test_these)
+    # test combinations of settings of objects at diff places in hierarchy
+    ct = 0; total = len(PUBLISHABLE_INPUTS_EXPECTED)
     for status_public,expectations in PUBLISHABLE_INPUTS_EXPECTED:
-        #print(status_public,expectations)
+        ct += 1
+        #print('{}/{}'.format(ct,total))
+        # set expectations for this round
         expected = []
         for x in expectations:
             if x == '----':
                 x = 'SKIP'
             expected.append(x)
-        for n,o in enumerate(publishable_objects):
+        # write test data to objects
+        for n,o in enumerate(test_these):
             status = status_public[n]
             if status == 'publish':
                 o.status = 'completed'
@@ -402,11 +408,22 @@ def test_publishable(publishable_objects):
                 o.public = 0
             o.write_json()
             #print(o.id, o.status, o.public)
-        paths = [o.path_abs for o in publishable_objects]
-        parents = docstore._parents_status(paths)
-        results = docstore._publishable(paths, parents, force=0)
+        paths = [o.path_abs for o in test_these]
+        #print('paths %s' % paths)
+        # this code will call docstore.publishable
+        identifiers = [identifier.Identifier(path) for path in paths]
+        parents = {
+            oi.id: oi.object()
+            for oi in identifiers
+            if oi.model is not 'file' # TODO is not leaf
+        }
+        results = docstore.publishable(identifiers, parents, force=0)
+        # package results and assert
         out = [r['action'] for r in results]
-        #print('EXPECTED %s' % expected)
-        #print('OUT      %s %s' % (out, out == expected))
-        print(status_public,expectations, out, out == expected)
+        print(
+            status_public,
+            expectations,
+            out,
+            out == expected
+        )
         assert out == expected
