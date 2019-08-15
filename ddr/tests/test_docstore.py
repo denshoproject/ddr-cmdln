@@ -7,6 +7,7 @@ from nose.tools import assert_raises
 from nose.plugins.attrib import attr
 import pytest
 
+from DDR import config
 from DDR import docstore
 from DDR import dvcs
 from DDR import identifier
@@ -296,15 +297,6 @@ def test_file_parent_ids():
 # _choose_signatures
 # load_document_json
 
-#def test_post_multi():
-#    hosts = [{'host': '127.0.0.1', 'port': 9999}]
-#    index = 'fakeindex'
-#    ds = docstore.Docstore(hosts, index)
-#    results = ds.post_multi('/tmp', recursive=True, force=True)
-#    print('results %s' % results)
-#    expected = {'successful': 0, 'skipped': 0, 'total': 0, 'bad': []}
-#    assert results == expected
-
 GIT_USER = 'gjost'
 GIT_MAIL = 'gjost@densho.org'
 AGENT = 'pytest'
@@ -427,3 +419,41 @@ def test_publishable(publishable_objects):
             out == expected
         )
         assert out == expected
+
+POST_OBJECT_IDS = [
+    'ddr-testing-123',
+    'ddr-testing-123-1',
+    'ddr-testing-123-1-master-abc123',
+]
+
+def test_post(publishable_objects):
+    """Right now this only tests if you can post() without raising exceptions
+    """
+    ds = docstore.Docstore(config.DOCSTORE_HOST, config.DOCSTORE_INDEX)
+    post_these = [o for o in publishable_objects if o.id in POST_OBJECT_IDS]
+    for oid in post_these:
+        print(o)
+        o.status = 'completed'
+        o.public = 1
+        o.write_json()
+        status = ds.post(o)
+        print(status)
+
+def test_post_multi(publishable_objects):
+    """Right now this only tests if you can post() without raising exceptions
+    """
+    ds = docstore.Docstore(config.DOCSTORE_HOST, config.DOCSTORE_INDEX)
+    print(ds)
+    post_these = [o for o in publishable_objects if o.id in POST_OBJECT_IDS]
+    collection_path = post_these[0].identifier.collection_path()
+    print(collection_path)
+    # make all objects publishable
+    for o in post_these:
+        o.status = 'completed'
+        o.public = 1
+        o.write_json()
+    # post
+    result = ds.post_multi(collection_path, recursive=False)
+    print(result)
+    result = ds.post_multi(collection_path, recursive=True)
+    print(result)

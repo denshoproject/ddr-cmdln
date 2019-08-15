@@ -651,14 +651,17 @@ class Docstore():
         ))
 
         if force:
-            publishable = True
+            can_publish = True
             public = False
         else:
             if not parents:
-                parents = _parents_status([document.identifier.path_abs()])
-            publishable = publishable([document], parents)
+                parents = {
+                    oid: oi.object()
+                    for oid,oi in _all_parents([document.identifier]).iteritems()
+                }
+            can_publish = publishable([document.identifier], parents)
             public = True
-        if not publishable:
+        if not can_publish:
             return {'status':403, 'response':'object not publishable'}
 
         d = document.to_esobject(public_fields=public_fields, public=public)
@@ -694,16 +697,18 @@ class Docstore():
         else:
             # files listed first, then entities, then collections
             paths = util.find_meta_files(path, recursive, files_first=1)
-
+        
+        # Determine if paths are publishable or not
         identifiers = [Identifier(path) for path in paths]
         parents = {
-            oi.id: oi.object()
-            for oi in identifiers
-            if oi.model is not 'file' # TODO is not leaf
+            oid: oi.object()
+            for oid,oi in _all_parents(identifiers).iteritems()
         }
-
-        # Determine if paths are publishable or not
-        paths = publishable(identifiers, parents, force=force)
+        paths = publishable(
+            identifiers,
+            parents,
+            force=force
+        )
         
         skipped = 0
         successful = 0
@@ -1264,6 +1269,19 @@ def _file_parent_ids(identifier):
         identifier.collection_id(),
     ]
 
+def _all_parents(identifiers, excluded_models=['file']):
+    """Given a list of identifiers, finds all the parents
+    @param identifiers list: List of Identifiers
+    @param excluded_models list: List of model names
+    @returns: list of Identifiers
+    """
+    parents = {}
+    for oi in identifiers:
+        for n,pi in enumerate(oi.lineage()):
+            if (pi.model not in excluded_models) and not parents.get(pi.id):
+                parents[pi.id] = pi
+    return parents
+        
 def publishable(identifiers, parents, force=False):
     """Determines which paths represent publishable paths and which do not.
     
@@ -1272,7 +1290,7 @@ def publishable(identifiers, parents, force=False):
     @param force: boolean Just publish the damn collection already.
     @returns list of dicts, e.g. [{'path':'/PATH/TO/OBJECT', 'action':'publish'}]
     """
-    def publishable(o):
+    def object_is_publishable(o):
         """Determines if individual item is publishable."""
         # TODO Hard-coded - use identifier
         if o.identifier.model == 'file':
@@ -1300,7 +1318,7 @@ def publishable(identifiers, parents, force=False):
             continue
         # check this object
         # (don't bother checking parents if object is unpublishable)
-        canpublish = publishable(oi.object())
+        canpublish = object_is_publishable(oi.object())
         if not canpublish:
             d['action'] = 'SKIP'
             d['note'] = 'unpublishable'
@@ -1310,9 +1328,10 @@ def publishable(identifiers, parents, force=False):
         # object is unpublishable if parents are unpublishable
         UNPUBLISHABLE = []
         for n,pi in enumerate(oi.lineage()[1:]):
-            canp = publishable(parents[pi.id])
-            if not publishable(parents[pi.id]):
-                UNPUBLISHABLE.append(pi.id)
+            if pi != oi:
+                canp = object_is_publishable(parents[pi.id])
+                if not object_is_publishable(parents[pi.id]):
+                    UNPUBLISHABLE.append(pi.id)
         if UNPUBLISHABLE:
             d['action'] = 'SKIP'
             d['note'] = 'parent unpublishable'
