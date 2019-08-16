@@ -569,3 +569,67 @@ class Searcher(object):
             limit=limit,
             offset=offset,
         )
+
+
+def search(hosts, index, doctypes=[], parent=None, filters=[], fulltext='', limit=10000, offset=0, page=None, aggregations=False):
+    """Fulltext search using Elasticsearch query_string syntax.
+    
+    Note: More approachable, higher-level function than DDR.docstore.search.
+    
+    Full-text search strings:
+        fulltext="seattle"
+        fulltext="fusa OR teruo"
+        fulltext="fusa AND teruo"
+        fulltext="+fusa -teruo"
+        fulltext="title:seattle"
+    
+    Note: Quoting inside strings is not (yet?) supported in the
+    command-line version.
+    
+    Specify parent object and doctype/model:
+        parent="ddr-densho-12"
+        parent="ddr-densho-1000-1-"
+        doctypes=['entity','segment']
+    
+    Filter on certain fields (filters may repeat):
+        filter=['topics:373,27']
+        filter=['topics:373', 'facility=12']
+    
+    @param hosts dict: config.DOCSTORE_HOST
+    @param index str: config.DOCSTORE_INDEX
+    @param doctypes list: Restrict to one or more models.
+    @param parent str: ID of parent object (partial OK).
+    @param filters list: Filter on certain fields (FIELD:VALUE,VALUE,...).
+    @param fulltext str: Fulltext search query.
+    @param limit int: Results page size.
+    @param offset int: Number of initial results to skip (use with limit).
+    @param page int: Which page of results to show.
+    """
+    if filters:
+        data = {}
+        for f in filters:
+            field,v = f.split(':')
+            values = v.split(',')
+            data[field] = values
+        filters = data
+    else:
+        filters = {}
+        
+    if page and offset:
+        Exception("Error: Specify either offset OR page, not both.")
+    if page:
+        thispage = int(page)
+        offset = es_offset(limit, thispage)
+    
+    searcher = Searcher(
+        mappings=identifier.ELASTICSEARCH_CLASSES_BY_MODEL,
+        fields=identifier.ELASTICSEARCH_LIST_FIELDS,
+    )
+    searcher.prepare(
+        fulltext=fulltext,
+        models=doctypes,
+        parent=parent,
+        filters=filters,
+    )
+    results = searcher.execute(limit, offset)
+    return results
