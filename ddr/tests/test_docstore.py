@@ -246,7 +246,6 @@ def test_clean_sort():
     assert docstore._clean_sort(data2) == expected2
 
 # search
-# delete
 # _model_fields
 
 
@@ -456,4 +455,25 @@ def test_post_multi(publishable_objects):
     result = ds.post_multi(collection_path, recursive=False)
     print(result)
     result = ds.post_multi(collection_path, recursive=True)
+    print(result)
+    
+# this should come last...
+def test_delete(publishable_objects):
+    ds = docstore.Docstore(config.DOCSTORE_HOST, config.DOCSTORE_INDEX)
+    print(ds)
+    # delete single
+    f = None
+    for o in publishable_objects:
+        if o.identifier.model == 'file':
+            f = o
+    print(f)
+    result = ds.delete(f.id, recursive=False)
+    print(result)
+    #
+    c = None
+    for o in publishable_objects:
+        if o.identifier.model == 'collection':
+            c = o
+    print(c)
+    result = ds.delete(c.id, recursive=True)
     print(result)

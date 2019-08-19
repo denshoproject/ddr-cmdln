@@ -358,9 +358,8 @@ def narrators(hosts, index, path):
               help='Elasticsearch index.')
 @click.option('--recurse','-r', is_flag=True, help='Delete documents under this one.')
 @click.option('--confirm', is_flag=True, help='Yes I really want to delete these objects.')
-@click.argument('doctype')
 @click.argument('object_id')
-def delete(hosts, index, recurse, confirm, doctype, object_id):
+def delete(hosts, index, recurse, confirm, object_id):
     """Delete the specified document from Elasticsearch
     """
     if confirm:
