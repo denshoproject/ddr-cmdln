@@ -358,9 +358,8 @@ def narrators(hosts, index, path):
               help='Elasticsearch index.')
 @click.option('--recurse','-r', is_flag=True, help='Delete documents under this one.')
 @click.option('--confirm', is_flag=True, help='Yes I really want to delete these objects.')
-@click.argument('doctype')
 @click.argument('object_id')
-def delete(hosts, index, recurse, confirm, doctype, object_id):
+def delete(hosts, index, recurse, confirm, object_id):
     """Delete the specified document from Elasticsearch
     """
     if confirm:
@@ -533,34 +532,16 @@ def search(hosts, index, doctypes, parent, filters, limit, offset, page, aggrega
     Use the --aggregations/-a flag to display filter aggregations,
     with document counts, filter keys, and labels.
     """
-    if filters:
-        data = {}
-        for f in filters:
-            field,v = f.split(':')
-            values = v.split(',')
-            data[field] = values
-        filters = data
-    else:
-        filters = {}
-        
-    if page and offset:
-        click.echo("Error: Specify either offset OR page, not both.")
-        return
-    if page:
-        thispage = int(page)
-        offset = search_.es_offset(limit, thispage)
-    
-    searcher = search_.Searcher(
-        mappings=identifier.ELASTICSEARCH_CLASSES_BY_MODEL,
-        fields=identifier.ELASTICSEARCH_LIST_FIELDS,
-    )
-    searcher.prepare(
-        fulltext=fulltext,
-        models=doctypes.split(','),
+    doctypes = doctypes.split(',')
+    results = search_.search(
+        hosts, index,
+        doctypes=doctypes,
         parent=parent,
         filters=filters,
+        fulltext=fulltext,
+        limit=limit, offset=offset, page=page,
+        aggregations=aggregations
     )
-    results = searcher.execute(limit, offset)
     
     # print raw results
     if raw:

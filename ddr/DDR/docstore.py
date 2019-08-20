@@ -51,6 +51,7 @@ import os
 from elasticsearch import Elasticsearch, TransportError
 import elasticsearch_dsl
 import simplejson as json
+import requests
 
 from DDR import config
 from DDR import converters
@@ -826,28 +827,44 @@ class Docstore():
     def delete(self, document_id, recursive=False):
         """Delete a document and optionally its children.
         
+        TODO refactor after upgrading Elasticsearch past 2.4.
+        delete_by_query was removed sometime during elasticsearch-py 2.*
+        I think it was added back in a later version so the code stays for now.
+        
+        For now, instead of deleting based on document_id, we start with
+        document_id, find all paths beneath it in the filesystem,
+        and curl DELETE url each individual document from Elasticsearch.
+        
         @param document_id:
         @param recursive: True or False
         """
-        identifier = Identifier(id=document_id)
+        logger.debug('delete(%s, %s, %s)' % (self.indexname, document_id, recursive))
+        oi = Identifier(document_id, config.MEDIA_BASE)
         if recursive:
-            if identifier.model == 'collection': doc_type = 'collection,entity,file'
-            elif identifier.model == 'entity': doc_type = 'entity,file'
-            elif identifier.model == 'file': doc_type = 'file'
-            query = 'id:"%s"' % identifier.id
-            try:
-                return self.es.delete_by_query(
-                    index=self.indexname, doc_type=doc_type, q=query
-                )
-            except TransportError:
-                pass
+            paths = util.find_meta_files(
+                oi.path_abs(), recursive=recursive, files_first=1
+            )
         else:
-            try:
-                return self.es.delete(
-                    index=self.indexname, doc_type=identifier.model, id=identifier.id
-                )
-            except TransportError:
-                pass
+            paths = [oi.path_abs()]
+        identifiers = [Identifier(path) for path in paths]
+        num = len(identifiers)
+        for n,oi in enumerate(identifiers):
+            # TODO hard-coded models here!
+            if oi.model == 'segment':
+                model = 'entity'
+            else:
+                model = oi.model
+            url = 'http://{}/{}/{}/{}/'.format(self.hosts, self.indexname, model, oi.id)
+            get = requests.request('GET', url)
+            if get.status_code == 200:
+                delete = requests.request('DELETE', url)
+                print('{}/{} DELETE  {} {} {} {}->{}'.format(
+                    n, num, self.indexname, model, oi.id, get.status_code, delete.status_code
+                ))
+            else:
+                print('{}/{} MISSING {} {} {} {}'.format(
+                    n, num, self.indexname, model, oi.id, get.status_code
+                ))
 
     def search(self, doctypes=[], query={}, sort=[], fields=[], from_=0, size=MAX_SIZE):
         """Executes a query, get a list of zero or more hits.
