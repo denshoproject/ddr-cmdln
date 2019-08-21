@@ -6,22 +6,23 @@
 
                           # LICENSE      Python3  PyPy
 
-beautifulsoup4==4.5.3     # MIT          y
-click==6.7                # BSD          y        y
-deepdiff==3.3.0           # MIT          y        y    3.3.0 last to support Py2.*
+beautifulsoup4==4.8.0     # MIT          y
+click==7.0                # BSD          y        y
+deepdiff==3.3.0           # MIT          y        y    Last python2.* release
 elasticsearch>=2.0.0,<3.0.0     # Apache y        y
 elasticsearch-dsl>=2.0.0,<3.0.0 # Apache y        y
 envoy==0.0.3              # MIT          y             TODO replace!
-GitPython==1.0.0          # BSD          y
-Jinja2==2.9.5             # BSD          y
-markupsafe                # BSD          y             required by jinja2 but absent
-psutil==5.2.1             # BSD          y        y
-python-dateutil==2.6.0    # BSD          y
+GitPython==2.1.14         # BSD          y             Last python2.* release
+Jinja2==2.10.1            # BSD          y
+psutil==5.6.3             # BSD          y        y
+python-dateutil==2.8.0    # BSD          y
 python-xmp-toolkit==2.0.1 # New BSD      y
-pytz==2016.10             # MIT          y
-requests==2.13.0          # Apache       y        y
-simplejson                # MIT          y        y
+pytz==2019.2              # MIT          y
+requests==2.22.0          # Apache       y        y
+simplejson==3.16.0        # MIT          y        y
 unicodecsv==0.14.1        # BSD          y        y
+
+# development
 
 bpython
 coverage
