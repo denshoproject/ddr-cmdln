@@ -51,6 +51,7 @@ import os
 from elasticsearch import Elasticsearch, TransportError
 import elasticsearch_dsl
 import simplejson as json
+import requests
 
 from DDR import config
 from DDR import converters
@@ -651,14 +652,17 @@ class Docstore():
         ))
 
         if force:
-            publishable = True
+            can_publish = True
             public = False
         else:
             if not parents:
-                parents = _parents_status([document.identifier.path_abs()])
-            publishable = _publishable([document.identifier.path_abs()], parents)
+                parents = {
+                    oid: oi.object()
+                    for oid,oi in _all_parents([document.identifier]).iteritems()
+                }
+            can_publish = publishable([document.identifier], parents)
             public = True
-        if not publishable:
+        if not can_publish:
             return {'status':403, 'response':'object not publishable'}
 
         d = document.to_esobject(public_fields=public_fields, public=public)
@@ -695,13 +699,17 @@ class Docstore():
             # files listed first, then entities, then collections
             paths = util.find_meta_files(path, recursive, files_first=1)
         
-        # Store value of public,status for each collection,entity.
-        # Values will be used by entities and files to inherit these values
-        # from their parent.
-        parents = _parents_status(paths)
-        
         # Determine if paths are publishable or not
-        paths = _publishable(paths, parents, force=force)
+        identifiers = [Identifier(path) for path in paths]
+        parents = {
+            oid: oi.object()
+            for oid,oi in _all_parents(identifiers).iteritems()
+        }
+        paths = publishable(
+            identifiers,
+            parents,
+            force=force
+        )
         
         skipped = 0
         successful = 0
@@ -739,7 +747,7 @@ class Docstore():
             # post document
             if path['action'] == 'POST':
                 created = self.post(document, parents=parents, force=True)
-                # force=True bypasses _publishable in post() function
+                # force=True bypasses publishable in post() function
             # delete previously published items now marked incomplete/private
             elif existing_v and (path['action'] == 'SKIP'):
                 print('%s | %s/%s DELETE' % (datetime.now(config.TZ), n+1, num))
@@ -819,28 +827,44 @@ class Docstore():
     def delete(self, document_id, recursive=False):
         """Delete a document and optionally its children.
         
+        TODO refactor after upgrading Elasticsearch past 2.4.
+        delete_by_query was removed sometime during elasticsearch-py 2.*
+        I think it was added back in a later version so the code stays for now.
+        
+        For now, instead of deleting based on document_id, we start with
+        document_id, find all paths beneath it in the filesystem,
+        and curl DELETE url each individual document from Elasticsearch.
+        
         @param document_id:
         @param recursive: True or False
         """
-        identifier = Identifier(id=document_id)
+        logger.debug('delete(%s, %s, %s)' % (self.indexname, document_id, recursive))
+        oi = Identifier(document_id, config.MEDIA_BASE)
         if recursive:
-            if identifier.model == 'collection': doc_type = 'collection,entity,file'
-            elif identifier.model == 'entity': doc_type = 'entity,file'
-            elif identifier.model == 'file': doc_type = 'file'
-            query = 'id:"%s"' % identifier.id
-            try:
-                return self.es.delete_by_query(
-                    index=self.indexname, doc_type=doc_type, q=query
-                )
-            except TransportError:
-                pass
+            paths = util.find_meta_files(
+                oi.path_abs(), recursive=recursive, files_first=1
+            )
         else:
-            try:
-                return self.es.delete(
-                    index=self.indexname, doc_type=identifier.model, id=identifier.id
-                )
-            except TransportError:
-                pass
+            paths = [oi.path_abs()]
+        identifiers = [Identifier(path) for path in paths]
+        num = len(identifiers)
+        for n,oi in enumerate(identifiers):
+            # TODO hard-coded models here!
+            if oi.model == 'segment':
+                model = 'entity'
+            else:
+                model = oi.model
+            url = 'http://{}/{}/{}/{}/'.format(self.hosts, self.indexname, model, oi.id)
+            get = requests.request('GET', url)
+            if get.status_code == 200:
+                delete = requests.request('DELETE', url)
+                print('{}/{} DELETE  {} {} {} {}->{}'.format(
+                    n, num, self.indexname, model, oi.id, get.status_code, delete.status_code
+                ))
+            else:
+                print('{}/{} MISSING {} {} {} {}'.format(
+                    n, num, self.indexname, model, oi.id, get.status_code
+                ))
 
     def search(self, doctypes=[], query={}, sort=[], fields=[], from_=0, size=MAX_SIZE):
         """Executes a query, get a list of zero or more hits.
@@ -1262,69 +1286,82 @@ def _file_parent_ids(identifier):
         identifier.collection_id(),
     ]
 
-def _publishable(paths, parents, force=False):
+def _all_parents(identifiers, excluded_models=['file']):
+    """Given a list of identifiers, finds all the parents
+    @param identifiers list: List of Identifiers
+    @param excluded_models list: List of model names
+    @returns: list of Identifiers
+    """
+    parents = {}
+    for oi in identifiers:
+        for n,pi in enumerate(oi.lineage()):
+            if (pi.model not in excluded_models) and not parents.get(pi.id):
+                parents[pi.id] = pi
+    return parents
+        
+def publishable(identifiers, parents, force=False):
     """Determines which paths represent publishable paths and which do not.
     
-    @param paths
-    @param parents
+    @param identifiers list
+    @param parents dict: Parent objects by object ID
     @param force: boolean Just publish the damn collection already.
     @returns list of dicts, e.g. [{'path':'/PATH/TO/OBJECT', 'action':'publish'}]
     """
+    def object_is_publishable(o):
+        """Determines if individual item is publishable."""
+        # TODO Hard-coded - use identifier
+        if o.identifier.model == 'file':
+            if o.public in PUBLIC_OK:
+                return True
+        else:
+            if (o.public and o.status) \
+            and (o.public in PUBLIC_OK) \
+            and (o.status in STATUS_OK):
+                return True
+        return False
+    
     path_dicts = []
-    for path in paths:
+    for oi in identifiers:
         d = {
-            'path': path,
-            'identifier': Identifier(path=path),
+            'path': oi.path_abs(),
+            'identifier': oi,
             'action': 'UNSPECIFIED',
             'note': '',
         }
-        
+        # --force
         if force:
             d['action'] = 'POST'
             path_dicts.append(d)
             continue
-        
-        # see if item's parents are incomplete or nonpublic
-        # TODO Bad! Bad! Generalize this...
+        # check this object
+        # (don't bother checking parents if object is unpublishable)
+        canpublish = object_is_publishable(oi.object())
+        if not canpublish:
+            d['action'] = 'SKIP'
+            d['note'] = 'unpublishable'
+            path_dicts.append(d)
+            continue
+        # check parents
+        # object is unpublishable if parents are unpublishable
         UNPUBLISHABLE = []
-        for parent_id in _file_parent_ids(d['identifier']):
-            parent = parents.get(parent_id, {})
-            for x in parent.itervalues():
-                if (x not in STATUS_OK) and (x not in PUBLIC_OK):
-                    if parent_id not in UNPUBLISHABLE:
-                        UNPUBLISHABLE.append(parent_id)
+        for n,pi in enumerate(oi.lineage()[1:]):
+            if pi != oi:
+                canp = object_is_publishable(parents[pi.id])
+                if not object_is_publishable(parents[pi.id]):
+                    UNPUBLISHABLE.append(pi.id)
         if UNPUBLISHABLE:
             d['action'] = 'SKIP'
             d['note'] = 'parent unpublishable'
             path_dicts.append(d)
             continue
-        
-        # see if item itself is incomplete or nonpublic
-        # TODO knows way too much about JSON data format
-        public = None; status = None
-        jsonpath = d['identifier'].path_abs('json')
-        document = load_json(jsonpath)
-        for field in document:
-            for k,v in field.iteritems():
-                if k == 'public':
-                    public = v
-                if k == 'status':
-                    status = v
-        if public and (public not in PUBLIC_OK):
-            d['action'] = 'SKIP'
-            d['note'] = 'not public'
-            path_dicts.append(d)
-            continue
-        elif status and (status not in STATUS_OK):
-            d['action'] = 'SKIP'
-            d['note'] = 'status'
-            path_dicts.append(d)
-            continue
-        
-        if path and d['identifier'].model:
+        # passed all the tests
+        if canpublish:
             d['action'] = 'POST'
+            path_dicts.append(d)
+            continue
+        # otherwise...
+        d['action'] = 'SKIP'
         path_dicts.append(d)
-    
     return path_dicts
 
 def _has_access_file( identifier ):

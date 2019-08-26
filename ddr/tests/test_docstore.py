@@ -1,11 +1,17 @@
 from datetime import datetime
 import json
+import os
+import sys
 
 from nose.tools import assert_raises
 from nose.plugins.attrib import attr
+import pytest
 
+from DDR import config
 from DDR import docstore
+from DDR import dvcs
 from DDR import identifier
+from DDR import models
 
 """
 NOTE: You can disable tests requiring Elasticseach server:
@@ -240,7 +246,6 @@ def test_clean_sort():
     assert docstore._clean_sort(data2) == expected2
 
 # search
-# delete
 # _model_fields
 
 
@@ -291,11 +296,184 @@ def test_file_parent_ids():
 # _choose_signatures
 # load_document_json
 
-#def test_post_multi():
-#    hosts = [{'host': '127.0.0.1', 'port': 9999}]
-#    index = 'fakeindex'
-#    ds = docstore.Docstore(hosts, index)
-#    results = ds.post_multi('/tmp', recursive=True, force=True)
-#    print('results %s' % results)
-#    expected = {'successful': 0, 'skipped': 0, 'total': 0, 'bad': []}
-#    assert results == expected
+GIT_USER = 'gjost'
+GIT_MAIL = 'gjost@densho.org'
+AGENT = 'pytest'
+
+COLLECTION_IDS = [
+    'ddr-testing-123',
+    'ddr-testing-123-1',
+    'ddr-testing-123-1-1',
+    'ddr-testing-123-1-master-abc123',
+    'ddr-testing-123-1-1-master-abc123',
+]
+
+@pytest.fixture(scope="session")
+def publishable_objects(tmpdir_factory):
+    fn = tmpdir_factory.mktemp('repo').join(COLLECTION_IDS[0])
+    repo_path = str(fn)
+    repo = dvcs.initialize_repository(
+        repo_path, GIT_USER, GIT_MAIL
+    )
+    basepath = os.path.dirname(repo_path)
+    objects = []
+    for oid in COLLECTION_IDS:
+        oi = identifier.Identifier(oid, basepath)
+        model_class = identifier.class_for_name(
+            identifier.MODEL_CLASSES[oi.model]['module'],
+            identifier.MODEL_CLASSES[oi.model]['class']
+        )
+        o = model_class.create(oi)
+        if o.identifier.model == 'file':
+            o.sha1 = o.identifier.idparts['sha1']
+        o.save(GIT_USER, GIT_MAIL, AGENT)
+        objects.append(o)
+    return objects
+
+def test_parents_status(publishable_objects):
+
+    def test(publishable_objects, status, public):
+        # set all to completed/public
+        for o in publishable_objects:
+            o.status = status; o.public = public
+            o.write_json()
+        parents = docstore._parents_status(
+            [o.identifier.path_abs('json') for o in publishable_objects]
+        )
+        print('parents %s' % parents)
+        for o in publishable_objects:
+            if not o.identifier.model == 'file':
+                p = parents[o.id]
+                print(p)
+                if not ((p['status'], p['public']) == (status,public)):
+                    assert False
+
+    test(publishable_objects, 'completed', 1)
+    test(publishable_objects, 'completed', 0)
+    test(publishable_objects, 'inprocess', 0)
+    test(publishable_objects, 'inprocess', 1)
+
+
+PUBLISHABLE_IDS = [
+    'ddr-testing-123',
+    'ddr-testing-123-1',
+    'ddr-testing-123-1-master-abc123',
+]
+PUBLISHABLE_INPUTS_EXPECTED = [
+    # collection, entity, file        
+    (('publish', 'publish', 'publish'), ('POST', 'POST', 'POST')),
+    (('publish', 'publish', '-------'), ('POST', 'POST', '----')),
+    (('publish', '-------', '-------'), ('POST', '----', '----')),
+    (('-------', '-------', '-------'), ('----', '----', '----')),
+    (('-------', '-------', 'publish'), ('----', '----', '----')),
+    (('-------', 'publish', 'publish'), ('----', '----', '----')),
+    (('publish', 'publish', 'publish'), ('POST', 'POST', 'POST')),
+    # publishable items with unpublishable parents are not publishable
+    (('publish', 'publish', '-------'), ('POST', 'POST', '----')),
+    (('publish', '-------', 'publish'), ('POST', '----', '----')),
+    (('-------', 'publish', 'publish'), ('----', '----', '----')),
+]
+
+def test_publishable(publishable_objects):
+    test_these = [o for o in publishable_objects if o.id in PUBLISHABLE_IDS]
+    print('test_these %s' % test_these)
+    # test combinations of settings of objects at diff places in hierarchy
+    ct = 0; total = len(PUBLISHABLE_INPUTS_EXPECTED)
+    for status_public,expectations in PUBLISHABLE_INPUTS_EXPECTED:
+        ct += 1
+        #print('{}/{}'.format(ct,total))
+        # set expectations for this round
+        expected = []
+        for x in expectations:
+            if x == '----':
+                x = 'SKIP'
+            expected.append(x)
+        # write test data to objects
+        for n,o in enumerate(test_these):
+            status = status_public[n]
+            if status == 'publish':
+                o.status = 'completed'
+                o.public = 1
+            else:
+                o.status = 'inprocess'
+                o.public = 0
+            o.write_json()
+            #print(o.id, o.status, o.public)
+        paths = [o.path_abs for o in test_these]
+        #print('paths %s' % paths)
+        # this code will call docstore.publishable
+        identifiers = [identifier.Identifier(path) for path in paths]
+        parents = {
+            oi.id: oi.object()
+            for oi in identifiers
+            if oi.model is not 'file' # TODO is not leaf
+        }
+        results = docstore.publishable(identifiers, parents, force=0)
+        # package results and assert
+        out = [r['action'] for r in results]
+        print(
+            status_public,
+            expectations,
+            out,
+            out == expected
+        )
+        assert out == expected
+
+POST_OBJECT_IDS = [
+    'ddr-testing-123',
+    'ddr-testing-123-1',
+    'ddr-testing-123-1-master-abc123',
+]
+
+def test_post(publishable_objects):
+    """Right now this only tests if you can post() without raising exceptions
+    """
+    ds = docstore.Docstore(config.DOCSTORE_HOST, config.DOCSTORE_INDEX)
+    post_these = [o for o in publishable_objects if o.id in POST_OBJECT_IDS]
+    for oid in post_these:
+        print(o)
+        o.status = 'completed'
+        o.public = 1
+        o.write_json()
+        status = ds.post(o)
+        print(status)
+
+def test_post_multi(publishable_objects):
+    """Right now this only tests if you can post() without raising exceptions
+    """
+    ds = docstore.Docstore(config.DOCSTORE_HOST, config.DOCSTORE_INDEX)
+    print(ds)
+    post_these = [o for o in publishable_objects if o.id in POST_OBJECT_IDS]
+    collection_path = post_these[0].identifier.collection_path()
+    print(collection_path)
+    # make all objects publishable
+    for o in post_these:
+        o.status = 'completed'
+        o.public = 1
+        o.write_json()
+    # post
+    result = ds.post_multi(collection_path, recursive=False)
+    print(result)
+    result = ds.post_multi(collection_path, recursive=True)
+    print(result)
+    
+# this should come last...
+def test_delete(publishable_objects):
+    ds = docstore.Docstore(config.DOCSTORE_HOST, config.DOCSTORE_INDEX)
+    print(ds)
+    # delete single
+    f = None
+    for o in publishable_objects:
+        if o.identifier.model == 'file':
+            f = o
+    print(f)
+    result = ds.delete(f.id, recursive=False)
+    print(result)
+    #
+    c = None
+    for o in publishable_objects:
+        if o.identifier.model == 'collection':
+            c = o
+    print(c)
+    result = ds.delete(c.id, recursive=True)
+    print(result)
