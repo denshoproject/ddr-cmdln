@@ -49,6 +49,7 @@ logger = logging.getLogger(__name__)
 import os
 
 from elasticsearch import Elasticsearch, TransportError
+from elasticsearch.client import SnapshotClient
 import elasticsearch_dsl
 import simplejson as json
 import requests
@@ -952,6 +953,54 @@ class Docstore():
                 #bulk_kwargs={}
             )
         return results
+    
+    def backup(self, snapshot, indices=[config.DOCSTORE_INDEX]):
+        """Make a snapshot backup of one or more Elasticsearch indices.
+        
+        repository = 'dev20190827'
+        snapshot = 'dev-20190828-1007'
+        indices = ['ddrpublic-dev', 'encyc-dev']
+        agent = 'gjost'
+        memo = 'backup before upgrading'
+        from DDR import docstore
+        ds = docstore.Docstore()
+        ds.backup(repository, snapshot, indices, agent, memo)
+        
+        @param repository: str
+        @param snapshot: str
+        @param indices: list
+        @returns: dict {"repository":..., "snapshot":...}
+        """
+        repository = os.path.basename(config.ELASTICSEARCH_PATH_REPO)
+        client = SnapshotClient(self.es.cluster.client)
+        # Get existing repository or make new one
+        try:
+            repo = client.get_repository(repository=repository)
+        except TransportError:
+            repo = client.create_repository(
+                repository=repository,
+                body={
+                    "type": "fs",
+                    "settings": {
+                        "location": config.ELASTICSEARCH_PATH_REPO
+                    }
+                }
+            )
+        # Get snapshot info or initiate new one
+        try:
+            snapshot = client.get(repository=repository, snapshot=snapshot)
+        except TransportError:
+            body = {
+                "indices": indices,
+                "metadata": {},
+            }
+            snapshot = client.create(
+                repository=repository, snapshot=snapshot, body=body
+            )
+        return {
+            "repository": repo,
+            "snapshot": snapshot,
+        }
 
 
 def make_index_name(text):

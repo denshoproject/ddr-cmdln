@@ -176,6 +176,59 @@ def create(hosts, index):
 @click.option('--index','-i',
               default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
               help='Elasticsearch index.')
+@click.argument('indices')
+@click.argument('snapshot')
+def backup(hosts, index, indices, snapshot):
+    """Make a snapshot backup of specified indices.
+    
+    """
+    indices = [i.strip() for i in indices.split(',')]
+    try:
+        r = docstore.Docstore(hosts, index).backup(snapshot, indices)
+    except Exception as err:
+        logprint('error', err)
+        r = {}
+        click.echo('Checklist:')
+        click.echo(
+            '- Check value of [public] docstore_path_repo in ddrlocal.cfg ({})'.format(
+                config.ELASTICSEARCH_PATH_REPO
+        ))
+        click.echo('- path.repo must be set in elasticsearch.yml on each node of cluster.')
+        click.echo('- path.repo must be writable on each node of cluster.')
+    if r:
+        click.echo('repository: {}'.format(r['repository']))
+        # snapshot feedback
+        if r['snapshot'].get('accepted') and r['snapshot']['accepted']:
+            # snapshot started
+            click.echo('Backup started. Reissue command for status updates.')
+        elif r['snapshot'].get('accepted') and not r['snapshot']['accepted']:
+            # problem
+            click.echo('Error: problem with backup!')
+        elif r['snapshot'].get('snapshots'):
+            # in progress or SUCCESS
+            for s in r['snapshot']['snapshots']:
+                click.echo('{}  {} {}'.format(
+                    s['start_time'],
+                    s['snapshot'],
+                    ','.join(s['indices']),
+                ))
+                click.echo('{}  {}'.format(
+                    s.get('end_time'),
+                    s['state'],
+                ))
+                if s['state'] != 'SUCCESS':
+                    click.echo(s)
+        else:
+            click.echo('snapshot:   {}'.format(r['snapshot']))
+
+
+@ddrindex.command()
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
 @click.option('--confirm', is_flag=True,
               help='Yes I really want to delete this index.')
 def destroy(hosts, index, confirm):

@@ -130,6 +130,9 @@ DOCSTORE_INDEX = CONFIG.get('public','docstore_index')
 RESULTS_PER_PAGE = 25
 ELASTICSEARCH_MAX_SIZE = 10000
 ELASTICSEARCH_DEFAULT_LIMIT = RESULTS_PER_PAGE
+# Location of snapshot backups. Should match value of path.repo setting
+# in /etc/elasticsearch/elasticsearch.yml on cluster
+ELASTICSEARCH_PATH_REPO = CONFIG.get('public','docstore_path_repo')
 
 VOCABS_URL = CONFIG.get('cmdln', 'vocabs_url')
 # Separator between path elements for hierarchical precoordinated terms.
