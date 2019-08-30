@@ -229,6 +229,23 @@ def backup(hosts, index, indices, snapshot):
 @click.option('--index','-i',
               default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
               help='Elasticsearch index.')
+@click.argument('indices')
+@click.argument('snapshot')
+def restore(hosts, index, indices, snapshot):
+    """Restore a snapshot backup.
+    """
+    indices = [i.strip() for i in indices.split(',')]
+    r = docstore.Docstore(hosts, index).restore_snapshot(snapshot, indices)
+    click.echo(r)
+
+
+@ddrindex.command()
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.option('--index','-i',
+              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
+              help='Elasticsearch index.')
 @click.option('--confirm', is_flag=True,
               help='Yes I really want to delete this index.')
 def destroy(hosts, index, confirm):

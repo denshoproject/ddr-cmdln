@@ -1002,6 +1002,19 @@ class Docstore():
             "snapshot": snapshot,
         }
 
+    def restore_snapshot(self, snapshot, indices=[]):
+        """Restore a snapshot
+        """
+        repository = os.path.basename(config.ELASTICSEARCH_PATH_REPO)
+        client = SnapshotClient(self.es.cluster.client)
+        repo = client.get_repository(repository=repository)
+        result = client.restore(
+            repository=config.ELASTICSEARCH_PATH_REPO,
+            snapshot=snapshot,
+            body={'indices': indices},
+        )
+        return result
+
 
 def make_index_name(text):
     """Takes input text and generates a legal Elasticsearch index name.
