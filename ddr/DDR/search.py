@@ -9,7 +9,6 @@ import urlparse
 from elasticsearch_dsl import Index, Search, A, Q, A
 from elasticsearch_dsl.query import Match, MultiMatch, QueryString
 from elasticsearch_dsl.connections import connections
-from elasticsearch_dsl.result import Result
 
 from DDR import config
 from DDR import docstore
@@ -355,7 +354,7 @@ def format_object(oi, d, is_detail=False):
     Certain fields are always included (id, title, etc and links).
     Everything else is determined by what fields are in the result dict.
     
-    d is basically an elasticsearch_dsl.Result, packaged by
+    d is basically an elasticsearch_dsl.Hit, packaged by
     search.SearchResults.
     
     @param oi: Identifier
