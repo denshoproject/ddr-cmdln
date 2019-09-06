@@ -9,8 +9,8 @@
 beautifulsoup4==4.8.0     # MIT          y
 click==7.0                # BSD          y        y
 deepdiff==3.3.0           # MIT          y        y    Last python2.* release
-elasticsearch>=2.0.0,<3.0.0     # Apache y        y
-elasticsearch-dsl>=2.0.0,<3.0.0 # Apache y        y
+elasticsearch>=7.0.0,<8.0.0     # Apache y        y
+elasticsearch-dsl>=7.0.0,<8.0.0 # Apache y        y
 envoy==0.0.3              # MIT          y             TODO replace!
 GitPython==2.1.14         # BSD          y             Last python2.* release
 Jinja2==2.10.1            # BSD          y
