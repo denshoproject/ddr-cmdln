@@ -13,6 +13,7 @@ import sys
 import envoy
 
 from DDR import config
+from DDR import docstore
 from DDR import fileio
 from DDR import identifier
 from DDR import util
@@ -74,7 +75,6 @@ def filter_files(files, roles, force, LOG):
     """Binary and access files for each File in roles
     """
     logprint(LOG, '%s files in filesystem' % len(files))
-    
     # load objects
     # extract file IDs from list of files, rm duplicates
     oids = sorted(list(set([
@@ -83,45 +83,26 @@ def filter_files(files, roles, force, LOG):
         ))[0]
         for path in files
     ])))
-    objects = [
-        identifier.Identifier(oid, config.MEDIA_BASE).object()
+    oidentifiers = [
+        identifier.Identifier(oid, config.MEDIA_BASE)
         for oid in oids
     ]
-    logprint(LOG, '%s file objects' % len(objects))
-    # only keep objects for specified role(s)
-    role_files = [o for o in objects if o.identifier.idparts['role'] in roles]
-    logprint(LOG, '%s %s file objects' % (
-        len(role_files),
-        ','.join(roles)
-    ))
-    # only objects which are publishable
-    publishable = get_publishable(role_files, force)
+    parents = {
+        oid: oi.object()
+        for oid,oi in docstore._all_parents(oidentifiers).iteritems()
+    }
+    publishable = [
+        x['identifier'].object()
+        for x in docstore.publishable(oidentifiers, parents)
+        if x['action'] == 'POST'
+    ]
     logprint(LOG, '%s publishable objects' % len(publishable))
-    
     # list binaries and access files
     binaries = [o.path_rel for o in publishable]
     accesses = [o.access_rel for o in publishable]
     paths = sorted(list(set(binaries + accesses)))
     logprint(LOG, '%s files' % len(paths))
     return paths
-
-def get_publishable(files, force):
-    # list files that are publishable; cache parent Entities for speed
-    parents = {}
-    for f in files:
-        if not parents.get(f.id):
-            parents[f.id] = f.parent()
-    return [f for f in files if can_publish(f, force, parents)]
-
-def can_publish(file_, force, parents):
-    if force:
-        return True
-    parent = parents[file_.id]
-    if (file_.public == 1) \
-    and (parent.public == 1) \
-    and (parent.status == 'completed'):
-        return True
-    return False
 
 def rsync_files(to_copy, collection_path, destdir, LOG):
     os.chdir(collection_path)
