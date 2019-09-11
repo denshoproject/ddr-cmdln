@@ -597,6 +597,12 @@ class Docstore():
         DOC_TYPE = 'narrator'
         data = load_json(path)
         for document in data['narrators']:
+            # remap some fields
+            # TODO should go in repo_models/elastic.py
+            document.pop('notes')
+            document['title'] = document.pop('display_name')
+            document['description'] = document.pop('bio')
+            #
             document['model'] = 'narrator'
             has_published = document.get('has_published', '')
             if has_published.isdigit():
