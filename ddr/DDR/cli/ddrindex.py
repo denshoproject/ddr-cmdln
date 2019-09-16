@@ -142,15 +142,12 @@ def help():
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
-def conf(hosts, index):
+def conf(hosts):
     """Print configuration settings.
     
     More detail since you asked.
     """
-    docstore.Docstore(hosts, index).print_configs()
+    docstore.Docstore(hosts).print_configs()
 
 
 @ddrindex.command()
@@ -468,27 +465,21 @@ def get(hosts, index, json, pretty, doctype, object_id):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
-def status(hosts, index):
+def status(hosts):
     """Print status info.
     
     More detail since you asked.
     """
-    ds = docstore.Docstore(hosts, index)
+    ds = docstore.Docstore(hosts)
     s = ds.status()
     
     logprint('debug', '------------------------------------------------------------------------',0)
     logprint('debug', 'Elasticsearch',0)
     # config file
     logprint('debug', 'DOCSTORE_HOST  (default): %s' % config.DOCSTORE_HOST, 0)
-    logprint('debug', 'DOCSTORE_INDEX (default): %s' % config.DOCSTORE_INDEX, 0)
     # overrides
     if hosts != config.DOCSTORE_HOST:
         logprint('debug', 'docstore_hosts: %s' % hosts, 0)
-    if index != config.DOCSTORE_INDEX:
-        logprint('debug', 'docstore_index: %s' % index, 0)
     
     try:
         pingable = ds.es.ping()
@@ -503,10 +494,7 @@ def status(hosts, index):
     logprint('debug', 'Indexes', 0)
     index_names = ds.es.indices.stats()['indices'].keys()
     for i in index_names:
-        if i == index:
-            logprint('debug', '* %s *' % i, 0)
-        else:
-            logprint('debug', '- %s' % i, 0)
+        logprint('debug', '- %s' % i, 0)
     
     logprint('debug', 'Aliases', 0)
     aliases = ds.aliases()
@@ -516,11 +504,11 @@ def status(hosts, index):
     else:
         logprint('debug', 'No aliases', 0)
     
-    if ds.es.indices.exists(index=index):
-        logprint('debug', 'Index %s present' % index, 0)
-    else:
-        logprint('error', "Index '%s' doesn't exist!" % index, 0)
-        return
+    #if ds.es.indices.exists(index=index):
+    #    logprint('debug', 'Index %s present' % index, 0)
+    #else:
+    #    logprint('error', "Index '%s' doesn't exist!" % index, 0)
+    #    return
 
     # TODO get ddrindex status model counts to work
     logprint('debug', '(Object counts are currently unavailable)', 0)
