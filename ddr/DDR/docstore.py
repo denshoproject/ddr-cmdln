@@ -184,10 +184,10 @@ class Docstore():
     def health(self):
         return self.es.cluster.health()
     
-    def index_exists(self, index):
+    def index_exists(self, indexname):
         """
         """
-        return self.es.indices.exists(index=index)
+        return self.es.indices.exists(index=indexname)
     
     def status(self):
         """Returns status information from the Elasticsearch cluster.
