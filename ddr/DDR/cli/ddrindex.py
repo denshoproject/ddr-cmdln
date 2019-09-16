@@ -347,16 +347,15 @@ def postjson(hosts, index, doctype, object_id, path):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.option('--recurse','-r', is_flag=True, help='Publish documents under this one.')
 @click.option('--force','-f', is_flag=True, help='Publish regardless of status.')
 @click.argument('path')
-def publish(hosts, index, recurse, force, path):
+def publish(hosts, recurse, force, path):
     """Post the document and its children to Elasticsearch
     """
-    status = docstore.Docstore(hosts, index).post_multi(path, recursive=recurse, force=force)
+    status = docstore.Docstore(hosts).post_multi(
+        path, recursive=recurse, force=force
+    )
     click.echo(status)
 
 
@@ -428,15 +427,12 @@ def delete(hosts, index, recurse, confirm, object_id):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.argument('doctype')
 @click.argument('object_id')
-def exists(hosts, index, doctype, object_id):
+def exists(hosts, doctype, object_id):
     """Indicate whether the specified document exists
     """
-    ds = docstore.Docstore(hosts, index)
+    ds = docstore.Docstore(hosts)
     click.echo(ds.exists(doctype, object_id))
 
 
@@ -444,19 +440,15 @@ def exists(hosts, index, doctype, object_id):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.option('--json','-j', is_flag=True, help='Print as JSON')
-@click.option('--pretty','-p', is_flag=True, help='Nicely formated JSON')
 @click.argument('doctype')
 @click.argument('object_id')
-def get(hosts, index, json, pretty, doctype, object_id):
-    """Pretty-print a single document
+def get(hosts, json, doctype, object_id):
+    """Print a single document
     """
-    document = docstore.Docstore(hosts, index).get(doctype, object_id)
+    document = docstore.Docstore(hosts).get(doctype, object_id)
     if json:
-        click.echo(format_json(document.to_dict(), pretty=pretty))
+        click.echo(format_json(document.to_dict()))
     else:
         click.echo(document)
 

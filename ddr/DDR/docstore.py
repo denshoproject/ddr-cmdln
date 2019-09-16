@@ -668,8 +668,8 @@ class Docstore():
         @param force: boolean Bypass status and public checks.
         @returns: JSON dict with status code and response
         """
-        logger.debug('post(%s, %s, %s)' % (
-            self.indexname, document, force
+        logger.debug('post(%s, %s)' % (
+            document, force
         ))
 
         if force:
@@ -685,12 +685,15 @@ class Docstore():
             public = True
         if not can_publish:
             return {'status':403, 'response':'object not publishable'}
-
+        
         d = document.to_esobject(public_fields=public_fields, public=public)
         logger.debug('saving')
-        status = d.save(using=self.es, index=self.indexname)
-        logger.debug(str(status))
-        return status
+        results = d.save(
+            index=self.index_name(document.identifier.model),
+            using=self.es
+        )
+        logger.debug(str(results))
+        return results
     
     def post_multi(self, path, recursive=False, force=False):
         """Publish (index) specified document and (optionally) its children.
@@ -709,7 +712,7 @@ class Docstore():
         @param force: boolean Just publish the damn collection already.
         @returns: number successful,list of paths that didn't work out
         """
-        logger.debug('index(%s, %s, %s, %s)' % (self.indexname, path, recursive, force))
+        logger.debug('index(%s, %s, %s)' % (path, recursive, force))
         
         publicfields = _public_fields()
         
@@ -781,8 +784,7 @@ class Docstore():
             # version is incremented with each updated
             posted_v = None
             # for e.g. segment the ES doc_type will be 'entity' but oi.model is 'segment'
-            es_model = ELASTICSEARCH_CLASSES_BY_MODEL[oi.model]._doc_type.name
-            d = self.get(es_model, oi.id)
+            d = self.get(oi.model, oi.id)
             if d:
                 posted_v = d.meta.version
 
@@ -804,21 +806,30 @@ class Docstore():
      
     def exists(self, model, document_id):
         """
+        
         @param model:
         @param document_id:
         """
-        return self.es.exists(index=self.indexname, doc_type=model, id=document_id)
-     
+        return self.es.exists(
+            index=self.index_name(model),
+            id=document_id
+        )
+    
     def get(self, model, document_id, fields=None):
-        """
+        """Get a single document by its id.
+        
         @param model:
         @param document_id:
         @param fields: boolean Only return these fields
+        @returns: repo_models.elastic.ESObject or None
         """
-        if self.exists(model, document_id):
-            ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[model]
-            return ES_Class.get(document_id, using=self.es, index=self.indexname)
-        return None
+        ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[model]
+        return ES_Class.get(
+            id=document_id,
+            index=self.index_name(model),
+            using=self.es,
+            ignore=404,
+        )
 
     def count(self, doctypes=[], query={}):
         """Executes a query and returns number of hits.
