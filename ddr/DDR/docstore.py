@@ -67,6 +67,8 @@ from DDR import modules
 from DDR import util
 from DDR import vocab
 
+INDEX_PREFIX = 'ddr'
+
 MAX_SIZE = 10000
 DEFAULT_PAGE_SIZE = 20
 
@@ -152,24 +154,24 @@ class PageNotAnInteger(InvalidPage):
 class EmptyPage(InvalidPage):
     pass
 
-
 class Docstore():
     hosts = None
-    indexname = None
     facets = None
     es = None
 
-    def __init__(self, hosts=config.DOCSTORE_HOST, index=config.DOCSTORE_INDEX, connection=None):
+    def __init__(self, hosts=config.DOCSTORE_HOST, connection=None):
         self.hosts = hosts
-        self.indexname = index
         if connection:
             self.es = connection
         else:
             self.es = Elasticsearch(hosts, timeout=config.DOCSTORE_TIMEOUT)
     
+    def index_name(self, model):
+        return '{}{}'.format(INDEX_PREFIX, model)
+    
     def __repr__(self):
-        return "<%s.%s %s:%s>" % (
-            self.__module__, self.__class__.__name__, self.hosts, self.indexname
+        return "<%s.%s %s:%s*>" % (
+            self.__module__, self.__class__.__name__, self.hosts, INDEX_PREFIX
         )
     
     def print_configs(self):
