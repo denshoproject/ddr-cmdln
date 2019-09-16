@@ -1068,7 +1068,7 @@ def doctype_fields(es_class):
     
     TODO move to ddr-cmdln
     """
-    return es_class._doc_type.mapping.to_dict()[es_class._doc_type.name]['properties'].keys()
+    return es_class._doc_type.mapping.to_dict()['properties'].keys()
 
 def _filter_payload(data, public_fields):
     """If requested, removes non-public fields from document before sending to ElasticSearch.
