@@ -157,14 +157,11 @@ def conf(hosts, index):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
-def create(hosts, index):
-    """Create new index.
+def create(hosts):
+    """Create new indices.
     """
     try:
-        docstore.Docstore(hosts, index).create_index(index)
+        docstore.Docstore(hosts).create_indices()
     except Exception as err:
         logprint('error', err)
 
@@ -243,13 +240,10 @@ def restore(hosts, index, indices, snapshot):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.option('--confirm', is_flag=True,
               help='Yes I really want to delete this index.')
-def destroy(hosts, index, confirm):
-    """Delete index (requires --confirm).
+def destroy(hosts, confirm):
+    """Delete indices (requires --confirm).
     
     \b
     It's meant to sound serious. Also to not clash with 'delete', which
@@ -257,7 +251,7 @@ def destroy(hosts, index, confirm):
     """
     if confirm:
         try:
-            docstore.Docstore(hosts, index).delete_index()
+            docstore.Docstore(hosts).delete_indices()
         except Exception as err:
             logprint('error', err)
     else:

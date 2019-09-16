@@ -290,56 +290,78 @@ class Docstore():
             if a == alias:
                 target = i
         return target
-     
-    def create_index(self, index=None):
+    
+    def create_indices(self):
+        """Create indices for each model defined in ddr-defs/repo_models/elastic.py
+        """
+        statuses = []
+        for i in ELASTICSEARCH_CLASSES['all']:
+            status = self.create_index(
+                self.index_name(i['doctype']),
+                i['class']
+            )
+            statuses.append(status)
+        return statuses
+    
+    def create_index(self, indexname, dsl_class):
         """Creates the specified index if it does not already exist.
         
+        Uses elasticsearch-dsl classes defined in ddr-defs/repo_models/elastic.py
+        
+        @param indexname: str
+        @param dsl_class: elasticsearch_dsl.Document class
         @returns: JSON dict with status codes and responses
         """
-        if not index:
-            index = self.indexname
-        logger.debug('creating new index: %s' % index)
-        body = {
-            'settings': {},
-            'mappings': {}
-            }
-        status = self.es.indices.create(index=index, body=body)
-        logger.debug(status)
-        statuses = self.init_mappings()
-        self.model_fields_lists()
-        logger.debug('DONE')
-     
-    def delete_index(self, index=None):
+        logger.debug('creating index {}'.format(indexname))
+        if self.index_exists(indexname):
+            status = '{"status":400, "message":"Index exists"}'
+            logger.debug('Index exists')
+            #print('Index exists')
+        else:
+            index = elasticsearch_dsl.Index(indexname)
+            #print('index {}'.format(index))
+            index.aliases(default={})
+            #print('registering')
+            out = index.document(dsl_class).init(index=indexname, using=self.es)
+            if out:
+                status = out
+            elif self.index_exists(indexname):
+                status = {
+                    "name": indexname,
+                    "present": True,
+                }
+            #print(status)
+            #print('creating index')
+        return status
+    
+    def delete_indices(self):
+        """Delete indices for each model defined in ddr-defs/repo_models/elastic.py
+        """
+        statuses = []
+        for i in ELASTICSEARCH_CLASSES['all']:
+            status = self.delete_index(
+                self.index_name(i['doctype'])
+            )
+            statuses.append(status)
+        return statuses
+    
+    def delete_index(self, indexname):
         """Delete the specified index.
         
         @returns: JSON dict with status code and response
         """
-        if not index:
-            index = self.indexname
-        logger.debug('deleting index: %s' % index)
-        if self.index_exists(index):
-            status = self.es.indices.delete(index=index)
+        logger.debug('deleting index: %s' % indexname)
+        if self.index_exists(indexname):
+            status = self.es.indices.delete(index=indexname)
         else:
-            status = '{"status":500, "message":"Index does not exist"}'
+            status = {
+                "name": indexname,
+                "status": 500,
+                "message": "Index does not exist",
+            }
         logger.debug(status)
         return status
     
-    def init_mappings(self):
-        """Initializes mappings for Elasticsearch objects
-        
-        Mappings for objects in (ddr-defs)repo_models.elastic.ELASTICSEARCH_CLASSES
-                
-        @returns: JSON dict with status code and response
-        """
-        logger.debug('registering doc types')
-        statuses = []
-        for class_ in ELASTICSEARCH_CLASSES['all']:
-            logger.debug('- %s' % class_['doctype'])
-            print('- %s' % class_)
-            status = class_['class'].init(index=self.indexname, using=self.es)
-            statuses.append( {'doctype':class_['doctype'], 'status':status} )
-        return statuses
-
     def model_fields_lists(self):
         """
         Lists of class-specific fields for each class, in order,
