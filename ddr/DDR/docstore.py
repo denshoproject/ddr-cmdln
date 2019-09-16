@@ -395,22 +395,12 @@ class Docstore():
                 json_text=json.dumps(data),
             )
     
-    def get_mappings(self, raw=False):
+    def get_mappings(self):
         """Get mappings for ESObjects
         
-        @param raw: boolean Use lower-level function to get all mappings
         @returns: str JSON
         """
-        if raw:
-            return self.es.indices.get_mapping(self.indexname)
-        return {
-            class_['doctype']: elasticsearch_dsl.Mapping.from_es(
-                index=self.indexname,
-                doc_type=class_['doctype'],
-                using=self.es,
-            ).to_dict()
-            for class_ in ELASTICSEARCH_CLASSES['all']
-        }
+        return self.es.indices.get_mapping()
     
     def post_vocabs(self, path=config.VOCABS_URL):
         """Posts ddr-vocab facets,terms to ES.

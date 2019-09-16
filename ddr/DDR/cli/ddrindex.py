@@ -289,18 +289,13 @@ def alias(hosts, index, alias, delete):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
-@click.option('--debug', '-d', is_flag=True, help='Display current mappings.')
-def mappings(hosts, index, debug):
-    """Push mappings to the specified index or display.
+@click.option('--indices','-i', help='Comma-separated list of indices to display.')
+def mappings(hosts, indices):
+    """Display mappings for the specified index/indices.
     """
-    if debug:
-        data = docstore.Docstore(hosts, index).get_mappings(raw=1)
-        text = json.dumps(data)
-        click.echo(text)
-    docstore.Docstore(hosts, index).init_mappings()
+    data = docstore.Docstore(hosts).get_mappings()
+    text = json.dumps(data)
+    click.echo(text)
 
 
 @ddrindex.command()
