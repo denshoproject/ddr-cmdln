@@ -551,37 +551,33 @@ class Docstore():
         if (not (data.get('id') and data.get('repo'))):
             raise Exception('Data file is not well-formed.')
         oi = Identifier(id=data['id'])
-        d = OrderedDict()
-        d['id'] = oi.id
-        d['model'] = oi.model
-        d['parent_id'] = oi.parent_id(stubs=1)
+
+        ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[doctype]
+        d = ES_Class(id=oi.id)
+        d.meta.id = oi.id
+        d.model = oi.model
+        d.parent_id = oi.parent_id(stubs=1)
         # links
-        d['links_html'] = oi.id
-        d['links_json'] = oi.id
-        d['links_img'] = '%s/logo.png' % oi.id
-        d['links_thumb'] = '%s/logo.png' % oi.id
-        d['links_parent'] = oi.parent_id(stubs=1)
-        d['links_children'] = oi.id
+        d.links_html = oi.id
+        d.links_json = oi.id
+        d.links_img = '%s/logo.png' % oi.id
+        d.links_thumb = '%s/logo.png' % oi.id
+        d.links_parent = oi.parent_id(stubs=1)
+        d.links_children = oi.id
         # title,description
-        d['title'] = data['title']
-        d['description'] = data['description']
-        d['url'] = data['url']
+        d.title = data['title']
+        d.description = data['description']
+        d.url = data['url']
         # ID components (repo, org, cid, ...) as separate fields
         idparts = deepcopy(oi.idparts)
         idparts.pop('model')
-        for k in ID_COMPONENTS:
-            d[k] = '' # ensure all fields present
-        for k,v in idparts.iteritems():
-            d[k] = v
+        for key,val in idparts.iteritems():
+            setattr(d, key, val)
         # add/update
         if remove and self.exists(doctype, oi):
-            results = self.es.delete(
-                index=self.indexname, doc_type=doctype, id=oi.id
-            )
+            results = d.delete(index=self.index_name(doctype), using=self.es)
         else:
-            results = self.es.index(
-                index=self.indexname, doc_type=doctype, id=oi.id, body=d
-            )
+            results = d.save(index=self.index_name(doctype), using=self.es)
         return results
     
     def repo(self, path, remove=False):

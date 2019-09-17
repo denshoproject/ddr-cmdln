@@ -360,14 +360,11 @@ def publish(hosts, recurse, force, path):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.argument('path')
-def repo(hosts, index, path):
+def repo(hosts, path):
     """Post the repository record to Elasticsearch
     """
-    status = docstore.Docstore(hosts, index).repo(path)
+    status = docstore.Docstore(hosts).repo(path)
     click.echo(status)
 
 
@@ -375,14 +372,11 @@ def repo(hosts, index, path):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.argument('path')
-def org(hosts, index, path):
+def org(hosts, path):
     """Post the organization record to Elasticsearch
     """
-    status = docstore.Docstore(hosts, index).org(path)
+    status = docstore.Docstore(hosts).org(path)
     click.echo(status)
 
 
