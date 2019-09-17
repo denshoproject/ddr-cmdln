@@ -629,20 +629,16 @@ class Docstore():
                 if self.get(DOC_TYPE, document['id'], fields=[]):
                     self.delete(document['id'])
     
-    def post_json(self, doc_type, document_id, json_text):
+    def post_json(self, indexname, document_id, json_text):
         """POST the specified JSON document as-is.
         
-        @param doc_type: str
+        @param indexname: str
         @param document_id: str
         @param json_text: str JSON-formatted string
         @returns: dict Status info.
         """
-        logger.debug('post_json(%s, %s, %s)' % (
-            self.indexname, doc_type, document_id
-        ))
-        return self.es.index(
-            index=self.indexname, doc_type=doc_type, id=document_id, body=json_text
-        )
+        logger.debug('post_json(%s, %s)' % (indexname, document_id))
+        return self.es.index(index=indexname, id=document_id, body=json_text)
 
     def post(self, document, public_fields=[], additional_fields={}, parents={}, force=False):
         """Add a new document to an index or update an existing one.

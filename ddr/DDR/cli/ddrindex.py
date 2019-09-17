@@ -323,19 +323,16 @@ def vocabs(hosts, index, path):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.argument('doctype')
 @click.argument('object_id')
 @click.argument('path')
-def postjson(hosts, index, doctype, object_id, path):
-    """Post raw JSON file to Elasticsearch (YMMV)
+def postjson(hosts, doctype, object_id, path):
+    """TODO Post raw JSON file to Elasticsearch (YMMV)
     
     This command is for posting raw JSON files.  If the file you wish to post
     is a DDR object, please use "ddrindex post".
     """
-    status = docstore.Docstore(hosts, index).post_json(
+    status = docstore.Docstore(hosts).post_json(
         doctype,
         object_id,
         fileio.read_text(path)
