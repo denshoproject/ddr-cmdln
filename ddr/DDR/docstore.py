@@ -608,26 +608,29 @@ class Docstore():
         @param path: str Absolute path to narrators.json
         @returns: dict
         """
-        DOC_TYPE = 'narrator'
+        # TODO we should not be hard-coding indexnames
+        doctype = 'narrator'
+        ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[doctype]
+        indexname = self.index_name(doctype)
         data = load_json(path)
-        for document in data['narrators']:
-            # remap some fields
-            # TODO should go in repo_models/elastic.py
-            document.pop('notes')
-            document['title'] = document.pop('display_name')
-            document['description'] = document.pop('bio')
-            #
-            document['model'] = 'narrator'
+        num = len(data['narrators'])
+        for n,document in enumerate(data['narrators']):
+            d = ES_Class(id=document['id'])
+            d.meta.id = document['id']
+            d.title = document['display_name']
+            d.description = document['bio']
+            d.model = doctype
             has_published = document.get('has_published', '')
             if has_published.isdigit():
                 has_published = int(has_published)
             if has_published:
-                result = self.post_json(DOC_TYPE, document['id'], json.dumps(document))
-                logging.debug(document['id'], result)
+                logging.debug('{}/{} {}'.format(n, num, d))
+                print('{}/{} {}'.format(n, num, d))
+                result = d.save(index=self.index_name(doctype), using=self.es)
             else:
-                logging.debug('%s not published' % document['id'])
-                if self.get(DOC_TYPE, document['id'], fields=[]):
-                    self.delete(document['id'])
+                logging.debug('%s not published' % d.id)
+                if self.get(doctype, d.id, fields=[]):
+                    self.delete(doctype, d.id)
     
     def post_json(self, indexname, document_id, json_text):
         """POST the specified JSON document as-is.

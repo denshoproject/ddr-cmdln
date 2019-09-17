@@ -390,14 +390,11 @@ def org(hosts, index, path):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.argument('path')
-def narrators(hosts, index, path):
+def narrators(hosts, path):
     """Post the DDR narrators file to Elasticsearch
     """
-    status = docstore.Docstore(hosts, index).narrators(path)
+    status = docstore.Docstore(hosts).narrators(path)
     click.echo(status)
 
 
