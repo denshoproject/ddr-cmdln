@@ -428,7 +428,7 @@ POST_OBJECT_IDS = [
 def test_post(publishable_objects):
     """Right now this only tests if you can post() without raising exceptions
     """
-    ds = docstore.Docstore(config.DOCSTORE_HOST, config.DOCSTORE_INDEX)
+    ds = docstore.Docstore(config.DOCSTORE_HOST)
     post_these = [o for o in publishable_objects if o.id in POST_OBJECT_IDS]
     for oid in post_these:
         print(o)
@@ -441,7 +441,7 @@ def test_post(publishable_objects):
 def test_post_multi(publishable_objects):
     """Right now this only tests if you can post() without raising exceptions
     """
-    ds = docstore.Docstore(config.DOCSTORE_HOST, config.DOCSTORE_INDEX)
+    ds = docstore.Docstore(config.DOCSTORE_HOST)
     print(ds)
     post_these = [o for o in publishable_objects if o.id in POST_OBJECT_IDS]
     collection_path = post_these[0].identifier.collection_path()
@@ -459,7 +459,7 @@ def test_post_multi(publishable_objects):
     
 # this should come last...
 def test_delete(publishable_objects):
-    ds = docstore.Docstore(config.DOCSTORE_HOST, config.DOCSTORE_INDEX)
+    ds = docstore.Docstore(config.DOCSTORE_HOST)
     print(ds)
     # delete single
     f = None
