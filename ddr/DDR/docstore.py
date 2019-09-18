@@ -414,12 +414,15 @@ class Docstore():
         @param path: Absolute path to dir containing facet files.
         @returns: JSON dict with status code and response
         """
-        logger.debug('index_facets(%s, %s)' % (self.indexname, path))
+        logger.debug('index_facets(%s)' % (path))
         vocabs = vocab.get_vocabs(path)
         
         # get classes from ddr-defs
-        Facet = ELASTICSEARCH_CLASSES_BY_MODEL['facet']
-        FacetTerm = ELASTICSEARCH_CLASSES_BY_MODEL['facetterm']
+        # TODO we should hard-code indexnames...
+        facet_doctype = 'facet'
+        facetterm_doctype = 'facetterm'
+        Facet = ELASTICSEARCH_CLASSES_BY_MODEL[facet_doctype]
+        FacetTerm = ELASTICSEARCH_CLASSES_BY_MODEL[facetterm_doctype]
         
         # push facet data
         statuses = []
@@ -435,7 +438,9 @@ class Docstore():
             facet.title = vocabs[v]['title']
             facet.description = vocabs[v]['description']
             logging.debug(facet)
-            status = facet.save(using=self.es, index=self.indexname)
+            status = facet.save(
+                index=self.index_name(facet_doctype), using=self.es
+            )
             statuses.append(status)
             
             for t in vocabs[v]['terms']:
@@ -451,13 +456,15 @@ class Docstore():
                 term.links_html = facetterm_id
                 term.links_json = facetterm_id
                 # TODO doesn't handle location_geopoint
-                for field in FacetTerm._doc_type.mapping.to_dict()[
-                        FacetTerm._doc_type.name]['properties'].keys():
+                for field in FacetTerm._doc_type.mapping.to_dict()['properties'].keys():
                     if t.get(field):
                         setattr(term, field, t[field])
                 term.id = facetterm_id  # overwrite term.id from original
                 logging.debug(term)
-                status = term.save(using=self.es, index=self.indexname)
+                print(term)
+                status = term.save(
+                    index=self.index_name(facetterm_doctype), using=self.es
+                )
                 statuses.append(status)
         
         forms_choices = {

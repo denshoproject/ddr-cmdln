@@ -292,9 +292,6 @@ def mappings(hosts, indices):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 #@click.option('--report', is_flag=True,
 #              help='Report number of records existing, to be indexed/updated.')
 #@click.option('--dryrun', is_flag=True,
@@ -302,14 +299,14 @@ def mappings(hosts, indices):
 #@click.option('--force', is_flag=True,
 #              help='Forcibly update records whether they need it or not.')
 @click.argument('path')
-def vocabs(hosts, index, path):
+def vocabs(hosts, path):
     """Post DDR vocabulary facets and terms.
     
     \b
     Example:
       $ ddrindex vocabs /opt/ddr-local/ddr-vocab/api/0.2/
     """
-    docstore.Docstore(hosts, index).post_vocabs(path=path)
+    docstore.Docstore(hosts).post_vocabs(path=path)
 
 
 @ddrindex.command()
