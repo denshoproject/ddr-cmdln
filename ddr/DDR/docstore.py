@@ -872,7 +872,7 @@ class Docstore():
         @param document_id:
         @param recursive: True or False
         """
-        logger.debug('delete(%s, %s, %s)' % (self.indexname, document_id, recursive))
+        logger.debug('delete(%s, %s)' % (document_id, recursive))
         oi = Identifier(document_id, config.MEDIA_BASE)
         if recursive:
             paths = util.find_meta_files(
@@ -888,17 +888,18 @@ class Docstore():
                 model = 'entity'
             else:
                 model = oi.model
-            url = 'http://{}/{}/{}/{}/'.format(self.hosts, self.indexname, model, oi.id)
-            get = requests.request('GET', url)
-            if get.status_code == 200:
-                delete = requests.request('DELETE', url)
-                print('{}/{} DELETE  {} {} {} {}->{}'.format(
-                    n, num, self.indexname, model, oi.id, get.status_code, delete.status_code
-                ))
-            else:
-                print('{}/{} MISSING {} {} {} {}'.format(
-                    n, num, self.indexname, model, oi.id, get.status_code
-                ))
+            url = 'http://{}/{}/_doc/{}/'.format(
+                self.hosts,
+                self.index_name(model),
+                oi.id
+            )
+            r = requests.request('DELETE', url)
+            print('{}/{} DELETE {} {} -> {} {}'.format(
+                n, num,
+                self.index_name(model),
+                oi.id,
+                r.status_code, r.reason
+            ))
 
     def search(self, doctypes=[], query={}, sort=[], fields=[], from_=0, size=MAX_SIZE):
         """Executes a query, get a list of zero or more hits.

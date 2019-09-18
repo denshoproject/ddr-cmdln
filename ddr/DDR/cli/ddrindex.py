@@ -386,17 +386,14 @@ def narrators(hosts, path):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.option('--recurse','-r', is_flag=True, help='Delete documents under this one.')
 @click.option('--confirm', is_flag=True, help='Yes I really want to delete these objects.')
 @click.argument('object_id')
-def delete(hosts, index, recurse, confirm, object_id):
+def delete(hosts, recurse, confirm, object_id):
     """Delete the specified document from Elasticsearch
     """
     if confirm:
-        click.echo(docstore.Docstore(hosts, index).delete(object_id, recursive=recurse))
+        click.echo(docstore.Docstore(hosts).delete(object_id, recursive=recurse))
     else:
         click.echo("Add '--confirm' if you're sure you want to do this.")
 
