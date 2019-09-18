@@ -5,34 +5,27 @@ Index Management: create, destroy, alias, mappings, status, reindex
 Publishing:       vocabs, post, postjson, index
 Debugging:        config, get, exists, search
 
-By default the command uses DOCSTORE_HOSTS and DOCSTORE_INDEX from the
-config file.  Override these values using the --hosts and --index options
-or with environment variables:
+By default the command uses DOCSTORE_HOSTS from the config file.  Override
+these values using the --hosts option or with an environment variable:
   $ export DOCSTORE_HOSTS=192.168.56.1:9200
-  $ export DOCSTORE_INDEX=ddrlocal-YYYYMMDDa
 
 CORE COMMANDS
 
-Initialize index (creates index and adds mappings)
+Initialize indices (creates indices with mappings)
   $ ddrindex create
-Create a bare index (no mappings)
-  $ ddrindex create --bare --index INDEXNAME
-
-Publish vocabularies (used for topics, facility fields)
-  $ ddrindex vocabs /opt/ddr-vocab/api/0.2
 
 Post repository and organization:
-  $ ddrindex repo REPO /var/www/media/ddr/REPO/repository.json
-  $ ddrindex org REPO-ORG /var/www/media/ddr/REPO-ORG/organization.json
+  $ ddrindex repo /var/www/media/ddr/REPO/repository.json
+  $ ddrindex org /var/www/media/ddr/REPO-ORG/organization.json
 
 Post an object. Optionally, publish its child objects and/or ignore publication status.
   $ ddrindex publish [--recurse] [--force] /var/www/media/ddr/ddr-testing-123
 
+Post vocabularies (used for topics, facility fields)
+  $ ddrindex vocabs /opt/ddr-vocab/api/0.2
+
 Post narrators:
   $ ddrindex narrators /opt/ddr-local/ddr-defs/narrators.json
-
-Post arbitrary JSON files:
-  $ ddrindex postjson DOCTYPE DOCUMENTID /PATH/TO/FILE.json
 
 MANAGEMENT COMMANDS
 
@@ -42,32 +35,34 @@ View current settings
 Check status
   $ ddrindex status
 
+See if document exists
+  $ ddrindex exists collection ddr-testing-123
+
+Get document
+  $ ddrindex get collection ddr-testing-123
+Get document as JSON
+  $ ddrindex get collection ddr-testing-123 --json
+Get document as JSON (formatted)
+  $ ddrindex get collection ddr-testing-123 --json | jq
+
+Remove document
+  $ ddrindex delete DOCTYPE DOCUMENTID
+
+Search
+  $ ddrindex search collection,entity Minidoka
+
+Delete existing indices
+  $ ddrindex destroy --confirm
+
+Reindex
+  $ ddrindex reindex --index source --target dest
+
 Set or remove an index alias
   $ ddrindex alias --index ddrpublic-20171108c --alias ddrpublic-dev
   $ ddrindex alias --index ddrpublic-20171108c --alias ddrpublic-dev --delete --confirm
 
 Post arbitrary JSON documents:
   $ ddrindex postjson DOCTYPE DOCUMENTID /PATH/TO/DOCUMENT.json
-
-Search
-  $ ddrindex search collection,entity Minidoka
-
-See if document exists
-  $ ddrindex exists collection ddr-testing-123
-Get document
-  $ ddrindex get collection ddr-testing-123
-
-Remove document
-  $ ddrindex delete DOCTYPE DOCUMENTID
-
-Delete existing index
-  $ ddrindex destroy --index documents --confirm
-
-Reindex
-  $ ddrindex reindex --index source --target dest
-
-Update mappings (or add to a bare index).
-  $ ddrindex mappings
 """
 
 from datetime import datetime
@@ -121,11 +116,9 @@ def ddrindex(debug):
     """ddrindex - publish DDR content to Elasticsearch; debug Elasticsearch
     
     \b
-    By default the command uses DOCSTORE_HOSTS and DOCSTORE_INDEX from the
-    config file.  Override these values using the --hosts and --index options
-    or with environment variables:
-      $ export DOCSTORE_HOSTS=192.168.56.1:9200
-      $ export DOCSTORE_INDEX=ddrlocal-YYYYMMDDa
+    By default the command uses DOCSTORE_HOSTS from the config file.  Override
+    these values using the --hosts option or with an environment variable:
+        $ export DOCSTORE_HOSTS=192.168.56.1:9200
     """
     if debug:
         click.echo('Debug mode is on')
