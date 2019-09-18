@@ -491,9 +491,6 @@ def status(hosts):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.option('--doctypes','-t',
               default='collection,entity,segment,file',
               help='One or more doctypes (comma-separated).')
@@ -519,7 +516,7 @@ def status(hosts):
               is_flag=True, default=False,
               help='Raw Elasticsearch output.')
 @click.argument('fulltext')
-def search(hosts, index, doctypes, parent, filters, limit, offset, page, aggregations, raw, fulltext):
+def search(hosts, doctypes, parent, filters, limit, offset, page, aggregations, raw, fulltext):
     """Fulltext search using Elasticsearch query_string syntax.
     
     \b
@@ -548,7 +545,7 @@ def search(hosts, index, doctypes, parent, filters, limit, offset, page, aggrega
     """
     doctypes = doctypes.split(',')
     results = search_.search(
-        hosts, index,
+        hosts,
         doctypes=doctypes,
         parent=parent,
         filters=filters,
