@@ -441,7 +441,7 @@ def sync(user_name, user_mail, collection):
 
 @command
 @local_only
-def entity_create(user_name, user_mail, collection, eidentifier, updated_files, templates, agent=''):
+def entity_create(user_name, user_mail, collection, eidentifier, updated_files, agent=''):
     """Command-line function for creating an entity and adding it to the collection.
     
     @param user_name: Username for use in changelog, git log
@@ -449,7 +449,6 @@ def entity_create(user_name, user_mail, collection, eidentifier, updated_files, 
     @param collection: Collection
     @param eidentifier: Identifier
     @param updated_files: List of updated files (relative to collection root).
-    @param templates: List of entity metadata templates (absolute paths).
     @param agent: (optional) Name of software making the change.
     @return: message ('ok' if successful)
     """
@@ -462,21 +461,14 @@ def entity_create(user_name, user_mail, collection, eidentifier, updated_files, 
     if not os.path.exists(eidentifier.path_abs()):
         os.makedirs(eidentifier.path_abs())
     
-    # copy template files to entity
-    for src in templates:
-        if os.path.exists(src):
-            dst = os.path.join(eidentifier.path_abs(), os.path.basename(src))
-            logging.debug('cp %s, %s' % (src, dst))
-            shutil.copy(src, dst)
-            if os.path.exists(dst):
-                git_files.append(dst)
-            else:
-                logging.error('COULD NOT COPY %s' % src)
-    
-    # instantiate now that we have entity dir and some templates
+    # instantiate and write JSON,XML
     object_class = eidentifier.object_class()
-    entity = object_class(eidentifier.path_abs())
-    
+    entity = object_class.create(eidentifier)
+    entity.write_json()
+    entity.write_xml()
+    git_files.append(eidentifier.path_rel('json'))
+    git_files.append(eidentifier.path_rel('xml'))
+
     # entity control
     econtrol = entity.control()
     if os.path.exists(econtrol.path):
