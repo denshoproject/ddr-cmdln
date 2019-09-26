@@ -254,7 +254,6 @@ def test_10_entity_create(tmpdir, test_paths):
     for eid in TEST_EIDS:
         ei = identifier.Identifier(eid, collection.identifier.basepath)
         entity = models.entity.Entity.create(ei)
-        entity.write_json(path=config.TEMPLATE_EJSON)
         print(entity)
         exit,status = commands.entity_create(
             GIT_USER, GIT_MAIL,
@@ -264,7 +263,6 @@ def test_10_entity_create(tmpdir, test_paths):
                 collection.json_path_rel,
                 collection.ead_path_rel,
             ],
-            [config.TEMPLATE_EJSON, config.TEMPLATE_METS],
             agent=AGENT
         )
         print(exit,status)

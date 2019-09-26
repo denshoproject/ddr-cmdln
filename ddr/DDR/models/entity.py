@@ -189,16 +189,12 @@ class Entity(common.DDRObject):
         collection = identifier.collection().object()
         if not collection:
             raise Exception('Parent collection for %s does not exist.' % identifier)
-        entity = Entity.create(identifier)
-        fileio.write_text(
-            entity.dump_json(template=True),
-            config.TEMPLATE_EJSON
-        )
         exit,status = commands.entity_create(
-            git_name, git_mail,
-            collection, entity.identifier,
-            [collection.json_path_rel, collection.ead_path_rel],
-            [config.TEMPLATE_EJSON, config.TEMPLATE_METS],
+            user_name=git_name,
+            user_mail=git_mail,
+            collection=collection,
+            eidentifier=identifier,
+            updated_files=[collection.json_path_rel, collection.ead_path_rel],
             agent=agent
         )
         if exit:

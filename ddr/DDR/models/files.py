@@ -187,17 +187,8 @@ class File(common.DDRObject):
         
         entity_file_edit(request, collection, file_, git_name, git_mail)
 
-        exit,status = commands.entity_create(
-            git_name, git_mail,
-            collection, entity.identifier,
-            [collection.json_path_rel, collection.ead_path_rel],
-            [config.TEMPLATE_EJSON, config.TEMPLATE_METS],
-            agent=agent
-        )
-        if exit:
-            raise Exception('Could not create new Entity: %s, %s' % (exit, status))
         # load Entity object, inherit values from parent, write back to file
-        entity = Identifier(identifier).object()
+        entity = parent
         entity.inherit(collection)
         entity.write_json()
         updated_files = [entity.json_path]

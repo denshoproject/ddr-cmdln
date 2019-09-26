@@ -188,16 +188,11 @@ class Collection(common.DDRObject):
         @param agent: str
         @returns: exit,status int,str
         """
-        collection = Collection.create(identifier)
-        fileio.write_text(
-            collection.dump_json(template=True),
-            config.TEMPLATE_CJSON
-        )
         exit,status = commands.create(
-            git_name, git_mail,
-            identifier,
-            [config.TEMPLATE_CJSON, config.TEMPLATE_EAD],
-            agent=agent
+            user_name=git_name,
+            user_mail=git_mail,
+            identifier=identifier,
+            agent=agent,
         )
         return exit,status
     
