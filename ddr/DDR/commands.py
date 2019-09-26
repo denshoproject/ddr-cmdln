@@ -249,8 +249,8 @@ def create(user_name, user_mail, identifier, agent=''):
     collection = object_class.create(identifier)
     collection.write_json()
     collection.write_xml()
-    git_files.append(eidentifier.path_rel('json'))
-    git_files.append(eidentifier.path_rel('xml'))
+    git_files.append(identifier.path_rel('json'))
+    git_files.append(identifier.path_rel('xml'))
     
     # add control, .gitignore, changelog
     control   = collection.control()
