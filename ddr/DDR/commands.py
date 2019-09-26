@@ -196,7 +196,7 @@ def clone(user_name, user_mail, identifier, dest_path):
 
 @command
 @requires_network
-def create(user_name, user_mail, identifier, templates, agent=''):
+def create(user_name, user_mail, identifier, agent=''):
     """Command-line function for creating a new collection.
     
     Clones a blank collection object from workbench server, adds files, commits.
@@ -218,7 +218,6 @@ def create(user_name, user_mail, identifier, templates, agent=''):
     @param user_name: Username for use in changelog, git log
     @param user_mail: User email address for use in changelog, git log
     @param identifier: Identifier
-    @param templates: List of metadata templates (absolute paths).
     @param agent: (optional) Name of software making the change.
     @return: message ('ok' if successful)
     """
@@ -242,21 +241,16 @@ def create(user_name, user_mail, identifier, templates, agent=''):
     dvcs.git_set_configs(repo, user_name, user_mail)
     dvcs.annex_set_configs(repo, user_name, user_mail)
     git_files = []
-    
-    # copy template files to collection
-    for src in templates:
-        if os.path.exists(src):
-            dst = os.path.join(identifier.path_abs(), os.path.basename(src))
-            logging.debug('cp %s, %s' % (src, dst))
-            shutil.copy(src, dst)
-            if os.path.exists(dst):
-                git_files.append(dst)
-            else:
-                logging.error('COULD NOT COPY %s' % src)
 
-    # instantiate now that we have collection dir and some templates
+    # collection dir
+    
+    # instantiate and write JSON,XML
     object_class = identifier.object_class()
-    collection = object_class(identifier.path_abs())
+    collection = object_class.create(identifier)
+    collection.write_json()
+    collection.write_xml()
+    git_files.append(eidentifier.path_rel('json'))
+    git_files.append(eidentifier.path_rel('xml'))
     
     # add control, .gitignore, changelog
     control   = collection.control()

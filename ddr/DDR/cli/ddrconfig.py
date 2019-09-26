@@ -28,7 +28,6 @@ def ddrconfig():
         'ACCESS_FILE_GEOMETRY',
         'FACETS_PATH',
         'MAPPINGS_PATH',
-        'TEMPLATE_EAD',
         'CGIT_URL',
         'GIT_REMOTE_NAME',
         'GITOLITE',

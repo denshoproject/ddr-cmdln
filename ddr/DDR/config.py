@@ -92,7 +92,6 @@ THUMBNAIL_GEOMETRY   = CONFIG.get('cmdln','thumbnail_geometry')
 THUMBNAIL_COLORSPACE = 'sRGB'
 THUMBNAIL_OPTIONS    = CONFIG.get('cmdln','thumbnail_options')
 
-TEMPLATE_EAD = os.path.join(REPO_MODELS_PATH, 'templates', 'ead.xml')
 TEMPLATE_EAD_JINJA2 = os.path.join(REPO_MODELS_PATH, 'templates', 'ead.xml.j2')
 TEMPLATE_METS_JINJA2 = os.path.join(REPO_MODELS_PATH, 'templates', 'mets.xml.j2')
 
