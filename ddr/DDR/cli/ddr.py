@@ -116,7 +116,7 @@ def create(collection, user, mail, log):
     adds initial collection files, and commits.
     """
     set_logging(log)
-    exit,msg = models.Collection.new(
+    exit,msg = models.Collection.create(
         identifier.Identifier(collection), user, mail, agent=AGENT
     )
     click.echo(msg); sys.exit(exit)
@@ -206,11 +206,11 @@ def edit(path):
         
         # TODO hard-coded stuff!
         if oi.model == 'collection':
-            models.Collection.create(oi).write_json()
+            models.Collection.new(oi).write_json()
         elif oi.model == 'entity':
-            models.Entity.create(oi).write_json()
+            models.Entity.new(oi).write_json()
         elif oi.model == 'file':
-            models.File.create(oi).write_json()
+            models.File.new(oi).write_json()
     
     click.edit(filename=oi.path_abs('json'))
 

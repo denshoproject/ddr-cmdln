@@ -323,7 +323,7 @@ Example:
 
 
     if args.cmd == 'create':
-        exit,msg = Collection.new(cidentifier, args.user, args.mail, agent=AGENT)
+        exit,msg = Collection.create(cidentifier, args.user, args.mail, agent=AGENT)
 
     elif args.cmd == 'clone':
         exit,msg = clone(args.user, args.mail, cidentifier, args.dest)

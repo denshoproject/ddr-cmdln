@@ -46,19 +46,19 @@ def collection(tmpdir_factory):
         collection_path, GIT_USER, GIT_MAIL
     )
     ci = identifier.Identifier(collection_path)
-    collection = models.collection.Collection.create(ci)
+    collection = models.collection.Collection.new(ci)
     collection.public = True
     collection.status = 'completed'
     collection.write_json()
     for oid,public,status in ENTITY_IDS:
         oi = identifier.Identifier(id=oid, base_path=collection.identifier.basepath)
-        o = models.entity.Entity.create(oi)
+        o = models.entity.Entity.new(oi)
         o.public = public
         o.status = status
         o.write_json()
     for oid,public,status in FILE_IDS:
         oi = identifier.Identifier(id=oid, base_path=collection.identifier.basepath)
-        o = models.files.File.create(oi)
+        o = models.files.File.new(oi)
         o.public = public
         o.status = status
         o.sha1 = oi.idparts['sha1']

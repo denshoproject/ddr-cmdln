@@ -246,7 +246,7 @@ def create(user_name, user_mail, identifier, agent=''):
     
     # instantiate and write JSON,XML
     object_class = identifier.object_class()
-    collection = object_class.create(identifier)
+    collection = object_class.new(identifier)
     collection.write_json()
     collection.write_xml()
     git_files.append(identifier.path_rel('json'))
@@ -457,7 +457,7 @@ def entity_create(user_name, user_mail, collection, eidentifier, updated_files, 
     
     # instantiate and write JSON,XML
     object_class = eidentifier.object_class()
-    entity = object_class.create(eidentifier)
+    entity = object_class.new(eidentifier)
     entity.write_json()
     entity.write_xml()
     git_files.append(eidentifier.path_rel('json'))
