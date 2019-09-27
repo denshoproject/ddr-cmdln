@@ -116,7 +116,12 @@ def test_find_store_dirs(tmpdir):
         str(tmpdir / 'find_store_dirs/ddr-test-123'),
         str(tmpdir / 'find_store_dirs/ddr-test-124'),
     ]
-    assert storage.find_store_dirs(basedir, 'collection.json', levels=2) == EXPECTED
+    print('EXPECTED %s' % EXPECTED)
+    output = storage.find_store_dirs(basedir, 'collection.json', levels=2)
+    print('output   %s' % output)
+    # test output regardless of order
+    for path in output:
+        assert path in EXPECTED
 
 # TODO local_stores
 # TODO nfs_stores
