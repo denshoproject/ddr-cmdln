@@ -1121,9 +1121,13 @@ class Identifier(object):
             mappings[self.model]['class']
         )
     
-    def object(self, mappings=MODEL_CLASSES):
-        """The object identified by the Identifier.
+    def object(self, mappings=MODEL_CLASSES, new=False):
+        """Returns the object identified by the Identifier or None.
+        
+        @param new: bool Create a new blank object if it doesn't already exist.
         """
+        if new and not os.path.exists(self.path_abs('json')):
+            return self.object_class(mappings).new(self)
         return self.object_class(mappings).from_identifier(self)
 
     def organization_id(self):
