@@ -1122,12 +1122,9 @@ class Identifier(object):
         )
     
     def object(self, mappings=MODEL_CLASSES):
-        """Returns the Identifier's object; makes new object if absent.
+        """The object identified by the Identifier.
         """
-        if os.path.exists(self.path_abs('json')):
-            return self.object_class(mappings).from_identifier(self)
-        else:
-            return self.object_class(mappings).new(self)
+        return self.object_class(mappings).from_identifier(self)
 
     def organization_id(self):
         return format_id(self, 'organization')
