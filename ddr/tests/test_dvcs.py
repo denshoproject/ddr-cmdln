@@ -9,9 +9,14 @@ import git
 from DDR import config
 from DDR import dvcs
 
+USER_NAME = 'gjost'
+USER_MAIL = 'gjost@densho.org'
+
 
 def make_repo(path, files=[]):
     repo = git.Repo.init(path)
+    dvcs.git_set_configs(repo, USER_NAME, USER_MAIL)
+    dvcs.annex_set_configs(repo, USER_NAME, USER_MAIL)
     # create empty files
     for fn in files:
         fpath = os.path.join(path, fn)
@@ -39,18 +44,16 @@ def test_repository(tmpdir):
     # annex_set_configs
     # repository
     path = str(tmpdir / 'ddr-test')
-    user = 'gjost'
-    mail = 'gjost@densho.org'
     repo = git.Repo.init(path)
-    dvcs.repository(path=path, user_name=user, user_mail=mail)
+    dvcs.repository(path=path, user_name=USER_NAME, user_mail=USER_MAIL)
     reader = repo.config_reader()
     reader.sections()
     core_items = {i[0]:i[1] for i in reader.items('core')}
     user_items = {i[0]:i[1] for i in reader.items('user')}
     annex_items = {i[0]:i[1] for i in reader.items('annex')}
     assert core_items.get('fileMode') == 'false'
-    assert user_items.get('name') == user
-    assert user_items.get('email') == mail
+    assert user_items.get('name') == USER_NAME
+    assert user_items.get('email') == USER_MAIL
     assert annex_items.get('sshcaching') == 'false'
 
 def test_git_version(tmpdir):
