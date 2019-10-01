@@ -13,15 +13,19 @@ from DDR import dvcs
 from DDR import identifier
 from DDR import models
 
-"""
-NOTE: You can disable tests requiring Elasticseach server:
-
-    $ nosetests -a '!elasticsearch'
-
-"""
-
-
 HOSTS = [{'host':'127.0.0.1', 'port':9200}]
+HOST_CHECK_URL = 'http://{}'.format(config.DOCSTORE_HOST)
+
+def no_cluster():
+    """Returns True if cannot contact cluster; use to skip tests
+    """
+    try:
+        r = requests.get(HOST_CHECK_URL, timeout=1)
+        if r.status_code == 200:
+            return False
+    except:
+        pass
+    return True
 
 
 #@attr('elasticsearch')
@@ -425,6 +429,7 @@ POST_OBJECT_IDS = [
     'ddr-testing-123-1-master-abc123',
 ]
 
+@pytest.mark.skipif(no_cluster(), reason="Elasticsearch cluster not available.")
 def test_post(publishable_objects):
     """Right now this only tests if you can post() without raising exceptions
     """
@@ -438,6 +443,7 @@ def test_post(publishable_objects):
         status = ds.post(o)
         print(status)
 
+@pytest.mark.skipif(no_cluster(), reason="Elasticsearch cluster not available.")
 def test_post_multi(publishable_objects):
     """Right now this only tests if you can post() without raising exceptions
     """
@@ -458,6 +464,7 @@ def test_post_multi(publishable_objects):
     print(result)
     
 # this should come last...
+@pytest.mark.skipif(no_cluster(), reason="Elasticsearch cluster not available.")
 def test_delete(publishable_objects):
     ds = docstore.Docstore(config.DOCSTORE_HOST, config.DOCSTORE_INDEX)
     print(ds)
