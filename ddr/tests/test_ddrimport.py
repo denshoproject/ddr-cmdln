@@ -65,7 +65,7 @@ def collection(tmpdir_factory):
             collection_path, GIT_USER, GIT_MAIL
         )
         ci = identifier.Identifier(collection_path)
-        collection = Collection.create(ci)
+        collection = Collection.new(ci)
         collection.save(GIT_USER, GIT_MAIL, AGENT)
         return collection
 

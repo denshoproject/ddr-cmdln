@@ -165,20 +165,20 @@ class Entity(common.DDRObject):
         return data
     
     @staticmethod
-    def create(identifier, parent=None):
-        """Creates a new Entity with initial values from module.FIELDS.
+    def new(identifier, parent=None):
+        """Creates new Entity with default values; does not write/commit.
         
         @param identifier: Identifier
         @param parent: [optional] DDRObject parent object
         @returns: Entity object
         """
-        obj = common.create_object(identifier, parent=parent)
+        obj = common.new_object(identifier, parent=parent)
         obj.files = []
         return obj
     
     @staticmethod
-    def new(identifier, git_name, git_mail, agent='cmdln'):
-        """Creates new Entity, writes to filesystem, does initial commit.
+    def create(identifier, git_name, git_mail, agent='cmdln'):
+        """Creates new Entity, writes files, performs initial commit
         
         @param identifier: Identifier
         @param git_name: str

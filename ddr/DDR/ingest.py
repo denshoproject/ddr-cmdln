@@ -545,7 +545,7 @@ def file_identifier(entity, data, sha1, log):
 
 def file_object(fidentifier, entity, data, src_path, src_size, md5, sha1, sha256, xmp, log):
     log.ok('File object')
-    file_ = fidentifier.object_class().create(fidentifier, parent=entity)
+    file_ = fidentifier.object_class().new(fidentifier, parent=entity)
     file_.basename_orig = os.path.basename(src_path)
     # add extension to path_abs
     basename_ext = os.path.splitext(file_.basename_orig)[1]

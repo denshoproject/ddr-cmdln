@@ -507,7 +507,7 @@ def sort_file_paths(json_paths, rank='role-eid-sort'):
             paths_sorted.append(val)
     return paths_sorted
 
-def create_object(identifier, parent=None, inherit=True):
+def new_object(identifier, parent=None, inherit=True):
     """Creates a new object initial values from module.FIELDS.
     
     If identifier.fields_module().FIELDS.field['default'] is non-None

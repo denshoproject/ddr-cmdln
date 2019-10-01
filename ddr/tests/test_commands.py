@@ -153,7 +153,7 @@ def test_00_create(tmpdir, test_paths):
         test_paths['TEST_COLLECTION'], GIT_USER, GIT_MAIL
     )
     ci = identifier.Identifier(test_paths['TEST_COLLECTION'])
-    collection = models.collection.Collection.create(ci)
+    collection = models.collection.Collection.new(ci)
     collection.save(GIT_USER, GIT_MAIL, AGENT)
     
     # directories exist
@@ -253,7 +253,7 @@ def test_10_entity_create(tmpdir, test_paths):
     print(collection)
     for eid in TEST_EIDS:
         ei = identifier.Identifier(eid, collection.identifier.basepath)
-        entity = models.entity.Entity.create(ei)
+        entity = models.entity.Entity.new(ei)
         print(entity)
         exit,status = commands.entity_create(
             GIT_USER, GIT_MAIL,

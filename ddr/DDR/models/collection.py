@@ -169,18 +169,18 @@ class Collection(common.DDRObject):
         return data
     
     @staticmethod
-    def create(identifier, parent=None):
-        """Creates a new Collection with initial values from module.FIELDS.
+    def new(identifier, parent=None):
+        """Creates new Collection with default values; does not write/commit.
         
         @param identifier: Identifier
         @param parent: [optional] DDRObject parent object
         @returns: Collection object
         """
-        return common.create_object(identifier, parent=parent)
+        return common.new_object(identifier, parent=parent)
     
     @staticmethod
-    def new(identifier, git_name, git_mail, agent='cmdln'):
-        """Creates new Collection, writes to filesystem, performs initial commit
+    def create(identifier, git_name, git_mail, agent='cmdln'):
+        """Creates new Collection, writes files, performs initial commit
         
         @param identifier: Identifier
         @param git_name: str

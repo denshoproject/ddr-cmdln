@@ -159,19 +159,19 @@ class File(common.DDRObject):
     #def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
     
     @staticmethod
-    def create(identifier=None, parent=None, inherit=True):
-        """Creates a new File with initial values from module.FIELDS.
+    def new(identifier=None, parent=None, inherit=True):
+        """Creates new File (metadata only) w default values; does not write/commit.
         
         @param identifier: [optional] Identifier
         @param parent: [optional] DDRObject parent object
         @param inherit: boolean Disable in loops to avoid infinite recursion
         @returns: File object
         """
-        return common.create_object(identifier, parent=parent, inherit=inherit)
+        return common.new_object(identifier, parent=parent, inherit=inherit)
     
     @staticmethod
-    def new(identifier, git_name, git_mail, agent='cmdln'):
-        """Creates new File (metadata only!), writes to filesystem, performs initial commit
+    def create(identifier, git_name, git_mail, agent='cmdln'):
+        """Creates new File (metadata only), writes files, performs initial commit
         
         @param identifier: Identifier
         @param git_name: str
@@ -182,7 +182,7 @@ class File(common.DDRObject):
         parent = identifier.parent().object()
         if not parent:
             raise Exception('Parent for %s does not exist.' % identifier)
-        file_ = File.create(identifier)
+        file_ = File.new(identifier)
         file_.write_json()
         
         entity_file_edit(request, collection, file_, git_name, git_mail)
@@ -331,7 +331,7 @@ class File(common.DDRObject):
         """
         if os.path.exists(identifier.path_abs('json')):
             return File.from_json(identifier.path_abs('json'), identifier)
-        return File.create(identifier, inherit=inherit)
+        return File.new(identifier, inherit=inherit)
     
     def parent( self ):
         i = Identifier(id=self.parent_id, base_path=self.identifier.basepath)

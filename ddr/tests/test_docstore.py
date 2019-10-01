@@ -327,7 +327,7 @@ def publishable_objects(tmpdir_factory):
             identifier.MODEL_CLASSES[oi.model]['module'],
             identifier.MODEL_CLASSES[oi.model]['class']
         )
-        o = model_class.create(oi)
+        o = model_class.new(oi)
         if o.identifier.model == 'file':
             o.sha1 = o.identifier.idparts['sha1']
         o.save(GIT_USER, GIT_MAIL, AGENT)
