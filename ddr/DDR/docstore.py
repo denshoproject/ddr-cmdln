@@ -1,42 +1,30 @@
 """
-TODO pass ES connection object to docstore.* instead of HOSTS,INDEX
+TODO pass ES connection object to docstore.* instead of HOSTS
 
 example walkthrough:
 ------------------------------------------------------------------------
 
-HOSTS = [{'host':'192.168.56.101', 'port':9200}]
-INDEX = 'documents0'
-PATH = '/var/www/media/base/ddr-testing-141'
-PATH = '/var/www/media/base/ddr-densho-2'
-PATH = '/var/www/media/base/ddr-densho-10'
-
-HOSTS = [{'host':'192.168.56.120', 'port':9200}]
-INDEX = 'dev'
-PATH = '/var/www/media/ddr'
-
 from DDR import docstore
+d = docstore.Docstore()
 
-d = docstore.Docstore(HOSTS, INDEX)
+d.delete_indices()
+d.create_indices()
 
-d.delete_index()
+# Repository, organization metadata
+d.repo(path='/var/www/media/ddr/ddr/repository.json')
+d.org(path='/var/www/media/ddr/ddr-densho/organization.json')
 
-d.create_index()
+# Post an object and its child objects.
+d.post_multi('/var/www/media/ddr/ddr-densho-10', recursive=True)
 
-d.init_mappings(INDEX)
-d.post_facets(docstore.VOCABS_URL)
+# Post vocabularies (used for topics, facility fields)
+d.post_vocabs(docstore.VOCABS_URL)
+
+# Narrators metadata
+d.narrators('/opt/ddr-local/ddr-defs/narrators.json')
 
 # Delete a collection
 d.delete(os.path.basename(PATH), recursive=True)
-
-# Repository, organization metadata
-d.repo(path='%s/ddr/repository.json' % PATH, remove=False)
-# Do this once per organization.
-d.org(path='%s/REPO-ORG/organization.json' % PATH, remove=False)
-
-# Narrators metadata
-d.narrators(NARRATORS_PATH)
-
-d.publish(PATH, recursive=True, public=True )
 
 ------------------------------------------------------------------------
 """
