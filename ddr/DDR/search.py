@@ -9,7 +9,6 @@ import urlparse
 from elasticsearch_dsl import Index, Search, A, Q, A
 from elasticsearch_dsl.query import Match, MultiMatch, QueryString
 from elasticsearch_dsl.connections import connections
-from elasticsearch_dsl.result import Result
 
 from DDR import config
 from DDR import docstore
@@ -218,8 +217,8 @@ class SearchResults(object):
         if results:
             # objects
             self.objects = [hit for hit in results]
-            if results.hits.total:
-                self.total = int(results.hits.total)
+            if self.objects:
+                self.total = len(self.objects)
 
             # aggregations
             self.aggregations = {}
@@ -355,7 +354,7 @@ def format_object(oi, d, is_detail=False):
     Certain fields are always included (id, title, etc and links).
     Everything else is determined by what fields are in the result dict.
     
-    d is basically an elasticsearch_dsl.Result, packaged by
+    d is basically an elasticsearch_dsl.Hit, packaged by
     search.SearchResults.
     
     @param oi: Identifier
@@ -437,7 +436,6 @@ class Searcher(object):
     'ok'
     >>> d = r.to_dict(request)
     """
-    index = DOCSTORE.indexname
     search_results_class = SearchResults
     mappings = {}
     fields = []
@@ -460,10 +458,12 @@ class Searcher(object):
         @param filters: dict
         @returns: elasticsearch_dsl.Search
         """
+        indices = ','.join(
+            ['{}{}'.format(docstore.INDEX_PREFIX, m) for m in models]
+        )
         s = Search(
+            index=indices,
             using=DOCSTORE.es,
-            index=DOCSTORE.indexname,
-            doc_type=models,
         ).source(include=identifier.ELASTICSEARCH_LIST_FIELDS)
         
         # fulltext query
@@ -571,7 +571,7 @@ class Searcher(object):
         )
 
 
-def search(hosts, index, doctypes=[], parent=None, filters=[], fulltext='', limit=10000, offset=0, page=None, aggregations=False):
+def search(hosts, doctypes=[], parent=None, filters=[], fulltext='', limit=10000, offset=0, page=None, aggregations=False):
     """Fulltext search using Elasticsearch query_string syntax.
     
     Note: More approachable, higher-level function than DDR.docstore.search.
@@ -596,7 +596,6 @@ def search(hosts, index, doctypes=[], parent=None, filters=[], fulltext='', limi
         filter=['topics:373', 'facility=12']
     
     @param hosts dict: config.DOCSTORE_HOST
-    @param index str: config.DOCSTORE_INDEX
     @param doctypes list: Restrict to one or more models.
     @param parent str: ID of parent object (partial OK).
     @param filters list: Filter on certain fields (FIELD:VALUE,VALUE,...).

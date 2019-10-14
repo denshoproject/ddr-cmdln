@@ -347,8 +347,8 @@ class DDRObject(object):
         # ID components (repo, org, cid, ...) as separate fields
         idparts = deepcopy(self.identifier.idparts)
         idparts.pop('model')
-        for k in ID_COMPONENTS:
-            setattr(d, k, '') # ensure all fields present
+#        for k in ID_COMPONENTS:
+#            setattr(d, k, '') # ensure all fields present
         for k,v in idparts.iteritems():
             setattr(d, k, v)
         # links
