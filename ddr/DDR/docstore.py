@@ -607,10 +607,15 @@ class Docstore():
         num = len(data['narrators'])
         for n,document in enumerate(data['narrators']):
             d = ES_Class(id=document['id'])
+            # set all values first before exceptions
+            for key,val in document.iteritems():
+                setattr(d, key, val)
+            # make sure certain important fields are set properly
             d.meta.id = document['id']
             d.title = document['display_name']
             d.description = document['bio']
             d.model = doctype
+            # publish
             has_published = document.get('has_published', '')
             if has_published.isdigit():
                 has_published = int(has_published)
