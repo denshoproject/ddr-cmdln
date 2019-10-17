@@ -491,7 +491,7 @@ def status(hosts):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--doctypes','-t',
+@click.option('--models','-m',
               default='collection,entity,segment,file',
               help='One or more doctypes (comma-separated).')
 @click.option('--parent','-P',
@@ -516,7 +516,7 @@ def status(hosts):
               is_flag=True, default=False,
               help='Raw Elasticsearch output.')
 @click.argument('fulltext')
-def search(hosts, doctypes, parent, filters, limit, offset, page, aggregations, raw, fulltext):
+def search(hosts, models, parent, filters, limit, offset, page, aggregations, raw, fulltext):
     """Fulltext search using Elasticsearch query_string syntax.
     
     \b
@@ -533,7 +533,7 @@ def search(hosts, doctypes, parent, filters, limit, offset, page, aggregations, 
     \b
     Specify parent object and doctype/model:
         $ ddrindex search seattle --parent=ddr-densho-12
-        $ ddrindex search seattle --doctypes=entity,segment
+        $ ddrindex search seattle --models=entity,segment
     
     \b
     Filter on certain fields (filters may repeat):
@@ -543,10 +543,10 @@ def search(hosts, doctypes, parent, filters, limit, offset, page, aggregations, 
     Use the --aggregations/-a flag to display filter aggregations,
     with document counts, filter keys, and labels.
     """
-    doctypes = doctypes.split(',')
+    models = models.split(',')
     results = search_.search(
         hosts,
-        doctypes=doctypes,
+        models=models,
         parent=parent,
         filters=filters,
         fulltext=fulltext,

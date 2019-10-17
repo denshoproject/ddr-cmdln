@@ -836,18 +836,20 @@ class Docstore():
         @param query: dict The search definition using Elasticsearch Query DSL
         @returns raw ElasticSearch query output
         """
-        logger.debug('count(index=%s, doctypes=%s, query=%s' % (
-            self.indexname, doctypes, query
-        ))
+        logger.debug('count(doctypes=%s, query=%s' % (doctypes, query))
         if not query:
-            raise Exception("Can't do an empty search. Give me something to work with here.")
+            raise Exception(
+                "Can't do an empty search. Give me something to work with here."
+            )
         
+        indices = ','.join(
+            ['{}{}'.format(INDEX_PREFIX, m) for m in doctypes]
+        )
         doctypes = ','.join(doctypes)
         logger.debug(json.dumps(query))
         
         return self.es.count(
-            index=self.indexname,
-            doc_type=doctypes,
+            index=indices,
             body=query,
         )
     
@@ -908,26 +910,31 @@ class Docstore():
         @param size: int Number of results to return
         @returns raw ElasticSearch query output
         """
-        logger.debug('search(index=%s, doctypes=%s, query=%s, sort=%s, fields=%s, from_=%s, size=%s' % (
-            self.indexname, doctypes, query, sort, fields, from_, size
+        logger.debug(
+            'search(doctypes=%s, query=%s, sort=%s, fields=%s, from_=%s, size=%s' % (
+                doctypes, query, sort, fields, from_, size
         ))
         if not query:
-            raise Exception("Can't do an empty search. Give me something to work with here.")
+            raise Exception(
+                "Can't do an empty search. Give me something to work with here."
+            )
         
+        indices = ','.join(
+            ['{}{}'.format(INDEX_PREFIX, m) for m in doctypes]
+        )
         doctypes = ','.join(doctypes)
         logger.debug(json.dumps(query))
         _clean_dict(sort)
         sort_cleaned = _clean_sort(sort)
         fields = ','.join(fields)
-        
+
         results = self.es.search(
-            index=self.indexname,
-            doc_type=doctypes,
+            index=indices,
             body=query,
-            sort=sort_cleaned,
+            #sort=sort_cleaned,  # TODO figure out sorting
             from_=from_,
             size=size,
-            _source_include=fields,
+            #_source_include=fields,  # TODO figure out fields
         )
         return results
     
