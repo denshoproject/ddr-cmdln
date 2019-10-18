@@ -217,52 +217,6 @@ class Docstore():
             self.es.cat.aliases(h=['index','alias'])
         )
     
-    def delete_alias(self, alias, index):
-        """Remove specified alias.
-        
-        @param alias: Name of the alias
-        @param index: Name of the alias' target index.
-        """
-        logger.debug('deleting alias %s -> %s' % (alias, index))
-        alias = make_index_name(alias)
-        index = make_index_name(index)
-        if alias not in [alias for index,alias in self.aliases()]:
-            logger.error('Alias does not exist: "%s".' % alias)
-            return
-        result = self.es.indices.delete_alias(index=index, name=alias)
-        logger.debug(result)
-        logger.debug('DONE')
-        return result
-    
-    def create_alias(self, alias, index):
-        """Point alias at specified index; create index if doesn't exist.
-        
-        IMPORTANT: There should only ever be ONE alias per index.
-        Existing aliases are deleted before specified one is created.
-        
-        @param alias: Name of the alias
-        @param index: Name of the alias' target index.
-        """
-        logger.debug('creating alias %s -> %s' % (alias, index))
-        alias = make_index_name(alias)
-        index = make_index_name(index)
-        # delete existing alias
-        for i,a in self.aliases():
-            removed = ''
-            if a == alias:
-                self.es.indices.delete_alias(
-                    # NOTE: "i" is probably not the arg "index".  That's what
-                    #       we want. We only want the arg "index".
-                    index=i,
-                    name=alias
-                )
-                removed = ' (removed)'
-            print('%s -> %s%s' % (a,i,removed))
-        result = self.es.indices.put_alias(index=index, name=alias, body='')
-        logger.debug(result)
-        logger.debug('DONE')
-        return result
-     
     def target_index(self, alias):
         """Get the name of the index to which the alias points
         

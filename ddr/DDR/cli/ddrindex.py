@@ -1,7 +1,7 @@
 HELP = """
 ddrindex - publish DDR content to Elasticsearch; debug Elasticsearch
 
-Index Management: create, destroy, alias, mappings, status, reindex
+Index Management: create, destroy, mappings, status, reindex
 Publishing:       vocabs, post, postjson, index
 Debugging:        config, get, exists, search
 
@@ -56,10 +56,6 @@ Delete existing indices
 
 Reindex
   $ ddrindex reindex --index source --target dest
-
-Set or remove an index alias
-  $ ddrindex alias --index ddrpublic-20171108c --alias ddrpublic-dev
-  $ ddrindex alias --index ddrpublic-20171108c --alias ddrpublic-dev --delete --confirm
 
 Post arbitrary JSON documents:
   $ ddrindex postjson DOCTYPE DOCUMENTID /PATH/TO/DOCUMENT.json
@@ -246,33 +242,6 @@ def destroy(hosts, confirm):
             logprint('error', err)
     else:
         click.echo("Add '--confirm' if you're sure you want to do this.")
-
-
-@ddrindex.command()
-@click.option('--hosts','-h',
-              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
-              help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
-@click.option('--alias','-a', help='Alias to create.')
-@click.option('--delete','-D', is_flag=True, help='Delete specified alias.')
-def alias(hosts, index, alias, delete):
-    """Manage aliases.
-    """
-    if not alias:
-        click.echo("Error: no alias specified.")
-        return
-    if delete:
-        try:
-            docstore.Docstore(hosts, index).delete_alias(index=index, alias=alias)
-        except Exception as err:
-            logprint('error', err)
-    else:
-        try:
-            docstore.Docstore(hosts, index).create_alias(index=index, alias=alias)
-        except Exception as err:
-            logprint('error', err)
 
 
 @ddrindex.command()
