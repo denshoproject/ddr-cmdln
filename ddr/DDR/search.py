@@ -317,19 +317,35 @@ class SearchResults(object):
             )
         return u"<SearchResults [%s] %s>" % (self.total, q)
     
-    def to_dict(self, list_function):
+    def to_dict(self, format_functions):
         """Express search results in API and Redis-friendly structure
+        
+        @param format_functions: dict
         returns: dict
         """
-        return self._dict({}, list_function)
+        if hasattr(self, 'params') and self.params:
+            params = deepcopy(self.params)
+        
+        return self._dict(params, {}, format_functions)
     
-    def ordered_dict(self, list_function, pad=False):
+    def ordered_dict(self, format_functions, pad=False):
         """Express search results in API and Redis-friendly structure
+        
+        @param format_functions: dict
         returns: OrderedDict
         """
-        return self._dict(OrderedDict(), list_function, pad=pad)
+        if hasattr(self, 'params') and self.params:
+            params = deepcopy(self.params)
+        
+        return self._dict(params, OrderedDict(), format_functions, pad=pad)
     
-    def _dict(self, data, format_functions, pad=False):
+    def _dict(self, params, data, format_functions, request=None, pad=False):
+        """
+        @param params: dict
+        @param data: dict
+        @param format_functions: dict
+        @param pad: bool
+        """
         data['total'] = self.total
         data['limit'] = self.limit
         data['offset'] = self.offset
