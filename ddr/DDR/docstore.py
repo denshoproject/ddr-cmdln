@@ -76,8 +76,8 @@ ddr-public
 
 modelfields = elasticsearch._model_fields(MODELS_DIR, MODELS)
 cached = elasticsearch.query(host=host, index=index, model=model,
-raw = elasticsearch.get(HOST, index=settings.DOCUMENT_INDEX, model=Repository.model, id=id)
-document = elasticsearch.get(settings.ELASTICSEARCH_HOST_PORT, settings.DOCUMENT_INDEX,
+raw = elasticsearch.get(HOST, model=Repository.model, id=id)
+document = elasticsearch.get(settings.ELASTICSEARCH_HOST_PORT,
 elasticsearch.list_facets():
 results = elasticsearch.facet_terms(settings.ELASTICSEARCH_HOST_PORT,
 """
@@ -166,7 +166,6 @@ class Docstore():
         print('CONFIG_FILES:           %s' % config.CONFIG_FILES)
         print('')
         print('DOCSTORE_HOST:          %s' % config.DOCSTORE_HOST)
-        print('DOCSTORE_INDEX:         %s' % config.DOCSTORE_INDEX)
         print('')
     
     def health(self):
@@ -942,7 +941,7 @@ class Docstore():
             )
         return results
     
-    def backup(self, snapshot, indices=[config.DOCSTORE_INDEX]):
+    def backup(self, snapshot, indices=[]):
         """Make a snapshot backup of one or more Elasticsearch indices.
         
         repository = 'dev20190827'

@@ -156,18 +156,15 @@ def create(hosts):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.argument('indices')
 @click.argument('snapshot')
-def backup(hosts, index, indices, snapshot):
+def backup(hosts, indices, snapshot):
     """Make a snapshot backup of specified indices.
     
     """
     indices = [i.strip() for i in indices.split(',')]
     try:
-        r = docstore.Docstore(hosts, index).backup(snapshot, indices)
+        r = docstore.Docstore(hosts).backup(snapshot, indices)
     except Exception as err:
         logprint('error', err)
         r = {}
@@ -209,16 +206,13 @@ def backup(hosts, index, indices, snapshot):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.argument('indices')
 @click.argument('snapshot')
-def restore(hosts, index, indices, snapshot):
+def restore(hosts, indices, snapshot):
     """Restore a snapshot backup.
     """
     indices = [i.strip() for i in indices.split(',')]
-    r = docstore.Docstore(hosts, index).restore_snapshot(snapshot, indices)
+    r = docstore.Docstore(hosts).restore_snapshot(snapshot, indices)
     click.echo(r)
 
 
