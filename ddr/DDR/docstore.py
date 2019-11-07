@@ -207,30 +207,6 @@ class Docstore():
         """Returns list of index names
         """
         return [name for name in self.status()['indices'].keys()]
-     
-    def aliases(self):
-        """
-        @param hosts: list of dicts containing host information.
-        """
-        return _parse_cataliases(
-            self.es.cat.aliases(h=['index','alias'])
-        )
-    
-    def target_index(self, alias):
-        """Get the name of the index to which the alias points
-        
-        >>> es.cat.aliases(h=['alias','index'])
-        u'documents0 wd5000bmv-2 \n'
-        
-        @param alias: Name of the alias
-        @returns: name of target index
-        """
-        alias = make_index_name(alias)
-        target = []
-        for i,a in _parse_cataliases(self.es.cat.aliases(h=['index','alias'])):
-            if a == alias:
-                target = i
-        return target
     
     def create_indices(self):
         """Create indices for each model defined in ddr-defs/repo_models/elastic.py
@@ -1025,24 +1001,6 @@ def make_index_name(text):
             elif char.isalnum():
                 name.append(char.lower())
     return ''.join(name)
-
-def _parse_cataliases( cataliases ):
-    """
-    Sample input:
-    u'ddrworkstation documents0 \nwd5000bmv-2 documents0 \n'
- 
-    @param cataliases: Raw output of es.cat.aliases(h=['index','alias'])
-    @returns: list of (index,alias) tuples
-    """
-    indices_aliases = []
-    for line in cataliases.strip().split('\n'):
-        # cat.aliases arranges data in columns so rm extra spaces
-        while '  ' in line:
-            line = line.replace('  ', ' ')
-        if line:
-            i,a = line.strip().split(' ')
-            indices_aliases.append( (i,a) )
-    return indices_aliases
 
 def doctype_fields(es_class):
     """List content fields in DocType subclass (i.e. appear in _source).

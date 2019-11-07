@@ -69,13 +69,6 @@ def test_make_index_name():
 #    assert deleted == {u'acknowledged': True}
 #    assert exists_deleted == False
 
-# set_alias
-# target_index
-def test_parse_cataliases():
-    cataliases = u'ddrworkstation documents0 \nwd5000bmv-2 documents0 \n'
-    expected = [('ddrworkstation','documents0'), ('wd5000bmv-2','documents0')]
-    assert docstore._parse_cataliases(cataliases) == expected
-
 # put_mappings
 
 # post_facets

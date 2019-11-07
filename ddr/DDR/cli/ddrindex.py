@@ -426,14 +426,6 @@ def status(hosts):
     for i in index_names:
         logprint('debug', '- %s' % i, 0)
     
-    logprint('debug', 'Aliases', 0)
-    aliases = ds.aliases()
-    if aliases:
-        for index,alias in aliases:
-            logprint('debug', '- %s -> %s' % (alias, index), 0)
-    else:
-        logprint('debug', 'No aliases', 0)
-    
     #if ds.es.indices.exists(index=index):
     #    logprint('debug', 'Index %s present' % index, 0)
     #else:
