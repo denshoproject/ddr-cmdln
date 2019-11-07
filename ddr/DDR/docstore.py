@@ -82,65 +82,12 @@ elasticsearch.list_facets():
 results = elasticsearch.facet_terms(settings.ELASTICSEARCH_HOST_PORT,
 """
 
-
-REPOSITORY_LIST_FIELDS = ['id', 'title', 'description', 'url',]
-ORGANIZATION_LIST_FIELDS = ['id', 'title', 'description', 'url',]
-COLLECTION_LIST_FIELDS = ['id', 'title', 'description',]
-ENTITY_LIST_FIELDS = ['id', 'title', 'description',]
-FILE_LIST_FIELDS = ['id', 'basename_orig', 'label', 'access_rel','sort',]
-
-REPOSITORY_LIST_SORT = [
-    {'repo':'asc'},
-]
-ORGANIZATION_LIST_SORT = [
-    {'repo':'asc'},
-    {'org':'asc'},
-]
-COLLECTION_LIST_SORT = [
-    {'repo':'asc'},
-    {'org':'asc'},
-    {'cid':'asc'},
-    {'id':'asc'},
-]
-ENTITY_LIST_SORT = [
-    {'repo':'asc'},
-    {'org':'asc'},
-    {'cid':'asc'},
-    {'eid':'asc'},
-    {'id':'asc'},
-]
-FILE_LIST_SORT = [
-    {'repo':'asc'},
-    {'org':'asc'},
-    {'cid':'asc'},
-    {'eid':'asc'},
-    {'sort':'asc'},
-    {'role':'desc'},
-    {'id':'asc'},
-]
-
-def all_list_fields():
-    LIST_FIELDS = []
-    for mf in [REPOSITORY_LIST_FIELDS, ORGANIZATION_LIST_FIELDS,
-               COLLECTION_LIST_FIELDS, ENTITY_LIST_FIELDS, FILE_LIST_FIELDS]:
-        for f in mf:
-            if f not in LIST_FIELDS:
-                LIST_FIELDS.append(f)
-    return LIST_FIELDS
-
 def load_json(path):
     try:
         data = json.loads(fileio.read_text(path))
     except json.errors.JSONDecodeError:
         raise Exception('simplejson.errors.JSONDecodeError reading %s' % path)
     return data
-
-class InvalidPage(Exception):
-    pass
-class PageNotAnInteger(InvalidPage):
-    pass
-class EmptyPage(InvalidPage):
-    pass
 
 class Docstore():
     hosts = None
@@ -1009,60 +956,6 @@ def doctype_fields(es_class):
     """
     return es_class._doc_type.mapping.to_dict()['properties'].keys()
 
-def _filter_payload(data, public_fields):
-    """If requested, removes non-public fields from document before sending to ElasticSearch.
-    
-    >>> data = [{'id': 'ddr-testing-123-1'}, {'title': 'Title'}, {'secret': 'this is a secret'}]
-    >>> public_fields = ['id', 'title']
-    >>> _filter_payload(data, public_fields)
-    removed secret
-    >>> data
-    [{'id': 'ddr-testing-123-1'}, {'title': 'Title'}]
-    
-    @param data: Standard DDR list-of-dicts data structure.
-    @param public_fields: List of field names; if present, fields not in list will be removed.
-    """
-    if public_fields and data and isinstance(data, list):
-        for field in data[1:]:
-            fieldname = field.keys()[0]
-            if fieldname not in public_fields:
-                data.remove(field)
-                logging.debug('removed %s' % fieldname)
-
-def _clean_controlled_vocab(data):
-    """Extract topics IDs from textual control-vocab texts.
-
-    >>> _clean_controlled_vocab('Topics [123]')
-    ['123']
-    >>> _clean_controlled_vocab(['Topics [123]'])
-    ['123']
-    >>> _clean_controlled_vocab(['123'])
-    ['123']
-    >>> _clean_controlled_vocab([123])
-    ['123']
-    >>> _clean_controlled_vocab('123')
-    ['123']
-    >>> _clean_controlled_vocab(123)
-    ['123']
-    
-    @param data: contents of data field
-    @returns: list of ID strings
-    """
-    if isinstance(data, int):
-        data = str(data)
-    if isinstance(data, basestring):
-        data = [data]
-    cleaned = []
-    for x in data:
-        if not isinstance(x, basestring):
-            x = str(x)
-        if ('[' in x) and (']' in x):
-            y = x.split('[')[1].split(']')[0] 
-        else:
-            y = x
-        cleaned.append(y)
-    return cleaned
-
 def _clean_dict(data):
     """Remove null or empty fields; ElasticSearch chokes on them.
     
@@ -1077,139 +970,6 @@ def _clean_dict(data):
         for key in data.keys():
             if not data[key]:
                 del(data[key])
-
-def _clean_payload(data):
-    """Remove null or empty fields; ElasticSearch chokes on them.
-    """
-    # remove info about DDR release, git-annex version, etc
-    if data and isinstance(data, list):
-        # skip the initial metadata field
-        data = data[1:]
-        # remove empty fields
-        for field in data:
-            # rm null or empty fields
-            _clean_dict(field)
-
-def _format_datetimes(data):
-    """force datetimes into ES mapping format
-    # TODO refactor this once we get it working
-    """
-    DATETIME_FIELDS = [
-        'record_created',
-        'record_lastmod',
-    ]
-    for field,value in data.iteritems():
-        if field in DATETIME_FIELDS:
-            dt = converters.text_to_datetime(value)
-            # Use default timezone unless...
-            if data['org'] in config.ALT_TIMEZONES.keys():
-                timezone = config.ALT_TIMEZONES[data['org']]
-            else:
-                timezone = config.TZ
-            if not dt.tzinfo:
-                timezone.localize(dt)
-            data[field] = converters.datetime_to_text(
-                dt, config.ELASTICSEARCH_DATETIME_FORMAT
-            )
-
-def _filter_fields(i, data):
-    """Run index_* functions on data
-    
-    @param i: Identifier
-    @param data: dict
-    @returns: dict data
-    """
-    module = i.fields_module()
-    for field in module.FIELDS:
-        fieldname = field['name']
-        # run index_* functions on field data if present
-        data[fieldname] = modules.Module(module).function(
-            'index_%s' % fieldname,
-            data[fieldname]
-        )
-    return data
-
-def _validate_number(number, num_pages):
-        """Validates the given 1-based page number.
-        see django.core.pagination.Paginator.validate_number
-        """
-        try:
-            number = int(number)
-        except (TypeError, ValueError):
-            raise PageNotAnInteger('That page number is not an integer')
-        if number < 1:
-            raise EmptyPage('That page number is less than 1')
-        if number > num_pages:
-            if number == 1:
-                pass
-            else:
-                raise EmptyPage('That page contains no results')
-        return number
-
-def _page_bottom_top(total, index, page_size):
-        """
-        Returns a Page object for the given 1-based page number.
-        """
-        num_pages = total / page_size
-        if total % page_size:
-            num_pages = num_pages + 1
-        number = _validate_number(index, num_pages)
-        bottom = (number - 1) * page_size
-        top = bottom + page_size
-        return bottom,top,num_pages
-
-def massage_query_results(results, thispage, page_size):
-    """Takes ES query, makes facsimile of original object; pads results for paginator.
-    
-    Problem: Django Paginator only displays current page but needs entire result set.
-    Actually, it just needs a list that is the same size as the actual result set.
-    
-    GOOD:
-    Do an ElasticSearch search, without ES paging.
-    Loop through ES results, building new list, process only the current page's hits
-    hits outside current page added as placeholders
-    
-    BETTER:
-    Do an ElasticSearch search, *with* ES paging.
-    Loop through ES results, building new list, processing all the hits
-    Pad list with empty objects fore and aft.
-    
-    @param results: ElasticSearch result set (non-empty, no errors)
-    @param thispage: Value of GET['page'] or 1
-    @param page_size: Number of objects per page
-    @returns: list of hit dicts, with empty "hits" fore and aft of current page
-    """
-    def unlistify(o, fieldname):
-        if o.get(fieldname, None):
-            if isinstance(o[fieldname], list):
-                o[fieldname] = o[fieldname][0]
-    
-    objects = []
-    if results and results['hits']:
-        total = results['hits']['total']
-        bottom,top,num_pages = _page_bottom_top(total, thispage, page_size)
-        # only process this page
-        for n,hit in enumerate(results['hits']['hits']):
-            o = {'n':n,
-                 'id': hit['_id'],
-                 'placeholder': True}
-            if (n >= bottom) and (n < top):
-                # if we tell ES only return certain fields, object is in 'fields'
-                if hit.get('fields', None):
-                    o = hit['fields']
-                elif hit.get('_source', None):
-                    o = hit['_source']
-                # copy ES results info to individual object source
-                o['index'] = hit['_index']
-                o['type'] = hit['_type']
-                o['model'] = hit['_type']
-                o['id'] = hit['_id']
-                # ElasticSearch wraps field values in lists
-                # when you use a 'fields' array in a query
-                for fieldname in all_list_fields():
-                    unlistify(o, fieldname)
-            objects.append(o)
-    return objects
 
 def _clean_sort( sort ):
     """Take list of [a,b] lists, return comma-separated list of a:b pairs
@@ -1247,51 +1007,6 @@ def _public_fields(modules=MODULES):
     public_fields['file'].append('path_rel')
     public_fields['file'].append('id')
     return public_fields
-
-def _parents_status( paths ):
-    """Stores value of public,status for each collection,entity so entities,files can inherit.
-    
-    @param paths
-    @returns: dict
-    """
-    parents = {}
-    def _make_coll_ent(path):
-        """Store values of id,public,status for a collection or entity.
-        """
-        p = {'id':None,
-             'public':None,
-             'status':None,}
-        data = load_json(path)
-        for field in data:
-            fname = field.keys()[0]
-            if fname in p.keys():
-                p[fname] = field[fname]
-        return p
-    for path in paths:
-        if ('collection.json' in path) or ('entity.json' in path):
-            o = _make_coll_ent(path)
-            parents[o.pop('id')] = o
-    return parents
-
-def _file_parent_ids(identifier):
-    """Calculate the parent IDs of an entity or file from the filename.
-    
-    TODO not specific to elasticsearch - move this function so other modules can use
-    
-    >>> _file_parent_ids('collection', '.../ddr-testing-123/collection.json')
-    []
-    >>> _file_parent_ids('entity', '.../ddr-testing-123-1/entity.json')
-    ['ddr-testing-123']
-    >>> _file_parent_ids('file', '.../ddr-testing-123-1-master-a1b2c3d4e5.json')
-    ['ddr-testing-123', 'ddr-testing-123-1']
-    
-    @param identifier: Identifier
-    @returns: parent_ids
-    """
-    return [
-        identifier.parent_id(),
-        identifier.collection_id(),
-    ]
 
 def _all_parents(identifiers, excluded_models=['file']):
     """Given a list of identifiers, finds all the parents
@@ -1370,18 +1085,6 @@ def publishable(identifiers, parents, force=False):
         d['action'] = 'SKIP'
         path_dicts.append(d)
     return path_dicts
-
-def _has_access_file( identifier ):
-    """Determines whether the path has a corresponding access file.
-    
-    @param path: Absolute or relative path to JSON file.
-    @param suffix: Suffix that is applied to File ID to get access file.
-    @returns: True,False
-    """
-    access_abs = identifier.path_abs('access')
-    if os.path.exists(access_abs) or os.path.islink(access_abs):
-        return True
-    return False
 
 def search_query(text='', must=[], should=[], mustnot=[], aggs={}):
     """Assembles a dict conforming to the Elasticsearch query DSL.
