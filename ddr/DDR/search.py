@@ -18,9 +18,6 @@ from DDR import vocab
 
 DEFAULT_LIMIT = 1000
 
-# set default hosts and index
-DOCSTORE = docstore.Docstore()
-
 # whitelist of params recognized in URL query
 # TODO derive from ddr-defs/repo_models/
 SEARCH_PARAM_WHITELIST = [
@@ -72,11 +69,12 @@ SEARCH_AGG_FIELDS = {
 
 # TODO derive from ddr-defs/repo_models/
 SEARCH_MODELS = [
-    'repository',
-    'organization',
-    'collection',
-    'entity',
-    'narrator',
+    'ddrrepository',
+    'ddrorganization',
+    'ddrcollection',
+    'ddrentity',
+    'ddrfile',
+    'ddrnarrator',
 ]
 
 # fields searched by query
@@ -203,7 +201,7 @@ def es_host_name(conn):
     return ':'.join([hostdata['host'], hostdata['port']])
 
 def es_search():
-    return Search(using=DOCSTORE.es)
+    return Search(using=docstore.Docstore().es)
 
 
 class SearchResults(object):
@@ -246,7 +244,7 @@ class SearchResults(object):
             # objects
             self.objects = [hit for hit in results]
             if results.hits.total:
-                self.total = len(results.hits)
+                self.total = results.hits.total.value
 
             # aggregations
             self.aggregations = {}
@@ -257,8 +255,7 @@ class SearchResults(object):
                     if field in ['topics', 'facility']:
                         field_ids = '{}_ids'.format(field)
                         aggs = results.aggregations[field]
-                        if hasattr(aggs, 'field_ids'):
-                            self.aggregations[field] = aggs[field_ids].buckets
+                        self.aggregations[field] = aggs[field_ids].buckets
                      
                     # simple aggregations
                     else:
@@ -354,22 +351,20 @@ class SearchResults(object):
         data['page_size'] = self.page_size
         data['this_page'] = self.this_page
         data['num_this_page'] = len(self.objects)
-        
-        if hasattr(self, 'params') and self.params:
-            params = deepcopy(self.params)
-        
         if params.get('page'): params.pop('page')
         if params.get('limit'): params.pop('limit')
         if params.get('offset'): params.pop('offset')
         qs = [key + '=' + val for key,val in params.items()]
         query_string = '&'.join(qs)
-        
+        data['prev_api'] = ''
+        data['next_api'] = ''
         data['objects'] = []
+        data['query'] = self.query
+        data['aggregations'] = self.aggregations
         
         # pad before
         if pad:
             data['objects'] += [{'n':n} for n in range(0, self.page_start)]
-        
         # page
         for o in self.objects:
             format_function = format_functions[o.meta.index]
@@ -380,16 +375,14 @@ class SearchResults(object):
                     listitem=True,
                 )
             )
-        
         # pad after
         if pad:
             data['objects'] += [{'n':n} for n in range(self.page_next, self.total)]
         
-        data['query'] = self.query
-        data['aggregations'] = self.aggregations
         return data
 
 
+# TODO move to models
 def format_object(oi, d, is_detail=False):
     """Format detail or list objects for command-line
     
@@ -475,29 +468,28 @@ def sanitize_input(text):
     http://lucene.apache.org/core/old_versioned_docs/versions/2_9_1/queryparsersyntax.html
     TODO Maybe elasticsearch-dsl or elasticsearch-py do this already
     """
-    if isinstance(text, basestring):
-        text = re.sub(
-            '([{}])'.format(re.escape('\\+\-&|!(){}\[\]^~*?:\/')),
-            r"\\\1",
-            text
-        )
-        # AND, OR, and NOT are used by lucene as logical operators.
-        ## We need to escape these.
-        # ...actually, we don't. We want these to be available.
-        #for word in ['AND', 'OR', 'NOT']:
-        #    escaped_word = "".join(["\\" + letter for letter in word])
-        #    text = re.sub(
-        #        r'\s*\b({})\b\s*'.format(word),
-        #        r" {} ".format(escaped_word),
-        #        text
-        #    )
-        # Escape odd quotes
-        quote_count = text.count('"')
-        if quote_count % 2 == 1:
-            text = re.sub(r'(.*)"(.*)', r'\1\"\2', text)
-        return text
-    elif isinstance(text, list):
-        return [sanitize_input(item) for item in text]
+    text = re.sub(
+        '([{}])'.format(re.escape('\\+\-&|!(){}\[\]^~*?:\/')),
+        r"\\\1",
+        text
+    )
+    
+    # AND, OR, and NOT are used by lucene as logical operators.
+    ## We need to escape these.
+    # ...actually, we don't. We want these to be available.
+    #for word in ['AND', 'OR', 'NOT']:
+    #    escaped_word = "".join(["\\" + letter for letter in word])
+    #    text = re.sub(
+    #        r'\s*\b({})\b\s*'.format(word),
+    #        r" {} ".format(escaped_word),
+    #        text
+    #    )
+    
+    # Escape odd quotes
+    quote_count = text.count('"')
+    if quote_count % 2 == 1:
+        text = re.sub(r'(.*)"(.*)', r'\1\"\2', text)
+    return text
 
 class Searcher(object):
     """Wrapper around elasticsearch_dsl.Search
@@ -510,7 +502,7 @@ class Searcher(object):
     >>> d = r.to_dict(request)
     """
     
-    def __init__(self, conn=DOCSTORE.es, search=None):
+    def __init__(self, conn=docstore.Docstore().es, search=None):
         """
         @param conn: elasticsearch.Elasticsearch with hosts/port
         @param index: str Elasticsearch index name
@@ -531,7 +523,7 @@ class Searcher(object):
     def prepare(self, params={}, params_whitelist=SEARCH_PARAM_WHITELIST, search_models=SEARCH_MODELS, fields=SEARCH_INCLUDE_FIELDS, fields_nested=SEARCH_NESTED_FIELDS, fields_agg=SEARCH_AGG_FIELDS):
         """Assemble elasticsearch_dsl.Search object
         
-        @param params:           dict or HttpRequest
+        @param params:           dict
         @param params_whitelist: list Accept only these (SEARCH_PARAM_WHITELIST)
         @param search_models:    list Limit to these ES doctypes (SEARCH_MODELS)
         @param fields:           list Retrieve these fields (SEARCH_INCLUDE_FIELDS)
@@ -551,11 +543,6 @@ class Searcher(object):
             for key,val in params.items()
         }
         
-        if params.get('fulltext'):
-            fulltext = params.pop('fulltext')
-        else:
-            fulltext = ''
-        
         # scrub fields not in whitelist
         bad_fields = [
             key for key in params.keys()
@@ -564,26 +551,18 @@ class Searcher(object):
         for key in bad_fields:
             params.pop(key)
         
+        indices = search_models
         if params.get('models'):
             indices = ','.join([
-                DOCSTORE.index_name(model) for model in params.pop('models')
+                docstore.Docstore().index_name(model) for model in models
             ])
-        else:
-            indices = search_models
-
-        parent = ''
-        if params.get('parent'):
-            parent = params.pop('parent')
-            if isinstance(parent, list) and (len(parent) == 1):
-                parent = parent[0]
-            if parent:
-                parent = '%s*' % parent
         
         s = Search(using=self.conn, index=indices)
-        #s = s.source(include=SEARCH_LIST_FIELDS)
         
-        # fulltext query
-        if fulltext:
+        if params.get('match_all'):
+            s = s.query('match_all')
+        elif params.get('fulltext'):
+            fulltext = params.pop('fulltext')
             # MultiMatch chokes on lists
             if isinstance(fulltext, list) and (len(fulltext) == 1):
                 fulltext = fulltext[0]
@@ -598,8 +577,12 @@ class Searcher(object):
                 )
             )
 
-        if parent:
-            parent = '%s*' % parent
+        if params.get('parent'):
+            parent = params.pop('parent')
+            if isinstance(parent, list) and (len(parent) == 1):
+                parent = parent[0]
+            if parent:
+                parent = '%s*' % parent
             s = s.query("wildcard", id=parent)
         
         # filters
