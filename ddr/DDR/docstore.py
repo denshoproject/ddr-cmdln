@@ -21,7 +21,7 @@ d.post_multi('/var/www/media/ddr/ddr-densho-10', recursive=True)
 d.post_vocabs(docstore.VOCABS_URL)
 
 # Narrators metadata
-d.narrators('/opt/ddr-local/ddr-defs/narrators.json')
+d.narrators('/opt/ddr-local/densho-vocab/api/0.2/narrators.json')
 
 # Delete a collection
 d.delete(os.path.basename(PATH), recursive=True)

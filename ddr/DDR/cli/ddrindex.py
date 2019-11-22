@@ -25,7 +25,7 @@ Post vocabularies (used for topics, facility fields)
   $ ddrindex vocabs /opt/ddr-vocab/api/0.2
 
 Post narrators:
-  $ ddrindex narrators /opt/ddr-local/ddr-defs/narrators.json
+  $ ddrindex narrators /opt/ddr-local/densho-vocab/api/0.2/narrators.json
 
 MANAGEMENT COMMANDS
 
