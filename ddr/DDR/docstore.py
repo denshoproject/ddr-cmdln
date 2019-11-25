@@ -143,9 +143,6 @@ class EmptyPage(InvalidPage):
     pass
 
 class Docstore():
-    hosts = None
-    facets = None
-    es = None
 
     def __init__(self, hosts=config.DOCSTORE_HOST, connection=None):
         self.hosts = hosts
@@ -171,6 +168,14 @@ class Docstore():
     
     def health(self):
         return self.es.cluster.health()
+    
+    def start_test(self):
+        try:
+            self.es.cluster.health()
+        except TransportError:
+            logger.critical('Elasticsearch cluster unavailable')
+            print('CRITICAL: Elasticsearch cluster unavailable')
+            sys.exit(1)
     
     def index_exists(self, indexname):
         """
@@ -801,7 +806,6 @@ class Docstore():
      
     def exists(self, model, document_id):
         """
-        
         @param model:
         @param document_id:
         """
@@ -836,18 +840,20 @@ class Docstore():
         @param query: dict The search definition using Elasticsearch Query DSL
         @returns raw ElasticSearch query output
         """
-        logger.debug('count(index=%s, doctypes=%s, query=%s' % (
-            self.indexname, doctypes, query
-        ))
+        logger.debug('count(doctypes=%s, query=%s' % (doctypes, query))
         if not query:
-            raise Exception("Can't do an empty search. Give me something to work with here.")
+            raise Exception(
+                "Can't do an empty search. Give me something to work with here."
+            )
         
+        indices = ','.join(
+            ['{}{}'.format(INDEX_PREFIX, m) for m in doctypes]
+        )
         doctypes = ','.join(doctypes)
         logger.debug(json.dumps(query))
         
         return self.es.count(
-            index=self.indexname,
-            doc_type=doctypes,
+            index=indices,
             body=query,
         )
     
@@ -908,26 +914,31 @@ class Docstore():
         @param size: int Number of results to return
         @returns raw ElasticSearch query output
         """
-        logger.debug('search(index=%s, doctypes=%s, query=%s, sort=%s, fields=%s, from_=%s, size=%s' % (
-            self.indexname, doctypes, query, sort, fields, from_, size
+        logger.debug(
+            'search(doctypes=%s, query=%s, sort=%s, fields=%s, from_=%s, size=%s' % (
+                doctypes, query, sort, fields, from_, size
         ))
         if not query:
-            raise Exception("Can't do an empty search. Give me something to work with here.")
+            raise Exception(
+                "Can't do an empty search. Give me something to work with here."
+            )
         
+        indices = ','.join(
+            ['{}{}'.format(INDEX_PREFIX, m) for m in doctypes]
+        )
         doctypes = ','.join(doctypes)
         logger.debug(json.dumps(query))
         _clean_dict(sort)
         sort_cleaned = _clean_sort(sort)
         fields = ','.join(fields)
-        
+
         results = self.es.search(
-            index=self.indexname,
-            doc_type=doctypes,
+            index=indices,
             body=query,
             sort=sort_cleaned,
             from_=from_,
             size=size,
-            _source_include=fields,
+            #_source_include=fields,  # TODO figure out fields
         )
         return results
     
@@ -1465,6 +1476,36 @@ def _has_access_file( identifier ):
         return True
     return False
 
+
+def aggs_dict(aggregations):
+    """Simplify aggregations data in search results
+    
+    input
+    {
+        u'format': {
+            u'buckets': [{u'doc_count': 2, u'key': u'ds'}],
+            u'doc_count_error_upper_bound': 0,
+            u'sum_other_doc_count': 0
+        },
+        u'rights': {
+            u'buckets': [{u'doc_count': 3, u'key': u'cc'}],
+            u'doc_count_error_upper_bound': 0, u'sum_other_doc_count': 0
+        },
+    }
+    output
+    {
+        u'format': {u'ds': 2},
+        u'rights': {u'cc': 3},
+    }
+    """
+    return {
+        fieldname: {
+            bucket['key']: bucket['doc_count']
+            for bucket in data['buckets']
+        }
+        for fieldname,data in aggregations.items()
+    }
+
 def search_query(text='', must=[], should=[], mustnot=[], aggs={}):
     """Assembles a dict conforming to the Elasticsearch query DSL.
     
@@ -1489,7 +1530,10 @@ def search_query(text='', must=[], should=[], mustnot=[], aggs={}):
     
     >>> from DDR import docstore,format_json
     >>> t = 'posthuman'
-    >>> a = [{'terms':{'language':['eng','chi']}}, {'terms':{'creators.role':['distraction']}}]
+    >>> a = [
+        {'terms':{'language':['eng','chi']}},
+        {'terms':{'creators.role':['distraction']}}
+    ]
     >>> q = docstore.search_query(text=t, must=a)
     >>> print(format_json(q))
     >>> d = ['entity','segment']
