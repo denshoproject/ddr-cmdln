@@ -47,7 +47,6 @@ def ddrconfig():
         'IDSERVICE_CHECKIDS_URL',
         'IDSERVICE_REGISTERIDS_URL',
         'DOCSTORE_HOST',
-        'DOCSTORE_INDEX',
         'VOCABS_URL',
         'REPO_MODELS_PATH',
     ]

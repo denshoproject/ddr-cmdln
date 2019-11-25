@@ -1,7 +1,7 @@
 HELP = """
 ddrindex - publish DDR content to Elasticsearch; debug Elasticsearch
 
-Index Management: create, destroy, alias, mappings, status, reindex
+Index Management: create, destroy, mappings, status, reindex
 Publishing:       vocabs, post, postjson, index
 Debugging:        config, get, exists, search
 
@@ -56,10 +56,6 @@ Delete existing indices
 
 Reindex
   $ ddrindex reindex --index source --target dest
-
-Set or remove an index alias
-  $ ddrindex alias --index ddrpublic-20171108c --alias ddrpublic-dev
-  $ ddrindex alias --index ddrpublic-20171108c --alias ddrpublic-dev --delete --confirm
 
 Post arbitrary JSON documents:
   $ ddrindex postjson DOCTYPE DOCUMENTID /PATH/TO/DOCUMENT.json
@@ -160,18 +156,15 @@ def create(hosts):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.argument('indices')
 @click.argument('snapshot')
-def backup(hosts, index, indices, snapshot):
+def backup(hosts, indices, snapshot):
     """Make a snapshot backup of specified indices.
     
     """
     indices = [i.strip() for i in indices.split(',')]
     try:
-        r = docstore.Docstore(hosts, index).backup(snapshot, indices)
+        r = docstore.Docstore(hosts).backup(snapshot, indices)
     except Exception as err:
         logprint('error', err)
         r = {}
@@ -213,16 +206,13 @@ def backup(hosts, index, indices, snapshot):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.argument('indices')
 @click.argument('snapshot')
-def restore(hosts, index, indices, snapshot):
+def restore(hosts, indices, snapshot):
     """Restore a snapshot backup.
     """
     indices = [i.strip() for i in indices.split(',')]
-    r = docstore.Docstore(hosts, index).restore_snapshot(snapshot, indices)
+    r = docstore.Docstore(hosts).restore_snapshot(snapshot, indices)
     click.echo(r)
 
 
@@ -246,33 +236,6 @@ def destroy(hosts, confirm):
             logprint('error', err)
     else:
         click.echo("Add '--confirm' if you're sure you want to do this.")
-
-
-@ddrindex.command()
-@click.option('--hosts','-h',
-              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
-              help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
-@click.option('--alias','-a', help='Alias to create.')
-@click.option('--delete','-D', is_flag=True, help='Delete specified alias.')
-def alias(hosts, index, alias, delete):
-    """Manage aliases.
-    """
-    if not alias:
-        click.echo("Error: no alias specified.")
-        return
-    if delete:
-        try:
-            docstore.Docstore(hosts, index).delete_alias(index=index, alias=alias)
-        except Exception as err:
-            logprint('error', err)
-    else:
-        try:
-            docstore.Docstore(hosts, index).create_alias(index=index, alias=alias)
-        except Exception as err:
-            logprint('error', err)
 
 
 @ddrindex.command()
@@ -463,14 +426,6 @@ def status(hosts):
     for i in index_names:
         logprint('debug', '- %s' % i, 0)
     
-    logprint('debug', 'Aliases', 0)
-    aliases = ds.aliases()
-    if aliases:
-        for index,alias in aliases:
-            logprint('debug', '- %s -> %s' % (alias, index), 0)
-    else:
-        logprint('debug', 'No aliases', 0)
-    
     #if ds.es.indices.exists(index=index):
     #    logprint('debug', 'Index %s present' % index, 0)
     #else:
@@ -491,7 +446,7 @@ def status(hosts):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--doctypes','-t',
+@click.option('--models','-m',
               default='collection,entity,segment,file',
               help='One or more doctypes (comma-separated).')
 @click.option('--parent','-P',
@@ -516,7 +471,7 @@ def status(hosts):
               is_flag=True, default=False,
               help='Raw Elasticsearch output.')
 @click.argument('fulltext')
-def search(hosts, doctypes, parent, filters, limit, offset, page, aggregations, raw, fulltext):
+def search(hosts, models, parent, filters, limit, offset, page, aggregations, raw, fulltext):
     """Fulltext search using Elasticsearch query_string syntax.
     
     \b
@@ -533,7 +488,7 @@ def search(hosts, doctypes, parent, filters, limit, offset, page, aggregations, 
     \b
     Specify parent object and doctype/model:
         $ ddrindex search seattle --parent=ddr-densho-12
-        $ ddrindex search seattle --doctypes=entity,segment
+        $ ddrindex search seattle --models=entity,segment
     
     \b
     Filter on certain fields (filters may repeat):
@@ -543,10 +498,10 @@ def search(hosts, doctypes, parent, filters, limit, offset, page, aggregations, 
     Use the --aggregations/-a flag to display filter aggregations,
     with document counts, filter keys, and labels.
     """
-    doctypes = doctypes.split(',')
+    models = models.split(',')
     results = search_.search(
         hosts,
-        doctypes=doctypes,
+        models=models,
         parent=parent,
         filters=filters,
         fulltext=fulltext,

@@ -7,7 +7,7 @@ import os
 import re
 import urlparse
 
-from elasticsearch_dsl import Index, Search, A, Q, A
+from elasticsearch_dsl import Index, Search, A, Q
 from elasticsearch_dsl.query import Match, MultiMatch, QueryString
 from elasticsearch_dsl.connections import connections
 
@@ -77,9 +77,12 @@ SEARCH_AGG_FIELDS = {
 
 # TODO derive from ddr-defs/repo_models/
 SEARCH_MODELS = [
+    'ddrrepository',
+    'ddrorganization',
     'ddrcollection',
     'ddrentity',
-    'ddrnarrator'
+    'ddrfile',
+    'ddrnarrator',
 ]
 
 # fields searched by query
@@ -212,7 +215,7 @@ def es_host_name(conn):
     return ':'.join([hostdata['host'], hostdata['port']])
 
 def es_search():
-    return Search(using=DOCSTORE.es)
+    return Search(using=docstore.Docstore().es)
 
 
 class SearchResults(object):
@@ -313,17 +316,6 @@ class SearchResults(object):
             self.prev_offset = None
         if self.next_offset >= self.total:
             self.next_offset = None
-
-        # django
-        self.page_size = self.limit
-        self.this_page = django_page(self.limit, self.offset)
-        self.prev_page = u''
-        self.next_page = u''
-        # django pagination
-        self.page_start = (self.this_page - 1) * self.page_size
-        self.page_next = self.this_page * self.page_size
-        self.pad_before = range(0, self.page_start)
-        self.pad_after = range(self.page_next, self.total)
     
     def __repr__(self):
         try:
@@ -335,17 +327,6 @@ class SearchResults(object):
                 self.offset, self.offset + self.limit, self.total, q
             )
         return u"<SearchResults [%s] %s>" % (self.total, q)
-
-    def _make_prevnext_url(self, query, request):
-        if request:
-            return urlunsplit([
-                request.META['wsgi.url_scheme'],
-                request.META.get('HTTP_HOST', 'testserver'),
-                request.META['PATH_INFO'],
-                query,
-                None,
-            ])
-        return '?%s' % query
     
     def to_dict(self, format_functions):
         """Express search results in API and Redis-friendly structure
@@ -353,7 +334,8 @@ class SearchResults(object):
         @param format_functions: dict
         returns: dict
         """
-	params = deepcopy(self.params)
+        if hasattr(self, 'params') and self.params:
+            params = deepcopy(self.params)
         return self._dict(params, {}, format_functions)
     
     def ordered_dict(self, format_functions, pad=False):
@@ -362,10 +344,11 @@ class SearchResults(object):
         @param format_functions: dict
         returns: OrderedDict
         """
-        params = deepcopy(self.params)
-        return self._dict(OrderedDict(), format_functions, pad=pad)
+        if hasattr(self, 'params') and self.params:
+            params = deepcopy(self.params)
+        return self._dict(params, OrderedDict(), format_functions, pad=pad)
     
-    def _dict(self, params, data, format_functions, pad=False):
+    def _dict(self, params, data, format_functions, request=None, pad=False):
         """
         @param params: dict
         @param data: dict
@@ -411,46 +394,7 @@ class SearchResults(object):
         return data
 
 
-def sanitize_input(text):
-    if isinstance(text, basestring):
-        data = [text]
-    elif isinstance(text, list):
-        data = text
-    elif isinstance(text, dict):
-        # TODO we aren't handling those yet :P
-        return text
-    
-    cleaned = []
-    for t in data:
-        # Escape special characters
-        # http://lucene.apache.org/core/old_versioned_docs/versions/2_9_1/queryparsersyntax.html
-        t = re.sub(
-            '([{}])'.format(re.escape('\\+\-&|!(){}\[\]^~*?:\/')),
-            r"\\\1",
-            t
-        )
-        # AND, OR, and NOT are used by lucene as logical operators.
-        ## We need to escape these.
-        # ...actually, we don't. We want these to be available.
-        #for word in ['AND', 'OR', 'NOT']:
-        #    escaped_word = "".join(["\\" + letter for letter in word])
-        #    text = re.sub(
-        #        r'\s*\b({})\b\s*'.format(word),
-        #        r" {} ".format(escaped_word),
-        #        text
-        #    )
-        # Escape odd quotes
-        quote_count = t.count('"')
-        if quote_count % 2 == 1:
-            t = re.sub(r'(.*)"(.*)', r'\1\"\2', t)
-        cleaned.append(t)
-    
-    if isinstance(text, str):
-        return cleaned[0]
-    elif isinstance(text, list):
-        return cleaned
-
-
+# TODO move to models
 def format_object(oi, d, is_detail=False):
     """Format detail or list objects for command-line
     
@@ -530,6 +474,35 @@ def make_links(oi, d, source='fs', is_detail=False):
     return links
 
 
+def sanitize_input(text):
+    """Escape special characters
+    
+    http://lucene.apache.org/core/old_versioned_docs/versions/2_9_1/queryparsersyntax.html
+    TODO Maybe elasticsearch-dsl or elasticsearch-py do this already
+    """
+    text = re.sub(
+        '([{}])'.format(re.escape('\\+\-&|!(){}\[\]^~*?:\/')),
+        r"\\\1",
+        text
+    )
+    
+    # AND, OR, and NOT are used by lucene as logical operators.
+    ## We need to escape these.
+    # ...actually, we don't. We want these to be available.
+    #for word in ['AND', 'OR', 'NOT']:
+    #    escaped_word = "".join(["\\" + letter for letter in word])
+    #    text = re.sub(
+    #        r'\s*\b({})\b\s*'.format(word),
+    #        r" {} ".format(escaped_word),
+    #        text
+    #    )
+    
+    # Escape odd quotes
+    quote_count = text.count('"')
+    if quote_count % 2 == 1:
+        text = re.sub(r'(.*)"(.*)', r'\1\"\2', text)
+    return text
+
 class Searcher(object):
     """Wrapper around elasticsearch_dsl.Search
     
@@ -541,7 +514,7 @@ class Searcher(object):
     >>> d = r.to_dict(request)
     """
     
-    def __init__(self, conn=DOCSTORE.es, search=None):
+    def __init__(self, conn=docstore.Docstore().es, search=None):
         """
         @param conn: elasticsearch.Elasticsearch with hosts/port
         @param index: str Elasticsearch index name
@@ -592,21 +565,14 @@ class Searcher(object):
         
         indices = search_models
         if params.get('models'):
-            indices = ','.join([DOCSTORE.index_name(model) for model in models])
+            indices = ','.join([
+                docstore.Docstore().index_name(model) for model in models
+            ])
         
         s = Search(using=self.conn, index=indices)
         
-        # only return specified fields
-        s = s.source(fields)
-        
-        # sorting
-        if params.get('sort'):
-            args = params.pop('sort')
-            s = s.sort(*args)
-        
         if params.get('match_all'):
             s = s.query('match_all')
-        
         elif params.get('fulltext'):
             fulltext = params.pop('fulltext')
             # MultiMatch chokes on lists
@@ -622,32 +588,13 @@ class Searcher(object):
                     default_operator='AND',
                 )
             )
-        
-        elif params.get('topics') or params.get('facility'):
-            # SPECIAL CASE FOR DDRPUBLIC TOPICS, FACILITY BROWSE PAGES
-            if params.get('topics'):
-                q = Q('bool',
-                      must=[Q('nested',
-                              path='topics',
-                              query=Q('term', topics__id=params.pop('topics'))
-                      )]
-                )
-                s = s.query(q)
-            elif params.get('facility'):
-                q = Q('bool',
-                      must=[Q('nested',
-                              path='facility',
-                              query=Q('term', facility__id=params.pop('facility'))
-                      )]
-                )
-                s = s.query(q)
 
         if params.get('parent'):
             parent = params.pop('parent')
             if isinstance(parent, list) and (len(parent) == 1):
                 parent = parent[0]
             if parent:
-                parent = '%s-*' % parent
+                parent = '%s*' % parent
             s = s.query("wildcard", id=parent)
         
         # filters
@@ -732,7 +679,7 @@ class Searcher(object):
         )
 
 
-def search(hosts, doctypes=[], parent=None, filters=[], fulltext='', limit=10000, offset=0, page=None, aggregations=False):
+def search(hosts, models=[], parent=None, filters=[], fulltext='', limit=10000, offset=0, page=None, aggregations=False):
     """Fulltext search using Elasticsearch query_string syntax.
     
     Note: More approachable, higher-level function than DDR.docstore.search.
@@ -757,7 +704,7 @@ def search(hosts, doctypes=[], parent=None, filters=[], fulltext='', limit=10000
         filter=['topics:373', 'facility=12']
     
     @param hosts dict: config.DOCSTORE_HOST
-    @param doctypes list: Restrict to one or more models.
+    @param models list: Restrict to one or more models.
     @param parent str: ID of parent object (partial OK).
     @param filters list: Filter on certain fields (FIELD:VALUE,VALUE,...).
     @param fulltext str: Fulltext search query.
@@ -765,6 +712,9 @@ def search(hosts, doctypes=[], parent=None, filters=[], fulltext='', limit=10000
     @param offset int: Number of initial results to skip (use with limit).
     @param page int: Which page of results to show.
     """
+    if not models:
+        models = SEARCH_MODELS
+        
     if filters:
         data = {}
         for f in filters:
@@ -781,15 +731,12 @@ def search(hosts, doctypes=[], parent=None, filters=[], fulltext='', limit=10000
         thispage = int(page)
         offset = es_offset(limit, thispage)
     
-    searcher = Searcher(
-        mappings=identifier.ELASTICSEARCH_CLASSES_BY_MODEL,
-        fields=identifier.ELASTICSEARCH_LIST_FIELDS,
-    )
-    searcher.prepare(
-        fulltext=fulltext,
-        models=doctypes,
-        parent=parent,
-        filters=filters,
-    )
+    searcher = Searcher()
+    searcher.prepare(params={
+        'fulltext': fulltext,
+        'models': models,
+        'parent': parent,
+        'filters': filters,
+    })
     results = searcher.execute(limit, offset)
     return results
