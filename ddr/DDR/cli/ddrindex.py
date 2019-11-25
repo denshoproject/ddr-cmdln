@@ -1,38 +1,31 @@
 HELP = """
 ddrindex - publish DDR content to Elasticsearch; debug Elasticsearch
 
-Index Management: create, destroy, alias, mappings, status, reindex
+Index Management: create, destroy, mappings, status, reindex
 Publishing:       vocabs, post, postjson, index
 Debugging:        config, get, exists, search
 
-By default the command uses DOCSTORE_HOSTS and DOCSTORE_INDEX from the
-config file.  Override these values using the --hosts and --index options
-or with environment variables:
+By default the command uses DOCSTORE_HOSTS from the config file.  Override
+these values using the --hosts option or with an environment variable:
   $ export DOCSTORE_HOSTS=192.168.56.1:9200
-  $ export DOCSTORE_INDEX=ddrlocal-YYYYMMDDa
 
 CORE COMMANDS
 
-Initialize index (creates index and adds mappings)
+Initialize indices (creates indices with mappings)
   $ ddrindex create
-Create a bare index (no mappings)
-  $ ddrindex create --bare --index INDEXNAME
-
-Publish vocabularies (used for topics, facility fields)
-  $ ddrindex vocabs /opt/ddr-vocab/api/0.2
 
 Post repository and organization:
-  $ ddrindex repo REPO /var/www/media/ddr/REPO/repository.json
-  $ ddrindex org REPO-ORG /var/www/media/ddr/REPO-ORG/organization.json
+  $ ddrindex repo /var/www/media/ddr/REPO/repository.json
+  $ ddrindex org /var/www/media/ddr/REPO-ORG/organization.json
 
 Post an object. Optionally, publish its child objects and/or ignore publication status.
   $ ddrindex publish [--recurse] [--force] /var/www/media/ddr/ddr-testing-123
 
-Post narrators:
-  $ ddrindex narrators /opt/ddr-local/ddr-defs/narrators.json
+Post vocabularies (used for topics, facility fields)
+  $ ddrindex vocabs /opt/ddr-vocab/api/0.2
 
-Post arbitrary JSON files:
-  $ ddrindex postjson DOCTYPE DOCUMENTID /PATH/TO/FILE.json
+Post narrators:
+  $ ddrindex narrators /opt/ddr-local/densho-vocab/api/0.2/narrators.json
 
 MANAGEMENT COMMANDS
 
@@ -42,32 +35,30 @@ View current settings
 Check status
   $ ddrindex status
 
-Set or remove an index alias
-  $ ddrindex alias --index ddrpublic-20171108c --alias ddrpublic-dev
-  $ ddrindex alias --index ddrpublic-20171108c --alias ddrpublic-dev --delete --confirm
-
-Post arbitrary JSON documents:
-  $ ddrindex postjson DOCTYPE DOCUMENTID /PATH/TO/DOCUMENT.json
-
-Search
-  $ ddrindex search collection,entity Minidoka
-
 See if document exists
   $ ddrindex exists collection ddr-testing-123
+
 Get document
   $ ddrindex get collection ddr-testing-123
+Get document as JSON
+  $ ddrindex get collection ddr-testing-123 --json
+Get document as JSON (formatted)
+  $ ddrindex get collection ddr-testing-123 --json | jq
 
 Remove document
   $ ddrindex delete DOCTYPE DOCUMENTID
 
-Delete existing index
-  $ ddrindex destroy --index documents --confirm
+Search
+  $ ddrindex search collection,entity Minidoka
+
+Delete existing indices
+  $ ddrindex destroy --confirm
 
 Reindex
   $ ddrindex reindex --index source --target dest
 
-Update mappings (or add to a bare index).
-  $ ddrindex mappings
+Post arbitrary JSON documents:
+  $ ddrindex postjson DOCTYPE DOCUMENTID /PATH/TO/DOCUMENT.json
 """
 
 from datetime import datetime
@@ -121,11 +112,9 @@ def ddrindex(debug):
     """ddrindex - publish DDR content to Elasticsearch; debug Elasticsearch
     
     \b
-    By default the command uses DOCSTORE_HOSTS and DOCSTORE_INDEX from the
-    config file.  Override these values using the --hosts and --index options
-    or with environment variables:
-      $ export DOCSTORE_HOSTS=192.168.56.1:9200
-      $ export DOCSTORE_INDEX=ddrlocal-YYYYMMDDa
+    By default the command uses DOCSTORE_HOSTS from the config file.  Override
+    these values using the --hosts option or with an environment variable:
+        $ export DOCSTORE_HOSTS=192.168.56.1:9200
     """
     if debug:
         click.echo('Debug mode is on')
@@ -142,29 +131,23 @@ def help():
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
-def conf(hosts, index):
+def conf(hosts):
     """Print configuration settings.
     
     More detail since you asked.
     """
-    docstore.Docstore(hosts, index).print_configs()
+    docstore.Docstore(hosts).print_configs()
 
 
 @ddrindex.command()
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
-def create(hosts, index):
-    """Create new index.
+def create(hosts):
+    """Create new indices.
     """
     try:
-        docstore.Docstore(hosts, index).create_index(index)
+        docstore.Docstore(hosts).create_indices()
     except Exception as err:
         logprint('error', err)
 
@@ -173,13 +156,74 @@ def create(hosts, index):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
+@click.argument('indices')
+@click.argument('snapshot')
+def backup(hosts, indices, snapshot):
+    """Make a snapshot backup of specified indices.
+    
+    """
+    indices = [i.strip() for i in indices.split(',')]
+    try:
+        r = docstore.Docstore(hosts).backup(snapshot, indices)
+    except Exception as err:
+        logprint('error', err)
+        r = {}
+        click.echo('Checklist:')
+        click.echo(
+            '- Check value of [public] docstore_path_repo in ddrlocal.cfg ({})'.format(
+                config.ELASTICSEARCH_PATH_REPO
+        ))
+        click.echo('- path.repo must be set in elasticsearch.yml on each node of cluster.')
+        click.echo('- path.repo must be writable on each node of cluster.')
+    if r:
+        click.echo('repository: {}'.format(r['repository']))
+        # snapshot feedback
+        if r['snapshot'].get('accepted') and r['snapshot']['accepted']:
+            # snapshot started
+            click.echo('Backup started. Reissue command for status updates.')
+        elif r['snapshot'].get('accepted') and not r['snapshot']['accepted']:
+            # problem
+            click.echo('Error: problem with backup!')
+        elif r['snapshot'].get('snapshots'):
+            # in progress or SUCCESS
+            for s in r['snapshot']['snapshots']:
+                click.echo('{}  {} {}'.format(
+                    s['start_time'],
+                    s['snapshot'],
+                    ','.join(s['indices']),
+                ))
+                click.echo('{}  {}'.format(
+                    s.get('end_time'),
+                    s['state'],
+                ))
+                if s['state'] != 'SUCCESS':
+                    click.echo(s)
+        else:
+            click.echo('snapshot:   {}'.format(r['snapshot']))
+
+
+@ddrindex.command()
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.argument('indices')
+@click.argument('snapshot')
+def restore(hosts, indices, snapshot):
+    """Restore a snapshot backup.
+    """
+    indices = [i.strip() for i in indices.split(',')]
+    r = docstore.Docstore(hosts).restore_snapshot(snapshot, indices)
+    click.echo(r)
+
+
+@ddrindex.command()
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
 @click.option('--confirm', is_flag=True,
               help='Yes I really want to delete this index.')
-def destroy(hosts, index, confirm):
-    """Delete index (requires --confirm).
+def destroy(hosts, confirm):
+    """Delete indices (requires --confirm).
     
     \b
     It's meant to sound serious. Also to not clash with 'delete', which
@@ -187,7 +231,7 @@ def destroy(hosts, index, confirm):
     """
     if confirm:
         try:
-            docstore.Docstore(hosts, index).delete_index()
+            docstore.Docstore(hosts).delete_indices()
         except Exception as err:
             logprint('error', err)
     else:
@@ -198,54 +242,19 @@ def destroy(hosts, index, confirm):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
-@click.option('--alias','-a', help='Alias to create.')
-@click.option('--delete','-D', is_flag=True, help='Delete specified alias.')
-def alias(hosts, index, alias, delete):
-    """Manage aliases.
+@click.option('--indices','-i', help='Comma-separated list of indices to display.')
+def mappings(hosts, indices):
+    """Display mappings for the specified index/indices.
     """
-    if not alias:
-        click.echo("Error: no alias specified.")
-        return
-    if delete:
-        try:
-            docstore.Docstore(hosts, index).delete_alias(index=index, alias=alias)
-        except Exception as err:
-            logprint('error', err)
-    else:
-        try:
-            docstore.Docstore(hosts, index).create_alias(index=index, alias=alias)
-        except Exception as err:
-            logprint('error', err)
+    data = docstore.Docstore(hosts).get_mappings()
+    text = json.dumps(data)
+    click.echo(text)
 
 
 @ddrindex.command()
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
-@click.option('--debug', '-d', is_flag=True, help='Display current mappings.')
-def mappings(hosts, index, debug):
-    """Push mappings to the specified index or display.
-    """
-    if debug:
-        data = docstore.Docstore(hosts, index).get_mappings(raw=1)
-        text = json.dumps(data)
-        click.echo(text)
-    docstore.Docstore(hosts, index).init_mappings()
-
-
-@ddrindex.command()
-@click.option('--hosts','-h',
-              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
-              help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 #@click.option('--report', is_flag=True,
 #              help='Report number of records existing, to be indexed/updated.')
 #@click.option('--dryrun', is_flag=True,
@@ -253,33 +262,30 @@ def mappings(hosts, index, debug):
 #@click.option('--force', is_flag=True,
 #              help='Forcibly update records whether they need it or not.')
 @click.argument('path')
-def vocabs(hosts, index, path):
+def vocabs(hosts, path):
     """Post DDR vocabulary facets and terms.
     
     \b
     Example:
       $ ddrindex vocabs /opt/ddr-local/ddr-vocab/api/0.2/
     """
-    docstore.Docstore(hosts, index).post_vocabs(path=path)
+    docstore.Docstore(hosts).post_vocabs(path=path)
 
 
 @ddrindex.command()
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.argument('doctype')
 @click.argument('object_id')
 @click.argument('path')
-def postjson(hosts, index, doctype, object_id, path):
-    """Post raw JSON file to Elasticsearch (YMMV)
+def postjson(hosts, doctype, object_id, path):
+    """TODO Post raw JSON file to Elasticsearch (YMMV)
     
     This command is for posting raw JSON files.  If the file you wish to post
     is a DDR object, please use "ddrindex post".
     """
-    status = docstore.Docstore(hosts, index).post_json(
+    status = docstore.Docstore(hosts).post_json(
         doctype,
         object_id,
         fileio.read_text(path)
@@ -291,16 +297,15 @@ def postjson(hosts, index, doctype, object_id, path):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.option('--recurse','-r', is_flag=True, help='Publish documents under this one.')
 @click.option('--force','-f', is_flag=True, help='Publish regardless of status.')
 @click.argument('path')
-def publish(hosts, index, recurse, force, path):
+def publish(hosts, recurse, force, path):
     """Post the document and its children to Elasticsearch
     """
-    status = docstore.Docstore(hosts, index).post_multi(path, recursive=recurse, force=force)
+    status = docstore.Docstore(hosts).post_multi(
+        path, recursive=recurse, force=force
+    )
     click.echo(status)
 
 
@@ -308,14 +313,11 @@ def publish(hosts, index, recurse, force, path):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.argument('path')
-def repo(hosts, index, path):
+def repo(hosts, path):
     """Post the repository record to Elasticsearch
     """
-    status = docstore.Docstore(hosts, index).repo(path)
+    status = docstore.Docstore(hosts).repo(path)
     click.echo(status)
 
 
@@ -323,14 +325,11 @@ def repo(hosts, index, path):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.argument('path')
-def org(hosts, index, path):
+def org(hosts, path):
     """Post the organization record to Elasticsearch
     """
-    status = docstore.Docstore(hosts, index).org(path)
+    status = docstore.Docstore(hosts).org(path)
     click.echo(status)
 
 
@@ -338,14 +337,11 @@ def org(hosts, index, path):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.argument('path')
-def narrators(hosts, index, path):
+def narrators(hosts, path):
     """Post the DDR narrators file to Elasticsearch
     """
-    status = docstore.Docstore(hosts, index).narrators(path)
+    status = docstore.Docstore(hosts).narrators(path)
     click.echo(status)
 
 
@@ -353,17 +349,14 @@ def narrators(hosts, index, path):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.option('--recurse','-r', is_flag=True, help='Delete documents under this one.')
 @click.option('--confirm', is_flag=True, help='Yes I really want to delete these objects.')
 @click.argument('object_id')
-def delete(hosts, index, recurse, confirm, object_id):
+def delete(hosts, recurse, confirm, object_id):
     """Delete the specified document from Elasticsearch
     """
     if confirm:
-        click.echo(docstore.Docstore(hosts, index).delete(object_id, recursive=recurse))
+        click.echo(docstore.Docstore(hosts).delete(object_id, recursive=recurse))
     else:
         click.echo("Add '--confirm' if you're sure you want to do this.")
 
@@ -372,15 +365,12 @@ def delete(hosts, index, recurse, confirm, object_id):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.argument('doctype')
 @click.argument('object_id')
-def exists(hosts, index, doctype, object_id):
+def exists(hosts, doctype, object_id):
     """Indicate whether the specified document exists
     """
-    ds = docstore.Docstore(hosts, index)
+    ds = docstore.Docstore(hosts)
     click.echo(ds.exists(doctype, object_id))
 
 
@@ -388,19 +378,15 @@ def exists(hosts, index, doctype, object_id):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
 @click.option('--json','-j', is_flag=True, help='Print as JSON')
-@click.option('--pretty','-p', is_flag=True, help='Nicely formated JSON')
 @click.argument('doctype')
 @click.argument('object_id')
-def get(hosts, index, json, pretty, doctype, object_id):
-    """Pretty-print a single document
+def get(hosts, json, doctype, object_id):
+    """Print a single document
     """
-    document = docstore.Docstore(hosts, index).get(doctype, object_id)
+    document = docstore.Docstore(hosts).get(doctype, object_id)
     if json:
-        click.echo(format_json(document.to_dict(), pretty=pretty))
+        click.echo(format_json(document.to_dict()))
     else:
         click.echo(document)
 
@@ -409,27 +395,21 @@ def get(hosts, index, json, pretty, doctype, object_id):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
-def status(hosts, index):
+def status(hosts):
     """Print status info.
     
     More detail since you asked.
     """
-    ds = docstore.Docstore(hosts, index)
+    ds = docstore.Docstore(hosts)
     s = ds.status()
     
     logprint('debug', '------------------------------------------------------------------------',0)
     logprint('debug', 'Elasticsearch',0)
     # config file
     logprint('debug', 'DOCSTORE_HOST  (default): %s' % config.DOCSTORE_HOST, 0)
-    logprint('debug', 'DOCSTORE_INDEX (default): %s' % config.DOCSTORE_INDEX, 0)
     # overrides
     if hosts != config.DOCSTORE_HOST:
         logprint('debug', 'docstore_hosts: %s' % hosts, 0)
-    if index != config.DOCSTORE_INDEX:
-        logprint('debug', 'docstore_index: %s' % index, 0)
     
     try:
         pingable = ds.es.ping()
@@ -444,24 +424,13 @@ def status(hosts, index):
     logprint('debug', 'Indexes', 0)
     index_names = ds.es.indices.stats()['indices'].keys()
     for i in index_names:
-        if i == index:
-            logprint('debug', '* %s *' % i, 0)
-        else:
-            logprint('debug', '- %s' % i, 0)
+        logprint('debug', '- %s' % i, 0)
     
-    logprint('debug', 'Aliases', 0)
-    aliases = ds.aliases()
-    if aliases:
-        for index,alias in aliases:
-            logprint('debug', '- %s -> %s' % (alias, index), 0)
-    else:
-        logprint('debug', 'No aliases', 0)
-    
-    if ds.es.indices.exists(index=index):
-        logprint('debug', 'Index %s present' % index, 0)
-    else:
-        logprint('error', "Index '%s' doesn't exist!" % index, 0)
-        return
+    #if ds.es.indices.exists(index=index):
+    #    logprint('debug', 'Index %s present' % index, 0)
+    #else:
+    #    logprint('error', "Index '%s' doesn't exist!" % index, 0)
+    #    return
 
     # TODO get ddrindex status model counts to work
     logprint('debug', '(Object counts are currently unavailable)', 0)
@@ -477,10 +446,7 @@ def status(hosts, index):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--index','-i',
-              default=config.DOCSTORE_INDEX, envvar='DOCSTORE_INDEX',
-              help='Elasticsearch index.')
-@click.option('--doctypes','-t',
+@click.option('--models','-m',
               default='collection,entity,segment,file',
               help='One or more doctypes (comma-separated).')
 @click.option('--parent','-P',
@@ -505,7 +471,7 @@ def status(hosts, index):
               is_flag=True, default=False,
               help='Raw Elasticsearch output.')
 @click.argument('fulltext')
-def search(hosts, index, doctypes, parent, filters, limit, offset, page, aggregations, raw, fulltext):
+def search(hosts, models, parent, filters, limit, offset, page, aggregations, raw, fulltext):
     """Fulltext search using Elasticsearch query_string syntax.
     
     \b
@@ -522,7 +488,7 @@ def search(hosts, index, doctypes, parent, filters, limit, offset, page, aggrega
     \b
     Specify parent object and doctype/model:
         $ ddrindex search seattle --parent=ddr-densho-12
-        $ ddrindex search seattle --doctypes=entity,segment
+        $ ddrindex search seattle --models=entity,segment
     
     \b
     Filter on certain fields (filters may repeat):
@@ -532,10 +498,10 @@ def search(hosts, index, doctypes, parent, filters, limit, offset, page, aggrega
     Use the --aggregations/-a flag to display filter aggregations,
     with document counts, filter keys, and labels.
     """
-    doctypes = doctypes.split(',')
+    models = models.split(',')
     results = search_.search(
-        hosts, index,
-        doctypes=doctypes,
+        hosts,
+        models=models,
         parent=parent,
         filters=filters,
         fulltext=fulltext,

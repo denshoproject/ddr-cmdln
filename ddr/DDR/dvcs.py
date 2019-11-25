@@ -17,6 +17,7 @@ import simplejson as json
 from DDR import config
 from DDR import fileio
 from DDR import storage
+from DDR import util
 
 # values are set after defining latest_commit()
 APP_COMMITS = {}
@@ -975,7 +976,7 @@ def _annex_make_description( drive_label=None, hostname=None, partner_host=None,
     description = None
     if drive_label:
         description = drive_label
-    elif hostname and (hostname == partner_host) and mail:
+    elif hostname and (hostname == partner_host) and util.validate_email(mail):
         description = ':'.join([ hostname, mail.split('@')[1] ])
     elif hostname and (hostname != partner_host):
         description = hostname

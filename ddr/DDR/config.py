@@ -92,12 +92,8 @@ THUMBNAIL_GEOMETRY   = CONFIG.get('cmdln','thumbnail_geometry')
 THUMBNAIL_COLORSPACE = 'sRGB'
 THUMBNAIL_OPTIONS    = CONFIG.get('cmdln','thumbnail_options')
 
-TEMPLATE_EAD = os.path.join(REPO_MODELS_PATH, 'templates', 'ead.xml')
-TEMPLATE_METS = os.path.join(REPO_MODELS_PATH, 'templates', 'mets.xml')
 TEMPLATE_EAD_JINJA2 = os.path.join(REPO_MODELS_PATH, 'templates', 'ead.xml.j2')
 TEMPLATE_METS_JINJA2 = os.path.join(REPO_MODELS_PATH, 'templates', 'mets.xml.j2')
-TEMPLATE_CJSON = CONFIG.get('cmdln','template_cjson')
-TEMPLATE_EJSON = CONFIG.get('cmdln','template_ejson')
 
 REQUESTS_TIMEOUT = 30
 
@@ -124,12 +120,13 @@ IDSERVICE_REGISTERIDS_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/create/'
 DOCSTORE_ENABLED = CONFIG.getboolean('local','docstore_enabled')
 DOCSTORE_TIMEOUT = int(CONFIG.get('local','docstore_timeout'))
 DOCSTORE_HOST_LOCAL = CONFIG.get('local','docstore_host')
-DOCSTORE_INDEX_LOCAL = CONFIG.get('local','docstore_index')
 DOCSTORE_HOST = CONFIG.get('public','docstore_host')
-DOCSTORE_INDEX = CONFIG.get('public','docstore_index')
 RESULTS_PER_PAGE = 25
 ELASTICSEARCH_MAX_SIZE = 10000
 ELASTICSEARCH_DEFAULT_LIMIT = RESULTS_PER_PAGE
+# Location of snapshot backups. Should match value of path.repo setting
+# in /etc/elasticsearch/elasticsearch.yml on cluster
+ELASTICSEARCH_PATH_REPO = CONFIG.get('public','docstore_path_repo')
 
 VOCABS_URL = CONFIG.get('cmdln', 'vocabs_url')
 # Separator between path elements for hierarchical precoordinated terms.

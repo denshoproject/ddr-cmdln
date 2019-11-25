@@ -170,3 +170,13 @@ def validate_paths(paths):
         except Exception as err:
             bad.append((n, path, err))
     return bad
+
+EMAIL_PATTERN = re.compile(
+    r"^[\w\.\+\-]+\@[\w]+\.[a-z]{2,3}$"
+)
+
+def validate_email(email):
+    if len(email) > 6:
+        if re.match(EMAIL_PATTERN, email) != None:
+            return True
+    return False

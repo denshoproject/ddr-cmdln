@@ -28,9 +28,6 @@ def ddrconfig():
         'ACCESS_FILE_GEOMETRY',
         'FACETS_PATH',
         'MAPPINGS_PATH',
-        'TEMPLATE_EJSON',
-        'TEMPLATE_EAD',
-        'TEMPLATE_METS',
         'CGIT_URL',
         'GIT_REMOTE_NAME',
         'GITOLITE',
@@ -50,7 +47,6 @@ def ddrconfig():
         'IDSERVICE_CHECKIDS_URL',
         'IDSERVICE_REGISTERIDS_URL',
         'DOCSTORE_HOST',
-        'DOCSTORE_INDEX',
         'VOCABS_URL',
         'REPO_MODELS_PATH',
     ]

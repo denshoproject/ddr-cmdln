@@ -318,7 +318,7 @@ def test_Entity_dict(tmpdir):
     collection_path = str(tmpdir / collection_id)
     path_abs = os.path.join(collection_path, 'files', entity_id)
     ei = identifier.Identifier(path_abs)
-    o = models.Entity.create(ei)
+    o = models.Entity.new(ei)
     o.record_created = datetime(2018, 9, 20, 12, 23, 21, 227561)
     o.record_lastmod = datetime(2018, 9, 20, 12, 23, 21, 227582)
     out = o.dict()
@@ -333,7 +333,7 @@ def test_Entity_diff(tmpdir):
     collection_path = str(tmpdir / collection_id)
     path_abs = os.path.join(collection_path, 'files', entity_id)
     ei = identifier.Identifier(path_abs)
-    o1 = models.Entity.create(ei)
+    o1 = models.Entity.new(ei)
     o2 = deepcopy(o1)
     # identical
     out0 = o1.diff(o2)

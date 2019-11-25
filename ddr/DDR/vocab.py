@@ -716,9 +716,7 @@ def topics_choices(facet, FacetTermClass):
         term.meta.id = facetterm_id
         term.facet = fid
         term.term_id = t.get('id')
-        for field in FacetTermClass._doc_type.mapping.to_dict()[
-            FacetTermClass._doc_type.name
-        ]['properties'].keys():
+        for field in FacetTermClass._doc_type.mapping.to_dict()['properties'].keys():
             if t.get(field):
                 setattr(term, field, t[field])
         term.id = facetterm_id  # overwrite id from original

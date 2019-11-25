@@ -1,42 +1,30 @@
 """
-TODO pass ES connection object to docstore.* instead of HOSTS,INDEX
+TODO pass ES connection object to docstore.* instead of HOSTS
 
 example walkthrough:
 ------------------------------------------------------------------------
 
-HOSTS = [{'host':'192.168.56.101', 'port':9200}]
-INDEX = 'documents0'
-PATH = '/var/www/media/base/ddr-testing-141'
-PATH = '/var/www/media/base/ddr-densho-2'
-PATH = '/var/www/media/base/ddr-densho-10'
-
-HOSTS = [{'host':'192.168.56.120', 'port':9200}]
-INDEX = 'dev'
-PATH = '/var/www/media/ddr'
-
 from DDR import docstore
+d = docstore.Docstore()
 
-d = docstore.Docstore(HOSTS, INDEX)
+d.delete_indices()
+d.create_indices()
 
-d.delete_index()
+# Repository, organization metadata
+d.repo(path='/var/www/media/ddr/ddr/repository.json')
+d.org(path='/var/www/media/ddr/ddr-densho/organization.json')
 
-d.create_index()
+# Post an object and its child objects.
+d.post_multi('/var/www/media/ddr/ddr-densho-10', recursive=True)
 
-d.init_mappings(INDEX)
-d.post_facets(docstore.VOCABS_URL)
+# Post vocabularies (used for topics, facility fields)
+d.post_vocabs(docstore.VOCABS_URL)
+
+# Narrators metadata
+d.narrators('/opt/ddr-local/densho-vocab/api/0.2/narrators.json')
 
 # Delete a collection
 d.delete(os.path.basename(PATH), recursive=True)
-
-# Repository, organization metadata
-d.repo(path='%s/ddr/repository.json' % PATH, remove=False)
-# Do this once per organization.
-d.org(path='%s/REPO-ORG/organization.json' % PATH, remove=False)
-
-# Narrators metadata
-d.narrators(NARRATORS_PATH)
-
-d.publish(PATH, recursive=True, public=True )
 
 ------------------------------------------------------------------------
 """
@@ -49,6 +37,7 @@ logger = logging.getLogger(__name__)
 import os
 
 from elasticsearch import Elasticsearch, TransportError
+from elasticsearch.client import SnapshotClient
 import elasticsearch_dsl
 import simplejson as json
 import requests
@@ -65,6 +54,8 @@ from DDR.identifier import MODULES, module_for_name
 from DDR import modules
 from DDR import util
 from DDR import vocab
+
+INDEX_PREFIX = 'ddr'
 
 MAX_SIZE = 10000
 DEFAULT_PAGE_SIZE = 20
@@ -85,57 +76,11 @@ ddr-public
 
 modelfields = elasticsearch._model_fields(MODELS_DIR, MODELS)
 cached = elasticsearch.query(host=host, index=index, model=model,
-raw = elasticsearch.get(HOST, index=settings.DOCUMENT_INDEX, model=Repository.model, id=id)
-document = elasticsearch.get(settings.ELASTICSEARCH_HOST_PORT, settings.DOCUMENT_INDEX,
+raw = elasticsearch.get(HOST, model=Repository.model, id=id)
+document = elasticsearch.get(settings.ELASTICSEARCH_HOST_PORT,
 elasticsearch.list_facets():
 results = elasticsearch.facet_terms(settings.ELASTICSEARCH_HOST_PORT,
 """
-
-
-REPOSITORY_LIST_FIELDS = ['id', 'title', 'description', 'url',]
-ORGANIZATION_LIST_FIELDS = ['id', 'title', 'description', 'url',]
-COLLECTION_LIST_FIELDS = ['id', 'title', 'description',]
-ENTITY_LIST_FIELDS = ['id', 'title', 'description',]
-FILE_LIST_FIELDS = ['id', 'basename_orig', 'label', 'access_rel','sort',]
-
-REPOSITORY_LIST_SORT = [
-    {'repo':'asc'},
-]
-ORGANIZATION_LIST_SORT = [
-    {'repo':'asc'},
-    {'org':'asc'},
-]
-COLLECTION_LIST_SORT = [
-    {'repo':'asc'},
-    {'org':'asc'},
-    {'cid':'asc'},
-    {'id':'asc'},
-]
-ENTITY_LIST_SORT = [
-    {'repo':'asc'},
-    {'org':'asc'},
-    {'cid':'asc'},
-    {'eid':'asc'},
-    {'id':'asc'},
-]
-FILE_LIST_SORT = [
-    {'repo':'asc'},
-    {'org':'asc'},
-    {'cid':'asc'},
-    {'eid':'asc'},
-    {'sort':'asc'},
-    {'role':'desc'},
-    {'id':'asc'},
-]
-
-def all_list_fields():
-    LIST_FIELDS = []
-    for mf in [REPOSITORY_LIST_FIELDS, ORGANIZATION_LIST_FIELDS,
-               COLLECTION_LIST_FIELDS, ENTITY_LIST_FIELDS, FILE_LIST_FIELDS]:
-        for f in mf:
-            if f not in LIST_FIELDS:
-                LIST_FIELDS.append(f)
-    return LIST_FIELDS
 
 def load_json(path):
     try:
@@ -144,47 +89,44 @@ def load_json(path):
         raise Exception('simplejson.errors.JSONDecodeError reading %s' % path)
     return data
 
-class InvalidPage(Exception):
-    pass
-class PageNotAnInteger(InvalidPage):
-    pass
-class EmptyPage(InvalidPage):
-    pass
-
-
 class Docstore():
-    hosts = None
-    indexname = None
-    facets = None
-    es = None
 
-    def __init__(self, hosts=config.DOCSTORE_HOST, index=config.DOCSTORE_INDEX, connection=None):
+    def __init__(self, hosts=config.DOCSTORE_HOST, connection=None):
         self.hosts = hosts
-        self.indexname = index
         if connection:
             self.es = connection
         else:
             self.es = Elasticsearch(hosts, timeout=config.DOCSTORE_TIMEOUT)
     
+    def index_name(self, model):
+        return '{}{}'.format(INDEX_PREFIX, model)
+    
     def __repr__(self):
-        return "<%s.%s %s:%s>" % (
-            self.__module__, self.__class__.__name__, self.hosts, self.indexname
+        return "<%s.%s %s:%s*>" % (
+            self.__module__, self.__class__.__name__, self.hosts, INDEX_PREFIX
         )
     
     def print_configs(self):
         print('CONFIG_FILES:           %s' % config.CONFIG_FILES)
         print('')
         print('DOCSTORE_HOST:          %s' % config.DOCSTORE_HOST)
-        print('DOCSTORE_INDEX:         %s' % config.DOCSTORE_INDEX)
         print('')
     
     def health(self):
         return self.es.cluster.health()
     
-    def index_exists(self, index):
+    def start_test(self):
+        try:
+            self.es.cluster.health()
+        except TransportError:
+            logger.critical('Elasticsearch cluster unavailable')
+            print('CRITICAL: Elasticsearch cluster unavailable')
+            sys.exit(1)
+    
+    def index_exists(self, indexname):
         """
         """
-        return self.es.indices.exists(index=index)
+        return self.es.indices.exists(index=indexname)
     
     def status(self):
         """Returns status information from the Elasticsearch cluster.
@@ -217,126 +159,78 @@ class Docstore():
         """Returns list of index names
         """
         return [name for name in self.status()['indices'].keys()]
-     
-    def aliases(self):
-        """
-        @param hosts: list of dicts containing host information.
-        """
-        return _parse_cataliases(
-            self.es.cat.aliases(h=['index','alias'])
-        )
     
-    def delete_alias(self, alias, index):
-        """Remove specified alias.
-        
-        @param alias: Name of the alias
-        @param index: Name of the alias' target index.
+    def create_indices(self):
+        """Create indices for each model defined in ddr-defs/repo_models/elastic.py
         """
-        logger.debug('deleting alias %s -> %s' % (alias, index))
-        alias = make_index_name(alias)
-        index = make_index_name(index)
-        if alias not in [alias for index,alias in self.aliases()]:
-            logger.error('Alias does not exist: "%s".' % alias)
-            return
-        result = self.es.indices.delete_alias(index=index, name=alias)
-        logger.debug(result)
-        logger.debug('DONE')
-        return result
+        statuses = []
+        for i in ELASTICSEARCH_CLASSES['all']:
+            status = self.create_index(
+                self.index_name(i['doctype']),
+                i['class']
+            )
+            statuses.append(status)
+        return statuses
     
-    def create_alias(self, alias, index):
-        """Point alias at specified index; create index if doesn't exist.
-        
-        IMPORTANT: There should only ever be ONE alias per index.
-        Existing aliases are deleted before specified one is created.
-        
-        @param alias: Name of the alias
-        @param index: Name of the alias' target index.
-        """
-        logger.debug('creating alias %s -> %s' % (alias, index))
-        alias = make_index_name(alias)
-        index = make_index_name(index)
-        # delete existing alias
-        for i,a in self.aliases():
-            removed = ''
-            if a == alias:
-                self.es.indices.delete_alias(
-                    # NOTE: "i" is probably not the arg "index".  That's what
-                    #       we want. We only want the arg "index".
-                    index=i,
-                    name=alias
-                )
-                removed = ' (removed)'
-            print('%s -> %s%s' % (a,i,removed))
-        result = self.es.indices.put_alias(index=index, name=alias, body='')
-        logger.debug(result)
-        logger.debug('DONE')
-        return result
-     
-    def target_index(self, alias):
-        """Get the name of the index to which the alias points
-        
-        >>> es.cat.aliases(h=['alias','index'])
-        u'documents0 wd5000bmv-2 \n'
-        
-        @param alias: Name of the alias
-        @returns: name of target index
-        """
-        alias = make_index_name(alias)
-        target = []
-        for i,a in _parse_cataliases(self.es.cat.aliases(h=['index','alias'])):
-            if a == alias:
-                target = i
-        return target
-     
-    def create_index(self, index=None):
+    def create_index(self, indexname, dsl_class):
         """Creates the specified index if it does not already exist.
         
+        Uses elasticsearch-dsl classes defined in ddr-defs/repo_models/elastic.py
+        
+        @param indexname: str
+        @param dsl_class: elasticsearch_dsl.Document class
         @returns: JSON dict with status codes and responses
         """
-        if not index:
-            index = self.indexname
-        logger.debug('creating new index: %s' % index)
-        body = {
-            'settings': {},
-            'mappings': {}
-            }
-        status = self.es.indices.create(index=index, body=body)
-        logger.debug(status)
-        statuses = self.init_mappings()
-        self.model_fields_lists()
-        logger.debug('DONE')
-     
-    def delete_index(self, index=None):
+        logger.debug('creating index {}'.format(indexname))
+        if self.index_exists(indexname):
+            status = '{"status":400, "message":"Index exists"}'
+            logger.debug('Index exists')
+            #print('Index exists')
+        else:
+            index = elasticsearch_dsl.Index(indexname)
+            #print('index {}'.format(index))
+            index.aliases(default={})
+            #print('registering')
+            out = index.document(dsl_class).init(index=indexname, using=self.es)
+            if out:
+                status = out
+            elif self.index_exists(indexname):
+                status = {
+                    "name": indexname,
+                    "present": True,
+                }
+            #print(status)
+            #print('creating index')
+        return status
+    
+    def delete_indices(self):
+        """Delete indices for each model defined in ddr-defs/repo_models/elastic.py
+        """
+        statuses = []
+        for i in ELASTICSEARCH_CLASSES['all']:
+            status = self.delete_index(
+                self.index_name(i['doctype'])
+            )
+            statuses.append(status)
+        return statuses
+    
+    def delete_index(self, indexname):
         """Delete the specified index.
         
         @returns: JSON dict with status code and response
         """
-        if not index:
-            index = self.indexname
-        logger.debug('deleting index: %s' % index)
-        if self.index_exists(index):
-            status = self.es.indices.delete(index=index)
+        logger.debug('deleting index: %s' % indexname)
+        if self.index_exists(indexname):
+            status = self.es.indices.delete(index=indexname)
         else:
-            status = '{"status":500, "message":"Index does not exist"}'
+            status = {
+                "name": indexname,
+                "status": 500,
+                "message": "Index does not exist",
+            }
         logger.debug(status)
         return status
     
-    def init_mappings(self):
-        """Initializes mappings for Elasticsearch objects
-        
-        Mappings for objects in (ddr-defs)repo_models.elastic.ELASTICSEARCH_CLASSES
-                
-        @returns: JSON dict with status code and response
-        """
-        logger.debug('registering doc types')
-        statuses = []
-        for class_ in ELASTICSEARCH_CLASSES['all']:
-            logger.debug('- %s' % class_['doctype'])
-            print('- %s' % class_)
-            status = class_['class'].init(index=self.indexname, using=self.es)
-            statuses.append( {'doctype':class_['doctype'], 'status':status} )
-        return statuses
-
     def model_fields_lists(self):
         """
         Lists of class-specific fields for each class, in order,
@@ -370,22 +264,12 @@ class Docstore():
                 json_text=json.dumps(data),
             )
     
-    def get_mappings(self, raw=False):
+    def get_mappings(self):
         """Get mappings for ESObjects
         
-        @param raw: boolean Use lower-level function to get all mappings
         @returns: str JSON
         """
-        if raw:
-            return self.es.indices.get_mapping(self.indexname)
-        return {
-            class_['doctype']: elasticsearch_dsl.Mapping.from_es(
-                index=self.indexname,
-                doc_type=class_['doctype'],
-                using=self.es,
-            ).to_dict()
-            for class_ in ELASTICSEARCH_CLASSES['all']
-        }
+        return self.es.indices.get_mapping()
     
     def post_vocabs(self, path=config.VOCABS_URL):
         """Posts ddr-vocab facets,terms to ES.
@@ -399,12 +283,15 @@ class Docstore():
         @param path: Absolute path to dir containing facet files.
         @returns: JSON dict with status code and response
         """
-        logger.debug('index_facets(%s, %s)' % (self.indexname, path))
+        logger.debug('index_facets(%s)' % (path))
         vocabs = vocab.get_vocabs(path)
         
         # get classes from ddr-defs
-        Facet = ELASTICSEARCH_CLASSES_BY_MODEL['facet']
-        FacetTerm = ELASTICSEARCH_CLASSES_BY_MODEL['facetterm']
+        # TODO we should hard-code indexnames...
+        facet_doctype = 'facet'
+        facetterm_doctype = 'facetterm'
+        Facet = ELASTICSEARCH_CLASSES_BY_MODEL[facet_doctype]
+        FacetTerm = ELASTICSEARCH_CLASSES_BY_MODEL[facetterm_doctype]
         
         # push facet data
         statuses = []
@@ -420,7 +307,9 @@ class Docstore():
             facet.title = vocabs[v]['title']
             facet.description = vocabs[v]['description']
             logging.debug(facet)
-            status = facet.save(using=self.es, index=self.indexname)
+            status = facet.save(
+                index=self.index_name(facet_doctype), using=self.es
+            )
             statuses.append(status)
             
             for t in vocabs[v]['terms']:
@@ -436,13 +325,15 @@ class Docstore():
                 term.links_html = facetterm_id
                 term.links_json = facetterm_id
                 # TODO doesn't handle location_geopoint
-                for field in FacetTerm._doc_type.mapping.to_dict()[
-                        FacetTerm._doc_type.name]['properties'].keys():
+                for field in FacetTerm._doc_type.mapping.to_dict()['properties'].keys():
                     if t.get(field):
                         setattr(term, field, t[field])
                 term.id = facetterm_id  # overwrite term.id from original
                 logging.debug(term)
-                status = term.save(using=self.es, index=self.indexname)
+                print(term)
+                status = term.save(
+                    index=self.index_name(facetterm_doctype), using=self.es
+                )
                 statuses.append(status)
         
         forms_choices = {
@@ -536,37 +427,33 @@ class Docstore():
         if (not (data.get('id') and data.get('repo'))):
             raise Exception('Data file is not well-formed.')
         oi = Identifier(id=data['id'])
-        d = OrderedDict()
-        d['id'] = oi.id
-        d['model'] = oi.model
-        d['parent_id'] = oi.parent_id(stubs=1)
+
+        ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[doctype]
+        d = ES_Class(id=oi.id)
+        d.meta.id = oi.id
+        d.model = oi.model
+        d.parent_id = oi.parent_id(stubs=1)
         # links
-        d['links_html'] = oi.id
-        d['links_json'] = oi.id
-        d['links_img'] = '%s/logo.png' % oi.id
-        d['links_thumb'] = '%s/logo.png' % oi.id
-        d['links_parent'] = oi.parent_id(stubs=1)
-        d['links_children'] = oi.id
+        d.links_html = oi.id
+        d.links_json = oi.id
+        d.links_img = '%s/logo.png' % oi.id
+        d.links_thumb = '%s/logo.png' % oi.id
+        d.links_parent = oi.parent_id(stubs=1)
+        d.links_children = oi.id
         # title,description
-        d['title'] = data['title']
-        d['description'] = data['description']
-        d['url'] = data['url']
+        d.title = data['title']
+        d.description = data['description']
+        d.url = data['url']
         # ID components (repo, org, cid, ...) as separate fields
         idparts = deepcopy(oi.idparts)
         idparts.pop('model')
-        for k in ID_COMPONENTS:
-            d[k] = '' # ensure all fields present
-        for k,v in idparts.iteritems():
-            d[k] = v
+        for key,val in idparts.iteritems():
+            setattr(d, key, val)
         # add/update
         if remove and self.exists(doctype, oi):
-            results = self.es.delete(
-                index=self.indexname, doc_type=doctype, id=oi.id
-            )
+            results = d.delete(index=self.index_name(doctype), using=self.es)
         else:
-            results = self.es.index(
-                index=self.indexname, doc_type=doctype, id=oi.id, body=d
-            )
+            results = d.save(index=self.index_name(doctype), using=self.es)
         return results
     
     def repo(self, path, remove=False):
@@ -593,35 +480,45 @@ class Docstore():
         @param path: str Absolute path to narrators.json
         @returns: dict
         """
-        DOC_TYPE = 'narrator'
+        # TODO we should not be hard-coding indexnames
+        doctype = 'narrator'
+        ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[doctype]
+        indexname = self.index_name(doctype)
         data = load_json(path)
-        for document in data['narrators']:
-            document['model'] = 'narrator'
+        num = len(data['narrators'])
+        for n,document in enumerate(data['narrators']):
+            d = ES_Class(id=document['id'])
+            # set all values first before exceptions
+            for key,val in document.iteritems():
+                setattr(d, key, val)
+            # make sure certain important fields are set properly
+            d.meta.id = document['id']
+            d.title = document['display_name']
+            d.description = document['bio']
+            d.model = doctype
+            # publish
             has_published = document.get('has_published', '')
             if has_published.isdigit():
                 has_published = int(has_published)
             if has_published:
-                result = self.post_json(DOC_TYPE, document['id'], json.dumps(document))
-                logging.debug(document['id'], result)
+                logging.debug('{}/{} {}'.format(n, num, d))
+                print('{}/{} {}'.format(n, num, d))
+                result = d.save(index=self.index_name(doctype), using=self.es)
             else:
-                logging.debug('%s not published' % document['id'])
-                if self.get(DOC_TYPE, document['id'], fields=[]):
-                    self.delete(document['id'])
+                logging.debug('%s not published' % d.id)
+                if self.get(doctype, d.id, fields=[]):
+                    self.delete(doctype, d.id)
     
-    def post_json(self, doc_type, document_id, json_text):
+    def post_json(self, indexname, document_id, json_text):
         """POST the specified JSON document as-is.
         
-        @param doc_type: str
+        @param indexname: str
         @param document_id: str
         @param json_text: str JSON-formatted string
         @returns: dict Status info.
         """
-        logger.debug('post_json(%s, %s, %s)' % (
-            self.indexname, doc_type, document_id
-        ))
-        return self.es.index(
-            index=self.indexname, doc_type=doc_type, id=document_id, body=json_text
-        )
+        logger.debug('post_json(%s, %s)' % (indexname, document_id))
+        return self.es.index(index=indexname, id=document_id, body=json_text)
 
     def post(self, document, public_fields=[], additional_fields={}, parents={}, force=False):
         """Add a new document to an index or update an existing one.
@@ -647,8 +544,8 @@ class Docstore():
         @param force: boolean Bypass status and public checks.
         @returns: JSON dict with status code and response
         """
-        logger.debug('post(%s, %s, %s)' % (
-            self.indexname, document, force
+        logger.debug('post(%s, %s)' % (
+            document, force
         ))
 
         if force:
@@ -664,12 +561,15 @@ class Docstore():
             public = True
         if not can_publish:
             return {'status':403, 'response':'object not publishable'}
-
+        
         d = document.to_esobject(public_fields=public_fields, public=public)
         logger.debug('saving')
-        status = d.save(using=self.es, index=self.indexname)
-        logger.debug(str(status))
-        return status
+        results = d.save(
+            index=self.index_name(document.identifier.model),
+            using=self.es
+        )
+        logger.debug(str(results))
+        return results
     
     def post_multi(self, path, recursive=False, force=False):
         """Publish (index) specified document and (optionally) its children.
@@ -688,7 +588,7 @@ class Docstore():
         @param force: boolean Just publish the damn collection already.
         @returns: number successful,list of paths that didn't work out
         """
-        logger.debug('index(%s, %s, %s, %s)' % (self.indexname, path, recursive, force))
+        logger.debug('index(%s, %s, %s)' % (path, recursive, force))
         
         publicfields = _public_fields()
         
@@ -760,8 +660,7 @@ class Docstore():
             # version is incremented with each updated
             posted_v = None
             # for e.g. segment the ES doc_type will be 'entity' but oi.model is 'segment'
-            es_model = ELASTICSEARCH_CLASSES_BY_MODEL[oi.model]._doc_type.name
-            d = self.get(es_model, oi.id)
+            d = self.get(oi.model, oi.id)
             if d:
                 posted_v = d.meta.version
 
@@ -786,18 +685,26 @@ class Docstore():
         @param model:
         @param document_id:
         """
-        return self.es.exists(index=self.indexname, doc_type=model, id=document_id)
-     
+        return self.es.exists(
+            index=self.index_name(model),
+            id=document_id
+        )
+    
     def get(self, model, document_id, fields=None):
-        """
+        """Get a single document by its id.
+        
         @param model:
         @param document_id:
         @param fields: boolean Only return these fields
+        @returns: repo_models.elastic.ESObject or None
         """
-        if self.exists(model, document_id):
-            ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[model]
-            return ES_Class.get(document_id, using=self.es, index=self.indexname)
-        return None
+        ES_Class = ELASTICSEARCH_CLASSES_BY_MODEL[model]
+        return ES_Class.get(
+            id=document_id,
+            index=self.index_name(model),
+            using=self.es,
+            ignore=404,
+        )
 
     def count(self, doctypes=[], query={}):
         """Executes a query and returns number of hits.
@@ -809,18 +716,20 @@ class Docstore():
         @param query: dict The search definition using Elasticsearch Query DSL
         @returns raw ElasticSearch query output
         """
-        logger.debug('count(index=%s, doctypes=%s, query=%s' % (
-            self.indexname, doctypes, query
-        ))
+        logger.debug('count(doctypes=%s, query=%s' % (doctypes, query))
         if not query:
-            raise Exception("Can't do an empty search. Give me something to work with here.")
+            raise Exception(
+                "Can't do an empty search. Give me something to work with here."
+            )
         
+        indices = ','.join(
+            ['{}{}'.format(INDEX_PREFIX, m) for m in doctypes]
+        )
         doctypes = ','.join(doctypes)
         logger.debug(json.dumps(query))
         
         return self.es.count(
-            index=self.indexname,
-            doc_type=doctypes,
+            index=indices,
             body=query,
         )
     
@@ -838,7 +747,7 @@ class Docstore():
         @param document_id:
         @param recursive: True or False
         """
-        logger.debug('delete(%s, %s, %s)' % (self.indexname, document_id, recursive))
+        logger.debug('delete(%s, %s)' % (document_id, recursive))
         oi = Identifier(document_id, config.MEDIA_BASE)
         if recursive:
             paths = util.find_meta_files(
@@ -854,17 +763,18 @@ class Docstore():
                 model = 'entity'
             else:
                 model = oi.model
-            url = 'http://{}/{}/{}/{}/'.format(self.hosts, self.indexname, model, oi.id)
-            get = requests.request('GET', url)
-            if get.status_code == 200:
-                delete = requests.request('DELETE', url)
-                print('{}/{} DELETE  {} {} {} {}->{}'.format(
-                    n, num, self.indexname, model, oi.id, get.status_code, delete.status_code
-                ))
-            else:
-                print('{}/{} MISSING {} {} {} {}'.format(
-                    n, num, self.indexname, model, oi.id, get.status_code
-                ))
+            url = 'http://{}/{}/_doc/{}/'.format(
+                self.hosts,
+                self.index_name(model),
+                oi.id
+            )
+            r = requests.request('DELETE', url)
+            print('{}/{} DELETE {} {} -> {} {}'.format(
+                n, num,
+                self.index_name(model),
+                oi.id,
+                r.status_code, r.reason
+            ))
 
     def search(self, doctypes=[], query={}, sort=[], fields=[], from_=0, size=MAX_SIZE):
         """Executes a query, get a list of zero or more hits.
@@ -880,26 +790,31 @@ class Docstore():
         @param size: int Number of results to return
         @returns raw ElasticSearch query output
         """
-        logger.debug('search(index=%s, doctypes=%s, query=%s, sort=%s, fields=%s, from_=%s, size=%s' % (
-            self.indexname, doctypes, query, sort, fields, from_, size
+        logger.debug(
+            'search(doctypes=%s, query=%s, sort=%s, fields=%s, from_=%s, size=%s' % (
+                doctypes, query, sort, fields, from_, size
         ))
         if not query:
-            raise Exception("Can't do an empty search. Give me something to work with here.")
+            raise Exception(
+                "Can't do an empty search. Give me something to work with here."
+            )
         
+        indices = ','.join(
+            ['{}{}'.format(INDEX_PREFIX, m) for m in doctypes]
+        )
         doctypes = ','.join(doctypes)
         logger.debug(json.dumps(query))
         _clean_dict(sort)
         sort_cleaned = _clean_sort(sort)
         fields = ','.join(fields)
-        
+
         results = self.es.search(
-            index=self.indexname,
-            doc_type=doctypes,
+            index=indices,
             body=query,
-            sort=sort_cleaned,
+            #sort=sort_cleaned,  # TODO figure out sorting
             from_=from_,
             size=size,
-            _source_include=fields,
+            #_source_include=fields,  # TODO figure out fields
         )
         return results
     
@@ -952,6 +867,67 @@ class Docstore():
                 #bulk_kwargs={}
             )
         return results
+    
+    def backup(self, snapshot, indices=[]):
+        """Make a snapshot backup of one or more Elasticsearch indices.
+        
+        repository = 'dev20190827'
+        snapshot = 'dev-20190828-1007'
+        indices = ['ddrpublic-dev', 'encyc-dev']
+        agent = 'gjost'
+        memo = 'backup before upgrading'
+        from DDR import docstore
+        ds = docstore.Docstore()
+        ds.backup(repository, snapshot, indices, agent, memo)
+        
+        @param repository: str
+        @param snapshot: str
+        @param indices: list
+        @returns: dict {"repository":..., "snapshot":...}
+        """
+        repository = os.path.basename(config.ELASTICSEARCH_PATH_REPO)
+        client = SnapshotClient(self.es.cluster.client)
+        # Get existing repository or make new one
+        try:
+            repo = client.get_repository(repository=repository)
+        except TransportError:
+            repo = client.create_repository(
+                repository=repository,
+                body={
+                    "type": "fs",
+                    "settings": {
+                        "location": config.ELASTICSEARCH_PATH_REPO
+                    }
+                }
+            )
+        # Get snapshot info or initiate new one
+        try:
+            snapshot = client.get(repository=repository, snapshot=snapshot)
+        except TransportError:
+            body = {
+                "indices": indices,
+                "metadata": {},
+            }
+            snapshot = client.create(
+                repository=repository, snapshot=snapshot, body=body
+            )
+        return {
+            "repository": repo,
+            "snapshot": snapshot,
+        }
+
+    def restore_snapshot(self, snapshot, indices=[]):
+        """Restore a snapshot
+        """
+        repository = os.path.basename(config.ELASTICSEARCH_PATH_REPO)
+        client = SnapshotClient(self.es.cluster.client)
+        repo = client.get_repository(repository=repository)
+        result = client.restore(
+            repository=config.ELASTICSEARCH_PATH_REPO,
+            snapshot=snapshot,
+            body={'indices': indices},
+        )
+        return result
 
 
 def make_index_name(text):
@@ -977,84 +953,12 @@ def make_index_name(text):
                 name.append(char.lower())
     return ''.join(name)
 
-def _parse_cataliases( cataliases ):
-    """
-    Sample input:
-    u'ddrworkstation documents0 \nwd5000bmv-2 documents0 \n'
- 
-    @param cataliases: Raw output of es.cat.aliases(h=['index','alias'])
-    @returns: list of (index,alias) tuples
-    """
-    indices_aliases = []
-    for line in cataliases.strip().split('\n'):
-        # cat.aliases arranges data in columns so rm extra spaces
-        while '  ' in line:
-            line = line.replace('  ', ' ')
-        if line:
-            i,a = line.strip().split(' ')
-            indices_aliases.append( (i,a) )
-    return indices_aliases
-
 def doctype_fields(es_class):
     """List content fields in DocType subclass (i.e. appear in _source).
     
     TODO move to ddr-cmdln
     """
-    return es_class._doc_type.mapping.to_dict()[es_class._doc_type.name]['properties'].keys()
-
-def _filter_payload(data, public_fields):
-    """If requested, removes non-public fields from document before sending to ElasticSearch.
-    
-    >>> data = [{'id': 'ddr-testing-123-1'}, {'title': 'Title'}, {'secret': 'this is a secret'}]
-    >>> public_fields = ['id', 'title']
-    >>> _filter_payload(data, public_fields)
-    removed secret
-    >>> data
-    [{'id': 'ddr-testing-123-1'}, {'title': 'Title'}]
-    
-    @param data: Standard DDR list-of-dicts data structure.
-    @param public_fields: List of field names; if present, fields not in list will be removed.
-    """
-    if public_fields and data and isinstance(data, list):
-        for field in data[1:]:
-            fieldname = field.keys()[0]
-            if fieldname not in public_fields:
-                data.remove(field)
-                logging.debug('removed %s' % fieldname)
-
-def _clean_controlled_vocab(data):
-    """Extract topics IDs from textual control-vocab texts.
-
-    >>> _clean_controlled_vocab('Topics [123]')
-    ['123']
-    >>> _clean_controlled_vocab(['Topics [123]'])
-    ['123']
-    >>> _clean_controlled_vocab(['123'])
-    ['123']
-    >>> _clean_controlled_vocab([123])
-    ['123']
-    >>> _clean_controlled_vocab('123')
-    ['123']
-    >>> _clean_controlled_vocab(123)
-    ['123']
-    
-    @param data: contents of data field
-    @returns: list of ID strings
-    """
-    if isinstance(data, int):
-        data = str(data)
-    if isinstance(data, basestring):
-        data = [data]
-    cleaned = []
-    for x in data:
-        if not isinstance(x, basestring):
-            x = str(x)
-        if ('[' in x) and (']' in x):
-            y = x.split('[')[1].split(']')[0] 
-        else:
-            y = x
-        cleaned.append(y)
-    return cleaned
+    return es_class._doc_type.mapping.to_dict()['properties'].keys()
 
 def _clean_dict(data):
     """Remove null or empty fields; ElasticSearch chokes on them.
@@ -1070,139 +974,6 @@ def _clean_dict(data):
         for key in data.keys():
             if not data[key]:
                 del(data[key])
-
-def _clean_payload(data):
-    """Remove null or empty fields; ElasticSearch chokes on them.
-    """
-    # remove info about DDR release, git-annex version, etc
-    if data and isinstance(data, list):
-        # skip the initial metadata field
-        data = data[1:]
-        # remove empty fields
-        for field in data:
-            # rm null or empty fields
-            _clean_dict(field)
-
-def _format_datetimes(data):
-    """force datetimes into ES mapping format
-    # TODO refactor this once we get it working
-    """
-    DATETIME_FIELDS = [
-        'record_created',
-        'record_lastmod',
-    ]
-    for field,value in data.iteritems():
-        if field in DATETIME_FIELDS:
-            dt = converters.text_to_datetime(value)
-            # Use default timezone unless...
-            if data['org'] in config.ALT_TIMEZONES.keys():
-                timezone = config.ALT_TIMEZONES[data['org']]
-            else:
-                timezone = config.TZ
-            if not dt.tzinfo:
-                timezone.localize(dt)
-            data[field] = converters.datetime_to_text(
-                dt, config.ELASTICSEARCH_DATETIME_FORMAT
-            )
-
-def _filter_fields(i, data):
-    """Run index_* functions on data
-    
-    @param i: Identifier
-    @param data: dict
-    @returns: dict data
-    """
-    module = i.fields_module()
-    for field in module.FIELDS:
-        fieldname = field['name']
-        # run index_* functions on field data if present
-        data[fieldname] = modules.Module(module).function(
-            'index_%s' % fieldname,
-            data[fieldname]
-        )
-    return data
-
-def _validate_number(number, num_pages):
-        """Validates the given 1-based page number.
-        see django.core.pagination.Paginator.validate_number
-        """
-        try:
-            number = int(number)
-        except (TypeError, ValueError):
-            raise PageNotAnInteger('That page number is not an integer')
-        if number < 1:
-            raise EmptyPage('That page number is less than 1')
-        if number > num_pages:
-            if number == 1:
-                pass
-            else:
-                raise EmptyPage('That page contains no results')
-        return number
-
-def _page_bottom_top(total, index, page_size):
-        """
-        Returns a Page object for the given 1-based page number.
-        """
-        num_pages = total / page_size
-        if total % page_size:
-            num_pages = num_pages + 1
-        number = _validate_number(index, num_pages)
-        bottom = (number - 1) * page_size
-        top = bottom + page_size
-        return bottom,top,num_pages
-
-def massage_query_results(results, thispage, page_size):
-    """Takes ES query, makes facsimile of original object; pads results for paginator.
-    
-    Problem: Django Paginator only displays current page but needs entire result set.
-    Actually, it just needs a list that is the same size as the actual result set.
-    
-    GOOD:
-    Do an ElasticSearch search, without ES paging.
-    Loop through ES results, building new list, process only the current page's hits
-    hits outside current page added as placeholders
-    
-    BETTER:
-    Do an ElasticSearch search, *with* ES paging.
-    Loop through ES results, building new list, processing all the hits
-    Pad list with empty objects fore and aft.
-    
-    @param results: ElasticSearch result set (non-empty, no errors)
-    @param thispage: Value of GET['page'] or 1
-    @param page_size: Number of objects per page
-    @returns: list of hit dicts, with empty "hits" fore and aft of current page
-    """
-    def unlistify(o, fieldname):
-        if o.get(fieldname, None):
-            if isinstance(o[fieldname], list):
-                o[fieldname] = o[fieldname][0]
-    
-    objects = []
-    if results and results['hits']:
-        total = results['hits']['total']
-        bottom,top,num_pages = _page_bottom_top(total, thispage, page_size)
-        # only process this page
-        for n,hit in enumerate(results['hits']['hits']):
-            o = {'n':n,
-                 'id': hit['_id'],
-                 'placeholder': True}
-            if (n >= bottom) and (n < top):
-                # if we tell ES only return certain fields, object is in 'fields'
-                if hit.get('fields', None):
-                    o = hit['fields']
-                elif hit.get('_source', None):
-                    o = hit['_source']
-                # copy ES results info to individual object source
-                o['index'] = hit['_index']
-                o['type'] = hit['_type']
-                o['model'] = hit['_type']
-                o['id'] = hit['_id']
-                # ElasticSearch wraps field values in lists
-                # when you use a 'fields' array in a query
-                for fieldname in all_list_fields():
-                    unlistify(o, fieldname)
-            objects.append(o)
-    return objects
 
 def _clean_sort( sort ):
     """Take list of [a,b] lists, return comma-separated list of a:b pairs
@@ -1240,51 +1011,6 @@ def _public_fields(modules=MODULES):
     public_fields['file'].append('path_rel')
     public_fields['file'].append('id')
     return public_fields
-
-def _parents_status( paths ):
-    """Stores value of public,status for each collection,entity so entities,files can inherit.
-    
-    @param paths
-    @returns: dict
-    """
-    parents = {}
-    def _make_coll_ent(path):
-        """Store values of id,public,status for a collection or entity.
-        """
-        p = {'id':None,
-             'public':None,
-             'status':None,}
-        data = load_json(path)
-        for field in data:
-            fname = field.keys()[0]
-            if fname in p.keys():
-                p[fname] = field[fname]
-        return p
-    for path in paths:
-        if ('collection.json' in path) or ('entity.json' in path):
-            o = _make_coll_ent(path)
-            parents[o.pop('id')] = o
-    return parents
-
-def _file_parent_ids(identifier):
-    """Calculate the parent IDs of an entity or file from the filename.
-    
-    TODO not specific to elasticsearch - move this function so other modules can use
-    
-    >>> _file_parent_ids('collection', '.../ddr-testing-123/collection.json')
-    []
-    >>> _file_parent_ids('entity', '.../ddr-testing-123-1/entity.json')
-    ['ddr-testing-123']
-    >>> _file_parent_ids('file', '.../ddr-testing-123-1-master-a1b2c3d4e5.json')
-    ['ddr-testing-123', 'ddr-testing-123-1']
-    
-    @param identifier: Identifier
-    @returns: parent_ids
-    """
-    return [
-        identifier.parent_id(),
-        identifier.collection_id(),
-    ]
 
 def _all_parents(identifiers, excluded_models=['file']):
     """Given a list of identifiers, finds all the parents
@@ -1364,17 +1090,64 @@ def publishable(identifiers, parents, force=False):
         path_dicts.append(d)
     return path_dicts
 
-def _has_access_file( identifier ):
-    """Determines whether the path has a corresponding access file.
+def aggs_dict(aggregations):
+    """Simplify aggregations data in search results
     
-    @param path: Absolute or relative path to JSON file.
-    @param suffix: Suffix that is applied to File ID to get access file.
-    @returns: True,False
+    input
+    {
+        u'format': {
+            u'buckets': [{u'doc_count': 2, u'key': u'ds'}],
+            u'doc_count_error_upper_bound': 0,
+            u'sum_other_doc_count': 0
+        },
+        u'rights': {
+            u'buckets': [{u'doc_count': 3, u'key': u'cc'}],
+            u'doc_count_error_upper_bound': 0, u'sum_other_doc_count': 0
+        },
+    }
+    output
+    {
+        u'format': {u'ds': 2},
+        u'rights': {u'cc': 3},
+    }
     """
-    access_abs = identifier.path_abs('access')
-    if os.path.exists(access_abs) or os.path.islink(access_abs):
-        return True
-    return False
+    return {
+        fieldname: {
+            bucket['key']: bucket['doc_count']
+            for bucket in data['buckets']
+        }
+        for fieldname,data in aggregations.items()
+    }
+
+
+def aggs_dict(aggregations):
+    """Simplify aggregations data in search results
+    
+    input
+    {
+        u'format': {
+            u'buckets': [{u'doc_count': 2, u'key': u'ds'}],
+            u'doc_count_error_upper_bound': 0,
+            u'sum_other_doc_count': 0
+        },
+        u'rights': {
+            u'buckets': [{u'doc_count': 3, u'key': u'cc'}],
+            u'doc_count_error_upper_bound': 0, u'sum_other_doc_count': 0
+        },
+    }
+    output
+    {
+        u'format': {u'ds': 2},
+        u'rights': {u'cc': 3},
+    }
+    """
+    return {
+        fieldname: {
+            bucket['key']: bucket['doc_count']
+            for bucket in data['buckets']
+        }
+        for fieldname,data in aggregations.items()
+    }
 
 def search_query(text='', must=[], should=[], mustnot=[], aggs={}):
     """Assembles a dict conforming to the Elasticsearch query DSL.
@@ -1400,7 +1173,10 @@ def search_query(text='', must=[], should=[], mustnot=[], aggs={}):
     
     >>> from DDR import docstore,format_json
     >>> t = 'posthuman'
-    >>> a = [{'terms':{'language':['eng','chi']}}, {'terms':{'creators.role':['distraction']}}]
+    >>> a = [
+        {'terms':{'language':['eng','chi']}},
+        {'terms':{'creators.role':['distraction']}}
+    ]
     >>> q = docstore.search_query(text=t, must=a)
     >>> print(format_json(q))
     >>> d = ['entity','segment']

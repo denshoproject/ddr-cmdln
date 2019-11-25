@@ -347,8 +347,8 @@ class DDRObject(object):
         # ID components (repo, org, cid, ...) as separate fields
         idparts = deepcopy(self.identifier.idparts)
         idparts.pop('model')
-        for k in ID_COMPONENTS:
-            setattr(d, k, '') # ensure all fields present
+#        for k in ID_COMPONENTS:
+#            setattr(d, k, '') # ensure all fields present
         for k,v in idparts.iteritems():
             setattr(d, k, v)
         # links
@@ -507,7 +507,7 @@ def sort_file_paths(json_paths, rank='role-eid-sort'):
             paths_sorted.append(val)
     return paths_sorted
 
-def create_object(identifier, parent=None, inherit=True):
+def new_object(identifier, parent=None, inherit=True):
     """Creates a new object initial values from module.FIELDS.
     
     If identifier.fields_module().FIELDS.field['default'] is non-None

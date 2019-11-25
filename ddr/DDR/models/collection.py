@@ -169,18 +169,18 @@ class Collection(common.DDRObject):
         return data
     
     @staticmethod
-    def create(identifier, parent=None):
-        """Creates a new Collection with initial values from module.FIELDS.
+    def new(identifier, parent=None):
+        """Creates new Collection with default values; does not write/commit.
         
         @param identifier: Identifier
         @param parent: [optional] DDRObject parent object
         @returns: Collection object
         """
-        return common.create_object(identifier, parent=parent)
+        return common.new_object(identifier, parent=parent)
     
     @staticmethod
-    def new(identifier, git_name, git_mail, agent='cmdln'):
-        """Creates new Collection, writes to filesystem, performs initial commit
+    def create(identifier, git_name, git_mail, agent='cmdln'):
+        """Creates new Collection, writes files, performs initial commit
         
         @param identifier: Identifier
         @param git_name: str
@@ -188,16 +188,11 @@ class Collection(common.DDRObject):
         @param agent: str
         @returns: exit,status int,str
         """
-        collection = Collection.create(identifier)
-        fileio.write_text(
-            collection.dump_json(template=True),
-            config.TEMPLATE_CJSON
-        )
         exit,status = commands.create(
-            git_name, git_mail,
-            identifier,
-            [config.TEMPLATE_CJSON, config.TEMPLATE_EAD],
-            agent=agent
+            user_name=git_name,
+            user_mail=git_mail,
+            identifier=identifier,
+            agent=agent,
         )
         return exit,status
     
@@ -382,13 +377,14 @@ class Collection(common.DDRObject):
     def reindex(self):
         """Reindex Collection objects to Elasticsearch
         """
-        ds = docstore.Docstore(config.DOCSTORE_HOST, config.DOCSTORE_INDEX)
+        ds = docstore.Docstore(config.DOCSTORE_HOST)
         # check for ES connection before going to all the trouble
         health = ds.health()
-        index_exists = ds.index_exists(config.DOCSTORE_INDEX)
+        index_name = ds.index_name(self.identifier.model)
+        index_exists = ds.index_exists(index_name)
         if not index_exists:
             return {
-                'error':'Missing Elasticsearch index "%s"' % config.DOCSTORE_INDEX
+                'error':'Missing Elasticsearch index "%s"' % index_name
             }
         return ds.post_multi(
             self.identifier.path_abs(), recursive=True, force=True
