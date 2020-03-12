@@ -14,7 +14,7 @@ elasticsearch-dsl>=7.0.0,<8.0.0 # Apache y        y
 envoy==0.0.3              # MIT          y             TODO replace!
 GitPython==2.1.14         # BSD          y             Last python2.* release
 Jinja2==2.10.1            # BSD          y
-psutil==5.6.3             # BSD          y        y
+psutil==5.6.6             # BSD          y        y
 python-dateutil==2.8.0    # BSD          y
 python-xmp-toolkit==2.0.1 # New BSD      y
 pytz==2019.2              # MIT          y
