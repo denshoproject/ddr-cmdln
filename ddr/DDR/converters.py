@@ -27,7 +27,7 @@ def normalize_string(text):
         return text
     elif not text:
         return u''
-    return unicode(text).replace('\r\n', '\n').replace('\r', '\n').strip()
+    return str(text).replace('\r\n', '\n').replace('\r', '\n').strip()
 
 def load_dirty_json(text):
     # http://grimhacker.com/2016/04/24/loading-dirty-json-with-python/
@@ -63,7 +63,7 @@ def coerce_text(data):
     """Ensure types (ints,datetimes) are converted to text
     """
     if isinstance(data, int):
-        return unicode(data)
+        return str(data)
     elif isinstance(data, datetime):
         return datetime_to_text(data)
     return data
@@ -541,7 +541,7 @@ def listofdicts_to_text(data, terms=[], separators=LISTOFDICTS_SEPARATORS, newli
     for datum in data:
         if terms:
             items = [
-                separators[0].join([key, unicode(datum.get(key,''))])
+                separators[0].join([key, str(datum.get(key,''))])
                 for key in terms
                 if datum.get(key)
             ]
@@ -647,7 +647,7 @@ def listofdicts_to_textnolabels(data, keys, separators=TEXTNOLABELS_LISTOFDICTS_
         # dict (see data2)
         elif isinstance(n, dict):
             # just the values, no keys
-            values = [unicode(n[key]) for key in keys]
+            values = [str(n[key]) for key in keys]
             item = separator.join(values)
             items.append(item)
     
