@@ -32,7 +32,7 @@ def check_file(json_path, verbose=False):
 
     if not os.path.exists(f.path_abs):
         result = ['missing', f.path_abs]
-        print result
+        print(result)
         return result
     
     mismatches = []
@@ -54,7 +54,7 @@ def check_file(json_path, verbose=False):
     
     if mismatches:
         mismatches.append(json_path)
-        print mismatches
+        print(mismatches)
     
     return mismatches
     

@@ -54,12 +54,12 @@ def check_encoding(repo_url, destdir, verbose=False, csv=False, headers=False, j
         prefix = ''
     
     if csv and headers:
-        print('%scollection id, files, defects, elapsed' % prefix)
+        print('{} collection id, files, defects, elapsed'.format(prefix))
         
     start = datetime.now()
     out(verbose, start)
     
-    out(verbose, 'clone %s %s' % (repo_url, repo_path))
+    out(verbose, 'clone {} {}'.format(repo_url, repo_path))
     repo = clone(repo_url, repo_path)
     out(verbose, repo)
     
@@ -75,7 +75,7 @@ def check_encoding(repo_url, destdir, verbose=False, csv=False, headers=False, j
     out(verbose, end)
     
     if csv:
-        print '%s%s' % (
+        print('{}{}'.format(
             prefix,
             ','.join([
                 str(collection_id),
@@ -83,7 +83,7 @@ def check_encoding(repo_url, destdir, verbose=False, csv=False, headers=False, j
                 str(len(defects)),
                 str(elapsed)
             ])
-        )
+        ))
     elif json:
         data = {
             'collection id': collection_id,
@@ -91,12 +91,12 @@ def check_encoding(repo_url, destdir, verbose=False, csv=False, headers=False, j
             'defects': len(defects),
             'elapsed': str(elapsed),
             }
-        print '%s%s' % (
+        print('{}{}'.format(
             prefix,
             json.dumps(data)
-        )
+        ))
     else:
-        print('%s%s, %s bad, %s files, %s elapsed' % (
+        print('{}{}, {} bad, {} files, {} elapsed'.format(
             prefix,
             collection_id,
             len(defects),
@@ -145,7 +145,7 @@ def analyze_files(paths, verbose=False):
             text = fileio.read_text(path)
             guess = chardet.detect(text)
             if verbose:
-                print('\n| %s %s' % (path, guess))
+                print('\n| {} {}'.format(path, guess))
         if (not bad) and verbose:
             sys.stdout.write('.')
     if len(paths) and verbose:
