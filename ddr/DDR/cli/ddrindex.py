@@ -93,7 +93,11 @@ def _json_handler(obj):
     if hasattr(obj, 'isoformat'):
         return obj.strftime(config.DATETIME_FORMAT)
     else:
-        raise TypeError, 'Object of type %s with value of %s is not JSON serializable' % (type(obj), repr(obj))
+        raise TypeError(
+            'Object of type %s with value of %s is not JSON serializable' % (
+                type(obj), repr(obj)
+            )
+        )
     
 def format_json(data, pretty=False):
     if pretty:
