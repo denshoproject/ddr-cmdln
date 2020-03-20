@@ -25,16 +25,14 @@ PACKAGE_SERVER=ddr.densho.org/static/ddrcmdln
 SRC_REPO_CMDLN=https://github.com/densho/ddr-cmdln.git
 SRC_REPO_CMDLN_ASSETS=https://github.com/densho/ddr-cmdln-assets.git
 SRC_REPO_DEFS=https://github.com/densho/ddr-defs.git
-SRC_REPO_VOCAB=https://github.com/densho/ddr-vocab.git
-SRC_REPO_VOCAB2=https://github.com/densho/densho-vocab.git
+SRC_REPO_VOCAB=https://github.com/densho/densho-vocab.git
 SRC_REPO_MANUAL=https://github.com/densho/ddr-manual.git
 
 CWD := $(shell pwd)
 INSTALL_CMDLN=/opt/ddr-cmdln
 INSTALL_CMDLN_ASSETS=$(INSTALL_CMDLN)/ddr-cmdln-assets
 INSTALL_DEFS=$(INSTALL_CMDLN)/ddr-defs
-INSTALL_VOCAB=$(INSTALL_CMDLN)/ddr-vocab
-INSTALL_VOCAB2=$(INSTALL_CMDLN)/densho-vocab
+INSTALL_VOCAB=$(INSTALL_CMDLN)/densho-vocab
 INSTALL_MANUAL=$(INSTALL_CMDLN)/ddr-manual
 
 COMMIT_CMDLN := $(shell git -C $(INSTALL_CMDLN) log --decorate --abbrev-commit --pretty=oneline -1)
@@ -83,7 +81,7 @@ DEB_BASE=opt/ddr-local
 debug:
 	@echo "ddr-cmdln: $(COMMIT_CMDLN)"
 	@echo "ddr-defs:  $(COMMIT_DEFS)"
-	@echo "ddr-vocab: $(COMMIT_VOCAB)"
+	@echo "densho-vocab: $(COMMIT_VOCAB)"
 
 
 .PHONY: help
@@ -95,7 +93,7 @@ help:
 	@echo ""
 	@echo "Most commands have subcommands (ex: install-ddr-cmdln, restart-supervisor)"
 	@echo ""
-	@echo "get     - Clones ddr-cmdln, ddr-defs, ddr-vocab."
+	@echo "get     - Clones ddr-cmdln, ddr-defs, densho-vocab."
 	@echo "install - Performs complete install. See also: make howto-install"
 	@echo "test    - Run unit tests"
 	@echo ""
@@ -134,7 +132,7 @@ howto-install:
 	@echo "make restart"
 
 
-get: get-app get-ddr-defs get-ddr-vocab
+get: get-app get-ddr-defs get-densho-vocab
 
 install: install-prep install-app install-configs
 
@@ -329,18 +327,12 @@ get-ddr-defs:
 	fi
 
 
-get-ddr-vocab:
+get-densho-vocab:
 	@echo ""
-	@echo "get-ddr-vocab ----------------------------------------------------------"
-	git status | grep "On branch"
+	@echo "get-densho-vocab -------------------------------------------------------"
 	if test -d $(INSTALL_VOCAB); \
 	then cd $(INSTALL_VOCAB) && git pull; \
 	else git clone $(SRC_REPO_VOCAB) $(INSTALL_VOCAB); \
-	fi
-	@echo "get-densho-vocab -------------------------------------------------------"
-	if test -d $(INSTALL_VOCAB2); \
-	then cd $(INSTALL_VOCAB2) && git pull; \
-	else git clone $(SRC_REPO_VOCAB2) $(INSTALL_VOCAB2); \
 	fi
 
 
