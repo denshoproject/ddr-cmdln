@@ -575,7 +575,7 @@ def _get_vocabs_all_fs(base, exclude='index'):
     return {
         vocab.replace('.json',''): _get_vocab_fs(os.path.join(base, vocab))
         for vocab in os.listdir(base)
-        if not (exclude in vocab) or (exclude == vocab)
+        if (not (exclude in vocab) or (exclude == vocab)) and ('.json' in vocab)
     }
 
 def _get_vocabs_all_http(base_url):
