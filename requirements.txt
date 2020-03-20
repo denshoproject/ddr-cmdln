@@ -6,20 +6,20 @@
 
                           # LICENSE  PyPy
 
-beautifulsoup4==4.8.0     # MIT
-click==7.0                # BSD      y
+beautifulsoup4==4.8.2     # MIT
+click==7.1.1              # BSD      y
 deepdiff==3.3.0           # MIT      y
 elasticsearch>=7.0.0,<8.0.0     # Apache  y
 elasticsearch-dsl>=7.0.0,<8.0.0 # Apache  y
 envoy==0.0.3              # MIT             TODO replace!
-GitPython==2.1.14         # BSD
-Jinja2==2.10.1            # BSD
-psutil==5.6.3             # BSD      y
-python-dateutil==2.8.0    # BSD
+GitPython==3.1.0          # BSD
+Jinja2==2.11.1            # BSD
+psutil==5.7.0             # BSD      y
+python-dateutil==2.8.1    # BSD
 python-xmp-toolkit==2.0.1 # New BSD
-pytz==2019.2              # MIT
-requests==2.22.0          # Apache   y
-simplejson==3.16.0        # MIT      y
+pytz==2019.3              # MIT
+requests==2.23.0          # Apache   y
+simplejson==3.17.0        # MIT      y
 unicodecsv==0.14.1        # BSD      y
 
 # development
