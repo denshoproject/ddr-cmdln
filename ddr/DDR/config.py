@@ -1,4 +1,4 @@
-import ConfigParser
+import configparser
 import os
 import sys
 
@@ -18,7 +18,7 @@ class NoConfigError(Exception):
         return repr(self.value)
 
 def read_configs(paths):
-    cfg = ConfigParser.ConfigParser()
+    cfg = configparser.RawConfigParser()
     configs_read = cfg.read(paths)
     if not configs_read:
         raise NoConfigError('No config file!')

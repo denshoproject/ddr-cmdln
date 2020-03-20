@@ -58,7 +58,6 @@ At the end the following files will be present in the destination directory:
 
 
 import argparse
-import ConfigParser
 from datetime import datetime
 import logging
 import os

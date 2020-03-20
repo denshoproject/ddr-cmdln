@@ -1,9 +1,9 @@
 import codecs
+import csv
 import os
 import sys
 
 import simplejson as json
-import unicodecsv as csv
 
 
 def read_text(path, utf8_strict=False):

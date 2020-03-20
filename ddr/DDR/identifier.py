@@ -6,7 +6,7 @@ import importlib
 import os
 import re
 import string
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 
 

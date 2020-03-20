@@ -1,4 +1,4 @@
-import ConfigParser
+import configparser
 import json
 import logging
 import os
@@ -14,7 +14,7 @@ from DDR import identifier
 from DDR import idservice
 from DDR import models
 
-config_parser = ConfigParser.ConfigParser()
+config_parser = configparser.ConfigParser()
 configs_read = config_parser.read(config.CONFIG_FILES)
 if not configs_read:
     raise config.NoConfigError('No config file!')

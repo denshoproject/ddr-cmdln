@@ -1,5 +1,4 @@
 from datetime import datetime
-from exceptions import Exception
 import logging
 logger = logging.getLogger(__name__)
 import os

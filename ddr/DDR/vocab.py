@@ -96,9 +96,9 @@ import logging
 logger = logging.getLogger(__name__)
 import multiprocessing
 import os
-import StringIO
+import io
 import sys
-import urlparse
+import urllib.parse
 
 from dateutil import parser
 import requests
@@ -326,8 +326,8 @@ class Index( object ):
                 urls.append(part.strip())
         uris = []
         for url in urls:
-            if url and urlparse.urlparse(url).path:
-                uris.append(urlparse.urlparse(url).path)
+            if url and urllib.parse.urlparse(url).path:
+                uris.append(urllib.parse.urlparse(url).path)
         return uris
     
     def load_csv(self, text):
@@ -342,7 +342,7 @@ class Index( object ):
         @param text: str Raw contents of CSV file
         @returns: Index object with terms
         """
-        pseudofile = StringIO.StringIO(text)
+        pseudofile = io.StringIO(text)
         reader = fileio.csv_reader(pseudofile)
         terms = []
         for n,row in enumerate(reader):
@@ -391,7 +391,7 @@ class Index( object ):
         
         @returns: CSV formatted text
         """
-        output = StringIO.StringIO()
+        output = io.StringIO()
         writer = fileio.csv_writer(output)
         # metadata
         writer.writerow(['id', self.id])
