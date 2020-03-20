@@ -286,7 +286,7 @@ def copy_to_workdir(src_path, tmp_path, tmp_path_renamed, log):
         os.makedirs(os.path.dirname(tmp_path))
     log.ok('| cp %s %s' % (src_path, tmp_path))
     shutil.copy(src_path, tmp_path)
-    os.chmod(tmp_path, 0644)
+    os.chmod(tmp_path, 0o644)
     if os.path.exists(tmp_path):
         log.ok('| done')
     else:
@@ -305,7 +305,7 @@ def copy_to_file_path(file_, src_path, log):
     if not os.path.exists(file_.entity_files_path):
         os.makedirs(file_.entity_files_path)
     shutil.copy(src_path, file_.path_abs)
-    os.chmod(file_.path_abs, 0644)
+    os.chmod(file_.path_abs, 0o644)
     if os.path.exists(file_.path_abs):
         log.ok('| done')
     else:
