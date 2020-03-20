@@ -22,9 +22,17 @@ VOCABS_URL = config.VOCABS_URL
 GIT_USER = 'gjost'
 GIT_MAIL = 'gjost@densho.org'
 AGENT = 'pytest'
+
+# ddr-cmdln standalone
 TEST_CSV_DIR = os.path.join(
-    os.getcwd(), 'ddr-cmdln/ddr/tests/ddrimport'
+    os.getcwd(), 'ddr/tests/ddrimport'
 )
+if not os.path.exists(TEST_CSV_DIR):
+    # ddr-cmdln as part of ddr-local
+    TEST_CSV_DIR = os.path.join(
+        os.getcwd(), 'ddr-cmdln/ddr/tests/ddrimport'
+    )
+
 TEST_FILES_DIR = os.path.join(
     os.getcwd(), 'ddr-cmdln-assets'
 )
