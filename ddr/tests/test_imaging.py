@@ -41,7 +41,7 @@ def test_files(tmpdir_factory):
     so we don't have to download them every time
     """
     tmpdir = tmpdir_factory.mktemp('images')
-    for fmt,data in TEST_FILES.iteritems():
+    for fmt,data in TEST_FILES.items():
         # /tmp/pytest-of-USER/imaging
         data['path'] = tmpdir / '..' / '..' / data['filename']
         if not data['path'].exists():

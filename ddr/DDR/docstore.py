@@ -158,7 +158,7 @@ class Docstore():
     def index_names(self):
         """Returns list of index names
         """
-        return [name for name in self.status()['indices'].keys()]
+        return [name for name in list(self.status()['indices'].keys())]
     
     def create_indices(self):
         """Create indices for each model defined in ddr-defs/repo_models/elastic.py
@@ -247,7 +247,7 @@ class Docstore():
         EXCLUDED = [
             'id', 'title', 'description',
         ]
-        for model in MODEL_REPO_MODELS.keys():
+        for model in list(MODEL_REPO_MODELS.keys()):
             module = module_for_name(MODEL_REPO_MODELS[model]['module']
             )
             fields = [
@@ -295,7 +295,7 @@ class Docstore():
         
         # push facet data
         statuses = []
-        for v in vocabs.keys():
+        for v in list(vocabs.keys()):
             fid = vocabs[v]['id']
             facet = Facet()
             facet.meta.id = fid
@@ -325,7 +325,7 @@ class Docstore():
                 term.links_html = facetterm_id
                 term.links_json = facetterm_id
                 # TODO doesn't handle location_geopoint
-                for field in FacetTerm._doc_type.mapping.to_dict()['properties'].keys():
+                for field in list(FacetTerm._doc_type.mapping.to_dict()['properties'].keys()):
                     if t.get(field):
                         setattr(term, field, t[field])
                 term.id = facetterm_id  # overwrite term.id from original
@@ -447,7 +447,7 @@ class Docstore():
         # ID components (repo, org, cid, ...) as separate fields
         idparts = deepcopy(oi.idparts)
         idparts.pop('model')
-        for key,val in idparts.iteritems():
+        for key,val in idparts.items():
             setattr(d, key, val)
         # add/update
         if remove and self.exists(doctype, oi):
@@ -489,7 +489,7 @@ class Docstore():
         for n,document in enumerate(data['narrators']):
             d = ES_Class(id=document['id'])
             # set all values first before exceptions
-            for key,val in document.iteritems():
+            for key,val in document.items():
                 setattr(d, key, val)
             # make sure certain important fields are set properly
             d.meta.id = document['id']
@@ -555,7 +555,7 @@ class Docstore():
             if not parents:
                 parents = {
                     oid: oi.object()
-                    for oid,oi in _all_parents([document.identifier]).iteritems()
+                    for oid,oi in _all_parents([document.identifier]).items()
                 }
             can_publish = publishable([document.identifier], parents)
             public = True
@@ -603,7 +603,7 @@ class Docstore():
         identifiers = [Identifier(path) for path in paths]
         parents = {
             oid: oi.object()
-            for oid,oi in _all_parents(identifiers).iteritems()
+            for oid,oi in _all_parents(identifiers).items()
         }
         paths = publishable(
             identifiers,
@@ -958,7 +958,7 @@ def doctype_fields(es_class):
     
     TODO move to ddr-cmdln
     """
-    return es_class._doc_type.mapping.to_dict()['properties'].keys()
+    return list(es_class._doc_type.mapping.to_dict()['properties'].keys())
 
 def _clean_dict(data):
     """Remove null or empty fields; ElasticSearch chokes on them.
@@ -971,7 +971,7 @@ def _clean_dict(data):
     @param data: Standard DDR list-of-dicts data structure.
     """
     if data and isinstance(data, dict):
-        for key in data.keys():
+        for key in list(data.keys()):
             if not data[key]:
                 del(data[key])
 
@@ -998,7 +998,7 @@ def _public_fields(modules=MODULES):
     @returns: Dict
     """
     public_fields = {}
-    for model,module in modules.iteritems():
+    for model,module in modules.items():
         if module:
             mfields = [
                 field['name']
@@ -1116,7 +1116,7 @@ def aggs_dict(aggregations):
             bucket['key']: bucket['doc_count']
             for bucket in data['buckets']
         }
-        for fieldname,data in aggregations.items()
+        for fieldname,data in list(aggregations.items())
     }
 
 
@@ -1146,7 +1146,7 @@ def aggs_dict(aggregations):
             bucket['key']: bucket['doc_count']
             for bucket in data['buckets']
         }
-        for fieldname,data in aggregations.items()
+        for fieldname,data in list(aggregations.items())
     }
 
 def search_query(text='', must=[], should=[], mustnot=[], aggs={}):

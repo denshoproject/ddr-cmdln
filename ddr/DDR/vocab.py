@@ -420,7 +420,7 @@ class Index( object ):
             'digraph G {',
             '  rankdir=RL;'
         ]
-        for tid,term in self._terms_by_id.iteritems():
+        for tid,term in self._terms_by_id.items():
             parent = self._parent(term)
             if parent:
                 src = '"%s-%s"' % (term.id, term.title[:term_len].replace('"',''))
@@ -433,7 +433,7 @@ class Index( object ):
     def dump_text( self ):
         """Text format of the entire index.
         """
-        terms = [self._format(term) for id,term in self._terms_by_id.iteritems()]
+        terms = [self._format(term) for id,term in self._terms_by_id.items()]
         return '\n\n'.join(terms)
         
     def menu_choices( self ):
@@ -511,7 +511,7 @@ class Term( object ):
         """Converts Term into a dict suitable for writing to JSON.
         """
         data = {}
-        for key,val in self.__dict__.iteritems():
+        for key,val in self.__dict__.items():
             if (key in ['parent_id']) and val:
                 val = getattr(self, key)
             elif (key in ['siblings', 'children']) and val:
@@ -592,7 +592,7 @@ def _get_vocabs_all_http(base_url):
         return_dict[vocab] = _get_vocab_http(url)
     return_dict = multiprocessing.Manager().dict()
     jobs = []
-    for vocab,filename in vocabs.iteritems():
+    for vocab,filename in vocabs.items():
         url = os.path.join(base_url, filename)
         p = multiprocessing.Process(
             target=worker,
@@ -604,7 +604,7 @@ def _get_vocabs_all_http(base_url):
         proc.join()
     
     # turn return_dict into a regular dict
-    return {key:val for key,val in return_dict.items()}
+    return {key:val for key,val in list(return_dict.items())}
 
 def get_vocabs(vocabs_url):
     """Loads data for multiple vocabularies from URL or from filesystem.
@@ -716,7 +716,7 @@ def topics_choices(facet, FacetTermClass):
         term.meta.id = facetterm_id
         term.facet = fid
         term.term_id = t.get('id')
-        for field in FacetTermClass._doc_type.mapping.to_dict()['properties'].keys():
+        for field in list(FacetTermClass._doc_type.mapping.to_dict()['properties'].keys()):
             if t.get(field):
                 setattr(term, field, t[field])
         term.id = facetterm_id  # overwrite id from original

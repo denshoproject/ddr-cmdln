@@ -84,7 +84,7 @@ class Entity(common.DDRObject):
         self.identifier = i
         
         self.id = i.id
-        self.idparts = i.parts.values()
+        self.idparts = list(i.parts.values())
         
         self.collection_id = i.collection_id()
         self.parent_id = i.parent_id()
@@ -563,7 +563,7 @@ class Entity(common.DDRObject):
             # from metadata file
             json_path = os.path.join(self.files_path, f)
             for field in json.loads(fileio.read_text(json_path)):
-                for k,v in field.iteritems():
+                for k,v in field.items():
                     if k == algo:
                         cs = v
                     if k == 'basename_orig':

@@ -129,7 +129,7 @@ class DDRObject(object):
             @param ignore: list of ignored fieldnames
             @returns: list of dicts minus ignored fields
             """
-            keys = data.keys()
+            keys = list(data.keys())
             for fieldname in ignore:
                 if fieldname in keys:
                     data.pop(fieldname)
@@ -168,7 +168,7 @@ class DDRObject(object):
             @param ignore: list of ignored fieldnames
             @returns: list of dicts minus ignored fields
             """
-            keys = data.keys()
+            keys = list(data.keys())
             for fieldname in ignore:
                 if fieldname in keys:
                     data.pop(fieldname)
@@ -179,7 +179,7 @@ class DDRObject(object):
             Prevents false positives w old objects that don't use current defaults.
             """
             for field in module.FIELDS:
-                if (field['name'] in data.keys()) and not data[field['name']]:
+                if (field['name'] in list(data.keys())) and not data[field['name']]:
                     data[field['name']] = field['default']
             return data
         
@@ -189,7 +189,7 @@ class DDRObject(object):
         raw.pop(0)
         other = OrderedDict()
         for item in raw:
-            key = item.keys()[0]
+            key = list(item.keys())[0]
             value = item[key]
             other[key] = value
         
@@ -349,7 +349,7 @@ class DDRObject(object):
         idparts.pop('model')
 #        for k in ID_COMPONENTS:
 #            setattr(d, k, '') # ensure all fields present
-        for k,v in idparts.iteritems():
+        for k,v in idparts.items():
             setattr(d, k, v)
         # links
         d.links_html = self.identifier.id
@@ -595,7 +595,7 @@ def is_object_metadata(data):
     @returns: boolean
     """
     for key in ['app_commit', 'app_release']:
-        if key in data.keys():
+        if key in list(data.keys()):
             return True
     return False
 
@@ -702,12 +702,12 @@ def load_json(document, module, json_text):
     # field values from JSON
     for mf in module.FIELDS:
         for f in json_data:
-            if hasattr(f, 'keys') and (f.keys()[0] == mf['name']):
-                fieldname = f.keys()[0]
+            if hasattr(f, 'keys') and (list(f.keys())[0] == mf['name']):
+                fieldname = list(f.keys())[0]
                 # run jsonload_* functions on field data if present
                 field_data = modules.Module(module).function(
                     'jsonload_%s' % fieldname,
-                    f.values()[0]
+                    list(f.values())[0]
                 )
                 if isinstance(field_data, basestring):
                     field_data = field_data.strip()
@@ -734,7 +734,7 @@ def apply_timezone(document, module):
             dt = getattr(document, fieldname)
             if dt and isinstance(dt, datetime) and (not dt.tzinfo):
                 # Use default timezone unless...
-                if document.identifier.idparts['org'] in config.ALT_TIMEZONES.keys():
+                if document.identifier.idparts['org'] in list(config.ALT_TIMEZONES.keys()):
                     timezone = config.ALT_TIMEZONES[document.identifier.idparts['org']]
                 else:
                     timezone = config.TZ
@@ -864,7 +864,7 @@ def csvload_rowd(module, rowd):
         for f in module.module.FIELDS
     }
     data = {}
-    for fieldname,value in rowd.iteritems():
+    for fieldname,value in rowd.items():
         try:
             ignored = 'ignore' in field_directives[fieldname]
         except KeyError:
@@ -899,7 +899,7 @@ def load_csv(obj, module, rowd):
     # apply module's csvload_* methods to rowd data
     rowd = csvload_rowd(module, rowd)
     obj.modified_fields = []
-    for field,value in rowd.iteritems():
+    for field,value in rowd.items():
         try:
             ignored = 'ignore' in field_directives[field]
         except KeyError:

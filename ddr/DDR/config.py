@@ -33,7 +33,7 @@ def _parse_alt_timezones(text):
     data = {}
     for item in [item for item in text.strip().split(';') if item]:
         key,val = item.strip().split(':')
-        if key not in data.keys():
+        if key not in list(data.keys()):
             data[key] = pytz.timezone(val)
     return data
 

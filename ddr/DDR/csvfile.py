@@ -44,8 +44,8 @@ def make_rows(rowds):
     @param rowds: list of dicts
     @returns: headers,rows
     """
-    headers = rowds[0].keys()
-    rows = [rowd.values() for rowd in rowds]
+    headers = list(rowds[0].keys())
+    rows = [list(rowd.values()) for rowd in rowds]
     return headers,rows
 
 def _strip_str(data):
@@ -133,7 +133,7 @@ def account_row(required_fields, rowd):
     """
     return [
         f for f in required_fields
-        if (f not in rowd.keys()) or (not rowd.get(f,None))
+        if (f not in list(rowd.keys())) or (not rowd.get(f,None))
     ]
 
 def validate_id(text):

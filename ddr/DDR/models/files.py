@@ -106,7 +106,7 @@ class File(common.DDRObject):
         for arg in args:
             if isinstance(arg, Identifier):
                 i = arg
-        for key,arg in kwargs.iteritems():
+        for key,arg in kwargs.items():
             if isinstance(arg, Identifier):
                 i = arg
         self.identifier = i
@@ -119,7 +119,7 @@ class File(common.DDRObject):
         path_abs = os.path.normpath(path_abs)
         
         self.id = i.id
-        self.idparts = i.parts.values()
+        self.idparts = list(i.parts.values())
         self.collection_id = i.collection_id()
         self.parent_id = i.parent_id()
         self.entity_id = self.parent_id
@@ -404,7 +404,7 @@ class File(common.DDRObject):
         """
         # remove 'id' from rowd because files.FIELDS has no 'id' field
         # TODO files.FIELDS really should have an ID field...
-        if 'id' in rowd.iterkeys():
+        if 'id' in iter(rowd.keys()):
             rowd.pop('id')
         module = modules.Module(self.identifier.fields_module())
         modified = common.load_csv(self, module, rowd)

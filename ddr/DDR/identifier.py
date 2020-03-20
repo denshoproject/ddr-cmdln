@@ -39,7 +39,7 @@ class Definitions():
             if i['module']
         }
         couldnt = []
-        for model,module in models_modules.iteritems():
+        for model,module in models_modules.items():
             try:
                 modules[model] = importlib.import_module(module)
             except ImportError:
@@ -88,7 +88,7 @@ class Definitions():
                 'class': model,
                 'as': '%smodule' % model,
             }
-            for model,module in modules.iteritems() if module
+            for model,module in modules.items() if module
         }
 
     @staticmethod
@@ -168,7 +168,7 @@ class Definitions():
     @staticmethod
     def children(parents):
         children = {}
-        for child,folks in parents.iteritems():
+        for child,folks in parents.items():
             if folks:
                 for parent in folks:
                     if not children.get(parent):
@@ -263,7 +263,7 @@ class Definitions():
                 template.replace('{','').replace('}','').split('-')
                 for template in templates
             ]
-            for model,templates in mi.iteritems()
+            for model,templates in mi.items()
         }
 
     # ----------------------------------------------------------------------
@@ -360,7 +360,7 @@ class Definitions():
         """
         templates = {}
         for i in identifiers:
-            for k,v in i['templates']['path'].iteritems():
+            for k,v in i['templates']['path'].items():
                 if v:
                     key = '%s-%s' % (i['model'],k)
                     templates[key] = v
@@ -398,7 +398,7 @@ class Definitions():
         """
         templates = {}
         for i in identifiers:
-            for k,v in i['templates']['url'].iteritems():
+            for k,v in i['templates']['url'].items():
                 if not templates.get(k):
                     templates[k] = {}
                 templates[k][i['model']] = [u for u in i['templates']['url'][k]]
@@ -424,7 +424,7 @@ class Definitions():
         @returns: dict of PARENT_MODULE.FIELD -> [CHILD_MODULE.FIELD]
         """
         parent_fields = {}
-        for module_name,module in modules.items():
+        for module_name,module in list(modules.items()):
             if hasattr(module, 'FIELDS'):
                 for module_field in module.FIELDS:
                     if module_field.get('inherits'):
@@ -508,7 +508,7 @@ def render_models_digraph(output_path):
     for model in MODELS:
         g.node(model)
     
-    for model,parents in PARENTS_ALL.iteritems():
+    for model,parents in PARENTS_ALL.items():
         if model and parents:
             for parent in parents:
                 g.edge(model, parent)
@@ -585,7 +585,7 @@ def set_idparts(i, groupdict, components=ID_COMPONENTS, types=COMPONENT_TYPES):
     id_components.insert(0, ('model',i.model))
     i.idparts = OrderedDict(id_components)
     # set ID parts to their assigned type
-    for key,val in i.parts.items():
+    for key,val in list(i.parts.items()):
         i.parts[key] = types[key](val)
 
 def set_idparts_sort(i, valid_components=VALID_COMPONENTS):
@@ -595,8 +595,8 @@ def set_idparts_sort(i, valid_components=VALID_COMPONENTS):
     Call after set_idparts
     """
     i.id_sort = []
-    for key,val in i.parts.items():
-        if key in valid_components.keys():
+    for key,val in list(i.parts.items()):
+        if key in list(valid_components.keys()):
             try:
                 i.id_sort.append( valid_components[key].index(val) )
             except:
@@ -638,7 +638,7 @@ def format_path(i, model, path_type, templates=PATH_TEMPLATES):
         raise MissingBasepathException('%s basepath not set.'% i)
     key = '-'.join([model, path_type])
     for template in templates[key]:
-        kwargs = {key: val for key,val in i.parts.items()}
+        kwargs = {key: val for key,val in list(i.parts.items())}
         kwargs['basepath'] = i.basepath
         # TODO put in try/except, first one that works is the path
         try:
@@ -677,7 +677,7 @@ def matches_pattern(text, patterns):
         model = tpl[-1]
         m = re.match(pattern, text)
         if m:
-            idparts = {k:v for k,v in m.groupdict().iteritems()}
+            idparts = {k:v for k,v in m.groupdict().items()}
             idparts['model'] = model
             return idparts
     return {}
@@ -729,7 +729,7 @@ def _parse_args_kwargs(keys, args, kwargs):
             elif _is_abspath(arg): blargs['path'] = arg
     # kwargs override args
     if kwargs:
-        for key,val in kwargs.items():
+        for key,val in list(kwargs.items()):
             if val and (key in keys):
                 blargs[key] = val
     return blargs
@@ -770,7 +770,7 @@ def first_id(model, i):
     @param i: Identifier
     @returns: Identifier
     """
-    parts = {k:v for k,v in i.parts.iteritems()}
+    parts = {k:v for k,v in i.parts.items()}
     next_component = _field_names(ID_TEMPLATES[model][0]).pop()
     parts[next_component] = 1
     parts['model'] = model
@@ -1091,7 +1091,7 @@ class Identifier(object):
         @returns: Identifier
         """
         partsd = {'model': self.model}
-        for k,v in self.parts.iteritems():
+        for k,v in self.parts.items():
             partsd[k] = v
         if not isinstance(v, int):
             raise Exception('Not a next-able model: %s' % (self.model))
@@ -1102,7 +1102,7 @@ class Identifier(object):
     def components(self):
         """Model and parts of the ID as a list.
         """
-        parts = [val for val in self.parts.itervalues()]
+        parts = [val for val in self.parts.values()]
         parts.insert(0, self.model)
         return parts
 
@@ -1178,7 +1178,7 @@ class Identifier(object):
         return {
             k:v
             for k,v in [
-                x for x in self.parts.items()
+                x for x in list(self.parts.items())
             ][:-1]
         }
 
@@ -1230,9 +1230,9 @@ class Identifier(object):
         """
         if not model in CHILDREN[self.model]:
             raise Exception('%s can not have child of type %s.' % (self.model, model))
-        child_parts = {key:val for key,val in self.parts.iteritems()}
+        child_parts = {key:val for key,val in self.parts.items()}
         child_parts['model'] = model
-        for key,val in idparts.iteritems():
+        for key,val in idparts.items():
             if key in ID_COMPONENTS:
                 child_parts[key] = val
         return self.__class__(child_parts, base_path=base_path)

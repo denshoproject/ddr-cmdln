@@ -666,9 +666,9 @@ def load_conflicted_json(text):
         elif flags == ' M  ':                                # >>>>>>>>
             if len(left) == len(right):
                 for n in range(0, len(left)):
-                    key = left[n].keys()[0]
-                    val = {'left': left[n].values()[0],
-                           'right': right[n].values()[0],}
+                    key = list(left[n].keys())[0]
+                    val = {'left': list(left[n].values())[0],
+                           'right': list(right[n].values())[0],}
                     fields.append( {key:val} )
     return fields
 
@@ -926,7 +926,7 @@ def annex_parse_version(text):
         ('supported repository versions', 'supported repository version'),
     ]
     for old,new in UPDATED_FIELDNAMES:
-        if old in data.iterkeys():
+        if old in iter(data.keys()):
             data[new] = data.pop(old)
     # add major version
     data['major version'] = data['git-annex version'].split('.')[0]
@@ -950,7 +950,7 @@ def annex_version(repo, verbose=False):
     return 'git-annex version: {}'.format(repo.git.annex('version', '--raw'))
 
 def _annex_parse_description(annex_status, uuid):
-    for key in annex_status.iterkeys():
+    for key in annex_status.keys():
         if 'repositories' in key:
             for r in annex_status[key]:
                 if (r['uuid'] == uuid) and r['here']:

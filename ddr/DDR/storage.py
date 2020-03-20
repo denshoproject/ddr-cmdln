@@ -82,7 +82,7 @@ def _parse_udisks_dump(udisks_dump_stdout):
                 k,v = l.split(':', 1)
                 k = k.strip()
                 v = v.strip()
-                if (k in INTERESTING) and v and (not k in device.keys()):
+                if (k in INTERESTING) and v and (not k in list(device.keys())):
                     device[k] = v
         devices.append(device)
     sdchunks = c = None
@@ -94,7 +94,7 @@ def _parse_udisks_dump(udisks_dump_stdout):
         'type': 'fstype',
     }
     for device in devices:
-        for keyfrom,keyto in RENAME_FIELDS.iteritems():
+        for keyfrom,keyto in RENAME_FIELDS.items():
             if device.get(keyfrom,None):
                 device[keyto] = device.pop(keyfrom)
     # I like ints

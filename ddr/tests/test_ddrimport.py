@@ -521,13 +521,13 @@ def check_hashes(before, after):
     """
     keys_changed = False
     hashes_changed = False
-    if not after.keys() == before.keys():
+    if not list(after.keys()) == list(before.keys()):
         keys_changed = True
         print('KEYS CHANGED: %s' % oid)
-        print('BEFORE %s' % before.keys())
-        print('AFTER  %s' % after.keys())
-    assert after.keys() == before.keys()
-    for oid in before.keys():
+        print('BEFORE %s' % list(before.keys()))
+        print('AFTER  %s' % list(after.keys()))
+    assert list(after.keys()) == list(before.keys())
+    for oid in list(before.keys()):
         if not before[oid] == after[oid]:
             hashes_changed = True
             print('HASHES CHANGED: %s' % oid)

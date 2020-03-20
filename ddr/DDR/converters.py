@@ -313,11 +313,11 @@ def dict_to_textbracketid(data, keys):
         return data
     if len(keys) != 2:
         raise Exception('Cannot format "Topic [ID]" data: too many keys. "%s"' % data)
-    if not 'id' in data.keys():
+    if not 'id' in list(data.keys()):
         raise Exception('No "id" field in data: "%s".' % data)
     data_ = copy.deepcopy(data)
     d = {'id': data_.pop('id')}
-    d['term'] = data_.values()[0]
+    d['term'] = list(data_.values())[0]
     return TEXT_BRACKETID_TEMPLATE.format(**d)
 
 def text_to_dict(text, keys):
@@ -343,7 +343,7 @@ def text_to_dict(text, keys):
         raise Exception('text_to_dict could not parse "%s"' % text)
     # strip strings, force int values to int
     d = {}
-    for key,val in data.iteritems():
+    for key,val in data.items():
         if isinstance(val, basestring):
             d[key] = val.strip()
         else:
@@ -408,7 +408,7 @@ def text_to_kvlist(text):
 def kvlist_to_text(data):
     items = []
     for d in data:
-        i = [k+':'+v for k,v in d.iteritems()]
+        i = [k+':'+v for k,v in d.items()]
         item = '; '.join(i)
         items.append(item)
     text = '; '.join(items)
@@ -548,7 +548,7 @@ def listofdicts_to_text(data, terms=[], separators=LISTOFDICTS_SEPARATORS, newli
         else:
             items = [
                 separators[0].join(keyval)
-                for keyval in datum.iteritems()
+                for keyval in datum.items()
             ]
         line = separators[1].join(items)
         lines.append(line)

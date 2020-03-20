@@ -252,7 +252,7 @@ def test_annex_status(tmpdir):
     status = dvcs.annex_status(repo)
     cleanup_repo(path)
     found = False
-    for key in status.iterkeys():
+    for key in status.keys():
         if 'repositories' in key:
             for r in status[key]:
                 if r['here']:
@@ -445,7 +445,7 @@ GIT_STATUS_MESSAGES = {
 def test_repo_states():
     results = {
         key: dvcs.repo_states(status)
-        for key,status in GIT_STATUS_MESSAGES.iteritems()
+        for key,status in GIT_STATUS_MESSAGES.items()
     }
     assert results['synced0'] == ['synced']
     assert results['synced1'] == ['synced']
