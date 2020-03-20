@@ -248,7 +248,7 @@ install-dependencies: install-core install-misc-tools
 mkdirs: mkdir-ddr-cmdln
 
 
-get-app: get-ddr-cmdln get-ddr-manual
+get-app: get-ddr-cmdln get-ddr-cmdln-assets get-ddr-manual
 
 install-app: install-dependencies install-setuptools install-ddr-cmdln install-configs mkdir-ddr-cmdln
 
@@ -269,7 +269,10 @@ get-ddr-cmdln:
 	then cd $(INSTALL_CMDLN) && git pull; \
 	else git clone $(SRC_REPO_CMDLN); \
 	fi
-	@echo "get-ddr-cmdln-assets"
+
+get-ddr-cmdln-assets:
+	@echo ""
+	@echo "get-ddr-cmdln-assets ---------------------------------------------------"
 	if test -d $(INSTALL_CMDLN_ASSETS); \
 	then cd $(INSTALL_CMDLN_ASSETS) && git pull; \
 	else git clone $(SRC_REPO_CMDLN_ASSETS); \
