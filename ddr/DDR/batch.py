@@ -136,7 +136,7 @@ def nicer_unicode_decode_error(headers, obj, csv):
     @param csv: list of CSV row cells
     """
     for n,field in enumerate(csv):
-        if isinstance(field, basestring):
+        if isinstance(field, str):
             try:
                 utf8 = field.decode('utf8', 'strict')
             except UnicodeEncodeError as err:
@@ -738,7 +738,7 @@ class Importer():
     @staticmethod
     def _rowd_is_external(rowd):
         """indicates whether or not rowd represents an external file."""
-        if rowd.get('external') and isinstance(rowd['external'], basestring) and rowd['external'].isdigit():
+        if rowd.get('external') and isinstance(rowd['external'], str) and rowd['external'].isdigit():
             rowd['external'] = int(rowd['external'])
         if rowd.get('external', 0):
             return True

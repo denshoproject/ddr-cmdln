@@ -99,7 +99,7 @@ class File(common.DDRObject):
         # only accept path_abs
         if kwargs and kwargs.get('path_abs',None):
             path_abs = kwargs['path_abs']
-        elif args and args[0] and isinstance(args[0], basestring):
+        elif args and args[0] and isinstance(args[0], str):
             path_abs = args[0]  #     Use path_abs arg!!!
         
         i = None

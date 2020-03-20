@@ -497,7 +497,7 @@ class Term( object ):
         # parse list from string in CSV
         encyc_urls = t.get('encyc_urls', [])
         if encyc_urls:
-            if isinstance(encyc_urls, basestring):
+            if isinstance(encyc_urls, str):
                 term.encyc_urls = encyc_urls.strip().split(',')
             elif isinstance(encyc_urls, list):
                 term.encyc_urls = encyc_urls
@@ -522,7 +522,7 @@ class Term( object ):
                 val_before = val
                 if isinstance(val, datetime):
                     val = converters.datetime_to_text(val)
-                elif isinstance(val, basestring):
+                elif isinstance(val, str):
                     pass
                 else:
                     val = None

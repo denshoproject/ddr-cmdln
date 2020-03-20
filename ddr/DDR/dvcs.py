@@ -1037,7 +1037,7 @@ def annex_status(repo):
     if major_version:
         if isinstance(major_version, int):
             pass
-        elif isinstance(major_version, basestring) and major_version.isdigit():
+        elif isinstance(major_version, str) and major_version.isdigit():
             major_version = int(major_version)
         else:
             raise Exception(

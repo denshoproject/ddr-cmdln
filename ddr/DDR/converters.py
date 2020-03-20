@@ -23,7 +23,7 @@ from DDR import config
 def normalize_string(text):
     if text == None:
         return u''
-    elif not isinstance(text, basestring):
+    elif not isinstance(text, str):
         return text
     elif not text:
         return u''
@@ -77,7 +77,7 @@ def text_to_boolean(value):
             return value
         elif isinstance(value, int) and value:
             return True
-        elif isinstance(value, basestring):
+        elif isinstance(value, str):
             if value.isdigit() and int(value):
                 return True
             if value in ['true', 'True']:
@@ -163,7 +163,7 @@ def _is_listofstrs(data):
     if isinstance(data, list):
         num_strs = 0
         for x in data:
-            if isinstance(x, basestring):
+            if isinstance(x, str):
                 num_strs += 1
         if num_strs == len(data):
             return True
@@ -309,7 +309,7 @@ def textbracketid_to_dict(text, keys=['term', 'id'], pattern=TEXT_BRACKETID_REGE
     return {}
 
 def dict_to_textbracketid(data, keys):
-    if isinstance(data, basestring):
+    if isinstance(data, str):
         return data
     if len(keys) != 2:
         raise Exception('Cannot format "Topic [ID]" data: too many keys. "%s"' % data)
@@ -344,7 +344,7 @@ def text_to_dict(text, keys):
     # strip strings, force int values to int
     d = {}
     for key,val in data.items():
-        if isinstance(val, basestring):
+        if isinstance(val, str):
             d[key] = val.strip()
         else:
             d[key] = val
@@ -535,7 +535,7 @@ def text_to_listofdicts(text, separators=LISTOFDICTS_SEPARATORS, split1x=LISTOFD
 def listofdicts_to_text(data, terms=[], separators=LISTOFDICTS_SEPARATORS, newlines=True):
     if not data:
         return ''
-    if isinstance(data, basestring):
+    if isinstance(data, str):
         data = text_to_listofdicts(data)
     lines = []
     for datum in data:
@@ -631,7 +631,7 @@ def listofdicts_to_textnolabels(data, keys, separators=TEXTNOLABELS_LISTOFDICTS_
     @returns: str
     """
     # split string into list (see data0)
-    if isinstance(data, basestring) and (separators[1] in data):
+    if isinstance(data, str) and (separators[1] in data):
         data = data.split(separators[1])
     if not isinstance(data, list):
         raise Exception('Data is not a list "%s".' % data)
@@ -639,7 +639,7 @@ def listofdicts_to_textnolabels(data, keys, separators=TEXTNOLABELS_LISTOFDICTS_
     items = []
     for n in data:
         # string (see data1)
-        if isinstance(n, basestring):
+        if isinstance(n, str):
             values = n.strip().split(separators[0], 1)
             item = separator.join(values)
             items.append(item)
@@ -684,7 +684,7 @@ def text_to_bracketids(text, fieldnames=[]):
                 for item in text
             ]
     # old-skool string
-    elif text and isinstance(text, basestring):
+    elif text and isinstance(text, str):
         data = [
             text_to_dict(item, fieldnames)
             for item in text.split(';')
@@ -806,13 +806,13 @@ ROLEPEOPLE_TEXT_TEMPLATE_W_ID = 'namepart:{{ data.namepart }}|role:{{ data.role 
 ROLEPEOPLE_TEXT_TEMPLATE_NOID = 'namepart:{{ data.namepart }}|role:{{ data.role }}'
 
 def rolepeople_to_text(data):
-    if isinstance(data, basestring):
+    if isinstance(data, str):
         text = data
     else:
         items = []
         for d in data:
             # strings probably formatted or close enough
-            if isinstance(d, basestring):
+            if isinstance(d, str):
                 items.append(d)
             elif isinstance(d, dict):
                 if d.get('namepart') and d.get('id'):

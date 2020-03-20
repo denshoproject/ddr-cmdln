@@ -709,7 +709,7 @@ def load_json(document, module, json_text):
                     'jsonload_%s' % fieldname,
                     list(f.values())[0]
                 )
-                if isinstance(field_data, basestring):
+                if isinstance(field_data, str):
                     field_data = field_data.strip()
                 setattr(document, fieldname, field_data)
     # Fill in missing fields with default values from module.FIELDS.

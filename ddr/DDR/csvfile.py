@@ -49,7 +49,7 @@ def make_rows(rowds):
     return headers,rows
 
 def _strip_str(data):
-    if isinstance(data, basestring):
+    if isinstance(data, str):
         data = data.strip()
     return data
 
