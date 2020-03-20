@@ -13,5 +13,6 @@ ddr/ddr_cmdln.egg-info/
 ddr/dist/
 ddr-defs/
 debs/
+densho-vocab/
 tmp/
 venv/
