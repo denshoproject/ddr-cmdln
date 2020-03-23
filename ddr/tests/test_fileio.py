@@ -70,7 +70,8 @@ def test_write_csv(tmpdir):
     assert os.path.exists(CSV_PATH)
     with open(CSV_PATH, 'r') as f:
         out = f.read()
-    assert out == CSV_FILE
+    # compare lines regardless or newline
+    assert out.splitlines() == CSV_FILE.splitlines()
     # cleanup
     if os.path.exists(CSV_PATH):
         os.remove(CSV_PATH)
