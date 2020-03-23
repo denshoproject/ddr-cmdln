@@ -168,9 +168,9 @@ def write_csv(path, headers, rows, append=False, utf8_strict=False):
     @param utf8_strict: boolean
     """
     if append:
-        mode = 'ab'
+        mode = 'a'
     else:
-        mode = 'wb'
+        mode = 'w'
     if utf8_strict:
         with codecs.open(path, mode, 'utf-8') as f:
             writer = csv_writer(f)
