@@ -30,6 +30,11 @@ SRC_REPO_DEFS=https://github.com/densho/ddr-defs.git
 SRC_REPO_VOCAB=https://github.com/densho/densho-vocab.git
 SRC_REPO_MANUAL=https://github.com/densho/ddr-manual.git
 
+INSTALL_BASE=/opt
+INSTALLDIR=$(INSTALL_BASE)/ddr-cmdln
+REQUIREMENTS=$(INSTALLDIR)/requirements.txt
+PIP_CACHE_DIR=$(INSTALL_BASE)/pip-cache
+
 CWD := $(shell pwd)
 INSTALL_CMDLN=/opt/ddr-cmdln
 INSTALL_CMDLN_ASSETS=$(INSTALL_CMDLN)/ddr-cmdln-assets
