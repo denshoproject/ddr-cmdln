@@ -92,6 +92,7 @@ and reimported from CSV.::
 
 from collections import defaultdict, OrderedDict
 from datetime import datetime
+import json
 import logging
 logger = logging.getLogger(__name__)
 import multiprocessing
@@ -102,7 +103,6 @@ import urllib.parse
 
 from dateutil import parser
 import requests
-import simplejson as json
 
 from DDR import config
 from DDR import converters

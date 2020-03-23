@@ -1,12 +1,12 @@
 from collections import OrderedDict
 from functools import total_ordering
+import json
 import mimetypes
 mimetypes.init()
 import os
 
 import envoy
 from jinja2 import Template
-import simplejson as json
 
 from DDR import commands
 from DDR import config

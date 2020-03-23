@@ -13,11 +13,10 @@ epilog = """
 import argparse
 from datetime import datetime
 import getpass
+import json
 import logging
 import os
 import sys
-
-import simplejson as json
 
 from DDR import batch_update
 from DDR.config import REPO_MODELS_PATH, VOCABS_URL

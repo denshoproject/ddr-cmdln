@@ -1,9 +1,9 @@
 from datetime import datetime
+import json
 import logging
 import sys
 
 import click
-import simplejson
 
 from DDR import dvcs
 from DDR import identifier
@@ -39,7 +39,7 @@ def ddrinfo(collection, json):
     data.update(annex_info(repo))
 
     if json:
-        print(simplejson.dumps(data))
+        print(json.dumps(data))
     else:
         output(data)
     

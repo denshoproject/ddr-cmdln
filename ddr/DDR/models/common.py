@@ -2,12 +2,12 @@ from collections import OrderedDict
 from copy import deepcopy
 from datetime import datetime
 from functools import total_ordering
+import json
 import os
 import re
 
 from deepdiff import DeepDiff
 import elasticsearch_dsl as dsl
-import simplejson as json
 
 from DDR import VERSION
 from DDR import archivedotorg
