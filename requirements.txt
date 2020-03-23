@@ -19,7 +19,6 @@ python-dateutil==2.8.1    # BSD
 python-xmp-toolkit==2.0.1 # New BSD
 pytz==2019.3              # MIT
 requests==2.23.0          # Apache   y
-unicodecsv==0.14.1        # BSD      y
 
 # development
 
