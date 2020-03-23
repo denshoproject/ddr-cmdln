@@ -300,7 +300,7 @@ test-ddr-cmdln:
 	@echo ""
 	@echo "test-ddr-cmdln ---------------------------------------------------------"
 	source $(VIRTUALENV)/bin/activate; \
-	cd $(INSTALL_CMDLN)/; pytest ddr/tests/
+	cd $(INSTALL_CMDLN)/; pytest --disable-warnings ddr/tests/
 
 coverage-ddr-cmdln:
 	@echo ""
