@@ -13,9 +13,6 @@ def test_read_text(tmpdir):
     # regular
     data = fileio.read_text(path)
     assert data == TEXT
-    # utf8_strict
-    data = fileio.read_text(path, utf8_strict=True)
-    assert data == TEXT
     # clean up
     os.remove(path)
 
@@ -24,11 +21,6 @@ def test_write_text(tmpdir):
     path = str(tmpdir / 'write_text.json')
     # regular
     fileio.write_text(TEXT, path)
-    with open(path, 'r') as f:
-        written = f.read()
-    assert written == TEXT
-    # utf8_strict
-    fileio.write_text(TEXT, path, utf8_strict=True)
     with open(path, 'r') as f:
         written = f.read()
     assert written == TEXT
