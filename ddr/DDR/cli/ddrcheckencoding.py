@@ -1,5 +1,6 @@
 import codecs
 from datetime import datetime
+import json
 import logging
 import os
 import shutil
@@ -8,7 +9,6 @@ import sys
 import chardet
 import click
 import git
-import simplejson as json
 
 from DDR import fileio
 from DDR import models

@@ -32,6 +32,7 @@ from __future__ import print_function
 from collections import OrderedDict
 from copy import deepcopy
 from datetime import datetime
+import json
 import logging
 logger = logging.getLogger(__name__)
 import os
@@ -39,7 +40,6 @@ import os
 from elasticsearch import Elasticsearch, TransportError
 from elasticsearch.client import SnapshotClient
 import elasticsearch_dsl
-import simplejson as json
 import requests
 
 from DDR import config
@@ -86,7 +86,7 @@ def load_json(path):
     try:
         data = json.loads(fileio.read_text(path))
     except json.errors.JSONDecodeError:
-        raise Exception('simplejson.errors.JSONDecodeError reading %s' % path)
+        raise Exception('json.errors.JSONDecodeError reading %s' % path)
     return data
 
 class Docstore():

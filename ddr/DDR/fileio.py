@@ -1,9 +1,8 @@
 import codecs
 import csv
+import json
 import os
 import sys
-
-import simplejson as json
 
 
 def read_text(path):

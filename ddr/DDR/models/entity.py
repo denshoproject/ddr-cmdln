@@ -2,12 +2,12 @@ from collections import OrderedDict
 from copy import deepcopy
 from datetime import datetime
 from functools import total_ordering
+import json
 import logging
 logger = logging.getLogger(__name__)
 import os
 
 from jinja2 import Template
-import simplejson as json
 
 from DDR import commands
 from DDR import config

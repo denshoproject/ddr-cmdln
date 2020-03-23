@@ -1,11 +1,11 @@
 from collections import OrderedDict
+import json
 import logging
 logger = logging.getLogger(__name__)
 import os
 import re
 
 from jinja2 import Template
-import simplejson as json
 
 from DDR import commands
 from DDR import config

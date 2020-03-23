@@ -62,12 +62,12 @@ Post arbitrary JSON documents:
 """
 
 from datetime import datetime
+import json
 import logging
 logger = logging.getLogger(__name__)
 
 import click
 import elasticsearch
-import simplejson as json
 
 from DDR import config
 from DDR import docstore

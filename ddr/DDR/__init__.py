@@ -2,10 +2,9 @@
 VERSION = '0.9.4-beta'
 
 from datetime import datetime, timedelta
+import json
 import logging
 logger = logging.getLogger(__name__)
-
-import simplejson as json
 
 from DDR import config
 
