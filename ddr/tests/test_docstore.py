@@ -244,7 +244,7 @@ def test_post(publishable_objects):
     """
     ds = docstore.Docstore(config.DOCSTORE_HOST)
     post_these = [o for o in publishable_objects if o.id in POST_OBJECT_IDS]
-    for oid in post_these:
+    for o in post_these:
         print(o)
         o.status = 'completed'
         o.public = 1
