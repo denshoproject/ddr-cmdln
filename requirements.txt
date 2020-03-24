@@ -25,9 +25,5 @@ unicodecsv==0.14.1        # BSD      y
 # development
 
 bpython
-coverage
 pytest
 pytest-cov
-#pytest-testmon
-pytest-xdist
-tox
