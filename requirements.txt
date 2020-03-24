@@ -23,9 +23,5 @@ requests==2.23.0          # Apache   y
 # development
 
 bpython
-coverage
 pytest
 pytest-cov
-#pytest-testmon
-pytest-xdist
-tox
