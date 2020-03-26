@@ -25,7 +25,7 @@ configs_read = config.read(CONFIG_FILES)
 if not configs_read:
     raise NoConfigError('No config file!')
 
-DEBUG = config.get('local','debug')
+DEBUG = config.get('debug','debug')
 MEDIA_BASE = config.get('cmdln','media_base')
 
 LOGGING_FORMAT = '%(asctime)s %(levelname)s %(message)s'

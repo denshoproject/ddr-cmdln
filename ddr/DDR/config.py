@@ -40,7 +40,7 @@ def _parse_alt_timezones(text):
 
 CONFIG,CONFIGS_READ = read_configs(CONFIG_FILES)
 
-DEBUG = CONFIG.get('cmdln', 'debug')
+DEBUG = CONFIG.get('debug', 'debug')
 
 INSTALL_PATH = CONFIG.get('cmdln','install_path')
 REPO_MODELS_PATH = CONFIG.get('cmdln','repo_models_path')
