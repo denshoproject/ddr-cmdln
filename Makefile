@@ -250,6 +250,8 @@ mkdirs: mkdir-ddr-cmdln
 
 get-app: get-ddr-cmdln get-ddr-cmdln-assets get-ddr-manual
 
+pip-download: pip-download-cmdln
+
 install-app: install-dependencies install-setuptools install-ddr-cmdln install-configs mkdir-ddr-cmdln
 
 test-app: test-ddr-cmdln
@@ -282,6 +284,10 @@ setup-ddr-cmdln:
 	git status | grep "On branch"
 	source $(VIRTUALENV)/bin/activate; \
 	cd $(INSTALL_CMDLN)/ddr; python setup.py install
+
+pip-download-cmdln:
+	source $(VIRTUALENV)/bin/activate; \
+	pip download --no-binary=:all: --destination-directory=$(INSTALL_CMDLN)/vendor -r $(INSTALL_CMDLN)/requirements.txt
 
 install-ddr-cmdln: install-setuptools
 	@echo ""

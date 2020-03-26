@@ -14,5 +14,6 @@ ddr/dist/
 ddr-defs/
 debs/
 densho-vocab/
+pip-local/
 tmp/
 venv/
