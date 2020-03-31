@@ -1239,12 +1239,12 @@ class Gitolite(object):
     """
     server = None
     timeout = None
-    info = None
+    info = ''
     connected = None
     authorized = None
     initialized = None
     
-    def __init__(self, server=config.GITOLITE, timeout=60):
+    def __init__(self, server=config.GITOLITE, timeout=config.GITOLITE_TIMEOUT):
         """
         @param server: USERNAME@DOMAIN
         @param timeout: int Maximum seconds to wait for reponse
