@@ -411,12 +411,13 @@ class DDRObject(object):
             d.facility_id = [item['id'] for item in self.facility]
             # A/V object metadata from Internet Archive
             # A/V templates
-            d.ia_meta = archivedotorg.get_ia_meta(self)
-            if d.ia_meta:
-                d.template = ':'.join([
-                    self.format,
-                    d.ia_meta['mimetype'].split('/')[0]
-                ])
+            if not config.OFFLINE:
+                d.ia_meta = archivedotorg.get_ia_meta(self)
+                if d.ia_meta:
+                    d.template = ':'.join([
+                        self.format,
+                        d.ia_meta['mimetype'].split('/')[0]
+                    ])
 
         if (self.identifier.model in ['file']):
             if download_path:
