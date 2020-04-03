@@ -153,7 +153,7 @@ class File(common.DDRObject):
         Returns tuple of self.sort,self.identifier.id_sort
         (self.sort takes precedence over ID sort)
         """
-        return self.sort,self.identifier.id_sort
+        return int(self.sort),self.identifier.id_sort
 
     #@staticmethod
     #def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
