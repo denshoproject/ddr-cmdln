@@ -42,6 +42,8 @@ CONFIG,CONFIGS_READ = read_configs(CONFIG_FILES)
 
 DEBUG = CONFIG.get('debug', 'debug')
 
+PYTHON_VERSION = '.'.join([str(sys.version_info.major), str(sys.version_info.minor)])
+
 INSTALL_PATH = CONFIG.get('cmdln','install_path')
 REPO_MODELS_PATH = CONFIG.get('cmdln','repo_models_path')
 if REPO_MODELS_PATH not in sys.path:
