@@ -99,6 +99,7 @@ import multiprocessing
 import os
 import io
 import sys
+from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 import urllib.parse
 
 from dateutil import parser
@@ -128,11 +129,12 @@ class Index( object ):
     id = ''
     title = ''
     description = ''
-    ids = []
-    _terms_by_id = {}
-    _titles_to_ids = {}
-    _parents_to_children = {}
+    ids: List[Any] = []
+    _terms_by_id: Dict[str,str] = {}
+    _titles_to_ids: Dict[str,str] = {}
+    _parents_to_children: Dict[str,str] = {}
     
+    # TODO type hinting
     def add( self, term ):
         """Adds a Term to the Index.
         """
@@ -149,10 +151,10 @@ class Index( object ):
         if (term.id not in self._parents_to_children[term.parent_id]):
             self._parents_to_children[term.parent_id].append(term.id)
     
-    def terms( self ):
+    def terms(self) -> List[Optional[Union[str, object]]]:
         return [self._terms_by_id.get(tid, None) for tid in self.ids]
     
-    def get( self, id=None, title=None ):
+    def get(self, id: str=None, title: str=None) -> Optional[Union[str, object]]:
         """Returns Term matching the id or title, or None.
         """
         if title and not id:
@@ -161,7 +163,7 @@ class Index( object ):
             return self._terms_by_id.get(id, None)
         raise Exception('id or title is required')
     
-    def _get_by_term_ids( self, term_ids ):
+    def _get_by_term_ids(self, term_ids: List[str]) -> List[str]:
         terms = []
         for id in term_ids:
             term = self._terms_by_id.get(id, None)
@@ -169,18 +171,21 @@ class Index( object ):
                 terms.append(term)
         return terms
     
-    def _parent( self, term ):
+    # TODO type hinting
+    def _parent(self, term):
         """Term for term.parent_id or None.
         """
         return self._terms_by_id.get(term.parent_id, None) 
     
-    def _children( self, term ):
+    # TODO type hinting
+    def _children(self, term):
         """List of terms that have term.id as their parent_id.
         """
         term_ids = self._parents_to_children.get(term.id, [])
         term_ids.sort()
         return self._get_by_term_ids(term_ids)
    
+    # TODO type hinting
     def _siblings( self, term ):
         """List of other terms with same parent_id.
         """
@@ -189,6 +194,7 @@ class Index( object ):
             return [t for t in self._children(parent) if t != term]
         return []
     
+    # TODO type hinting
     def _ancestors( self, term ):
         """List of term IDs leading from term to root.
         @param term
@@ -203,7 +209,8 @@ class Index( object ):
         ancestors.reverse()
         return ancestors
     
-    def _path( self, term ):
+    # TODO type hinting
+    def _path(self, term):
         path = [term.title]
         t = term
         while t.parent_id:
@@ -212,7 +219,8 @@ class Index( object ):
         path.reverse()
         return config.VOCABS_PRECOORD_PATH_SEP.join(path)
     
-    def _format( self, term ):
+    # TODO type hinting
+    def _format(self, term):
         """Generates thesaurus-style text output for each Term.
         """
         bt = self._parent(term)
@@ -226,6 +234,7 @@ class Index( object ):
         if rt: lines.append('RT %s' % ', '.join([t.title for t in rt]))
         return '\n'.join(lines)
     
+    # TODO type hinting
     def _build( self, terms ):
         """Adds list of raw Term objects to Index, adds parent/siblings/children to each Term.
         """
@@ -239,7 +248,7 @@ class Index( object ):
             term.path = self._path(term)
             #term.format = self._format(term)
     
-    def read(self, path):
+    def read(self, path: str):
         """Read from the specified file (.json or .csv).
         
         @param path: Absolute path to file; must be .json or .csv.
@@ -253,7 +262,7 @@ class Index( object ):
         elif extension.lower() == '.csv':
             self.load_csv(fileio.read_text(path))
     
-    def write( self, path):
+    def write(self, path: str):
         """Write to the specified file (.json or .csv).
         
         @param path: Absolute path to file; must be .json or .csv.
@@ -266,7 +275,7 @@ class Index( object ):
         elif extension.lower() == '.csv':
             fileio.write_text(self.dump_csv(), path)
             
-    def load_json( self, text ):
+    def load_json(self, text: str):
         """Load terms from a JSON file.
         
         Sample JSON format (fields will not be in same order):
@@ -315,7 +324,7 @@ class Index( object ):
             terms.append(term)
         self._build(terms)
 
-    def _parse_csv_urls(self, text):
+    def _parse_csv_urls(self, text: str) -> List[str]:
         """Parses URLs, removes domain, returns list of URIs
         @param text: str
         @returns: list
@@ -330,7 +339,7 @@ class Index( object ):
                 uris.append(urllib.parse.urlparse(url).path)
         return uris
     
-    def load_csv(self, text):
+    def load_csv(self, text: str):
         """Load terms from a CSV file.
         
             id, topics
@@ -368,6 +377,7 @@ class Index( object ):
                 terms.append(term)
         self._build(terms)
     
+    # TODO type hinting
     def dump_json( self ):
         """JSON format of the entire index.
         
@@ -386,6 +396,7 @@ class Index( object ):
         }
         return format_json(data)
     
+    # TODO type hinting
     def dump_csv(self):
         """Write terms to a CSV file.
         
@@ -404,6 +415,7 @@ class Index( object ):
             writer.writerow(term.csv())
         return output.getvalue()
     
+    # TODO type hinting
     def dump_graphviz( self, term_len=50 ):
         """Dumps contents of index to a Graphviz file.
         
@@ -430,18 +442,21 @@ class Index( object ):
         lines.append('}')
         return '\n'.join(lines)
     
-    def dump_text( self ):
+    # TODO type hinting
+    def dump_text(self):
         """Text format of the entire index.
         """
         terms = [self._format(term) for id,term in self._terms_by_id.items()]
         return '\n\n'.join(terms)
         
-    def menu_choices( self ):
+    # TODO type hinting
+    def menu_choices(self):
         """List of (id,title) tuples suitable for use in Django multiselect menu.
         """
         return [(term.id,term.title) for term in self.terms()]
 
-    def path_choices( self ):
+    # TODO type hinting
+    def path_choices(self):
         """List of (id,title) tuples suitable for use in Django multiselect menu.
         """
         return [('%s [%s]' % (term.path, term.id)) for term in self.terms()]
@@ -450,15 +465,15 @@ class Index( object ):
 class Term( object ):
     id = None
     parent_id = 0
-    siblings = []
-    children = []
+    siblings: List[Any] = []
+    children: List[Any] = []
     created = None   # Date fields must contain dates or "null",
     modified = None  # or Elasticsearch will throw a parsing error.
     title = ''
     _title = ''
     description = ''
     weight = 0
-    encyc_urls = []
+    encyc_urls: List[str] = []
     path = ''
 
     def __init__(self, id=None, parent_id=0, created=None, modified=None, title='', _title='', description='', weight=0, encyc_urls=[]):
@@ -472,16 +487,19 @@ class Term( object ):
         self.weight = weight
         self.encyc_urls = encyc_urls
     
-    def __repr__( self ):
+    def __repr__(self) -> str:
         return "<Term %s: %s>" % (self.id, self.title)
     
+    # TODO type hinting
     @staticmethod
     def from_dict(t):
         """
         @param t: dict
         @returns: Term object
         """
-        def getstr(t, fieldname, default=None):
+        def getstr(t: Dict[str,str],
+                   fieldname: str,
+                   default: Optional[str]) -> Optional[str]:
             if t.get(fieldname):
                 return t[fieldname].strip()
             return default
@@ -507,7 +525,7 @@ class Term( object ):
             term.weight = 0
         return term
 
-    def _flatten_json( self ):
+    def _flatten_json(self) -> Dict[str,str]:
         """Converts Term into a dict suitable for writing to JSON.
         """
         data = {}
@@ -529,7 +547,7 @@ class Term( object ):
             data[key] = val
         return data
     
-    def csv( self ):
+    def csv(self) -> List[List[str]]:
         """Converts Term into a list suitable for writing to CSV.
         """
         data = []
@@ -551,7 +569,7 @@ class Term( object ):
 
 # Functions for getting single or multiple vocabs from URL or filesystem
 
-def _get_vocab_fs(path):
+def _get_vocab_fs(path: str) -> Dict[str,str]:
     """Loads vocabulary data from filesystem.
     
     @param path: str Absolute path to vocabulary file (.json)
@@ -559,7 +577,7 @@ def _get_vocab_fs(path):
     logging.info('getting vocab: %s' % path)
     return json.loads(fileio.read_text(path))
 
-def _get_vocab_http(url):
+def _get_vocab_http(url: str) -> Dict[str,str]:
     """Loads vocabulary data from vocab API.
     
     @param path: str URL of vocabulary file (.json)
@@ -568,9 +586,10 @@ def _get_vocab_http(url):
     r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
     if r.status_code != 200:
         raise Exception(
-            '%s vocabulary file missing: %s' % (vocab.capitalize(), url))
+            'vocabulary file missing: %s' % (url))
     return json.loads(r.text)
 
+# TODO type hinting
 def _get_vocabs_all_fs(base, exclude='index'):
     return {
         vocab.replace('.json',''): _get_vocab_fs(os.path.join(base, vocab))
@@ -578,6 +597,7 @@ def _get_vocabs_all_fs(base, exclude='index'):
         if (not (exclude in vocab) or (exclude == vocab)) and ('.json' in vocab)
     }
 
+# TODO type hinting
 def _get_vocabs_all_http(base_url):
     # get list of vocabs
     url = os.path.join(base_url, 'index.json')
@@ -606,7 +626,8 @@ def _get_vocabs_all_http(base_url):
     # turn return_dict into a regular dict
     return {key:val for key,val in list(return_dict.items())}
 
-def get_vocabs(vocabs_url):
+# TODO type hinting
+def get_vocabs(vocabs_url: str):
     """Loads data for multiple vocabularies from URL or from filesystem.
     
     Works with JSON files generated by DDR.vocab.Index.dump_terms_json().
@@ -627,8 +648,9 @@ def get_vocabs(vocabs_url):
 # this is a pointer to the module object instance itself.
 THIS_MODULE = sys.modules[__name__]
 # global var so we don't have to retrieve topics for every entity
-TOPICS = {}
+TOPICS: Dict[str,str]={}
 
+# TODO type hinting
 def repair_topicdata(data, facet):
     """Repair damaged topics data
     # see https://github.com/densho/ddr-cmdln/issues/43
@@ -669,6 +691,7 @@ def repair_topicdata(data, facet):
             item['term'] = THIS_MODULE.TOPICS[item['id']]
     return data
 
+# TODO type hinting
 def TEMP_scrub_topicdata(data):
     """Pretty much the same as repair_topicdata, from repo_models
     """
@@ -697,6 +720,7 @@ def TEMP_scrub_topicdata(data):
     return data
 
 
+# TODO type hinting
 def topics_choices(facet, FacetTermClass):
     """List of topicID,path used in ddrpublic search forms topics fields.
     
@@ -726,6 +750,7 @@ def topics_choices(facet, FacetTermClass):
         for term in make_tree(terms)
     ]
 
+# TODO type hinting
 def make_tree(terms_list):
     """Rearranges terms list into hierarchical list.
     
@@ -738,12 +763,13 @@ def make_tree(terms_list):
     @param terms_list: list
     @returns: list
     """
-    def tree():
+    
+    def tree() -> defaultdict:
         """Define a tree data structure
         """
         return defaultdict(tree)
     
-    def add(tree_, path):
+    def add(tree_: defaultdict, path: List[str]):
         """
         @param tree_: defaultdict
         @param path: list of ancestor term IDs
@@ -751,6 +777,7 @@ def make_tree(terms_list):
         for node in path:
             tree_ = tree_[node]
     
+    # TODO type hinting
     def populate(terms_list):
         """Create and populate tree structure
         by iterating through list of terms and referencing ancestor/path keys
@@ -768,7 +795,7 @@ def make_tree(terms_list):
             add(tree_, path)
         return tree_
     
-    def flatten(tree_, depth=0):
+    def flatten(tree_: defaultdict, depth: int=0):
         """Takes tree dict and returns list of terms with depth values
         
         Variation on ptr() from the gist
@@ -788,11 +815,11 @@ def make_tree(terms_list):
     
     terms_dict = {t['term_id']: t for t in terms_list}
     terms_tree = populate(terms_list)
-    terms = []
+    terms: List[str] = []
     flatten(terms_tree)
     return terms
 
-def form_vocab_choices(facet, fieldname):
+def form_vocab_choices(facet: dict, fieldname: str) -> List[Tuple[str,str]]:
     """List of keyword,label used in ddrpublic search multichoice fields.
     
     @param facet: dict Output of get_vocabs()[FIELDNAME]

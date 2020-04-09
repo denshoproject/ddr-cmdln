@@ -2,6 +2,7 @@ from collections import OrderedDict
 import mimetypes
 mimetypes.init()
 import os
+from typing import List
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
@@ -68,7 +69,7 @@ class IAObject():
     http_status = -1
     original = ''
     mimetype = ''
-    files = OrderedDict()
+    files: OrderedDict = OrderedDict()
     
     def __repr__(self):
         return "<%s.%s %s>" % (
@@ -164,7 +165,7 @@ class IAFile():
     url = ''
     mimetype = ''
     encoding = ''
-    _fields = []
+    _fields: List[str] = []
     
     def __init__(self, oid, format_, tag):
         self.name = tag['name']

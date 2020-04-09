@@ -17,6 +17,7 @@ import os
 import shutil
 import sys
 import traceback
+from typing import Dict
 
 from DDR import config
 from DDR import changelog
@@ -1013,11 +1014,11 @@ class UpdaterMetrics():
     verdict = 'unknown'
     objects = 0
     objects_saved = 0
-    updated = {}
+    updated: Dict[str,str] = {}
     files_updated = 0
-    load_errs = {}
-    save_errs = {}
-    bad_exits = {}
+    load_errs: Dict[str,str] = {}
+    save_errs: Dict[str,str] = {}
+    bad_exits: Dict[str,str] = {}
     failures = 0
     fail_rate = 0.0
     committed = None

@@ -4,6 +4,7 @@ import logging
 logger = logging.getLogger(__name__)
 import os
 import re
+from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 from jinja2 import Template
 
@@ -62,7 +63,7 @@ class Collection(common.DDRObject):
     git_url = None
     _status = ''
     _astatus = ''
-    _states = []
+    _states: List[str] = []
     _unsynced = 0
     
     def __init__( self, path_abs, id=None, identifier=None ):

@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 import os
 import re
 import socket
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from dateutil import parser
 import envoy
@@ -23,7 +24,7 @@ from DDR import util
 APP_COMMITS = {}
 
 
-def repository(path, user_name=None, user_mail=None):
+def repository(path: str, user_name: str=None, user_mail: str=None) -> git.Repo:
     """
     @param collection_path: Absolute path to collection repo.
     @param user_name: str
@@ -37,7 +38,9 @@ def repository(path, user_name=None, user_mail=None):
         return repo
     return repo
 
-def initialize_repository(path, user_name=None, user_mail=None):
+def initialize_repository(path: str,
+                          user_name: str=None,
+                          user_mail: str=None) -> git.Repo:
     """Runs Git and git-annex init and checks out master
     
     @param collection_path: Absolute path to collection repo.
@@ -71,7 +74,7 @@ def initialize_repository(path, user_name=None, user_mail=None):
 
 # git info -------------------------------------------------------------
 
-def git_version(repo):
+def git_version(repo: git.Repo) -> str:
     """Returns Git version info.
     
     @param repo: A GitPython Repo object.
@@ -79,7 +82,7 @@ def git_version(repo):
     """
     return envoy.run('git --version').std_out.strip()
 
-def repo_status(repo, short=False):
+def repo_status(repo: git.Repo, short: bool=False) -> str:
     """Retrieve git status on repository.
     
     @param repo: A GitPython Repo object
@@ -93,7 +96,7 @@ def repo_status(repo, short=False):
     #logging.debug('\n{}'.format(status))
     return status
 
-def latest_commit(path):
+def latest_commit(path: str) -> str:
     """Returns latest commit for the specified repository
     
     TODO pass repo object instead of path
@@ -117,7 +120,6 @@ def latest_commit(path):
         return repo.git.log('--pretty=format:%H %d %ad', '--date=iso', '-1', path)
     else:
         return repo.git.log('--pretty=format:%H %d %ad', '--date=iso', '-1')
-    return None
 
 # Latest commits for ddr-cmdln and ddr-local.
 # Include here in settings so only has to be retrieved once,
@@ -127,7 +129,7 @@ APP_COMMITS = {
     'def': latest_commit(config.REPO_MODELS_PATH),
 }
 
-def earliest_commit(path, parsed=False):
+def earliest_commit(path: str, parsed: bool=False) -> str:
     """Returns earliest commit for the specified repository/path
     
     TODO pass repo object instead of path
@@ -160,7 +162,7 @@ def earliest_commit(path, parsed=False):
         return data
     return text
 
-def _parse_cmp_commits(gitlog, a, b):
+def _parse_cmp_commits(gitlog: str, a: str, b: str) -> Dict[str, Optional[str]]:
     """
     If abbrev == True:
         git log --pretty=%h
@@ -187,7 +189,10 @@ def _parse_cmp_commits(gitlog, a, b):
     else: result['op'] = '--'
     return result
 
-def cmp_commits(repo, a, b, abbrev=False):
+def cmp_commits(repo: git.Repo,
+                a: str,
+                b: str,
+                abbrev: bool=False) -> Dict[str, Optional[str]]:
     """Indicates how two commits are related (newer,older,equal)
     
     Both commits must be in the same branch of the same repo.
@@ -218,7 +223,7 @@ def cmp_commits(repo, a, b, abbrev=False):
 
 # git diff
 
-def _parse_list_untracked( text='' ):
+def _parse_list_untracked(text: str='') -> List[str]:
     """Parses output of "git status --short".
     """
     return [
@@ -227,7 +232,7 @@ def _parse_list_untracked( text='' ):
         if ('??' in line)
     ]
 
-def list_untracked(repo):
+def list_untracked(repo: git.Repo) -> List[str]:
     """Returns list of untracked files
     
     Works for git-annex files just like for regular files.
@@ -238,7 +243,7 @@ def list_untracked(repo):
     stdout = repo_status(repo, short=True)
     return _parse_list_untracked(stdout)
 
-def _parse_list_modified( diff ):
+def _parse_list_modified(diff: str) -> List[str]:
     """Parses output of "git stage --name-only".
     """
     paths = []
@@ -246,7 +251,7 @@ def _parse_list_modified( diff ):
         paths = diff.strip().split('\n')
     return paths
     
-def list_modified(repo):
+def list_modified(repo: git.Repo) -> List[str]:
     """Returns list of currently modified files
     
     Works for git-annex files just like for regular files.
@@ -257,7 +262,7 @@ def list_modified(repo):
     stdout = repo.git.diff('--name-only')
     return _parse_list_modified(stdout)
 
-def _parse_list_staged( diff ):
+def _parse_list_staged(diff: str) -> List[str]:
     """Parses output of "git stage --name-only --cached".
     """
     staged = []
@@ -265,7 +270,7 @@ def _parse_list_staged( diff ):
         staged = diff.strip().split('\n')
     return staged
     
-def list_staged(repo):
+def list_staged(repo: git.Repo) -> List[str]:
     """Returns list of currently staged files
     
     Works for git-annex files just like for regular files.
@@ -276,12 +281,12 @@ def list_staged(repo):
     stdout = repo.git.diff('--cached', '--name-only')
     return _parse_list_staged(stdout)
 
-def _parse_list_committed( entry ):
+def _parse_list_committed(entry: str) -> List[str]:
     entrylines = [line for line in entry.split('\n') if '|' in line]
     files = [line.split('|')[0].strip() for line in entrylines]
     return files
     
-def list_committed(repo, commit):
+def list_committed(repo: git.Repo, commit: git.Commit) -> List[str]:
     """Returns list of all files in the commit
 
     $ git log -1 --stat 0a1b2c3d4e...|grep \|
@@ -294,7 +299,7 @@ def list_committed(repo, commit):
     entry = repo.git.log('-1', '--stat', commit.hexsha)
     return _parse_list_committed(entry)
 
-def _parse_list_conflicted( ls_unmerged ):
+def _parse_list_conflicted(ls_unmerged: str) -> List[str]:
     files = []
     for line in ls_unmerged.strip().split('\n'):
         if line:
@@ -303,7 +308,7 @@ def _parse_list_conflicted( ls_unmerged ):
                 files.append(f)
     return files
     
-def list_conflicted(repo):
+def list_conflicted(repo: git.Repo) -> List[str]:
     """Returns list of unmerged files in path; presence of files indicates merge conflict.
     
     @param repo: A Gitpython Repo object
@@ -312,7 +317,7 @@ def list_conflicted(repo):
     stdout = repo.git.ls_files('--unmerged')
     return _parse_list_conflicted(stdout)
 
-def git_status(repo):
+def git_status(repo: git.Repo) -> Dict[str, List[str]]:
     return {
         'staged': list_staged(repo),
         'modified': list_modified(repo),
@@ -320,7 +325,7 @@ def git_status(repo):
         'conflicted': list_conflicted(repo),
     }
 
-def file_in_git_objects(repo, path_rel):
+def file_in_git_objects(repo: git.Repo, path_rel: str) -> bool:
     """True if the (binary) file is in .git/objects
     
     `git hash-object $PATH` returns a SHA1 hash of a given path.
@@ -345,7 +350,7 @@ def file_in_git_objects(repo, path_rel):
     )
     return os.path.exists(git_objects_path)
 
-def file_in_git_annex(repo, path_rel):
+def file_in_git_annex(repo: git.Repo, path_rel: str) -> bool:
     """True if file is an annex file
     
     Wrapper around `git annex lookupkey $PATH` which returns a unique identifier
@@ -418,7 +423,7 @@ RESOLVED
     M  collection.json
 """
 
-def _compile_patterns(patterns):
+def _compile_patterns(patterns) -> List[List[str]]:
     """Compile regex patterns only once, at import.
     """
     new = []
@@ -437,7 +442,7 @@ GIT_STATE_PATTERNS = _compile_patterns((
     (r'(\nUU )',                'conflicted'),
 ))
 
-def repo_states(git_status, patterns=GIT_STATE_PATTERNS):
+def repo_states(git_status: str, patterns=GIT_STATE_PATTERNS) -> List[str]:
     """Returns list of states the repo may have
     
     @param text: str
@@ -453,7 +458,7 @@ def repo_states(git_status, patterns=GIT_STATE_PATTERNS):
         states.remove('synced')
     return states
 
-def synced(status, states=None):
+def synced(status: str, states: Optional[List[str]]=None):
     """Indicates whether repo is synced with remote repo.
     
     @param status: Output of "git status --short --branch"
@@ -463,7 +468,7 @@ def synced(status, states=None):
         states = repo_states(status)
     return ('synced' in states) and ('ahead' not in states) and ('behind' not in states)
 
-def ahead(status, states=None):
+def ahead(status: str, states: Optional[List[str]]=None):
     """Indicates whether repo is ahead of remote repos.
     
     @param status: Output of "git status --short --branch"
@@ -473,7 +478,7 @@ def ahead(status, states=None):
         states = repo_states(status)
     return ('ahead' in states) and not ('behind' in states)
 
-def behind(status, states=None):
+def behind(status: str, states: Optional[List[str]]=None):
     """Indicates whether repo is behind remote repos.
 
     @param status: Output of "git status --short --branch"
@@ -483,7 +488,7 @@ def behind(status, states=None):
         states = repo_states(status)
     return ('behind' in states) and not ('ahead' in states)
 
-def diverged(status, states=None):
+def diverged(status: str, states: Optional[List[str]]=None):
     """
     @param status: Output of "git status --short --branch"
     @returns: boolean
@@ -492,7 +497,7 @@ def diverged(status, states=None):
         states = repo_states(status)
     return ('ahead' in states) and ('behind' in states)
 
-def conflicted(status, states=None):
+def conflicted(status: str, states: Optional[List[str]]=None):
     """Indicates whether repo has a merge conflict.
     
     NOTE: Use list_conflicted if you have a repo object.
@@ -507,7 +512,9 @@ def conflicted(status, states=None):
 
 # git operations -------------------------------------------------------
 
-def git_set_configs(repo, user_name=None, user_mail=None):
+def git_set_configs(repo: git.Repo,
+                    user_name: str=None,
+                    user_mail: str=None) -> git.Repo:
     if user_name and user_mail:
         repo.git.config('user.name', user_name)
         repo.git.config('user.email', user_mail)
@@ -517,7 +524,7 @@ def git_set_configs(repo, user_name=None, user_mail=None):
     repo.git.config('core.fileMode', 'false')
     return repo
 
-def compose_commit_message(title, body='', agent=''):
+def compose_commit_message(title: str, body: str='', agent: str='') -> str:
     """Composes a Git commit message.
     
     TODO wrap body text at 72 chars
@@ -534,7 +541,7 @@ def compose_commit_message(title, body='', agent=''):
     if agent: agent = '\n\n@agent: %s' % agent
     return '%s%s%s' % (title, body, agent)
 
-def fetch(repo):
+def fetch(repo: git.Repo) -> str:
     """run git fetch; fetches from origin.
     
     @param repo: A GitPython Repo object
@@ -542,7 +549,7 @@ def fetch(repo):
     """
     return repo.git.fetch()
 
-def stage(repo, git_files=[]):
+def stage(repo: git.Repo, git_files: List[str]=[]):
     """Stage some files; DON'T USE FOR git-annex FILES!
     
     @param repo: A GitPython repository
@@ -550,7 +557,7 @@ def stage(repo, git_files=[]):
     """
     repo.git.add([git_files])
 
-def commit(repo, msg, agent):
+def commit(repo: git.Repo, msg: str, agent: str) -> git.Commit:
     """Commit some changes.
     
     @param repo: A GitPython repository
@@ -575,15 +582,15 @@ def commit(repo, msg, agent):
     # done
     return commit
 
-def reset(repo):
+def reset(repo: git.Repo):
     """Resets all staged files in repo."""
     return repo.git.reset('HEAD')
 
-def revert(repo):
+def revert(repo: git.Repo):
     """Reverts all modified files in repo."""
     return repo.git.checkout('--', '.')
 
-def remove_untracked(repo):
+def remove_untracked(repo: git.Repo) -> List[str]:
     """Deletes all untracked files in the repo."""
     out = []
     untracked_paths = [
@@ -606,7 +613,7 @@ MERGE_MARKER_MID   = '======='
 MERGE_MARKER_END   = '>>>>>>>'
 
 def load_conflicted_json(text):
-    """Reads DDR JSON file, extracts conflicting fields; arranges in left-right pairs.
+    """Reads DDR JSON file, extracts conflicting fields; returns left-right pairs.
     
     Takes JSON like this:
         ...
@@ -628,11 +635,13 @@ def load_conflicted_json(text):
     Outputs like this:
         ...
         {u'record_created': u'2013-09-30T12:43:11'}
-        {u'record_lastmod': {'right': u'2013-10-02T12:59:30', 'left': u'2013-10-02T12:59:30'}}
+        {u'record_lastmod': {
+            'right': u'2013-10-02T12:59:30', 'left': u'2013-10-02T12:59:30'}
+        }
         {u'status': u'completed'}
         ...
     """
-    def make_dict(line):
+    def make_dict(line: str) -> Dict[str, str]:
         """
         Sample inputs:
             '    "application": "https://github.com/densho/ddr-local.git",'
@@ -672,7 +681,7 @@ def load_conflicted_json(text):
                     fields.append( {key:val} )
     return fields
 
-def automerge_conflicted(text, which='left'):
+def automerge_conflicted(text: str, which: str='left') -> str:
     """Automatically accept left or right conflicted changes in a file.
     
     Works on any kind of file.
@@ -699,7 +708,7 @@ def automerge_conflicted(text, which='left'):
             lines.append(line)
     return '\n'.join(lines)
 
-def merge_add( repo, file_path_rel ):
+def merge_add(repo: git.Repo, file_path_rel: str) -> str:
     """Adds file unless contains conflict markers
     """
     # check for merge conflict markers
@@ -710,7 +719,7 @@ def merge_add( repo, file_path_rel ):
     repo.git.add(file_path_rel)
     return 'ok'
 
-def merge_commit( repo ):
+def merge_commit(repo: git.Repo) -> str:
     """Performs the final commit on a merge.
     
     Assumes files have already been added; quits if it finds unmerged files.
@@ -718,9 +727,12 @@ def merge_commit( repo ):
     unmerged = list_conflicted(repo)
     if unmerged:
         return 'ERROR: unmerged files exist!'
-    commit = repo.git.commit('--message', 'merge conflicts resolved using DDR web UI.')
+    commit = repo.git.commit(
+        '--message', 'merge conflicts resolved using DDR web UI.'
+    )
+    return 'ok'
 
-def diverge_commit( repo ):
+def diverge_commit(repo: git.Repo) -> str:
     """Performs the final commit on diverged repo.
     
     Assumes files have already been added; quits if it finds unmerged files.
@@ -728,12 +740,15 @@ def diverge_commit( repo ):
     unmerged = list_conflicted(repo)
     if unmerged:
         return 'ERROR: unmerged files exist!'
-    commit = repo.git.commit('--message', 'divergent commits resolved using DDR web UI.')
+    commit = repo.git.commit(
+        '--message', 'divergent commits resolved using DDR web UI.'
+    )
+    return 'ok'
 
 
 # git inventory --------------------------------------------------------
 
-def repos(path):
+def repos(path: str) -> List[str]:
     """Lists all the repositories in the path directory.
     Duplicate of collections list?
     
@@ -749,7 +764,7 @@ def repos(path):
             repos.append(dpath)
     return repos
 
-def is_local(url):
+def is_local(url: str) -> int:
     """Indicates whether or not the git URL is local.
     
     Currently very crude: just checks if there's an ampersand and a colon.
@@ -762,14 +777,14 @@ def is_local(url):
         return 1     # local
     return -1        # unknown
 
-def local_exists(path):
+def local_exists(path: str) -> int:
     """Indicates whether a local remote can be found in the filesystem.
     """
     if os.path.exists(path):
         return 1
     return 0
 
-def is_clone(path1, path2, n=5):
+def is_clone(path1: str, path2: str, n: int=5) -> int:
     """Indicates whether two repos at the specified paths are clones of each other.
     
     Compares the first N hashes
@@ -787,7 +802,9 @@ def is_clone(path1, path2, n=5):
             except:
                 repo = None
             if repo:
-                log = repo.git.log('--reverse', '-%s' % n, pretty="format:'%H'").split('\n')
+                log = repo.git.log(
+                    '--reverse', '-%s' % n, pretty="format:'%H'"
+                ).split('\n')
                 if log and (type(log) == type([])):
                     return log
             return None
@@ -800,7 +817,9 @@ def is_clone(path1, path2, n=5):
                 return 0
     return -1
 
-def remotes(repo, paths=None, clone_log_n=1):
+def remotes(repo: git.Repo,
+            paths: List[str]=None,
+            clone_log_n: int=1) -> List[Dict[str,str]]:
     """Lists remotes for the repository at path.
     
     For each remote lists info you'd find in REPO/.git/config plus a bit more:
@@ -865,7 +884,7 @@ def remotes(repo, paths=None, clone_log_n=1):
         remotes.append(r)
     return remotes
 
-def remote_add(repo, url, name=config.GIT_REMOTE_NAME):
+def remote_add(repo: git.Repo, url: str, name: str=config.GIT_REMOTE_NAME):
     """Add the specified remote name unless it already exists
     
     @param repo: GitPython Repository
@@ -879,7 +898,7 @@ def remote_add(repo, url, name=config.GIT_REMOTE_NAME):
         repo.create_remote(name, url)
         logging.debug('ok')
 
-def repos_remotes(repo):
+def repos_remotes(repo: git.Repo) -> List[Dict[str, object]]:
     """Gets list of remotes for each repo in path.
     
     @param repo: A GitPython Repo object
@@ -890,12 +909,14 @@ def repos_remotes(repo):
 
 # annex ----------------------------------------------------------------
 
-def annex_set_configs(repo, user_name=None, user_mail=None):
+def annex_set_configs(repo: git.Repo,
+                      user_name: str=None,
+                      user_mail: str=None) -> git.Repo:
     # earlier versions of git-annex have problems with ssh caching on NTFS
     repo.git.config('annex.sshcaching', 'false')
     return repo
 
-def annex_parse_version(text):
+def annex_parse_version(text: str) -> Dict[str, str]:
     """Takes output of "git annex version" and returns dict
     
     ANNEX_3_VERSION
@@ -932,7 +953,7 @@ def annex_parse_version(text):
     data['major version'] = data['git-annex version'].split('.')[0]
     return data
 
-def annex_version(repo, verbose=False):
+def annex_version(repo: git.Repo, verbose: bool=False) -> str:
     """Returns git-annex version only, excludes repository version info.
     
     If verbose, returns all info including version of local repo's annex.
@@ -957,7 +978,7 @@ def _annex_parse_description(annex_status, uuid):
                     return r['description']
     return None
     
-def annex_get_description(repo, annex_status):
+def annex_get_description(repo: git.Repo, annex_status: Dict[str,str]) -> str:
     """Get description of the current repo, if any.
     
     @param repo: A GitPython Repo object
@@ -972,7 +993,7 @@ def annex_get_description(repo, annex_status):
         logging.error('UNKNOWN ANNEX UUID')
     return _annex_parse_description(annex_status, uuid)
 
-def _annex_make_description( drive_label=None, hostname=None, partner_host=None, mail=None ):
+def _annex_make_description(drive_label=None, hostname=None, partner_host=None, mail=None):
     description = None
     if drive_label:
         description = drive_label
@@ -982,7 +1003,12 @@ def _annex_make_description( drive_label=None, hostname=None, partner_host=None,
         description = hostname
     return description
 
-def annex_set_description( repo, annex_status, description=None, drive_label=None, hostname=None, force=False ):
+def annex_set_description(repo: git.Repo,
+                          annex_status: Dict[str,str],
+                          description: str=None,
+                          drive_label: str=None,
+                          hostname: str=None,
+                          force: bool=False) -> Optional[str]:
     """Sets repo's git annex description if not already set.
 
     NOTE: This needs to run git annex status, which takes some time.
@@ -1053,7 +1079,7 @@ def annex_status(repo):
         return data
     return None
 
-def annex_info(repo):
+def annex_info(repo: git.Repo) -> Dict[str,str]:
     """
     """
     data = json.loads(repo.git.annex('info', '--fast', '--json'))
@@ -1103,7 +1129,7 @@ def annex_whereis_file(repo, file_path_rel, info=None):
         else: r['this'] = False
     return data
 
-def annex_missing_files(repo):
+def annex_missing_files(repo: git.Repo) -> List[Dict[str,str]]:
     """List git-annex data for binaries absent from repo
     
     @returns: list of dicts, one per missing file
@@ -1144,7 +1170,7 @@ def annex_trim(repo, confirmed=False):
         'dropped':dropped,
     }
 
-def annex_stage(repo, annex_files=[]):
+def annex_stage(repo: git.Repo, annex_files: List[str]=[]):
     """Stage some files with git-annex.
     
     @param repo: A GitPython repository
@@ -1153,7 +1179,8 @@ def annex_stage(repo, annex_files=[]):
     for path in annex_files:
         repo.git.annex('add', path)
 
-def annex_file_targets(repo, relative=False ):
+def annex_file_targets(repo: git.Repo,
+                       relative: bool=False) -> List[Tuple[Any, Any]]:
     """Lists annex file symlinks and their targets in the annex objects dir
     
     @param repo: A GitPython Repo object
@@ -1183,10 +1210,13 @@ def annex_file_targets(repo, relative=False ):
 class Cgit():
     url = None
     
-    def __init__(self, cgit_url=config.CGIT_URL):
+    def __init__(self, cgit_url: str=config.CGIT_URL):
         self.url = cgit_url
     
-    def collection_title(self, repo, session, timeout=config.REQUESTS_TIMEOUT):
+    def collection_title(self,
+                         repo: str,
+                         session: requests.Session,
+                         timeout: int=config.REQUESTS_TIMEOUT) -> str:
         """Gets collection title from CGit
         
         Requests plain blob of collection.json, reads 'title' field.
@@ -1205,7 +1235,6 @@ class Cgit():
             r = session.get(url, timeout=timeout)
             logging.debug(str(r.status_code))
         except requests.ConnectionError:
-            r = None
             title = '[ConnectionError]'
         data = None
         if r and r.status_code == 200:
@@ -1244,7 +1273,9 @@ class Gitolite(object):
     authorized = None
     initialized = None
     
-    def __init__(self, server=config.GITOLITE, timeout=config.GITOLITE_TIMEOUT):
+    def __init__(self,
+                 server: str=config.GITOLITE,
+                 timeout: int=config.GITOLITE_TIMEOUT):
         """
         @param server: USERNAME@DOMAIN
         @param timeout: int Maximum seconds to wait for reponse
@@ -1252,7 +1283,7 @@ class Gitolite(object):
         self.server = server
         self.timeout = timeout
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         status = []
         if self.info: status.append('Init')
         else: status.append('noinit')
@@ -1281,7 +1312,7 @@ class Gitolite(object):
             self.connected = False
         self.initialized = True
     
-    def _authorized(self):
+    def _authorized(self) -> bool:
         """Parse Gitolite server response, indicate whether user is authorized
         
         http://gitolite.com/gitolite/user.html#info
@@ -1307,7 +1338,7 @@ class Gitolite(object):
         logging.debug('        NO CONNECTION')
         return False
     
-    def orgs(self):
+    def orgs(self) -> List[str]:
         """Returns list of orgs to which user has access
         
         @returns: list of organization IDs
@@ -1321,7 +1352,7 @@ class Gitolite(object):
                     repos_orgs.append(repo_org)
         return repos_orgs
     
-    def repos(self):
+    def repos(self) -> List[str]:
         """Returns list of repos to which user has access
         
         @param gitolite_out: raw output of gitolite_info()
@@ -1335,7 +1366,7 @@ class Gitolite(object):
                     repos.append(repo)
         return repos
 
-    def collections(self, org_id=''):
+    def collections(self, org_id: str='') -> List[str]:
         """List collections, optionally filtering by organization ID
         
         @param something: str
@@ -1349,7 +1380,10 @@ class Gitolite(object):
             ]
         return self.repos()
 
-    def collection_titles(self, username, password, timeout=5):
+    def collection_titles(self,
+                          username: str,
+                          password: str,
+                          timeout: int=5) -> List[Tuple[str, str]]:
         """Returns IDs:titles dict for all collections to which user has access.
         
         TODO Page through the Cgit index pages (fewer HTTP requests)?

@@ -2,6 +2,7 @@ import configparser
 import logging
 import os
 import sys
+from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 from DDR import fileio
 
@@ -11,7 +12,7 @@ COLLECTION_CONTROL_TEMPLATE = os.path.join(TEMPLATE_PATH, 'collection_control.tp
 ENTITY_CONTROL_TEMPLATE     = os.path.join(TEMPLATE_PATH, 'entity_control.tpl' )
 
 
-def load_template(filename):
+def load_template(filename: str) -> str:
     return fileio.read_text(filename)
 
 
@@ -21,7 +22,7 @@ class ControlFile( object ):
     path = None
     _config = None
     
-    def __init__( self, path ):
+    def __init__(self, path: str):
         self.path = path
         if not os.path.exists(self.path):
             print('ERR: control file not initialized')
@@ -49,12 +50,12 @@ class CollectionControlFile( ControlFile ):
         self.path_rel = os.path.basename(self.path)
     
     @staticmethod
-    def create( path, collection_id ):
+    def create(path: str, collection_id: str):
         logging.debug('    CollectionControlFile.create({})'.format(path))
         t = load_template(COLLECTION_CONTROL_TEMPLATE)
         fileio.write_text(t.format(cid=collection_id), path)
     
-    def update_checksums( self, collection ):
+    def update_checksums(self, collection):
         self._config.remove_section('Entities')
         self._config.add_section('Entities')
         ids = []
@@ -74,7 +75,7 @@ class EntityControlFile( ControlFile ):
         self.path_rel = sep.join(self.path.split(sep)[-3:])
     
     @staticmethod
-    def create( path, collection_id, entity_id ):
+    def create(path: str, collection_id: str, entity_id: str):
         logging.debug('    EntityControlFile.create({})'.format(path))
         t = load_template(ENTITY_CONTROL_TEMPLATE)
         fileio.write_text(

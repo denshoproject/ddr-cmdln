@@ -6,6 +6,7 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 import os
+from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 from jinja2 import Template
 
@@ -70,9 +71,9 @@ class Entity(common.DDRObject):
     control_path_rel = None
     mets_path_rel = None
     files_path_rel = None
-    _entities_meta = []
-    _files_meta = []
-    _children_objects = []
+    _entities_meta: List[str] = []
+    _files_meta: List[str] = []
+    _children_objects: List[str] = []
     signature_id = ''
     
     def __init__( self, path_abs, id=None, identifier=None ):

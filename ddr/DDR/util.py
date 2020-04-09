@@ -1,11 +1,13 @@
 import hashlib
 import os
 import re
+from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 from DDR import config
 from DDR import identifier
 
 
+# TODO type hints
 def find_meta_files(basedir, recursive=False, model=None, files_first=False, force_read=False):
     """Lists absolute paths to .json files in basedir; saves copy if requested.
     
@@ -45,7 +47,7 @@ def find_meta_files(basedir, recursive=False, model=None, files_first=False, for
             + [path for path in paths if path_matches_model(path, 'collection')]
     return paths
 
-def _search_recursive(basedir, model, excludes):
+def _search_recursive(basedir: str, model: str, excludes: List[str]) -> List[str]:
     """Recursively search directory.
     """
     paths = []
@@ -60,7 +62,7 @@ def _search_recursive(basedir, model, excludes):
                     paths.append(path)
     return paths
 
-def _search_directory(basedir, excludes):
+def _search_directory(basedir: str, excludes: List[str]) -> List[str]:
     """Search only the specified directory.
     """
     paths = []
@@ -71,7 +73,7 @@ def _search_directory(basedir, excludes):
                 paths.append(path)
     return paths
 
-def _excluded(path, excludes):
+def _excluded(path: str, excludes: List[str]) -> bool:
     """True if path contains one excluded strings
     """
     for x in excludes:
@@ -79,7 +81,7 @@ def _excluded(path, excludes):
             return True
     return False
 
-def path_matches_model(path, model):
+def path_matches_model(path: str, model: str) -> bool:
     """True if matches specified model or model is blank
     """
     if model:
@@ -89,7 +91,7 @@ def path_matches_model(path, model):
             return False
     return True
 
-def natural_sort( l ):
+def natural_sort(l: List[str]) -> List[str]:
     """Sort the given list in the way that humans expect.
     src: http://www.codinghorror.com/blog/2007/12/sorting-for-humans-natural-sort-order.html
     """
@@ -98,7 +100,7 @@ def natural_sort( l ):
     l.sort( key=alphanum_key )
     return l
 
-def natural_order_string( id ):
+def natural_order_string(id: str) -> str:
     """Convert a collection/entity ID into form that can be sorted naturally.
     
     @param id: A valid format DDR ID
@@ -125,7 +127,7 @@ def file_hash(path, algo='sha1'):
     f.close()
     return h.hexdigest()
 
-def normalize_text(text):
+def normalize_text(text: str) -> str:
     """Strip text, convert line endings, etc.
     
     TODO make this work on lists, dict values
@@ -157,7 +159,7 @@ def normalize_text(text):
         return process(text)
     return text
 
-def validate_paths(paths):
+def validate_paths(paths: List[str]) -> List[Tuple[int, str, Exception]]:
     """Tests whether a list of paths can be instantiated without errors
 
     @param paths: list
@@ -175,7 +177,7 @@ EMAIL_PATTERN = re.compile(
     r"^[\w\.\+\-]+\@[\w]+\.[a-z]{2,3}$"
 )
 
-def validate_email(email):
+def validate_email(email: str) -> bool:
     if len(email) > 6:
         if re.match(EMAIL_PATTERN, email) != None:
             return True
