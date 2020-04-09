@@ -1,12 +1,12 @@
 from collections import OrderedDict
 from functools import total_ordering
+import json
 import mimetypes
 mimetypes.init()
 import os
 
 import envoy
 from jinja2 import Template
-import simplejson as json
 
 from DDR import commands
 from DDR import config
@@ -99,14 +99,14 @@ class File(common.DDRObject):
         # only accept path_abs
         if kwargs and kwargs.get('path_abs',None):
             path_abs = kwargs['path_abs']
-        elif args and args[0] and isinstance(args[0], basestring):
+        elif args and args[0] and isinstance(args[0], str):
             path_abs = args[0]  #     Use path_abs arg!!!
         
         i = None
         for arg in args:
             if isinstance(arg, Identifier):
                 i = arg
-        for key,arg in kwargs.iteritems():
+        for key,arg in kwargs.items():
             if isinstance(arg, Identifier):
                 i = arg
         self.identifier = i
@@ -119,7 +119,7 @@ class File(common.DDRObject):
         path_abs = os.path.normpath(path_abs)
         
         self.id = i.id
-        self.idparts = i.parts.values()
+        self.idparts = list(i.parts.values())
         self.collection_id = i.collection_id()
         self.parent_id = i.parent_id()
         self.entity_id = self.parent_id
@@ -153,7 +153,7 @@ class File(common.DDRObject):
         Returns tuple of self.sort,self.identifier.id_sort
         (self.sort takes precedence over ID sort)
         """
-        return self.sort,self.identifier.id_sort
+        return int(self.sort),self.identifier.id_sort
 
     #@staticmethod
     #def exists(oidentifier, basepath=None, gitolite=None, idservice=None):
@@ -404,7 +404,7 @@ class File(common.DDRObject):
         """
         # remove 'id' from rowd because files.FIELDS has no 'id' field
         # TODO files.FIELDS really should have an ID field...
-        if 'id' in rowd.iterkeys():
+        if 'id' in iter(rowd.keys()):
             rowd.pop('id')
         module = modules.Module(self.identifier.fields_module())
         modified = common.load_csv(self, module, rowd)

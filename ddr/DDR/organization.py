@@ -4,7 +4,7 @@
 # repositories at the same time.
 # https://myrepos.branchable.com/
 
-import ConfigParser
+import configparser
 import logging
 logger = logging.getLogger(__name__)
 import os
@@ -137,7 +137,7 @@ def read_mrconfig( path ):
     @param path: Absolute path to .mrconfig file.
     @returns: ConfigParser object
     """
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.readfp(open(path))
     return config
 
@@ -159,7 +159,7 @@ def make_mrconfig( defaults, repos, server, base_path='' ):
     @param base_path: Absolute path to the directory in which the repos are located.
     @returns mrconfig: A ConfigParser object
     """
-    mrconfig = ConfigParser.ConfigParser(defaults)
+    mrconfig = configparser.ConfigParser(defaults)
     for r in repos:
         section = os.path.join(base_path, r['id'])
         mrconfig.add_section(section)

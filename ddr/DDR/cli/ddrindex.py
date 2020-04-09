@@ -62,12 +62,12 @@ Post arbitrary JSON documents:
 """
 
 from datetime import datetime
+import json
 import logging
 logger = logging.getLogger(__name__)
 
 import click
 import elasticsearch
-import simplejson as json
 
 from DDR import config
 from DDR import docstore
@@ -93,7 +93,11 @@ def _json_handler(obj):
     if hasattr(obj, 'isoformat'):
         return obj.strftime(config.DATETIME_FORMAT)
     else:
-        raise TypeError, 'Object of type %s with value of %s is not JSON serializable' % (type(obj), repr(obj))
+        raise TypeError(
+            'Object of type %s with value of %s is not JSON serializable' % (
+                type(obj), repr(obj)
+            )
+        )
     
 def format_json(data, pretty=False):
     if pretty:
@@ -422,7 +426,7 @@ def status(hosts):
     logprint('debug', 'ping ok', 0)
     
     logprint('debug', 'Indexes', 0)
-    index_names = ds.es.indices.stats()['indices'].keys()
+    index_names = list(ds.es.indices.stats()['indices'].keys())
     for i in index_names:
         logprint('debug', '- %s' % i, 0)
     
@@ -547,12 +551,12 @@ def search(hosts, models, parent, filters, limit, offset, page, aggregations, ra
     if aggregations:
         click.echo('Aggregations: (doc count, key, label)')
         longest_agg = ''
-        for key,val in results.aggregations.items():
+        for key,val in list(results.aggregations.items()):
             if val:
                 if len(key) > len(longest_agg):
                     longest_agg = key
         TEMPLATE = '{key}  {value}'
-        for key,val in results.aggregations.items():
+        for key,val in list(results.aggregations.items()):
             if val:
                 values = [
                     '(%s) %s "%s"' % (v['doc_count'], v['key'], v['label'])

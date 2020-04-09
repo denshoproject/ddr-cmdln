@@ -4,30 +4,24 @@
 # sudo apt-get install imagemagick libexempi3 libxml2-dev python-dev pmount udisks
 # Elasticsearch 2.4.3
 
-                          # LICENSE      Python3  PyPy
+                          # LICENSE  PyPy
 
-beautifulsoup4==4.8.0     # MIT          y
-click==7.0                # BSD          y        y
-deepdiff==3.3.0           # MIT          y        y    Last python2.* release
-elasticsearch>=7.0.0,<8.0.0     # Apache y        y
-elasticsearch-dsl>=7.0.0,<8.0.0 # Apache y        y
-envoy==0.0.3              # MIT          y             TODO replace!
-GitPython==2.1.14         # BSD          y             Last python2.* release
-Jinja2==2.10.1            # BSD          y
-psutil==5.6.3             # BSD          y        y
-python-dateutil==2.8.0    # BSD          y
-python-xmp-toolkit==2.0.1 # New BSD      y
-pytz==2019.2              # MIT          y
-requests==2.22.0          # Apache       y        y
-simplejson==3.16.0        # MIT          y        y
-unicodecsv==0.14.1        # BSD          y        y
+beautifulsoup4==4.8.2     # MIT
+click==7.1.1              # BSD      y
+deepdiff==3.3.0           # MIT      y
+elasticsearch>=7.0.0,<8.0.0     # Apache  y
+elasticsearch-dsl>=7.0.0,<8.0.0 # Apache  y
+envoy==0.0.3              # MIT             TODO replace!
+GitPython==3.1.0          # BSD
+Jinja2==2.11.1            # BSD
+psutil==5.7.0             # BSD      y
+python-dateutil==2.8.1    # BSD
+python-xmp-toolkit==2.0.1 # New BSD
+pytz==2019.3              # MIT
+requests==2.23.0          # Apache   y
 
 # development
 
 bpython
-coverage
 pytest
 pytest-cov
-#pytest-testmon
-pytest-xdist
-tox

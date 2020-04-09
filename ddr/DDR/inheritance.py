@@ -57,7 +57,7 @@ def inheritable_fields( MODEL_FIELDS ):
     return [
         field['name']
         for field in MODEL_FIELDS
-        if '.'.join([field['model'], field['name']]) in identifier.INHERITABLE_FIELDS.keys()
+        if '.'.join([field['model'], field['name']]) in list(identifier.INHERITABLE_FIELDS.keys())
     ]
 
 def selected_inheritables( inheritables, cleaned_data ):
@@ -77,8 +77,8 @@ def selected_inheritables( inheritables, cleaned_data ):
     if fieldnames:
         selected = [
             fieldnames[key]
-            for key in cleaned_data.keys()
-            if (key in fieldnames.keys()) and cleaned_data[key]
+            for key in list(cleaned_data.keys())
+            if (key in list(fieldnames.keys())) and cleaned_data[key]
         ]
     return selected
     

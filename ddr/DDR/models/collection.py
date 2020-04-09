@@ -1,11 +1,11 @@
 from collections import OrderedDict
+import json
 import logging
 logger = logging.getLogger(__name__)
 import os
 import re
 
 from jinja2 import Template
-import simplejson as json
 
 from DDR import commands
 from DDR import config
@@ -87,7 +87,7 @@ class Collection(common.DDRObject):
         self.identifier = i
         
         self.id = i.id
-        self.idparts = i.parts.values()
+        self.idparts = list(i.parts.values())
         
         self.path_abs = path_abs
         self.path = path_abs
@@ -292,9 +292,9 @@ class Collection(common.DDRObject):
                     e.identifier = Identifier(path=path)
                     e.id = e.identifier.id
                     for line in data[1:]:
-                        if 'title' in line.keys():
+                        if 'title' in list(line.keys()):
                             e.title = line['title']
-                        elif 'signature_id' in line.keys():
+                        elif 'signature_id' in list(line.keys()):
                             e.signature_id = line['signature_id']
                     e.signature_abs = common.signature_abs(e, self.identifier.basepath)
                     entities.append(e)

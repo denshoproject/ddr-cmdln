@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 import os
 import re
-import urlparse
+import urllib.parse
 
 from elasticsearch_dsl import Index, Search, A, Q
 from elasticsearch_dsl.query import Match, MultiMatch, QueryString
@@ -263,7 +263,7 @@ class SearchResults(object):
             # aggregations
             self.aggregations = {}
             if hasattr(results, 'aggregations'):
-                for field in results.aggregations.to_dict().keys():
+                for field in list(results.aggregations.to_dict().keys()):
                     
                     # nested aggregations
                     if field in ['topics', 'facility']:
@@ -366,7 +366,7 @@ class SearchResults(object):
         if params.get('page'): params.pop('page')
         if params.get('limit'): params.pop('limit')
         if params.get('offset'): params.pop('offset')
-        qs = [key + '=' + val for key,val in params.items()]
+        qs = [key + '=' + val for key,val in list(params.items())]
         query_string = '&'.join(qs)
         data['prev_api'] = ''
         data['next_api'] = ''
@@ -421,7 +421,7 @@ def format_object(oi, d, is_detail=False):
         oi, d, source='es', is_detail=is_detail
     )
     DETAIL_EXCLUDE = []
-    for key,val in d.items():
+    for key,val in list(d.items()):
         if key not in DETAIL_EXCLUDE:
             data[key] = val
     return data
@@ -552,12 +552,12 @@ class Searcher(object):
         # Sanitize while copying.
         self.params = {
             key: sanitize_input(val)
-            for key,val in params.items()
+            for key,val in list(params.items())
         }
         
         # scrub fields not in whitelist
         bad_fields = [
-            key for key in params.keys()
+            key for key in list(params.keys())
             if key not in params_whitelist + ['page']
         ]
         for key in bad_fields:
@@ -598,7 +598,7 @@ class Searcher(object):
             s = s.query("wildcard", id=parent)
         
         # filters
-        for key,val in params.items():
+        for key,val in list(params.items()):
             
             if key in fields_nested:
                 # Instead of nested search on topics.id or facility.id
@@ -636,7 +636,7 @@ class Searcher(object):
                 # 'term' search is for single choice, not multiple choice fields(?)
         
         # aggregations
-        for fieldname,field in fields_agg.items():
+        for fieldname,field in list(fields_agg.items()):
             
             # nested aggregation (Elastic docs: https://goo.gl/xM8fPr)
             if fieldname == 'topics':

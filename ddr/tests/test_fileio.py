@@ -13,9 +13,6 @@ def test_read_text(tmpdir):
     # regular
     data = fileio.read_text(path)
     assert data == TEXT
-    # utf8_strict
-    data = fileio.read_text(path, utf8_strict=True)
-    assert data == TEXT
     # clean up
     os.remove(path)
 
@@ -24,11 +21,6 @@ def test_write_text(tmpdir):
     path = str(tmpdir / 'write_text.json')
     # regular
     fileio.write_text(TEXT, path)
-    with open(path, 'r') as f:
-        written = f.read()
-    assert written == TEXT
-    # utf8_strict
-    fileio.write_text(TEXT, path, utf8_strict=True)
     with open(path, 'r') as f:
         written = f.read()
     assert written == TEXT
@@ -78,7 +70,8 @@ def test_write_csv(tmpdir):
     assert os.path.exists(CSV_PATH)
     with open(CSV_PATH, 'r') as f:
         out = f.read()
-    assert out == CSV_FILE
+    # compare lines regardless or newline
+    assert out.splitlines() == CSV_FILE.splitlines()
     # cleanup
     if os.path.exists(CSV_PATH):
         os.remove(CSV_PATH)

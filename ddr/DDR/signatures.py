@@ -15,11 +15,10 @@ identifiers = signatures.signatures(paths, basepath)
 """
 
 from datetime import datetime
+import json
 import logging
 logger = logging.getLogger(__name__)
 import os
-
-import simplejson as json
 
 from DDR import config
 from DDR import commands
@@ -76,7 +75,7 @@ class SigIdentifier(identifier.Identifier):
         
         # read from .json file
         data = self._read_fields(self.path_abs('json'))
-        for key,val in data.iteritems():
+        for key,val in data.items():
             if val:
                 setattr(self, key, val)
         
@@ -95,15 +94,15 @@ class SigIdentifier(identifier.Identifier):
             sort_key['sort'] = self.sort
             sort_key['eid'] = eid
             
-        self.sort_key = sort_key.values()
+        self.sort_key = list(sort_key.values())
     
     def _read_fields(self, path):
         """Extracts specified fields from JSON
         """
         data = {}
         for d in json.loads(fileio.read_text(path)):
-            key = d.keys()[0]
-            if key in JSON_FIELDS.keys():
+            key = list(d.keys())[0]
+            if key in list(JSON_FIELDS.keys()):
                 # coerces to int
                 if d.get(key) and isinstance(JSON_FIELDS[key], int):
                     data[key] = int(d[key])

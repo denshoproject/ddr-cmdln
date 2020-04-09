@@ -1,4 +1,4 @@
-import simplejson as json
+import json
 
 from DDR import dvcs
 
@@ -192,7 +192,7 @@ class Module(object):
         """
         data = json.loads(document_json)
         # First item in list is document metadata, everything else is a field.
-        document_fields = [field.keys()[0] for field in data[1:]]
+        document_fields = [list(field.keys())[0] for field in data[1:]]
         module_fields = [field['name'] for field in getattr(self.module, 'FIELDS')]
         # models.load_json() uses MODULE.FIELDS, so get list of fields
         # directly from the JSON document.

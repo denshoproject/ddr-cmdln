@@ -22,9 +22,17 @@ VOCABS_URL = config.VOCABS_URL
 GIT_USER = 'gjost'
 GIT_MAIL = 'gjost@densho.org'
 AGENT = 'pytest'
+
+# ddr-cmdln standalone
 TEST_CSV_DIR = os.path.join(
-    os.getcwd(), 'ddr-cmdln/ddr/tests/ddrimport'
+    os.getcwd(), 'ddr/tests/ddrimport'
 )
+if not os.path.exists(TEST_CSV_DIR):
+    # ddr-cmdln as part of ddr-local
+    TEST_CSV_DIR = os.path.join(
+        os.getcwd(), 'ddr-cmdln/ddr/tests/ddrimport'
+    )
+
 TEST_FILES_DIR = os.path.join(
     os.getcwd(), 'ddr-cmdln-assets'
 )
@@ -521,13 +529,13 @@ def check_hashes(before, after):
     """
     keys_changed = False
     hashes_changed = False
-    if not after.keys() == before.keys():
+    if not list(after.keys()) == list(before.keys()):
         keys_changed = True
         print('KEYS CHANGED: %s' % oid)
-        print('BEFORE %s' % before.keys())
-        print('AFTER  %s' % after.keys())
-    assert after.keys() == before.keys()
-    for oid in before.keys():
+        print('BEFORE %s' % list(before.keys()))
+        print('AFTER  %s' % list(after.keys()))
+    assert list(after.keys()) == list(before.keys())
+    for oid in list(before.keys()):
         if not before[oid] == after[oid]:
             hashes_changed = True
             print('HASHES CHANGED: %s' % oid)

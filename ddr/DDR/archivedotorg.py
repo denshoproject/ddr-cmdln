@@ -154,7 +154,7 @@ class IAObject():
             'mimetype': self.mimetype,
             'files': {
                 format_:f.dict()
-                for format_,f in self.files.iteritems()
+                for format_,f in self.files.items()
             }
         }
 

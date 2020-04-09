@@ -94,7 +94,7 @@ def parse_timestamp(text, mail):
     if dt and (not dt.tzinfo):
         domain = mail.strip().split('@')[-1]
         # Use default timezone unless...
-        if domain in config.ALT_TIMEZONES.keys():
+        if domain in list(config.ALT_TIMEZONES.keys()):
             timezone = config.ALT_TIMEZONES[domain]
         else:
             timezone = config.TZ
