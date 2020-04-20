@@ -451,9 +451,8 @@ deb-stretch:
 	--depends "libxslt1-dev"   \
 	--depends "libz-dev"   \
 	--depends "pmount"   \
-	--depends "python-dev"   \
-	--depends "python-pip"   \
-	--depends "python-six"   \
+	--depends "python3-dev"   \
+	--depends "python3-pip"   \
 	--depends "python-virtualenv"   \
 	--depends "udisks2"   \
 	--after-install "bin/after-install.sh"   \
