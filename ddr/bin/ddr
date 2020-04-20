@@ -301,6 +301,10 @@ Example:
 
 
     args = parser.parse_args()
+
+    if not args.cmd:
+        print('Enter a subcommand (see --help).')
+        sys.exit(0)
     
     if args.debug:
         print(args)
