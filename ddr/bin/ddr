@@ -31,7 +31,7 @@ MEDIA_BASE = config.get('cmdln','media_base')
 LOGGING_FORMAT = '%(asctime)s %(levelname)s %(message)s'
 LOGGING_DATEFMT = '%Y-%m-%d %H:%M:%S'
 LOGGING_FILE = config.get('local','log_file')
-if config.get('local','log_level') == 'debug':
+if config.get('debug','log_level') == 'debug':
     LOGGING_LEVEL = logging.DEBUG
 else:
     LOGGING_LEVEL = logging.ERROR
