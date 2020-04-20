@@ -42,6 +42,7 @@ CONFIG,CONFIGS_READ = read_configs(CONFIG_FILES)
 
 DEBUG = CONFIG.get('debug', 'debug')
 OFFLINE = CONFIG.get('debug', 'offline')
+LOG_LEVEL = CONFIG.get('debug', 'log_level')
 
 PYTHON_VERSION = '.'.join([str(sys.version_info.major), str(sys.version_info.minor)])
 
@@ -58,7 +59,6 @@ MEDIA_BASE = CONFIG.get('cmdln','media_base')
 
 LOG_DIR = CONFIG.get('local', 'log_dir')
 LOG_FILE = CONFIG.get('local','log_file')
-LOG_LEVEL = CONFIG.get('local', 'log_level')
 
 UTF8_STRICT = CONFIG.getboolean('cmdln','utf8_strict')
 

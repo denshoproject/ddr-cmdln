@@ -115,6 +115,16 @@ might as well just clone it to that location.
     $ sudo git clone https://github.com/densho/ddr-cmdln.git /opt/ddr-cmdln
     $ cd /opt/ddr-cmdln/
 
+If you want to modify any of the files you must give yourself permissions.
+::
+   $ sudo chown -R USER.USER /opt/ddr-cmdln
+
+Create a `ddr` user.  The DDR application will run as this user, and
+all repository files will be owned by this user.
+::
+    $ cd /opt/ddr-cmdln/
+    $ sudo adduser ddr
+
 Git-cloning is a separate step from the actual installation.  GitHub
 may ask you for passwords.
 ::
@@ -132,6 +142,11 @@ Problems installing `lxml` may be due to memory constraints,
 especially if Elasticsearch is running, which it will be if you've
 installed `ddr-local` and run `make enable-bkgnd`.
 
+Install config files.
+::
+    $ cd /opt/ddr-cmdn/
+    $ sudo make install-configs
+
 
 POST-INSTALL
 ============
@@ -143,7 +158,7 @@ Usage
 In order to use `ddr-cmdln` you must activate its `virtualenv` which
 is located in `/opt/ddr-cmdln/venv/ddrcmdln`.
 ::
-    USER@HOST:~$ du ddr
+    USER@HOST:~$ su ddr
     ddr@HOST:~$ source /opt/ddr-cmdln/venv/ddrcmdln/bin/activate
     (ddrcmdln)ddr@HOST:~$
 
@@ -181,6 +196,8 @@ Rather than listing settings files here, examine the `deb` task in
 Models Definitions
 ------------------
 
+NOTE: `ddr-defs` is installed automatically by `make get`.
+
 If you installed from a package the latest model definitions should be
 installed in the `ddr-cmdln` directory.  If you installed from source
 the definitions should have been downloaded as part of `make get`.  If
@@ -192,6 +209,20 @@ If you want to install the model definitions in some non-standard
 location, you can clone them:
 ::
     $ sudo git clone https://github.com/densho/ddr-defs.git /PATH/TO/ddr-defs/
+
+
+Controlled Vocabularies
+-----------------------
+
+NOTE: `densho-vocab` is installed automatically by `make get`
+
+::
+   $ sudo make get-densho-vocab
+
+If you want to install the model definitions in some non-standard
+location, you can clone them:
+::
+    $ sudo git clone https://github.com/densho/densho-vocab.git /PATH/TO/densho-vocab/
 
 
 Network Config
