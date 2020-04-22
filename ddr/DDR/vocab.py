@@ -571,15 +571,31 @@ def _get_vocab_http(url):
             '%s vocabulary file missing: %s' % (vocab.capitalize(), url))
     return json.loads(r.text)
 
-def _get_vocabs_all_fs(base, exclude='index'):
-    return {
-        vocab.replace('.json',''): _get_vocab_fs(os.path.join(base, vocab))
-        for vocab in os.listdir(base)
-        if (not (exclude in vocab) or (exclude == vocab)) and ('.json' in vocab)
-    }
+def _get_vocabs_all_fs(base, exclude=['index','narrators']):
+    """Get JSON vocab files, excluding index and narrators.
+    @param base: str Absolute path to vocabs
+    @param exclude: list
+    @returns: dict
+    """
+    data = {}
+    for vocab in os.listdir(base):
+        is_json = '.json' in vocab
+        excluded = False
+        for e in exclude:
+            if e in vocab:
+                excluded = True
+        if is_json and not excluded:
+            key = vocab.replace('.json','')
+            val = _get_vocab_fs(os.path.join(base, vocab))
+            data[key] = val
+    return data
 
-def _get_vocabs_all_http(base_url):
-    # get list of vocabs
+def _get_vocabs_all_http(base_url, exclude=['index','narrators']):
+    """Get JSON vocab files, excluding index and narrators.
+    @param base: str Absolute path to vocabs
+    @param exclude: list
+    @returns: dict
+    """
     url = os.path.join(base_url, 'index.json')
     r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
     if r.status_code != 200:
@@ -593,13 +609,14 @@ def _get_vocabs_all_http(base_url):
     return_dict = multiprocessing.Manager().dict()
     jobs = []
     for vocab,filename in vocabs.items():
-        url = os.path.join(base_url, filename)
-        p = multiprocessing.Process(
-            target=worker,
-            args=(vocab, url, return_dict)
-        )
-        jobs.append(p)
-        p.start()
+        if vocab not in exclude:
+            url = os.path.join(base_url, filename)
+            p = multiprocessing.Process(
+                target=worker,
+                args=(vocab, url, return_dict)
+            )
+            jobs.append(p)
+            p.start()
     for proc in jobs:
         proc.join()
     
