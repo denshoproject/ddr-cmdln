@@ -86,12 +86,15 @@ DEB_BRANCH := $(shell python bin/package-branch.py)
 DEB_ARCH=amd64
 DEB_NAME_JESSIE=$(APP)-$(DEB_BRANCH)
 DEB_NAME_STRETCH=$(APP)-$(DEB_BRANCH)
+DEB_NAME_BUSTER=$(APP)-$(DEB_BRANCH)
 # Application version, separator (~), Debian release tag e.g. deb8
 # Release tag used because sortable and follows Debian project usage.
 DEB_VERSION_JESSIE=$(APP_VERSION)~deb8
 DEB_VERSION_STRETCH=$(APP_VERSION)~deb9
+DEB_VERSION_BUSTER=$(APP_VERSION)~deb10
 DEB_FILE_JESSIE=$(DEB_NAME_JESSIE)_$(DEB_VERSION_JESSIE)_$(DEB_ARCH).deb
 DEB_FILE_STRETCH=$(DEB_NAME_STRETCH)_$(DEB_VERSION_STRETCH)_$(DEB_ARCH).deb
+DEB_FILE_BUSTER=$(DEB_NAME_BUSTER)_$(DEB_VERSION_BUSTER)_$(DEB_ARCH).deb
 DEB_VENDOR=Densho.org
 DEB_MAINTAINER=<geoffrey.jost@densho.org>
 DEB_DESCRIPTION=Densho Digital Repository editor
@@ -441,6 +444,64 @@ deb-stretch:
 	--depends "git-core"   \
 	--depends "imagemagick"   \
 	--depends "libexempi3"   \
+	--depends "libssl-dev"   \
+	--depends "libxml2"   \
+	--depends "libxml2-dev"   \
+	--depends "libxslt1-dev"   \
+	--depends "libz-dev"   \
+	--depends "pmount"   \
+	--depends "python3-dev"   \
+	--depends "python3-pip"   \
+	--depends "python3-venv"   \
+	--depends "udisks2"   \
+	--after-install "bin/after-install.sh"   \
+	--chdir $(INSTALL_CMDLN)   \
+	conf/ddrlocal.cfg=etc/ddr/ddrlocal.cfg   \
+	conf/logrotate=etc/logrotate.d/ddr   \
+	conf/README-logs=$(LOG_BASE)/README  \
+	static=var/www   \
+	bin=$(DEB_BASE)   \
+	conf=$(DEB_BASE)   \
+	COPYRIGHT=$(DEB_BASE)   \
+	ddr-cmdln-assets=$(DEB_BASE)   \
+	ddr-defs=$(DEB_BASE)   \
+	densho-vocab=$(DEB_BASE)   \
+	.git=$(DEB_BASE)   \
+	.gitignore=$(DEB_BASE)   \
+	INSTALL.rst=$(DEB_BASE)   \
+	LICENSE=$(DEB_BASE)   \
+	Makefile=$(DEB_BASE)   \
+	README.rst=$(DEB_BASE)   \
+	requirements.txt=$(DEB_BASE)   \
+	setup-workstation.sh=$(DEB_BASE)   \
+	static=$(DEB_BASE)   \
+	venv=$(DEB_BASE)   \
+	VERSION=$(DEB_BASE)
+# Put worktree pointer file back in place
+	python bin/deb-prep-post.py after
+
+deb-buster:
+	@echo ""
+	@echo "FPM packaging (buster) -------------------------------------------------"
+	-rm -Rf $(DEB_FILE_BUSTER)
+# Copy .git/ dir from master worktree
+	python bin/deb-prep-post.py before
+# Make package
+	fpm   \
+	--verbose   \
+	--input-type dir   \
+	--output-type deb   \
+	--name $(DEB_NAME_BUSTER)   \
+	--version $(DEB_VERSION_BUSTER)   \
+	--package $(DEB_FILE_BUSTER)   \
+	--url "$(GIT_SOURCE_URL)"   \
+	--vendor "$(DEB_VENDOR)"   \
+	--maintainer "$(DEB_MAINTAINER)"   \
+	--description "$(DEB_DESCRIPTION)"   \
+	--depends "git-annex"   \
+	--depends "git-core"   \
+	--depends "imagemagick"   \
+	--depends "libexempi8"   \
 	--depends "libssl-dev"   \
 	--depends "libxml2"   \
 	--depends "libxml2-dev"   \
