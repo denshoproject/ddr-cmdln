@@ -11,7 +11,10 @@ coverage-*
 ddr/build/
 ddr/ddr_cmdln.egg-info/
 ddr/dist/
+ddr-cmdln-assets/
 ddr-defs/
 debs/
+densho-vocab/
+pip-local/
 tmp/
 venv/

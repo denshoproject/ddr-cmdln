@@ -1,4 +1,4 @@
-import ConfigParser
+import configparser
 import logging
 import os
 import sys
@@ -30,7 +30,7 @@ class ControlFile( object ):
     
     def read( self ):
         logging.debug('    ControlFile.read({})'.format(self.path))
-        self._config = ConfigParser.ConfigParser(allow_no_value=True)
+        self._config = configparser.ConfigParser(allow_no_value=True)
         self._config.read([self.path])
     
     def write( self ):

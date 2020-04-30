@@ -151,13 +151,12 @@ class TestImporter():
             {'id': 'ddr-testing-123-4-5-master'},
             {'id': 'ddr-testing-123-4-5-master-abc123'},
         ]
-        out0 = batch.Importer._fidentifiers(rowds0, ci)
-        print(out0)
-        print(out0.keys())
+        out0 = list(batch.Importer._fidentifiers(rowds0, ci).keys())
         expected_keys = [
             'ddr-testing-123-4-master-abc123', 'ddr-testing-123-4-5-master-abc123',
         ]
-        assert out0.keys() == expected_keys
+        for key in out0:
+            assert key in expected_keys
     
     def test_fid_parents(self):
         ci = identifier.Identifier('ddr-testing-123')
@@ -170,12 +169,13 @@ class TestImporter():
             {'id': 'ddr-testing-123-4-5'},
             {'id': 'ddr-testing-123-4-5-master-abc123'},
         ]
-        out0 = batch.Importer._fid_parents(fids0, rowds0, ci)
+        out0 = list(batch.Importer._fid_parents(fids0, rowds0, ci).keys())
         expected0 = [
             'ddr-testing-123-4',
             'ddr-testing-123-4-5',
         ]
-        assert out0.keys() == expected0
+        for key in out0:
+            assert key in expected0
         
         # existing files
         fid10 = identifier.Identifier('ddr-testing-123-4-master-abc123')
@@ -188,12 +188,13 @@ class TestImporter():
             {'id': 'ddr-testing-123-4-master-abc123'},
             {'id': 'ddr-testing-123-4-5-master-abc123'},
         ]
-        out1 = batch.Importer._fid_parents(fids1, rowds1, ci)
+        out1 = list(batch.Importer._fid_parents(fids1, rowds1, ci).keys())
         expected1 = [
             'ddr-testing-123-4-master-abc123',
             'ddr-testing-123-4-5-master-abc123',
         ]
-        assert out1.keys() == expected1
+        for key in out1:
+            assert key in expected1
     
     # TODO def test_eidentifiers(self):
     # TODO def test_existing_bad_entities(self):

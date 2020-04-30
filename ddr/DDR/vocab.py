@@ -92,17 +92,17 @@ and reimported from CSV.::
 
 from collections import defaultdict, OrderedDict
 from datetime import datetime
+import json
 import logging
 logger = logging.getLogger(__name__)
 import multiprocessing
 import os
-import StringIO
+import io
 import sys
-import urlparse
+import urllib.parse
 
 from dateutil import parser
 import requests
-import simplejson as json
 
 from DDR import config
 from DDR import converters
@@ -326,8 +326,8 @@ class Index( object ):
                 urls.append(part.strip())
         uris = []
         for url in urls:
-            if url and urlparse.urlparse(url).path:
-                uris.append(urlparse.urlparse(url).path)
+            if url and urllib.parse.urlparse(url).path:
+                uris.append(urllib.parse.urlparse(url).path)
         return uris
     
     def load_csv(self, text):
@@ -342,7 +342,7 @@ class Index( object ):
         @param text: str Raw contents of CSV file
         @returns: Index object with terms
         """
-        pseudofile = StringIO.StringIO(text)
+        pseudofile = io.StringIO(text)
         reader = fileio.csv_reader(pseudofile)
         terms = []
         for n,row in enumerate(reader):
@@ -391,7 +391,7 @@ class Index( object ):
         
         @returns: CSV formatted text
         """
-        output = StringIO.StringIO()
+        output = io.StringIO()
         writer = fileio.csv_writer(output)
         # metadata
         writer.writerow(['id', self.id])
@@ -420,7 +420,7 @@ class Index( object ):
             'digraph G {',
             '  rankdir=RL;'
         ]
-        for tid,term in self._terms_by_id.iteritems():
+        for tid,term in self._terms_by_id.items():
             parent = self._parent(term)
             if parent:
                 src = '"%s-%s"' % (term.id, term.title[:term_len].replace('"',''))
@@ -433,7 +433,7 @@ class Index( object ):
     def dump_text( self ):
         """Text format of the entire index.
         """
-        terms = [self._format(term) for id,term in self._terms_by_id.iteritems()]
+        terms = [self._format(term) for id,term in self._terms_by_id.items()]
         return '\n\n'.join(terms)
         
     def menu_choices( self ):
@@ -497,7 +497,7 @@ class Term( object ):
         # parse list from string in CSV
         encyc_urls = t.get('encyc_urls', [])
         if encyc_urls:
-            if isinstance(encyc_urls, basestring):
+            if isinstance(encyc_urls, str):
                 term.encyc_urls = encyc_urls.strip().split(',')
             elif isinstance(encyc_urls, list):
                 term.encyc_urls = encyc_urls
@@ -511,7 +511,7 @@ class Term( object ):
         """Converts Term into a dict suitable for writing to JSON.
         """
         data = {}
-        for key,val in self.__dict__.iteritems():
+        for key,val in self.__dict__.items():
             if (key in ['parent_id']) and val:
                 val = getattr(self, key)
             elif (key in ['siblings', 'children']) and val:
@@ -522,7 +522,7 @@ class Term( object ):
                 val_before = val
                 if isinstance(val, datetime):
                     val = converters.datetime_to_text(val)
-                elif isinstance(val, basestring):
+                elif isinstance(val, str):
                     pass
                 else:
                     val = None
@@ -571,15 +571,31 @@ def _get_vocab_http(url):
             '%s vocabulary file missing: %s' % (vocab.capitalize(), url))
     return json.loads(r.text)
 
-def _get_vocabs_all_fs(base, exclude='index'):
-    return {
-        vocab.replace('.json',''): _get_vocab_fs(os.path.join(base, vocab))
-        for vocab in os.listdir(base)
-        if not (exclude in vocab) or (exclude == vocab)
-    }
+def _get_vocabs_all_fs(base, exclude=['index','narrators']):
+    """Get JSON vocab files, excluding index and narrators.
+    @param base: str Absolute path to vocabs
+    @param exclude: list
+    @returns: dict
+    """
+    data = {}
+    for vocab in os.listdir(base):
+        is_json = '.json' in vocab
+        excluded = False
+        for e in exclude:
+            if e in vocab:
+                excluded = True
+        if is_json and not excluded:
+            key = vocab.replace('.json','')
+            val = _get_vocab_fs(os.path.join(base, vocab))
+            data[key] = val
+    return data
 
-def _get_vocabs_all_http(base_url):
-    # get list of vocabs
+def _get_vocabs_all_http(base_url, exclude=['index','narrators']):
+    """Get JSON vocab files, excluding index and narrators.
+    @param base: str Absolute path to vocabs
+    @param exclude: list
+    @returns: dict
+    """
     url = os.path.join(base_url, 'index.json')
     r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
     if r.status_code != 200:
@@ -592,19 +608,20 @@ def _get_vocabs_all_http(base_url):
         return_dict[vocab] = _get_vocab_http(url)
     return_dict = multiprocessing.Manager().dict()
     jobs = []
-    for vocab,filename in vocabs.iteritems():
-        url = os.path.join(base_url, filename)
-        p = multiprocessing.Process(
-            target=worker,
-            args=(vocab, url, return_dict)
-        )
-        jobs.append(p)
-        p.start()
+    for vocab,filename in vocabs.items():
+        if vocab not in exclude:
+            url = os.path.join(base_url, filename)
+            p = multiprocessing.Process(
+                target=worker,
+                args=(vocab, url, return_dict)
+            )
+            jobs.append(p)
+            p.start()
     for proc in jobs:
         proc.join()
     
     # turn return_dict into a regular dict
-    return {key:val for key,val in return_dict.items()}
+    return {key:val for key,val in list(return_dict.items())}
 
 def get_vocabs(vocabs_url):
     """Loads data for multiple vocabularies from URL or from filesystem.
@@ -716,7 +733,7 @@ def topics_choices(facet, FacetTermClass):
         term.meta.id = facetterm_id
         term.facet = fid
         term.term_id = t.get('id')
-        for field in FacetTermClass._doc_type.mapping.to_dict()['properties'].keys():
+        for field in list(FacetTermClass._doc_type.mapping.to_dict()['properties'].keys()):
             if t.get(field):
                 setattr(term, field, t[field])
         term.id = facetterm_id  # overwrite id from original

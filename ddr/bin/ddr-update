@@ -13,13 +13,12 @@ epilog = """
 import argparse
 from datetime import datetime
 import getpass
+import json
 import logging
 import os
 import sys
 
-import simplejson as json
-
-from DDR import batch_update
+from DDR import batch
 from DDR.config import REPO_MODELS_PATH, VOCABS_URL
 from DDR import idservice
 from DDR import identifier
@@ -89,7 +88,7 @@ def main():
     start = datetime.now()
     if model == 'entity':
         
-        updated = batch_update.update_entities(
+        updated = batch.update_entities(
             args.csv,
             args.collection,
             VOCABS_URL,
@@ -98,7 +97,7 @@ def main():
                 
     elif model == 'file':
         
-        updated = batch_update.update_files(
+        updated = batch.update_files(
             args.csv,
             args.collection,
             VOCABS_URL,

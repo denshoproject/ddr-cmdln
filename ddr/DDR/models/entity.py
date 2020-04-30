@@ -2,12 +2,12 @@ from collections import OrderedDict
 from copy import deepcopy
 from datetime import datetime
 from functools import total_ordering
+import json
 import logging
 logger = logging.getLogger(__name__)
 import os
 
 from jinja2 import Template
-import simplejson as json
 
 from DDR import commands
 from DDR import config
@@ -84,7 +84,7 @@ class Entity(common.DDRObject):
         self.identifier = i
         
         self.id = i.id
-        self.idparts = i.parts.values()
+        self.idparts = list(i.parts.values())
         
         self.collection_id = i.collection_id()
         self.parent_id = i.parent_id()
@@ -563,7 +563,7 @@ class Entity(common.DDRObject):
             # from metadata file
             json_path = os.path.join(self.files_path, f)
             for field in json.loads(fileio.read_text(json_path)):
-                for k,v in field.iteritems():
+                for k,v in field.items():
                     if k == algo:
                         cs = v
                     if k == 'basename_orig':

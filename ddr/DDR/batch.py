@@ -11,13 +11,12 @@ Register newly added EIDs
 import codecs
 import csv
 from datetime import datetime
+import json
 import logging
 import os
 import shutil
 import sys
 import traceback
-
-import simplejson as json
 
 from DDR import config
 from DDR import changelog
@@ -136,7 +135,7 @@ def nicer_unicode_decode_error(headers, obj, csv):
     @param csv: list of CSV row cells
     """
     for n,field in enumerate(csv):
-        if isinstance(field, basestring):
+        if isinstance(field, str):
             try:
                 utf8 = field.decode('utf8', 'strict')
             except UnicodeEncodeError as err:
@@ -333,7 +332,7 @@ class Checker():
         # new files don't have their own IDs - they have their parent entity IDs
         # the parent entity may be duplicated
         PARENT_MODELS = ['entity', 'segment']
-        if (model in PARENT_MODELS) and rowds and ('basename_orig' in rowds[0].keys()):
+        if (model in PARENT_MODELS) and rowds and ('basename_orig' in list(rowds[0].keys())):
             model = 'file'
         # TODO should not know model name
         if model == 'file-role':
@@ -392,7 +391,7 @@ class Checker():
         @returns: dict
         """
         valid_values = {}
-        for key,data in vocabs.iteritems():
+        for key,data in vocabs.items():
             field = data['id']
             values = [term['id'] for term in data['terms']]
             if values:
@@ -426,8 +425,8 @@ class Checker():
             exceptions=nonrequired_fields,
             additional=['access_path'],  # used for custom access files
         )
-        if header_errs.keys():
-            for name,errs in header_errs.iteritems():
+        if list(header_errs.keys()):
+            for name,errs in header_errs.items():
                 if errs:
                     for err in errs:
                         logging.error('* %s: "%s"' % (name, err))
@@ -439,8 +438,8 @@ class Checker():
         if model and (model == 'file'):
             find_dupes = False
         rowds_errs = csvfile.validate_rowds(module, headers, required_fields, valid_values, rowds, find_dupes)
-        if rowds_errs.keys():
-            for name,errs in rowds_errs.iteritems():
+        if list(rowds_errs.keys()):
+            for name,errs in rowds_errs.items():
                 if errs:
                     for err in errs:
                         logging.error('* %s: "%s"' % (name, err))
@@ -662,7 +661,7 @@ class Importer():
         # note: fidentifiers will be {} if all rows are for new files
         oids = {
             fi.id: Importer._fidentifier_parent(fi)
-            for fi in fidentifiers.itervalues()
+            for fi in fidentifiers.values()
         }
         # new files (these will be the Files' parent Entity identifiers)
         for rowd in rowds:
@@ -677,11 +676,9 @@ class Importer():
     @staticmethod
     def _eidentifiers(fid_parents):
         """deduplicated list of Entity Identifiers."""
-        return list(
-            set([
-                e for e in fid_parents.itervalues()
-            ])
-        )
+        return list([
+            e for e in fid_parents.values()
+        ])
     
     @staticmethod
     def _existing_bad_entities(eidentifiers):
@@ -707,7 +704,7 @@ class Importer():
         return {
             # TODO don't hard-code object class!!!
             fid: fi.object()
-            for fid,fi in fidentifiers.iteritems()
+            for fid,fi in fidentifiers.items()
         }
     
     @staticmethod
@@ -740,7 +737,7 @@ class Importer():
     @staticmethod
     def _rowd_is_external(rowd):
         """indicates whether or not rowd represents an external file."""
-        if rowd.get('external') and isinstance(rowd['external'], basestring) and rowd['external'].isdigit():
+        if rowd.get('external') and isinstance(rowd['external'], str) and rowd['external'].isdigit():
             rowd['external'] = int(rowd['external'])
         if rowd.get('external', 0):
             return True
@@ -1051,9 +1048,9 @@ class UpdaterMetrics():
         ]
     
     def row(self):
-        load_errs = [':'.join([key,val]) for key,val in self.load_errs.iteritems()]
-        save_errs = [':'.join([key,val]) for key,val in self.save_errs.iteritems()]
-        bad_exits = [':'.join([key,val]) for key,val in self.bad_exits.iteritems()]
+        load_errs = [':'.join([key,val]) for key,val in self.load_errs.items()]
+        save_errs = [':'.join([key,val]) for key,val in self.save_errs.items()]
+        bad_exits = [':'.join([key,val]) for key,val in self.bad_exits.items()]
         return [
             self.cid,
             self.verdict,
@@ -1177,9 +1174,9 @@ class Updater():
             total_objects_saved += metrics.objects_saved
             total_files_updated += metrics.files_updated
             total_failures += metrics.failures
-            total_load_errs += len(metrics.load_errs.keys())
-            total_save_errs += len(metrics.save_errs.keys())
-            total_bad_exits += len(metrics.bad_exits.keys())
+            total_load_errs += len(list(metrics.load_errs.keys()))
+            total_save_errs += len(list(metrics.save_errs.keys()))
+            total_bad_exits += len(list(metrics.bad_exits.keys()))
             delta = metrics.per_object
             per_objects.append(delta)
             
@@ -1195,7 +1192,7 @@ class Updater():
                     # stage
                     stage_these = []
                     if metrics.updated:
-                        for f in metrics.updated.itervalues():
+                        for f in metrics.updated.values():
                             stage_these.extend(f)
                     logging.info('%s files changed' % (len(stage_these)))
                     if stage_these:
@@ -1246,7 +1243,7 @@ class Updater():
     @staticmethod
     def _consolidate_paths(updated_files):
         updated = []
-        for oid,paths in updated_files.iteritems():
+        for oid,paths in updated_files.items():
             for path in paths:
                 if path not in updated:
                     updated.append(path)
@@ -1324,7 +1321,7 @@ class Updater():
         metrics.updated = response['updated_files']
         metrics.files_updated  =  len(metrics.updated)
         
-        metrics.failures = len(metrics.load_errs.keys()) + len(metrics.save_errs.keys()) + len(metrics.bad_exits.keys())
+        metrics.failures = len(list(metrics.load_errs.keys())) + len(list(metrics.save_errs.keys())) + len(list(metrics.bad_exits.keys()))
         metrics.fail_rate = (metrics.failures * 1.0) / metrics.objects
         
         metrics.elapsed = end - start

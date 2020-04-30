@@ -2,7 +2,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 import requests
-import simplejson as json
 
 from DDR import config
 from DDR import identifier
@@ -101,11 +100,7 @@ class IDServiceClient():
             headers=self._auth_headers(),
             timeout=config.REQUESTS_TIMEOUT
         )
-        try:
-            data = json.loads(r.content)
-        except ValueError:
-            data = {}
-        return r.status_code,r.reason,data
+        return r.status_code,r.reason,r.json()
     
     def next_object_id(self, oidentifier, model, register=False):
         """GET or POST the next object ID of the specified type
@@ -157,7 +152,7 @@ class IDServiceClient():
         r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
         oids = []
         if r.status_code == 200:
-            oids = [o['id'] for o in json.loads(r.text)]
+            oids = [o['id'] for o in r.json()]
         return r.status_code,r.reason,oids
     
     @staticmethod
@@ -188,7 +183,7 @@ class IDServiceClient():
             data={'object_ids': entity_ids},
             timeout=config.REQUESTS_TIMEOUT
         )
-        data = json.loads(r.text)
+        data = r.json()
         #logging.debug(data)
         return r.status_code,r.reason,data['registered'],data['unregistered']
     
@@ -206,6 +201,6 @@ class IDServiceClient():
             data={'object_ids': entity_ids},
             timeout=config.REQUESTS_TIMEOUT
         )
-        data = json.loads(r.text)
+        data = r.json()
         logging.debug(data)
         return r.status_code,r.reason,data['created']

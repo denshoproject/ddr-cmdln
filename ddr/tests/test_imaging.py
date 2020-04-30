@@ -41,7 +41,7 @@ def test_files(tmpdir_factory):
     so we don't have to download them every time
     """
     tmpdir = tmpdir_factory.mktemp('images')
-    for fmt,data in TEST_FILES.iteritems():
+    for fmt,data in TEST_FILES.items():
         # /tmp/pytest-of-USER/imaging
         data['path'] = tmpdir / '..' / '..' / data['filename']
         if not data['path'].exists():
@@ -88,11 +88,13 @@ def test_analyze(test_files):
     path1 = str(test_files['jpg']['path'])
     assert os.path.exists(path1)
     out1 = imaging.analyze(path1)
+    if config.PYTHON_VERSION == '3.7':   # Debian 10 python3
+        STDOUT = '{} JPEG 1024x588 1024x588+0+0 8-bit Gray 256c 123971B 0.000u 0:00.000'
+    elif config.PYTHON_VERSION == '3.5': # Debian 9 python3
+        STDOUT = '{} JPEG 1024x588 1024x588+0+0 8-bit Grayscale Gray 256c 124KB 0.000u 0:00.000'
     expected1 = {
         'std_err': '',
-        'std_out': '%s JPEG 1024x588 1024x588+0+0 8-bit Grayscale Gray 256c 124KB 0.000u 0:00.000' % (
-            test_files['jpg']['path']
-        ),
+        'std_out': STDOUT.format(test_files['jpg']['path']),
         'format': 'JPEG',
         'image': True,
         'can_thumbnail': None,
@@ -123,7 +125,15 @@ def test_thumbnail(test_files):
     assert os.path.exists(dest)
 
 def test_extract_xmp(test_files):
-    expected0 = '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Exempi + XMP Core 5.5.0"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about=""/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>'.strip()
+    exempi = '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>' \
+        '<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Exempi + XMP Core {}">' \
+        '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">' \
+        '<rdf:Description rdf:about=""/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>'
+    if config.PYTHON_VERSION == '3.7':
+        expected0 = exempi.format('5.6.0')  # Debian 10 python3
+    elif config.PYTHON_VERSION == '3.5':
+        expected0 = exempi.format('5.5.0')  # Debian 9 python3
+    
     out0 = imaging.extract_xmp(
         str(test_files['jpg']['path'])
     ).strip()

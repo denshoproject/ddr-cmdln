@@ -1,73 +1,43 @@
 import codecs
+import csv
+import json
 import os
 import sys
 
-import simplejson as json
-import unicodecsv as csv
 
-
-def read_text(path, utf8_strict=False):
+def read_text(path):
     """Read text file; make sure text is in UTF-8.
     
     @param path: str Absolute path to file.
-    @param utf8_strict: boolean
     @returns: unicode
     """
     if not os.path.exists(path):
         raise IOError('File is missing or unreadable: %s' % path)
-    if utf8_strict:
-        try:
-            with codecs.open(path, 'rU', 'utf-8') as f:
-                return f.read()
-        except UnicodeDecodeError:
-            bad = []
-            with open(path, 'r') as f:
-                for n,line in enumerate(f.readlines()):
-                    try:
-                        utf8 = line.decode('utf8', 'strict')
-                    except UnicodeDecodeError:
-                        bad.append(str(n))
-            raise Exception(
-                'Unicode decoding errors in line(s) %s.' % ','.join(bad)
-            )
-    else:
-        with open(path, 'r') as f:
-            return f.read()
+    with open(path, 'r') as f:
+        return f.read()
 
-def write_text(text, path, utf8_strict=False):
+def write_text(text, path):
     """Write text to UTF-8 file.
     
     @param text: unicode
     @param path: str Absolute path to file.
-    @param utf8_strict: boolean
     """
-    if utf8_strict:
-        with codecs.open(path, 'w', 'utf-8') as f:
-            return f.write(text)
-    else:
-        with open(path, 'w') as f:
-            f.write(text)
+    with open(path, 'w') as f:
+        f.write(text)
 
-def append_text(text, path, utf8_strict=False):
+def append_text(text, path):
     """Append text to UTF-8 file.
     
     @param text: unicode
     @param path: str Absolute path to file.
-    @param utf8_strict: boolean
     """
     addnewline = False
     if os.path.exists(path):
         addnewline = True
-    if utf8_strict:
-        with codecs.open(path, 'a', 'utf-8') as f:
-            if addnewline:
-                f.write('\n')
-            f.write(text)
-    else:
-        with open(path, 'a') as f:
-            if addnewline:
-                f.write('\n')
-            f.write(text)
+    with open(path, 'a') as f:
+        if addnewline:
+            f.write('\n')
+        f.write(text)
 
 
 # Some files' XMP data is wayyyyyy too big
@@ -102,7 +72,7 @@ def csv_writer(csvfile):
     )
     return writer
 
-def read_csv(path, utf8_strict=False):
+def read_csv(path):
     """Read specified file, returns list of rows.
     
     >>> path = '/tmp/batch-test_write_csv.csv'
@@ -119,35 +89,16 @@ def read_csv(path, utf8_strict=False):
     Throws Exception if file contains text that can't be decoded to UTF-8.
     
     @param path: Absolute path to CSV file
-    @param utf8_strict: boolean
     @returns list of rows
     """
     rows = []
-    if utf8_strict:
-        try:
-            with codecs.open(path, 'rU', 'utf-8') as f:  # the 'U' is for universal-newline mode
-                reader = csv_reader(f)
-                for row in reader:
-                    rows.append(row)
-        except UnicodeDecodeError:
-            bad = []
-            with open(path, 'r') as f:
-                for n,line in enumerate(f.readlines()):
-                    try:
-                        utf8 = line.decode('utf8', 'strict')
-                    except UnicodeDecodeError:
-                        bad.append(str(n))
-            raise Exception(
-                'Unicode decoding errors in line(s) %s.' % ','.join(bad)
-            )
-    else:
-        with open(path, 'r') as f:
-            reader = csv_reader(f)
-            for row in reader:
-                rows.append(row)
+    with open(path, 'r') as f:
+        reader = csv_reader(f)
+        for row in reader:
+            rows.append(row)
     return rows
 
-def write_csv(path, headers, rows, append=False, utf8_strict=False):
+def write_csv(path, headers, rows, append=False):
     """Write header and list of rows to file.
     
     >>> path = '/tmp/batch-test_write_csv.csv'
@@ -165,23 +116,14 @@ def write_csv(path, headers, rows, append=False, utf8_strict=False):
     @param headers: list of strings
     @param rows: list of lists
     @param append: boolean
-    @param utf8_strict: boolean
     """
     if append:
-        mode = 'ab'
+        mode = 'a'
     else:
-        mode = 'wb'
-    if utf8_strict:
-        with codecs.open(path, mode, 'utf-8') as f:
-            writer = csv_writer(f)
-            if headers:
-                writer.writerow(headers)
-            for row in rows:
-                writer.writerow(row)
-    else:
-        with open(path, mode) as f:
-            writer = csv_writer(f)
-            if headers:
-                writer.writerow(headers)
-            for row in rows:
-                writer.writerow(row)
+        mode = 'w'
+    with open(path, mode, newline='') as f:
+        writer = csv_writer(f)
+        if headers:
+            writer.writerow(headers)
+        for row in rows:
+            writer.writerow(row)

@@ -1,9 +1,9 @@
 from datetime import datetime
+import json
 import logging
 import sys
 
 import click
-import simplejson
 
 from DDR import dvcs
 from DDR import identifier
@@ -39,7 +39,7 @@ def ddrinfo(collection, json):
     data.update(annex_info(repo))
 
     if json:
-        print(simplejson.dumps(data))
+        print(json.dumps(data))
     else:
         output(data)
     
@@ -97,14 +97,14 @@ def annex_info(repo):
     @param repo: GitPython.Repository object
     @returns: dict
     """
-    WHITELIST = [f for f in AINFO_FIELDS.iterkeys()]
+    WHITELIST = [f for f in AINFO_FIELDS.keys()]
     ainfo = {
         AINFO_FIELDS[key]: val
-        for key,val in dvcs.annex_status(repo).iteritems()
+        for key,val in dvcs.annex_status(repo).items()
         if key in WHITELIST
     }
     return ainfo
 
 def output(data):
-    for key,val in data.iteritems():
+    for key,val in data.items():
         logging.info('%s: %s' % (key,val))

@@ -1,6 +1,7 @@
 # git and git-annex code
 
 from datetime import datetime
+import json
 import logging
 logger = logging.getLogger(__name__)
 import os
@@ -12,7 +13,6 @@ import envoy
 import git
 from git.exc import GitCommandError
 import requests
-import simplejson as json
 
 from DDR import config
 from DDR import fileio
@@ -666,9 +666,9 @@ def load_conflicted_json(text):
         elif flags == ' M  ':                                # >>>>>>>>
             if len(left) == len(right):
                 for n in range(0, len(left)):
-                    key = left[n].keys()[0]
-                    val = {'left': left[n].values()[0],
-                           'right': right[n].values()[0],}
+                    key = list(left[n].keys())[0]
+                    val = {'left': list(left[n].values())[0],
+                           'right': list(right[n].values())[0],}
                     fields.append( {key:val} )
     return fields
 
@@ -926,7 +926,7 @@ def annex_parse_version(text):
         ('supported repository versions', 'supported repository version'),
     ]
     for old,new in UPDATED_FIELDNAMES:
-        if old in data.iterkeys():
+        if old in iter(data.keys()):
             data[new] = data.pop(old)
     # add major version
     data['major version'] = data['git-annex version'].split('.')[0]
@@ -950,7 +950,7 @@ def annex_version(repo, verbose=False):
     return 'git-annex version: {}'.format(repo.git.annex('version', '--raw'))
 
 def _annex_parse_description(annex_status, uuid):
-    for key in annex_status.iterkeys():
+    for key in annex_status.keys():
         if 'repositories' in key:
             for r in annex_status[key]:
                 if (r['uuid'] == uuid) and r['here']:
@@ -1037,7 +1037,7 @@ def annex_status(repo):
     if major_version:
         if isinstance(major_version, int):
             pass
-        elif isinstance(major_version, basestring) and major_version.isdigit():
+        elif isinstance(major_version, str) and major_version.isdigit():
             major_version = int(major_version)
         else:
             raise Exception(
@@ -1239,12 +1239,12 @@ class Gitolite(object):
     """
     server = None
     timeout = None
-    info = None
+    info = ''
     connected = None
     authorized = None
     initialized = None
     
-    def __init__(self, server=config.GITOLITE, timeout=60):
+    def __init__(self, server=config.GITOLITE, timeout=config.GITOLITE_TIMEOUT):
         """
         @param server: USERNAME@DOMAIN
         @param timeout: int Maximum seconds to wait for reponse

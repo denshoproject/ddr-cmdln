@@ -1,4 +1,4 @@
-import ConfigParser
+import configparser
 import os
 import sys
 
@@ -18,7 +18,7 @@ class NoConfigError(Exception):
         return repr(self.value)
 
 def read_configs(paths):
-    cfg = ConfigParser.ConfigParser()
+    cfg = configparser.RawConfigParser()
     configs_read = cfg.read(paths)
     if not configs_read:
         raise NoConfigError('No config file!')
@@ -33,14 +33,18 @@ def _parse_alt_timezones(text):
     data = {}
     for item in [item for item in text.strip().split(';') if item]:
         key,val = item.strip().split(':')
-        if key not in data.keys():
+        if key not in list(data.keys()):
             data[key] = pytz.timezone(val)
     return data
 
 
 CONFIG,CONFIGS_READ = read_configs(CONFIG_FILES)
 
-DEBUG = CONFIG.get('cmdln', 'debug')
+DEBUG = CONFIG.get('debug', 'debug')
+OFFLINE = CONFIG.get('debug', 'offline')
+LOG_LEVEL = CONFIG.get('debug', 'log_level')
+
+PYTHON_VERSION = '.'.join([str(sys.version_info.major), str(sys.version_info.minor)])
 
 INSTALL_PATH = CONFIG.get('cmdln','install_path')
 REPO_MODELS_PATH = CONFIG.get('cmdln','repo_models_path')
@@ -55,7 +59,6 @@ MEDIA_BASE = CONFIG.get('cmdln','media_base')
 
 LOG_DIR = CONFIG.get('local', 'log_dir')
 LOG_FILE = CONFIG.get('local','log_file')
-LOG_LEVEL = CONFIG.get('local', 'log_level')
 
 UTF8_STRICT = CONFIG.getboolean('cmdln','utf8_strict')
 
@@ -100,6 +103,7 @@ REQUESTS_TIMEOUT = 30
 CGIT_URL = CONFIG.get('workbench','cgit_url')
 GIT_REMOTE_NAME = 'origin'  # CONFIG.get('workbench','remote')
 GITOLITE = CONFIG.get('workbench','gitolite')
+GITOLITE_TIMEOUT = CONFIG.get('workbench','gitolite_timeout')
 WORKBENCH_LOGIN_TEST = CONFIG.get('workbench','login_test_url')
 WORKBENCH_LOGIN_URL = CONFIG.get('workbench','workbench_login_url')
 WORKBENCH_LOGOUT_URL = CONFIG.get('workbench','workbench_logout_url')

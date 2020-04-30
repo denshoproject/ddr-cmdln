@@ -153,7 +153,7 @@ def normalize_text(text):
         except AttributeError:
             pass # doesn't work on ints and lists :P
         return t
-    if isinstance(text, basestring):
+    if isinstance(text, str):
         return process(text)
     return text
 

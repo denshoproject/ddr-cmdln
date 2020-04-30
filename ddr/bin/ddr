@@ -4,7 +4,7 @@
 #
 
 import argparse
-import ConfigParser
+import configparser
 import logging
 import os
 import sys
@@ -20,18 +20,18 @@ from DDR.commands import devices, mounted_devices, mount_point, mount, umount, s
 from DDR.identifier import Identifier
 from DDR.models import Collection, Entity
 
-config = ConfigParser.ConfigParser()
+config = configparser.ConfigParser()
 configs_read = config.read(CONFIG_FILES)
 if not configs_read:
     raise NoConfigError('No config file!')
 
-DEBUG = config.get('local','debug')
+DEBUG = config.get('debug','debug')
 MEDIA_BASE = config.get('cmdln','media_base')
 
 LOGGING_FORMAT = '%(asctime)s %(levelname)s %(message)s'
 LOGGING_DATEFMT = '%Y-%m-%d %H:%M:%S'
 LOGGING_FILE = config.get('local','log_file')
-if config.get('local','log_level') == 'debug':
+if config.get('debug','log_level') == 'debug':
     LOGGING_LEVEL = logging.DEBUG
 else:
     LOGGING_LEVEL = logging.ERROR
@@ -301,6 +301,10 @@ Example:
 
 
     args = parser.parse_args()
+
+    if not args.cmd:
+        print('Enter a subcommand (see --help).')
+        sys.exit(0)
     
     if args.debug:
         print(args)

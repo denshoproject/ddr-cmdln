@@ -39,7 +39,7 @@ def test_image(tmpdir_factory):
     base_dir =  str(tmpdir_factory.mktemp('ingest'))
     img_path = os.path.join(base_dir, IMG_FILENAME)
     if not os.path.exists(img_path):
-        urllib.urlretrieve(
+        urllib.request.urlretrieve(
             IMG_URL,
             os.path.join(base_dir, IMG_FILENAME)
         )
