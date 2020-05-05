@@ -339,7 +339,7 @@ def idservice_api_login(username=None, password=None, url=None):
         username = os.environ.get(IDSERVICE_ENVIRONMENT_USERNAME)
         logging.debug('Username: %s (environ)' % username)
     else:
-        username = raw_input('Username: ')
+        username = input('Username: ')
     if not username:
         logging.error('No username!')
         sys.exit(1)
