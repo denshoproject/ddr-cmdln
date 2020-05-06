@@ -9,6 +9,12 @@ import string
 from urllib.parse import urlparse
 
 
+DEFINITIONS_IMPORT_ERR = """
+Could not import module(s) %s.
+This is likely a problem with `[cmdln] repo_models_path` in the config file,
+an error problem in the definitions module, or a missing Python or package
+dependency (e.g. lxml).
+"""
 
 class Definitions():
     """Functions for parsing and extracting useful data from IDENTIFIERS
@@ -22,7 +28,7 @@ class Definitions():
         return models
     
     @staticmethod
-    def modules(identifiers):                                                                         
+    def modules(identifiers):
         return {key:None for key in Definitions.models(identifiers)}
     
     @staticmethod
@@ -45,11 +51,7 @@ class Definitions():
             except ImportError:
                 couldnt.append(module)
         if couldnt:
-            raise Exception(
-                'Could not import module(s) %s. ' \
-                'May indicate problem in definitions module or dependency (e.g. lxml).' % (
-                    couldnt
-            ))
+            raise Exception(DEFINITIONS_IMPORT_ERR.format(couldnt))
         return modules
 
     @staticmethod
