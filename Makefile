@@ -42,10 +42,10 @@ PIP_CACHE_DIR=$(INSTALL_BASE)/pip-cache
 
 CWD := $(shell pwd)
 INSTALL_CMDLN=/opt/ddr-cmdln
-INSTALL_CMDLN_ASSETS=$(INSTALL_CMDLN)/ddr-cmdln-assets
-INSTALL_DEFS=$(INSTALL_CMDLN)/ddr-defs
-INSTALL_VOCAB=$(INSTALL_CMDLN)/densho-vocab
-INSTALL_MANUAL=$(INSTALL_CMDLN)/ddr-manual
+INSTALL_CMDLN_ASSETS=/opt/ddr-cmdln/ddr-cmdln-assets
+INSTALL_DEFS=/opt/ddr-defs
+INSTALL_VOCAB=/opt/densho-vocab
+INSTALL_MANUAL=/opt/ddr-manual
 
 COMMIT_CMDLN := $(shell git -C $(INSTALL_CMDLN) log --decorate --abbrev-commit --pretty=oneline -1)
 COMMIT_DEFS := $(shell git -C $(INSTALL_DEFS) log --decorate --abbrev-commit --pretty=oneline -1)
@@ -295,7 +295,7 @@ get-ddr-cmdln:
 	git status | grep "On branch"
 	if test -d $(INSTALL_CMDLN); \
 	then cd $(INSTALL_CMDLN) && git pull; \
-	else git clone $(SRC_REPO_CMDLN); \
+	else git clone $(SRC_REPO_CMDLN) $(INSTALL_CMDLN); \
 	fi
 
 get-ddr-cmdln-assets:
@@ -303,7 +303,7 @@ get-ddr-cmdln-assets:
 	@echo "get-ddr-cmdln-assets ---------------------------------------------------"
 	if test -d $(INSTALL_CMDLN_ASSETS); \
 	then cd $(INSTALL_CMDLN_ASSETS) && git pull; \
-	else git clone $(SRC_REPO_CMDLN_ASSETS); \
+	else git clone $(SRC_REPO_CMDLN_ASSETS) $(INSTALL_CMDLN_ASSETS); \
 	fi
 
 setup-ddr-cmdln:
@@ -401,7 +401,7 @@ get-ddr-manual:
 	git status | grep "On branch"
 	if test -d $(INSTALL_MANUAL); \
 	then cd $(INSTALL_MANUAL) && git pull; \
-	else git clone $(SRC_REPO_MANUAL); \
+	else git clone $(SRC_REPO_MANUAL) $(INSTALL_MANUAL); \
 	fi
 
 install-ddr-manual: install-setuptools
