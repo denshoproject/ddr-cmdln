@@ -80,18 +80,17 @@ endif
 ELASTICSEARCH=elasticsearch-7.3.1-amd64.deb
 # wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.3.1.deb
 
-TGZ_BRANCH := $(shell python bin/package-branch.py)
+TGZ_BRANCH := $(shell python3 bin/package-branch.py)
 TGZ_FILE=$(APP)_$(APP_VERSION)
 TGZ_DIR=$(INSTALL_CMDLN)/$(TGZ_FILE)
 TGZ_CMDLN_ASSETS=$(TGZ_DIR)/ddr-cmdln-assets
 TGZ_DEFS=$(TGZ_DIR)/ddr-defs
 TGZ_VOCAB=$(TGZ_DIR)/densho-vocab
 TGZ_MANUAL=$(TGZ_DIR)/ddr-manual
-TGZ_STATIC=$(TGZ_DIR)/static
 
 # Adding '-rcN' to VERSION will name the package "ddrlocal-release"
 # instead of "ddrlocal-BRANCH"
-DEB_BRANCH := $(shell python bin/package-branch.py)
+DEB_BRANCH := $(shell python3 bin/package-branch.py)
 DEB_ARCH=amd64
 DEB_NAME_JESSIE=$(APP)-$(DEB_BRANCH)
 DEB_NAME_STRETCH=$(APP)-$(DEB_BRANCH)
@@ -107,7 +106,7 @@ DEB_FILE_BUSTER=$(DEB_NAME_BUSTER)_$(DEB_VERSION_BUSTER)_$(DEB_ARCH).deb
 DEB_VENDOR=Densho.org
 DEB_MAINTAINER=<geoffrey.jost@densho.org>
 DEB_DESCRIPTION=Densho Digital Repository editor
-DEB_BASE=opt/ddr-local
+DEB_BASE=opt/ddr-cmdln
 
 
 debug:
@@ -121,7 +120,7 @@ debug:
 
 help:
 	@echo "--------------------------------------------------------------------------------"
-	@echo "ddr-local make commands"
+	@echo "ddr-cmdln make commands"
 	@echo ""
 	@echo "Most commands have subcommands (ex: install-ddr-cmdln, restart-supervisor)"
 	@echo ""
@@ -323,8 +322,6 @@ install-ddr-cmdln: install-setuptools
 	cd $(INSTALL_CMDLN)/ddr; python setup.py install
 	source $(VIRTUALENV)/bin/activate; \
 	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) -r $(INSTALL_CMDLN)/requirements.txt
-	-mkdir -p /etc/ImageMagick-6/
-	cp $(INSTALL_CMDLN)/conf/imagemagick-policy.xml /etc/ImageMagick-6/policy.xml
 
 mkdir-ddr-cmdln:
 	@echo ""
@@ -381,7 +378,7 @@ get-densho-vocab:
 
 install-configs:
 	@echo ""
-	@echo "configuring ddr-local --------------------------------------------------"
+	@echo "configuring ddr-cmdln --------------------------------------------------"
 # base settings file
 	-mkdir /etc/ddr
 	cp $(INSTALL_CMDLN)/conf/ddrlocal.cfg $(CONF_PRODUCTION)
@@ -390,6 +387,9 @@ install-configs:
 	touch $(CONF_LOCAL)
 	chown ddr.ddr $(CONF_LOCAL)
 	chmod 640 $(CONF_LOCAL)
+	-mkdir -p /etc/ImageMagick-6/
+	-cp /etc/ImageMagick-6/policy.xml /etc/ImageMagick-6/policy.xml.orig
+	cp $(INSTALL_CMDLN)/conf/imagemagick-policy.xml /etc/ImageMagick-6/policy.xml
 
 uninstall-configs:
 	-rm $(CONF_PRODUCTION)
@@ -482,12 +482,11 @@ deb-stretch:
 	--after-install "bin/after-install.sh"   \
 	--chdir $(INSTALL_CMDLN)   \
 	conf/ddrlocal.cfg=etc/ddr/ddrlocal.cfg   \
-	conf/logrotate=etc/logrotate.d/ddr   \
 	conf/README-logs=$(LOG_BASE)/README  \
-	static=var/www   \
 	bin=$(DEB_BASE)   \
 	conf=$(DEB_BASE)   \
 	COPYRIGHT=$(DEB_BASE)   \
+	ddr=$(DEB_BASE)   \
 	ddr-cmdln-assets=$(DEB_BASE)   \
 	ddr-defs=$(DEB_BASE)   \
 	densho-vocab=$(DEB_BASE)   \
@@ -498,8 +497,6 @@ deb-stretch:
 	Makefile=$(DEB_BASE)   \
 	README.rst=$(DEB_BASE)   \
 	requirements.txt=$(DEB_BASE)   \
-	setup-workstation.sh=$(DEB_BASE)   \
-	static=$(DEB_BASE)   \
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
@@ -540,12 +537,11 @@ deb-buster:
 	--after-install "bin/after-install.sh"   \
 	--chdir $(INSTALL_CMDLN)   \
 	conf/ddrlocal.cfg=etc/ddr/ddrlocal.cfg   \
-	conf/logrotate=etc/logrotate.d/ddr   \
 	conf/README-logs=$(LOG_BASE)/README  \
-	static=var/www   \
 	bin=$(DEB_BASE)   \
 	conf=$(DEB_BASE)   \
 	COPYRIGHT=$(DEB_BASE)   \
+	ddr=$(DEB_BASE)   \
 	ddr-cmdln-assets=$(DEB_BASE)   \
 	ddr-defs=$(DEB_BASE)   \
 	densho-vocab=$(DEB_BASE)   \
@@ -556,8 +552,6 @@ deb-buster:
 	Makefile=$(DEB_BASE)   \
 	README.rst=$(DEB_BASE)   \
 	requirements.txt=$(DEB_BASE)   \
-	setup-workstation.sh=$(DEB_BASE)   \
-	static=$(DEB_BASE)   \
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
