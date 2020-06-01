@@ -485,6 +485,7 @@ deb-stretch:
 	bin=$(DEB_BASE)   \
 	conf=$(DEB_BASE)   \
 	COPYRIGHT=$(DEB_BASE)   \
+	ddr=$(DEB_BASE)   \
 	ddr-cmdln-assets=$(DEB_BASE)   \
 	ddr-defs=$(DEB_BASE)   \
 	densho-vocab=$(DEB_BASE)   \
@@ -539,6 +540,7 @@ deb-buster:
 	bin=$(DEB_BASE)   \
 	conf=$(DEB_BASE)   \
 	COPYRIGHT=$(DEB_BASE)   \
+	ddr=$(DEB_BASE)   \
 	ddr-cmdln-assets=$(DEB_BASE)   \
 	ddr-defs=$(DEB_BASE)   \
 	densho-vocab=$(DEB_BASE)   \
