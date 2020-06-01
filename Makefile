@@ -80,7 +80,7 @@ endif
 ELASTICSEARCH=elasticsearch-7.3.1-amd64.deb
 # wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.3.1.deb
 
-TGZ_BRANCH := $(shell python bin/package-branch.py)
+TGZ_BRANCH := $(shell python3 bin/package-branch.py)
 TGZ_FILE=$(APP)_$(APP_VERSION)
 TGZ_DIR=$(INSTALL_CMDLN)/$(TGZ_FILE)
 TGZ_CMDLN_ASSETS=$(TGZ_DIR)/ddr-cmdln-assets
@@ -90,7 +90,7 @@ TGZ_MANUAL=$(TGZ_DIR)/ddr-manual
 
 # Adding '-rcN' to VERSION will name the package "ddrlocal-release"
 # instead of "ddrlocal-BRANCH"
-DEB_BRANCH := $(shell python bin/package-branch.py)
+DEB_BRANCH := $(shell python3 bin/package-branch.py)
 DEB_ARCH=amd64
 DEB_NAME_JESSIE=$(APP)-$(DEB_BRANCH)
 DEB_NAME_STRETCH=$(APP)-$(DEB_BRANCH)
