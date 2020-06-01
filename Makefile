@@ -106,7 +106,7 @@ DEB_FILE_BUSTER=$(DEB_NAME_BUSTER)_$(DEB_VERSION_BUSTER)_$(DEB_ARCH).deb
 DEB_VENDOR=Densho.org
 DEB_MAINTAINER=<geoffrey.jost@densho.org>
 DEB_DESCRIPTION=Densho Digital Repository editor
-DEB_BASE=opt/ddr-local
+DEB_BASE=opt/ddr-cmdln
 
 
 debug:
