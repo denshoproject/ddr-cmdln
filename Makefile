@@ -87,7 +87,6 @@ TGZ_CMDLN_ASSETS=$(TGZ_DIR)/ddr-cmdln-assets
 TGZ_DEFS=$(TGZ_DIR)/ddr-defs
 TGZ_VOCAB=$(TGZ_DIR)/densho-vocab
 TGZ_MANUAL=$(TGZ_DIR)/ddr-manual
-TGZ_STATIC=$(TGZ_DIR)/static
 
 # Adding '-rcN' to VERSION will name the package "ddrlocal-release"
 # instead of "ddrlocal-BRANCH"
@@ -482,9 +481,7 @@ deb-stretch:
 	--after-install "bin/after-install.sh"   \
 	--chdir $(INSTALL_CMDLN)   \
 	conf/ddrlocal.cfg=etc/ddr/ddrlocal.cfg   \
-	conf/logrotate=etc/logrotate.d/ddr   \
 	conf/README-logs=$(LOG_BASE)/README  \
-	static=var/www   \
 	bin=$(DEB_BASE)   \
 	conf=$(DEB_BASE)   \
 	COPYRIGHT=$(DEB_BASE)   \
@@ -498,8 +495,6 @@ deb-stretch:
 	Makefile=$(DEB_BASE)   \
 	README.rst=$(DEB_BASE)   \
 	requirements.txt=$(DEB_BASE)   \
-	setup-workstation.sh=$(DEB_BASE)   \
-	static=$(DEB_BASE)   \
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
@@ -540,9 +535,7 @@ deb-buster:
 	--after-install "bin/after-install.sh"   \
 	--chdir $(INSTALL_CMDLN)   \
 	conf/ddrlocal.cfg=etc/ddr/ddrlocal.cfg   \
-	conf/logrotate=etc/logrotate.d/ddr   \
 	conf/README-logs=$(LOG_BASE)/README  \
-	static=var/www   \
 	bin=$(DEB_BASE)   \
 	conf=$(DEB_BASE)   \
 	COPYRIGHT=$(DEB_BASE)   \
@@ -556,8 +549,6 @@ deb-buster:
 	Makefile=$(DEB_BASE)   \
 	README.rst=$(DEB_BASE)   \
 	requirements.txt=$(DEB_BASE)   \
-	setup-workstation.sh=$(DEB_BASE)   \
-	static=$(DEB_BASE)   \
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
