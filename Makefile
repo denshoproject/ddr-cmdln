@@ -120,7 +120,7 @@ debug:
 
 help:
 	@echo "--------------------------------------------------------------------------------"
-	@echo "ddr-local make commands"
+	@echo "ddr-cmdln make commands"
 	@echo ""
 	@echo "Most commands have subcommands (ex: install-ddr-cmdln, restart-supervisor)"
 	@echo ""
@@ -380,7 +380,7 @@ get-densho-vocab:
 
 install-configs:
 	@echo ""
-	@echo "configuring ddr-local --------------------------------------------------"
+	@echo "configuring ddr-cmdln --------------------------------------------------"
 # base settings file
 	-mkdir /etc/ddr
 	cp $(INSTALL_CMDLN)/conf/ddrlocal.cfg $(CONF_PRODUCTION)
