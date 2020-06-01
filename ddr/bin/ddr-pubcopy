@@ -89,7 +89,7 @@ def filter_files(files, roles, force, LOG):
     ]
     parents = {
         oid: oi.object()
-        for oid,oi in docstore._all_parents(oidentifiers).iteritems()
+        for oid,oi in docstore._all_parents(oidentifiers).items()
     }
     publishable = [
         x['identifier'].object()
