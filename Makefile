@@ -489,8 +489,8 @@ deb-stretch:
 	conf=$(DEB_BASE)   \
 	COPYRIGHT=$(DEB_BASE)   \
 	ddr-cmdln-assets=$(DEB_BASE)   \
-	ddr-defs=$(DEB_BASE)   \
-	densho-vocab=$(DEB_BASE)   \
+	../ddr-defs=opt   \
+	../densho-vocab=opt   \
 	.git=$(DEB_BASE)   \
 	.gitignore=$(DEB_BASE)   \
 	INSTALL.rst=$(DEB_BASE)   \
@@ -547,8 +547,8 @@ deb-buster:
 	conf=$(DEB_BASE)   \
 	COPYRIGHT=$(DEB_BASE)   \
 	ddr-cmdln-assets=$(DEB_BASE)   \
-	ddr-defs=$(DEB_BASE)   \
-	densho-vocab=$(DEB_BASE)   \
+	../ddr-defs=opt   \
+	../densho-vocab=opt   \
 	.git=$(DEB_BASE)   \
 	.gitignore=$(DEB_BASE)   \
 	INSTALL.rst=$(DEB_BASE)   \
