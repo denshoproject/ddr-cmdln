@@ -12,12 +12,13 @@ def read(*parts):
     return codecs.open(os.path.join(here, *parts), 'r').read()
 
 def find_version(*file_paths):
-    version_file = read(*file_paths)
-    version_match = re.search(r"^VERSION = ['\"]([^'\"]*)['\"]",
-                              version_file, re.M)
-    if version_match:
-        return version_match.group(1)
-    raise RuntimeError("Unable to find version string.")
+    #version_file = read(*file_paths)
+    #version_match = re.search(r"^VERSION = ['\"]([^'\"]*)['\"]",
+    #                          version_file, re.M)
+    #if version_match:
+    #    return version_match.group(1)
+    #raise RuntimeError("Unable to find version string.")
+    return read(*file_paths)
 
 long_description = read('README.rst')
 
@@ -27,7 +28,7 @@ setup(
     name = 'ddr-cmdln',
     description = 'ddr-cmdln',
     long_description = long_description,
-    version = find_version('DDR', '__init__.py'),
+    version = find_version('..', 'VERSION'),
     #license = 'TBD',
     author = 'Geoffrey Jost',
     author_email = 'geoffrey.jost@densho.org',
