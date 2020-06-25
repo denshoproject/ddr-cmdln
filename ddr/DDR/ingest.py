@@ -693,7 +693,12 @@ def add_access( entity, ddrfile, src_path, git_name, git_mail, agent='', log_pat
     annex_files = [
         file_.access_rel
     ]
-    repo = stage_files(entity, git_files, annex_files, new_files, log, show_staged=show_staged)
+    repo = stage_files(
+        entity=entity,
+        git_files=git_files, annex_files=annex_files,
+        log=log,
+        show_staged=show_staged,
+    )
     
     # IMPORTANT: Files are only staged! Be sure to commit!
     # IMPORTANT: changelog is not staged!
