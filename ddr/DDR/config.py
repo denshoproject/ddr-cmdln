@@ -40,8 +40,8 @@ def _parse_alt_timezones(text):
 
 CONFIG,CONFIGS_READ = read_configs(CONFIG_FILES)
 
-DEBUG = CONFIG.get('debug', 'debug')
-OFFLINE = CONFIG.get('debug', 'offline')
+DEBUG = CONFIG.getboolean('debug', 'debug')
+OFFLINE = CONFIG.getboolean('debug', 'offline')
 LOG_LEVEL = CONFIG.get('debug', 'log_level')
 
 PYTHON_VERSION = '.'.join([str(sys.version_info.major), str(sys.version_info.minor)])

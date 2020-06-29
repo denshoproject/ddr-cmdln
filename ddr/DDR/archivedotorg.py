@@ -177,6 +177,8 @@ class IAFile():
                 setattr(self, field, tag.find(field).contents[0])
             except AttributeError:
                 setattr(self, field, '')
+            except IndexError:
+                setattr(self, field, '')
     
     def __repr__(self):
         return "<%s.%s %s>" % (

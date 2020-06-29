@@ -85,7 +85,7 @@ results = elasticsearch.facet_terms(settings.ELASTICSEARCH_HOST_PORT,
 def load_json(path):
     try:
         data = json.loads(fileio.read_text(path))
-    except json.errors.JSONDecodeError:
+    except json.JSONDecodeError:
         raise Exception('json.errors.JSONDecodeError reading %s' % path)
     return data
 
