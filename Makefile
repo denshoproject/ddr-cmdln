@@ -61,6 +61,9 @@ LOG_BASE=/var/log/ddr
 
 DDR_REPO_BASE=/var/www/media/ddr
 
+MEDIA_BASE=/var/www
+MEDIA_ROOT=$(MEDIA_BASE)/media
+
 LIBEXEMPI3_PKG=
 ifeq ($(DEBIAN_CODENAME), stretch)
 	LIBEXEMPI3_PKG=libexempi3
