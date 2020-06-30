@@ -77,6 +77,14 @@ ifeq ($(DEBIAN_CODENAME), buster)
 	OPENJDK_PKG=openjdk-11-jre
 endif
 
+IMAGEMAGICK_CONF=
+ifeq ($(DEBIAN_CODENAME), stretch)
+	IMAGEMAGICK_CONF=imagemagick-policy.xml.deb9
+endif
+ifeq ($(DEBIAN_CODENAME), buster)
+	IMAGEMAGICK_CONF=imagemagick-policy.xml.deb10
+endif
+
 ELASTICSEARCH=elasticsearch-7.3.1-amd64.deb
 # wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.3.1.deb
 
@@ -389,7 +397,7 @@ install-configs:
 	chmod 640 $(CONF_LOCAL)
 	-mkdir -p /etc/ImageMagick-6/
 	-cp /etc/ImageMagick-6/policy.xml /etc/ImageMagick-6/policy.xml.orig
-	cp $(INSTALL_CMDLN)/conf/imagemagick-policy.xml /etc/ImageMagick-6/policy.xml
+	cp $(INSTALL_CMDLN)/conf/$(IMAGEMAGICK_CONF) /etc/ImageMagick-6/policy.xml
 
 uninstall-configs:
 	-rm $(CONF_PRODUCTION)
