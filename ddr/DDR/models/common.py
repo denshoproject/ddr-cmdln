@@ -308,17 +308,20 @@ class DDRObject(object):
             ]
         
         img_path = ''
-        if hasattr(self, 'mimetype') and (self.mimetype == 'text/html'):  # TODO knows too much!!!
+        if hasattr(self, 'mimetype') and (self.mimetype == 'text/html'):
+            # file with html transcript  TODO test this
             img_path = os.path.join(
                 self.identifier.collection_id(),
                 '%s%s' % (self.id, self.ext),
             )
         elif hasattr(self, 'access_rel'):
+            # file with image            TODO test this
             img_path = os.path.join(
                 self.identifier.collection_id(),
                 os.path.basename(self.access_rel),
             )
         elif self.signature_id:
+            # entity with signature      TODO test this
             img_path = os.path.join(
                 self.identifier.collection_id(),
                 access_filename(self.signature_id),
