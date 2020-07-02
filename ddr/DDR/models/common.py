@@ -311,7 +311,7 @@ class DDRObject(object):
         if hasattr(self, 'mimetype') and (self.mimetype == 'text/html'):  # TODO knows too much!!!
             img_path = os.path.join(
                 self.identifier.collection_id(),
-                '%s.htm' % self.id,
+                '%s%s' % (self.id, self.ext),
             )
         elif hasattr(self, 'access_rel'):
             img_path = os.path.join(
