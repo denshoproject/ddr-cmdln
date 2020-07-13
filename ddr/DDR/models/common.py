@@ -606,6 +606,9 @@ def is_object_metadata(data):
 def to_dict(document, module, json_safe=False):
     """Returns an OrderedDict containing the object fields and values.
     
+    All fields of the object *definition* are included.  Fields missing
+    from the provided object are included as blank strings ('').
+    
     @param document: Collection, Entity, File document object
     @param module: collection, entity, files model definitions module
     @param json_safe: bool Serialize Python objects e.g. datetime to text
@@ -614,7 +617,7 @@ def to_dict(document, module, json_safe=False):
     data = OrderedDict()
     for f in module.FIELDS:
         fieldname = f['name']
-        field_data = getattr(document, f['name'])
+        field_data = getattr(document, f['name'], '')
         if json_safe:
             if isinstance(field_data, Identifier):
                 field_data = str(field_data)
