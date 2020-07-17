@@ -8,7 +8,6 @@ import pytz
 CONFIG_FILES = [
     '/etc/ddr/ddr.cfg',       '/etc/ddr/local.cfg',
     '/etc/ddr/ddrlocal.cfg',  '/etc/ddr/ddrlocal-local.cfg',
-    '/etc/ddr/ddridservice.cfg', '/etc/ddr/ddridservice-local.cfg',
 ]
 
 class NoConfigError(Exception):
