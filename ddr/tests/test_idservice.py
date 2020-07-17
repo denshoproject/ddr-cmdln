@@ -16,6 +16,8 @@ def mkurl(fragment):
 
 SKIP_REASON = 'No [cmdln]idservice_username/password in configs.'
 def no_username_password():
+    if not (hasattr(config,'IDSERVICE_USERNAME') or hasattr(config,'IDSERVICE_PASSWORD')):
+        return True
     if not (config.IDSERVICE_USERNAME or config.IDSERVICE_PASSWORD):
         return True
     return False
