@@ -8,7 +8,6 @@ import pytz
 CONFIG_FILES = [
     '/etc/ddr/ddr.cfg',       '/etc/ddr/local.cfg',
     '/etc/ddr/ddrlocal.cfg',  '/etc/ddr/ddrlocal-local.cfg',
-    '/etc/ddr/ddridservice.cfg', '/etc/ddr/ddridservice-local.cfg',
 ]
 
 class NoConfigError(Exception):
@@ -120,6 +119,8 @@ IDSERVICE_USERINFO_URL = IDSERVICE_API_BASE + '/rest-auth/user/'
 IDSERVICE_NEXT_OBJECT_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/next/{model}/'
 IDSERVICE_CHECKIDS_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/check/'
 IDSERVICE_REGISTERIDS_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/create/'
+IDSERVICE_USERNAME = CONFIG.get('cmdln', 'idservice_username', fallback='')
+IDSERVICE_PASSWORD = CONFIG.get('cmdln', 'idservice_password', fallback='')
 
 DOCSTORE_ENABLED = CONFIG.getboolean('local','docstore_enabled')
 DOCSTORE_TIMEOUT = int(CONFIG.get('local','docstore_timeout'))

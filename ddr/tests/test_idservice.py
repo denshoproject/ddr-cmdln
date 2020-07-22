@@ -1,136 +1,267 @@
-from bs4 import BeautifulSoup
+from pathlib import Path
+from urllib.parse import urlparse, urlunparse
 
+import pytest
+import requests
+
+from DDR import config
 from DDR import identifier
 from DDR import idservice
 
-# TODO test_session
-# TODO test__get_csrf_token
 
-LOGGED_IN_HTML = """<html>
-<head>
-<title>logged in</title>
-</head>
-</html>"""
+def mkurl(fragment):
+    u = urlparse(config.IDSERVICE_API_BASE)
+    path = Path(u.path) / fragment
+    return urlunparse([u.scheme, u.netloc, str(path), '', '', ''])
 
-LOGGED_OUT_HTML = """<html>
-<head>
-<title>Log in | Densho Digital Repository</title>
-</head>
-</html>"""
+SKIP_REASON = 'No [cmdln]idservice_username/password in configs.'
+def no_username_password():
+    if not (hasattr(config,'IDSERVICE_USERNAME') or hasattr(config,'IDSERVICE_PASSWORD')):
+        return True
+    if not (config.IDSERVICE_USERNAME or config.IDSERVICE_PASSWORD):
+        return True
+    return False
 
-#def test_needs_login():
-#    soup0 = BeautifulSoup(LOGGED_IN_HTML, 'html.parser')
-#    soup1 = BeautifulSoup(LOGGED_OUT_HTML, 'html.parser')
-#    assert idservice._needs_login(soup0) == False
-#    assert idservice._needs_login(soup1) == True
+@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+def test_groups():
+    url = mkurl('groups')
+    response = requests.get(url)
+    assert response.status_code == 200
 
-# TODO test_login
-# TODO test_logout
+@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+def test_group():
+    url = mkurl('groups/1')
+    response = requests.get(url)
+    assert response.status_code == 200
 
-COLLECTION_IDS_HTML = """
-<table id="collections" class="table">
-  <tr>
-    <td><a class="collection" href="/kiroku/ddr-densho-1/">ddr-densho-1</a></td>
-  </tr>
-  <tr>
-    <td><a class="collection" href="/kiroku/ddr-densho-2/">ddr-densho-2</a></td>
-  </tr>
-</table>
-"""
-COLLECTION_IDS = ['ddr-densho-1', 'ddr-densho-2']
+@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+def test_users():
+    url = mkurl('users')
+    response = requests.get(url)
+    assert response.status_code == 401
 
-ENTITY_IDS_HTML = """
-<table id="entities" class="table">
-  <tr class="entity">
-    <td class="eid">ddr-densho-1-1</td>
-    <td class="timestamp">2013-01-11T20:09:38.331830-08:00td></tr>
-  <tr class="entity">
-    <td class="eid">ddr-densho-1-2</td>
-    <td class="timestamp">2013-03-14T14:51:43.344370-07:00</td>
-  </tr>
-</table>
-"""
-ENTITY_IDS = ['ddr-densho-1-1', 'ddr-densho-1-2']
+@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+def test_user():
+    url = mkurl('users/1')
+    response = requests.get(url)
+    assert response.status_code == 401
 
-#def test__object_ids_existing():
-#    out0 = idservice._object_ids_existing(
-#        BeautifulSoup(COLLECTION_IDS_HTML),
-#        ('a','collection')
+@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+def test_login():
+    ic = idservice.IDServiceClient()
+    print(config.IDSERVICE_USERNAME)
+    print(config.IDSERVICE_PASSWORD)
+    code,status = ic.login(config.IDSERVICE_USERNAME, config.IDSERVICE_PASSWORD)
+    print(code,status)
+    assert code == 200
+    assert status == 'OK'
+
+@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+def test_resume():
+    ic = idservice.IDServiceClient()
+    print(config.IDSERVICE_USERNAME)
+    print(config.IDSERVICE_PASSWORD)
+    code,status = ic.login(config.IDSERVICE_USERNAME, config.IDSERVICE_PASSWORD)
+    print(code,status)
+    assert code == 200
+    assert status == 'OK'
+    code,status = ic.resume(ic.token)
+    assert code == 200
+    assert status == 'OK'
+
+@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+def test_detail():
+    ic = idservice.IDServiceClient()
+    code,status = ic.login(config.IDSERVICE_USERNAME, config.IDSERVICE_PASSWORD)
+    assert code == 200
+    print(code,status)
+    url = mkurl('objectids/ddr-testing-1/')
+    print(url)
+    r = requests.get(url)
+    print(r.status_code,r.reason)
+    assert r.status_code == 200
+
+@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+def test_children():
+    """Test that app returns list of children
+    """
+    ic = idservice.IDServiceClient()
+    code,status = ic.login(config.IDSERVICE_USERNAME, config.IDSERVICE_PASSWORD)
+    assert code == 200
+    url = mkurl('objectids/ddr-testing-1/children/')
+    r = requests.get(url)
+    assert r.status_code == 200
+    print(r.text)
+    data = r.json()
+    print(data)
+    assert isinstance(data, list)
+    assert len(data)
+    assert data[0]['group'] == 'testing'
+    assert data[0]['model'] in ['entity','segment']
+    assert 'ddr-testing-' in data[0]['id']
+    assert data[1]['group'] == 'testing'
+    assert data[1]['model'] in ['entity','segment']
+    assert 'ddr-testing-' in data[1]['id']
+
+#@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+#def test_check_collections():
+#    ic = idservice.IDServiceClient()
+#    code,status = ic.login(config.IDSERVICE_USERNAME, config.IDSERVICE_PASSWORD)
+#    assert code == 200
+#    url = mkurl('objectids/ddr-testing-1/check/')
+#    print(url)
+#    data = {"object_ids": ["ddr-testing-1","ddr-testing-2"]}
+#    r = requests.post(url, data=data)
+#    print(r.status_code)
+#    print(r.reason)
+#    assert r.status_code == 200
+#    #print(r.text)
+#    data = r.json()
+#    assert isinstance(data, dict)
+#    assert isinstance(data['registered'], list)
+#    assert isinstance(data['unregistered'], list)
+#    assert len(data['registered']) == 1
+#    assert len(data['unregistered']) == 1
+#    assert 'ddr-testing-1' in data['registered']
+#    assert 'ddr-testing-2' in data['unregistered']
+
+#@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+#def test_check_entities():
+#    ic = idservice.IDServiceClient()
+#    code,status = ic.login(config.IDSERVICE_USERNAME, config.IDSERVICE_PASSWORD)
+#    assert code == 200
+#    url = mkurl('objectids/ddr-testing-1/check/')
+#    data = {'object_ids': [
+#        'ddr-testing-1-1','ddr-testing-1-2','ddr-testing-1-3',
+#    ]}
+#    r = requests.post(url, data=data)
+#    print(r.status_code)
+#    print(r.reason)
+#    assert r.status_code == 200
+#    data = r.json()
+#    print(data)
+#    assert isinstance(data, dict)
+#    assert isinstance(data['registered'], list)
+#    assert isinstance(data['unregistered'], list)
+#    assert len(data['registered']) == 2
+#    assert len(data['unregistered']) == 1
+#    assert 'ddr-testing-1-1' in data['registered']
+#    assert 'ddr-testing-1-2' in data['registered']
+#    assert 'ddr-testing-1-3' in data['unregistered']
+
+@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+def test_next_collection():
+    """Test if app can get or post next collection
+    """
+    ic = idservice.IDServiceClient()
+    code,status = ic.login(config.IDSERVICE_USERNAME, config.IDSERVICE_PASSWORD)
+    assert code == 200
+    url = mkurl('objectids/ddr-testing/next/collection/')
+    # GET
+    print(url)
+    r = requests.get(url)
+    assert r.status_code == 200
+    print(r.status_code)
+    print(r.text)
+    data = r.json()
+    assert isinstance(data, dict)
+    assert data['group'] == 'testing'
+    assert data['model'] == 'collection'
+    assert 'ddr-testing-' in data['id']
+    ## POST
+    #print(url)
+    #r = client.post(url)
+    #assert r.status_code == 201
+    #print(r.data)
+    #assert isinstance(r.data, dict)
+    #assert r.data['group'] == 'testing'
+    #assert r.data['model'] == 'collection'
+    #assert r.data['id'] == 'ddr-testing-2'
+    #o = models.ObjectID.objects.get(id='ddr-testing-2')
+    #print(o)
+
+@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+def test_next_entity():
+    """Test if app can get or post next entity
+    """
+    ic = idservice.IDServiceClient()
+    code,status = ic.login(config.IDSERVICE_USERNAME, config.IDSERVICE_PASSWORD)
+    assert code == 200
+    url = mkurl('objectids/ddr-testing-1/next/entity/')
+    print(url)
+    r = requests.get(url)
+    assert r.status_code == 200
+    print(r.status_code)
+    print(r.text)
+    data = r.json()
+    assert isinstance(data, dict)
+    assert data['group'] == 'testing'
+    assert data['model'] == 'entity'
+    assert 'ddr-testing-1-' in data['id']
+    ## POST
+    #print(url)
+    #r = client.post(url)
+    #assert r.status_code == 201
+    #print(r.data)
+    #assert isinstance(r.data, dict)
+    #assert r.data['group'] == 'testing'
+    #assert r.data['model'] == 'entity'
+    #assert r.data['id'] == 'ddr-testing-1-2'
+
+#@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+#def test_create():
+#    ic = idservice.IDServiceClient()
+#    code,status = ic.login(config.IDSERVICE_USERNAME, config.IDSERVICE_PASSWORD)
+#    assert code == 200
+#    print(code,status)
+#    url = mkurl('objectids/ddr-testing-1/')
+#    print(url)
+#    r = requests.get(url)
+#    print(r.status_code,r.reason)
+#    assert r.status_code == 200
+
+#@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+#def test_create_collections(client, create_user):
+#    # setup
+#    make_objectid('testing', 'collection', 'ddr-testing-1')
+#    models.ObjectID.objects.get(id='ddr-testing-1')
+#    admin_user = create_user(
+#        username=USERNAME, password=PASSWORD, is_staff=1, is_superuser=1
 #    )
-#    assert out0 == COLLECTION_IDS
-#    out1 = idservice._object_ids_existing(
-#        BeautifulSoup(ENTITY_IDS_HTML),
-#        ('td', 'eid')
+#    # test
+#    client.login(username=USERNAME, password=PASSWORD)
+#    url = IDSERVICE_API_BASE + '/objectids/{}/create/'.format('ddr-testing')
+#    data = {'object_ids': [
+#        'ddr-testing-2','ddr-testing-3'
+#    ]}
+#    r = client.post(url, data=data)
+#    print(r.data)
+#    assert isinstance(r.data, dict)
+#    assert isinstance(r.data['created'], list)
+#    assert len(r.data['created']) == 2
+#    assert 'ddr-testing-2' in r.data['created']
+#    assert 'ddr-testing-3' in r.data['created']
+
+#@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+#def test_create_entities(client, create_user):
+#    # setup
+#    make_objectid('testing', 'collection', 'ddr-testing-1')
+#    make_objectid('testing', 'entity', 'ddr-testing-1-1')
+#    models.ObjectID.objects.get(id='ddr-testing-1')
+#    models.ObjectID.objects.get(id='ddr-testing-1-1')
+#    admin_user = create_user(
+#        username=USERNAME, password=PASSWORD, is_staff=1, is_superuser=1
 #    )
-#    assert out1 == ENTITY_IDS
-
-#def test_get_ancestor():
-#    ei = identifier.Identifier('ddr-test-123-456')
-#    ci = identifier.Identifier('ddr-test-123')
-#    oi = identifier.Identifier('ddr-test')
-#    assert idservice.get_ancestor(ei, 'collection').id == ci.id
-#    assert idservice.get_ancestor(ei, 'organization').id == oi.id
-
-# TODO test_collections
-# TODO test_entities
-# TODO test_objects_next
-
-NEXT_COLLECTION_HTML = """
-<!DOCTYPE html>
-<html lang="en">
-<body>
-<table id="collections" class="table">
-  <tr>
-    <td>
-      <a class="collection" href="/workbench/kiroku/ddr-testing-123/">ddr-testing-123</a>
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <a class="collection" href="/workbench/kiroku/ddr-testing-124/">ddr-testing-124</a>
-    </td>
-  </tr>
-</table>
-</body>
-</html>
-"""
-
-NEXT_ENTITY_HTML = """
-<!DOCTYPE html>
-<html lang="en">
-<body>
-<table id="entities" class="table">
-  <tr class="entity">
-    <td class="eid">ddr-testing-124-1</td>
-    <td class="timestamp">2015-11-16T15:27:26.467049-08:00</td>
-  </tr>
-  <tr class="entity">
-    <td class="eid">ddr-testing-124-2</td>
-    <td class="timestamp">2015-11-16T15:27:33.447116-08:00</td>
-  </tr>
-  <tr class="entity">
-    <td class="eid">ddr-testing-124-3</td>
-    <td class="timestamp">2015-11-16T15:27:33.462868-08:00</td>
-  </tr>
-</table>
-</body>
-</html>
-"""
-
-#def test__objects_next_process():
-#    new_ids_url = 'NEW_IDS_URL'
-#    find0 = ['a', 'collection']
-#    out0 = idservice._objects_next_process(new_ids_url, NEXT_COLLECTION_HTML, find0, 1)
-#    assert out0 == ['ddr-testing-124']
-#    
-#    find1 = ['td', 'eid']
-#    out1 = idservice._objects_next_process(new_ids_url, NEXT_ENTITY_HTML, find1, 1)
-#    assert out1 == ['ddr-testing-124-3']
-
-
-# TODO test_collections_next
-# TODO test_entities_next
-# TODO test_register_entity_ids
-
-
-
+#    # test
+#    client.login(username=USERNAME, password=PASSWORD)
+#    url = IDSERVICE_API_BASE + '/objectids/{}/create/'.format('ddr-testing-1')
+#    data = {'object_ids': [
+#        'ddr-testing-1-2','ddr-testing-1-3',
+#    ]}
+#    r = client.post(url, data=data)
+#    print(r.data)
+#    assert isinstance(r.data, dict)
+#    assert isinstance(r.data['created'], list)
+#    assert len(r.data['created']) == 2
+#    assert 'ddr-testing-1-2' in r.data['created']
+#    assert 'ddr-testing-1-3' in r.data['created']
