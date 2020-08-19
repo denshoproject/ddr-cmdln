@@ -4,9 +4,30 @@ import os
 
 import pytest
 
+from DDR import config
 from DDR import fileio
 from DDR import identifier
 from DDR import vocab
+
+
+NO_VOCABS_ERR = 'Vocabs are not available.'
+def no_vocabs():
+    """Returns True if cannot load vocabs; use to skip tests
+    """
+    # skip if config.VOCABS_URL set to filesystem path
+    if not ('https://' in vocabs_url) or ('http://' in vocabs_url):
+        return False
+    try:
+        print(config.VOCABS_URL)
+        r = requests.get(config.VOCABS_URL, timeout=1)
+        print(r.status_code)
+        if r.status_code == 200:
+            return False
+    except ConnectionError:
+        print('ConnectionError')
+        return True
+    return True
+
 
 # Index.add
 # Index.terms
@@ -516,3 +537,16 @@ TOPICS_CHOICES = [
     ('topics-462', 'Activism and involvement -- Movements and ideologies'),
     ('topics-463', 'Activism and involvement -- Movements and ideologies -- Feminism')
 ]
+
+
+#def _get_vocab_fs():
+#def _get_vocabs_all_fs():
+
+#@pytest.mark.skipif(no_vocabs(), reason=NO_VOCABS_ERR)
+#def _get_vocab_http():
+
+#@pytest.mark.skipif(no_vocabs(), reason=NO_VOCABS_ERR)
+#def _get_vocabs_all_http():
+
+#@pytest.mark.skipif(no_vocabs(), reason=NO_VOCABS_ERR)
+#def get_vocabs():

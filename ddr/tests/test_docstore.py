@@ -20,7 +20,8 @@ HOSTS = [{'host':'127.0.0.1', 'port':9200}]
 HOST_CHECK_URL = 'http://{}'.format(config.DOCSTORE_HOST)
 DISABLE_SKIP = False
 
-def no_cluster():
+NO_ELASTICSEARCH_ERR = "Elasticsearch cluster not available."
+def no_elasticsearch():
     """Returns True if cannot contact cluster; use to skip tests
     """
     if DISABLE_SKIP:
@@ -238,7 +239,7 @@ POST_OBJECT_IDS = [
     'ddr-testing-123-1-master-abc123',
 ]
 
-@pytest.mark.skipif(no_cluster(), reason="Elasticsearch cluster not available.")
+@pytest.mark.skipif(no_elasticsearch(), reason=NO_ELASTICSEARCH_ERR)
 def test_post(publishable_objects):
     """Right now this only tests if you can post() without raising exceptions
     """
@@ -252,7 +253,7 @@ def test_post(publishable_objects):
         status = ds.post(o)
         print(status)
 
-@pytest.mark.skipif(no_cluster(), reason="Elasticsearch cluster not available.")
+@pytest.mark.skipif(no_elasticsearch(), reason=NO_ELASTICSEARCH_ERR)
 def test_post_multi(publishable_objects):
     """Right now this only tests if you can post() without raising exceptions
     """
@@ -273,7 +274,7 @@ def test_post_multi(publishable_objects):
     print(result)
     
 # this should come last...
-@pytest.mark.skipif(no_cluster(), reason="Elasticsearch cluster not available.")
+@pytest.mark.skipif(no_elasticsearch(), reason=NO_ELASTICSEARCH_ERR)
 def test_delete(publishable_objects):
     ds = docstore.Docstore(config.DOCSTORE_HOST)
     print(ds)

@@ -9,6 +9,8 @@ import requests
 
 from DDR import config
 
+IA_SAMPLE_URL = 'https://archive.org/download/ddr-densho-1003-1-24/ddr-densho-1003-1-24_files.xml'
+
 IA_DOWNLOAD_URL = 'https://archive.org/download'
 
 # Models that should always be checked for IA content

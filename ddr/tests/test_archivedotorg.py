@@ -5,11 +5,29 @@ import os
 
 from bs4 import BeautifulSoup
 import pytest
+import requests
 
 from DDR import archivedotorg
 from DDR import identifier
 
 
+NO_IARCHIVE_ERR = 'ID service is not available.'
+def no_iarchive():
+    """Returns True if cannot contact IA API; use to skip tests
+    """
+    try:
+        print(archivedotorg.IA_SAMPLE_URL)
+        r = requests.get(archivedotorg.IA_SAMPLE_URL, timeout=1)
+        print(r.status_code)
+        if r.status_code == 200:
+            return False
+    except ConnectionError:
+        print('ConnectionError')
+        return True
+    return True
+
+
+@pytest.mark.skipif(no_iarchive(), reason=NO_IARCHIVE_ERR)
 def test_is_iaobject():
     class Thing():
         identifier = None; format = None
@@ -38,6 +56,7 @@ def test_is_iaobject():
     out3 = archivedotorg.is_iaobject(thing3)
     assert out3 == False
 
+@pytest.mark.skipif(no_iarchive(), reason=NO_IARCHIVE_ERR)
 def test_iaobject_get():
     o0 = archivedotorg.IAObject(
         'ddr-densho-1000-1-1', 200, SEGMENT_XML
@@ -47,6 +66,7 @@ def test_iaobject_get():
     assert out0 == '<DDR.archivedotorg.IAObject ddr-densho-1000-1-1>'
     assert out1 == 'https://archive.org/download/ddr-densho-1000-1-1/ddr-densho-1000-1-1_files.xml'
 
+@pytest.mark.skipif(no_iarchive(), reason=NO_IARCHIVE_ERR)
 def test_file_url():
     FORMATS = archivedotorg.FORMATS
     o = archivedotorg.IAObject(
@@ -61,6 +81,7 @@ def test_file_url():
 
 #def test_iaobject_get_xml():
 
+@pytest.mark.skipif(no_iarchive(), reason=NO_IARCHIVE_ERR)
 def test_iaobject_get_original():
     o = archivedotorg.IAObject(
         'ddr-densho-1000-1-1', 200, SEGMENT_XML
@@ -81,6 +102,7 @@ def test_iaobject_get_original():
         o.soup = BeautifulSoup(SEGMENT_XML_MULT_FILES, 'html.parser')
         out2 = o._get_original()
 
+@pytest.mark.skipif(no_iarchive(), reason=NO_IARCHIVE_ERR)
 def test_iaobject_original_file():
     o = archivedotorg.IAObject(
         'ddr-densho-1000-1-1', 200, SEGMENT_XML
@@ -98,6 +120,7 @@ def test_iaobject_original_file():
     out = str(f)
     expected = '<DDR.archivedotorg.IAFile ddr-densho-1000-1-1-mezzanine-0762419626.mpg>'
 
+@pytest.mark.skipif(no_iarchive(), reason=NO_IARCHIVE_ERR)
 def test_iaobject_dict():
     o = archivedotorg.IAObject(
         'ddr-densho-1000-1-1', 200, SEGMENT_XML

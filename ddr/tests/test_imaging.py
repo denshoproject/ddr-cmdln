@@ -33,7 +33,23 @@ TEST_FILES = {
 # CloudFlare blocks if you don't use a browser user agent
 REQUEST_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0"
 
+NO_FILES_ERR = 'ID service is not available.'
+def no_files():
+    """Returns True if cannot download files; use to skip tests
+    """
+    try:
+        print(TEST_FILES['jpg']['url'])
+        r = requests.get(TEST_FILES['jpg']['url'], timeout=3)
+        print(r.status_code)
+        if r.status_code == 200:
+            return False
+    except ConnectionError:
+        print('ConnectionError')
+        return True
+    return True
 
+
+@pytest.mark.skipif(no_files(), reason=NO_FILES_ERR)
 @pytest.fixture(scope="session")
 def test_files(tmpdir_factory):
     """
@@ -53,6 +69,7 @@ def test_files(tmpdir_factory):
     TEST_FILES['tmpdir'] = tmpdir
     return TEST_FILES
         
+@pytest.mark.skipif(no_files(), reason=NO_FILES_ERR)
 def test_analyze_magick(test_files):
     print(test_files['jpg']['path'])
     jpeg = imaging.analyze(str(test_files['jpg']['path']))
@@ -81,6 +98,7 @@ def test_analyze_magick(test_files):
     #assert docx['format'] == None
     #assert docx['image'] == False
 
+@pytest.mark.skipif(no_files(), reason=NO_FILES_ERR)
 def test_analyze(test_files):
     path0 = '/tmp/missingfile.jpg'
     assert_raises(Exception, imaging.analyze, path0)
@@ -116,6 +134,7 @@ def test_geometry_is_ok():
     for s in GEOMETRY['bad']:
         assert imaging.geometry_is_ok(s) == False
 
+@pytest.mark.skipif(no_files(), reason=NO_FILES_ERR)
 def test_thumbnail(test_files):
     src = str(test_files['jpg']['path'])
     dest = str(test_files['tmpdir'] / 'test-imaging-thumb.jpg')
@@ -124,6 +143,7 @@ def test_thumbnail(test_files):
     imaging.thumbnail(src, dest, geometry)
     assert os.path.exists(dest)
 
+@pytest.mark.skipif(no_files(), reason=NO_FILES_ERR)
 def test_extract_xmp(test_files):
     exempi = '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>' \
         '<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Exempi + XMP Core {}">' \

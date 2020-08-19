@@ -22,31 +22,51 @@ def no_username_password():
         return True
     return False
 
+NO_IDSERVICE_ERR = 'ID service is not available.'
+def no_idservice():
+    """Returns True if cannot contact ID service; use to skip tests
+    """
+    try:
+        print(config.IDSERVICE_API_BASE)
+        r = requests.get(config.IDSERVICE_API_BASE, timeout=1)
+        print(r.status_code)
+        if r.status_code == 200:
+            return False
+    except ConnectionError:
+        print('ConnectionError')
+        return True
+    return True
+
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+@pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_groups():
     url = mkurl('groups')
     response = requests.get(url)
     assert response.status_code == 200
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+@pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_group():
     url = mkurl('groups/1')
     response = requests.get(url)
     assert response.status_code == 200
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+@pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_users():
     url = mkurl('users')
     response = requests.get(url)
     assert response.status_code == 401
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+@pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_user():
     url = mkurl('users/1')
     response = requests.get(url)
     assert response.status_code == 401
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+@pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_login():
     ic = idservice.IDServiceClient()
     print(config.IDSERVICE_USERNAME)
@@ -57,6 +77,7 @@ def test_login():
     assert status == 'OK'
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+@pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_resume():
     ic = idservice.IDServiceClient()
     print(config.IDSERVICE_USERNAME)
@@ -70,6 +91,7 @@ def test_resume():
     assert status == 'OK'
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+@pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_detail():
     ic = idservice.IDServiceClient()
     code,status = ic.login(config.IDSERVICE_USERNAME, config.IDSERVICE_PASSWORD)
@@ -82,6 +104,7 @@ def test_detail():
     assert r.status_code == 200
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+@pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_children():
     """Test that app returns list of children
     """
@@ -104,6 +127,7 @@ def test_children():
     assert 'ddr-testing-' in data[1]['id']
 
 #@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+#@pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 #def test_check_collections():
 #    ic = idservice.IDServiceClient()
 #    code,status = ic.login(config.IDSERVICE_USERNAME, config.IDSERVICE_PASSWORD)
@@ -126,6 +150,7 @@ def test_children():
 #    assert 'ddr-testing-2' in data['unregistered']
 
 #@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+#@pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 #def test_check_entities():
 #    ic = idservice.IDServiceClient()
 #    code,status = ic.login(config.IDSERVICE_USERNAME, config.IDSERVICE_PASSWORD)
@@ -150,6 +175,7 @@ def test_children():
 #    assert 'ddr-testing-1-3' in data['unregistered']
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+@pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_next_collection():
     """Test if app can get or post next collection
     """
@@ -181,6 +207,7 @@ def test_next_collection():
     #print(o)
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+@pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_next_entity():
     """Test if app can get or post next entity
     """
@@ -209,6 +236,7 @@ def test_next_entity():
     #assert r.data['id'] == 'ddr-testing-1-2'
 
 #@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+#@pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 #def test_create():
 #    ic = idservice.IDServiceClient()
 #    code,status = ic.login(config.IDSERVICE_USERNAME, config.IDSERVICE_PASSWORD)
@@ -221,6 +249,7 @@ def test_next_entity():
 #    assert r.status_code == 200
 
 #@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+#@pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 #def test_create_collections(client, create_user):
 #    # setup
 #    make_objectid('testing', 'collection', 'ddr-testing-1')
@@ -243,6 +272,7 @@ def test_next_entity():
 #    assert 'ddr-testing-3' in r.data['created']
 
 #@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
+#@pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 #def test_create_entities(client, create_user):
 #    # setup
 #    make_objectid('testing', 'collection', 'ddr-testing-1')
