@@ -758,15 +758,17 @@ def _sort_children(objects):
     @returns: list of objects
     """
     # separate entities/segments and files
-    objects_by_model = []; models = []
+    objects_by_model = {}
     for model,group in groupby(objects, lambda x: x.identifier.model):
-        objects_by_model.append(list(group))
-        models.append(model)
+        if not model in objects_by_model.keys():
+            objects_by_model[model] = []
+        for o in group:
+            objects_by_model[model].append(o)
     # recombine
     combined = []
     for model in ['entity', 'segment', 'file']:  # TODO replace hard-coded
-        if model in models:
-            combined += objects_by_model[models.index(model)]
+        if model in objects_by_model.keys():
+            combined += natsorted(objects_by_model[model])
     return combined
 
 
