@@ -2,12 +2,14 @@ from collections import OrderedDict
 from copy import deepcopy
 from datetime import datetime
 from functools import total_ordering
+from itertools import groupby
 import json
 import logging
 logger = logging.getLogger(__name__)
 import os
 
 from jinja2 import Template
+from natsort import natsorted
 
 from DDR import commands
 from DDR import config
@@ -579,20 +581,17 @@ class Entity(common.DDRObject):
         return checksums
     
     def _children_paths(self):
-        """Searches filesystem for (entity) childrens' .jsons, returns paths
+        """Searches fs for (entity) childrens' .jsons, returns natsorted paths
         
         @returns: list
         """
         if os.path.exists(self.files_path):
-            return sorted(
-                [
-                    f
-                    for f in util.find_meta_files(self.files_path, recursive=True)
-                    # only direct children, no descendants
-                    if Identifier(f).parent_id() == self.id
-                ],
-                key=lambda f: util.natural_order_string(f)
-            )
+            return natsorted([
+                f
+                for f in util.find_meta_files(self.files_path, recursive=True)
+                # only direct children, no descendants
+                if Identifier(f).parent_id() == self.id
+            ])
         return []
     
     def _file_paths(self, rel=False):
@@ -752,22 +751,24 @@ class Entity(common.DDRObject):
 def _sort_children(objects):
     """Arranges children in the proper order, Entities first, then Files
     
+    TODO Doesn't *really* sort, just separates objects by model and recombines
+    TODO the objects must already be in sorted order within model type
+    
     @param objects: list of Entity and File objects
     @returns: list of objects
     """
-    objects = sorted(objects)
-    # TODO replace hard-coded models
-    # entities,segments
-    grouped_objects = [
-        o
-        for o in objects
-        if o.identifier.model in ['entity', 'segment']
-    ]
-    # files
-    for o in objects:
-        if o.identifier.model in ['file']:
-            grouped_objects.append(o)
-    return grouped_objects
+    # separate entities/segments and files
+    objects_by_model = []; models = []
+    for model,group in groupby(objects, lambda x: x.identifier.model):
+        objects_by_model.append(list(group))
+        models.append(model)
+    # recombine
+    combined = []
+    for model in ['entity', 'segment', 'file']:  # TODO replace hard-coded
+        if model in models:
+            combined += objects_by_model[models.index(model)]
+    return combined
+
 
 def files_to_filegroups(files):
     """Converts list of File objects to METS file_groups structure.
