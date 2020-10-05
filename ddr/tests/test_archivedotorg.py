@@ -17,7 +17,7 @@ def no_iarchive():
     """
     try:
         print(archivedotorg.IA_SAMPLE_URL)
-        r = requests.get(archivedotorg.IA_SAMPLE_URL, timeout=1)
+        r = requests.get(archivedotorg.IA_SAMPLE_URL, timeout=3)
         print(r.status_code)
         if r.status_code == 200:
             return False
