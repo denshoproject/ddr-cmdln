@@ -3,20 +3,21 @@ import csv
 import json
 import os
 import sys
+from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 
-def read_text(path):
+def read_text(path: str) -> str:
     """Read text file; make sure text is in UTF-8.
     
     @param path: str Absolute path to file.
-    @returns: unicode
+    @returns: str
     """
     if not os.path.exists(path):
         raise IOError('File is missing or unreadable: %s' % path)
     with open(path, 'r') as f:
         return f.read()
 
-def write_text(text, path):
+def write_text(text: str, path: str):
     """Write text to UTF-8 file.
     
     @param text: unicode
@@ -25,7 +26,7 @@ def write_text(text, path):
     with open(path, 'w') as f:
         f.write(text)
 
-def append_text(text, path):
+def append_text(text: str, path: str):
     """Append text to UTF-8 file.
     
     @param text: unicode
@@ -72,7 +73,7 @@ def csv_writer(csvfile):
     )
     return writer
 
-def read_csv(path):
+def read_csv(path: str) -> List[Dict[str,str]]:
     """Read specified file, returns list of rows.
     
     >>> path = '/tmp/batch-test_write_csv.csv'
@@ -98,7 +99,10 @@ def read_csv(path):
             rows.append(row)
     return rows
 
-def write_csv(path, headers, rows, append=False):
+def write_csv(path: str,
+              headers: List[str],
+              rows: List[Dict[str,str]],
+              append: bool=False):
     """Write header and list of rows to file.
     
     >>> path = '/tmp/batch-test_write_csv.csv'

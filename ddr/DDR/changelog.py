@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 import os
+from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 from dateutil import parser
 
@@ -20,7 +21,7 @@ SAMPLE_OLD_CHANGELOG = """* Added entity file files/ddr-testing-160-1-master-c70
 -- Geoffrey Jost <geoffrey.jost@densho.org>  Wed, 02 Oct 2013 10:11:08 
 """
 
-def is_old_entry(txt):
+def is_old_entry(txt: str) -> bool:
     """Indicate whether this is an old entry.
     
     Sample:
@@ -35,7 +36,7 @@ def is_old_entry(txt):
         pass
     return False
 
-def read_old_entry(txt):
+def read_old_entry(txt: str) -> Dict[str,object]:
     """Read old-style changelog and return entries as data.
     """
     lines = txt.strip().split('\n')
@@ -60,7 +61,7 @@ SAMPLE_NEW_CHANGELOG = """2013-10-01T14:33:35 -- Geoffrey Jost <geoffrey.jost@de
 * Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/files/ddr-testing-160-1-master-c703e5ece1.json
 """
 
-def is_new_entry(txt):
+def is_new_entry(txt: str) -> bool:
     """Indicate whether this is a new entry.
     
     Sample:
@@ -74,7 +75,7 @@ def is_new_entry(txt):
         pass
     return False
 
-def read_new_entry(txt):
+def read_new_entry(txt: str) -> Dict[str,object]:
     """Read new-style changelog and return entries as data.
     """
     lines = txt.strip().split('\n')
@@ -88,7 +89,7 @@ def read_new_entry(txt):
              'messages':messages,}
     return entry
 
-def parse_timestamp(text, mail):
+def parse_timestamp(text: str, mail: str) -> datetime:
     # TODO add timezone if absent
     dt = parser.parse(text)
     if dt and (not dt.tzinfo):
@@ -101,7 +102,7 @@ def parse_timestamp(text, mail):
         dt = timezone.localize(dt)
     return dt
 
-def read_entries(log):
+def read_entries(log: str) -> List[Dict[str, object]]:
     entries = []
     for e in log.split('\n\n'):
         entry = None
@@ -113,14 +114,17 @@ def read_entries(log):
             entries.append(entry)
     return entries
 
-def read_changelog(path):
+def read_changelog(path: str) -> List[Dict[str, object]]:
     """
     @param path: Absolute path to changelog file.
     @returns list of entry dicts
     """
     return read_entries(fileio.read_text(path))
 
-def make_entry(messages, user, mail, timestamp=None):
+def make_entry(messages: List[str],
+               user: str,
+               mail: str,
+               timestamp: datetime=None) -> str:
     """Makes a (new-style) changelog entry.
     
     @param messages: List of strings.
@@ -135,6 +139,7 @@ def make_entry(messages, user, mail, timestamp=None):
     lines = [stamp] + ['* %s' % m for m in messages]
     return '\n'.join(lines)
 
+# TODO type hints
 def make_changelog(entries):
     cl = [make_entry(e['messages'], e['user'], e['mail'], e['timestamp']) for e in entries]
     return '\n\n'.join(cl)
@@ -146,9 +151,10 @@ TEMPLATE_PATH = os.path.join(MODULE_PATH, 'templates')
 CHANGELOG_TEMPLATE    = os.path.join(TEMPLATE_PATH, 'changelog.tpl')
 CHANGELOG_DATE_FORMAT = os.path.join(TEMPLATE_PATH, 'changelog-date.tpl')
 
-def load_template(filename):
+def load_template(filename: str) -> str:
     return fileio.read_text(filename)
 
+# TODO type hints
 def write_changelog_entry(path, messages, user, email, timestamp=None):
     logging.debug('    write_changelog_entry({})'.format(path))
     template = load_template(CHANGELOG_TEMPLATE)

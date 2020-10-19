@@ -13,6 +13,7 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 import re
+from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 from dateutil import parser
 from jinja2 import Template
@@ -20,7 +21,7 @@ from jinja2 import Template
 from DDR import config
 
 
-def normalize_string(text):
+def normalize_string(text: str) -> str:
     if text == None:
         return u''
     elif not isinstance(text, str):
@@ -29,7 +30,7 @@ def normalize_string(text):
         return u''
     return str(text).replace('\r\n', '\n').replace('\r', '\n').strip()
 
-def load_dirty_json(text):
+def load_dirty_json(text: str):
     # http://grimhacker.com/2016/04/24/loading-dirty-json-with-python/
     regex_replace = [
         (r"([ \{,:\[])(u)?'([^']+)'", r'\1"\3"'),
@@ -40,7 +41,7 @@ def load_dirty_json(text):
         text = re.sub(r, s, text)
     return json.loads(text)
 
-def strip_list(data):
+def strip_list(data: List[Any]) -> List[Any]:
     """Remove empty list items (ex: ['not empty, '']
    
     @param data: list
@@ -51,7 +52,7 @@ def strip_list(data):
         if item and (not item == 0)
     ]
 
-def render(template, data):
+def render(template: str, data: Dict[str, str]) -> str:
     """Render a Jinja2 template.
     
     @param template: str Jinja2-formatted template
@@ -59,7 +60,7 @@ def render(template, data):
     """
     return Template(template).render(data=data)
 
-def coerce_text(data):
+def coerce_text(data: Union[int,datetime,str]) -> Optional[str]:
     """Ensure types (ints,datetimes) are converted to text
     """
     if isinstance(data, int):
@@ -71,7 +72,7 @@ def coerce_text(data):
 
 # boolean --------------------------------------------------------------
 
-def text_to_boolean(value):
+def text_to_boolean(value: str) -> bool:
     if value:
         if isinstance(value, bool):
             return value
@@ -106,7 +107,8 @@ ALT_DATETIME_FORMATS = [
     '%Y-%m-%dT%H:%M:%S.%f%z',
 ]
 
-def text_to_datetime(text, fmt=config.DATETIME_FORMAT):
+def text_to_datetime(text: str,
+                     fmt: str=config.DATETIME_FORMAT) -> Optional[datetime]:
     """Load datatime from text in specified format.
     
     TODO timezone!
@@ -119,19 +121,18 @@ def text_to_datetime(text, fmt=config.DATETIME_FORMAT):
     if isinstance(text, datetime):
         return text
     text = normalize_string(text)
-    if text:
-        try:
-            return parser.parse(text)
-        except:
-            # try a bunch of old/messed up formats
-            for fmt in ALT_DATETIME_FORMATS:
-                try:
-                    return datetime.strptime(text, fmt)
-                except:
-                    pass
-    return ''
+    try:
+        return parser.parse(text)
+    except:
+        # try a bunch of old/messed up formats
+        for fmt in ALT_DATETIME_FORMATS:
+            try:
+                return datetime.strptime(text, fmt)
+            except:
+                pass
+    return None
 
-def datetime_to_text(data, fmt=config.DATETIME_FORMAT):
+def datetime_to_text(data: datetime, fmt: str=config.DATETIME_FORMAT) -> Optional[str]:
     """Dump datetime to text suitable for a CSV field.
     
     TODO timezone!
@@ -161,7 +162,7 @@ def datetime_to_text(data, fmt=config.DATETIME_FORMAT):
 LIST_SEPARATOR = ';'
 LIST_SEPARATOR_SPACE = '%s ' % LIST_SEPARATOR
 
-def _is_listofstrs(data):
+def _is_listofstrs(data: List[str]) -> bool:
     if isinstance(data, list):
         num_strs = 0
         for x in data:
@@ -171,7 +172,7 @@ def _is_listofstrs(data):
             return True
     return False
 
-def text_to_list(text, separator=LIST_SEPARATOR):
+def text_to_list(text: str, separator: str=LIST_SEPARATOR) -> List[str]:
     """
     @param text: str
     @param separator: str
@@ -189,7 +190,7 @@ def text_to_list(text, separator=LIST_SEPARATOR):
             data.append(item)
     return data
 
-def list_to_text(data, separator=LIST_SEPARATOR_SPACE):
+def list_to_text(data: List[str], separator: str=LIST_SEPARATOR_SPACE) -> str:
     """
     @param data: list
     @param separator: str
@@ -209,14 +210,16 @@ def list_to_text(data, separator=LIST_SEPARATOR_SPACE):
 # data = {'term':'ABC', 'id':'123'}
 #
 
-def _is_text_labels(text, separators=[':','|']):
+def _is_text_labels(text: str, separators: List[str]=[':','|']) -> bool:
     # both separators
     sepsfound = [s for s in separators if s in text]
     if len(sepsfound) == len(separators):
         return True
     return False
 
-def textlabels_to_dict(text, keys, separators=[':','|']):
+def textlabels_to_dict(text: str,
+                       keys: List[str],
+                       separators: List[str]=[':','|']) -> Dict[str,str]:
     """
     @param text: str
     @param keys: list
@@ -232,7 +235,9 @@ def textlabels_to_dict(text, keys, separators=[':','|']):
             data[key] = val
     return data
 
-def dict_to_textlabels(data, keys, separators):
+def dict_to_textlabels(data: Dict[str,str],
+                       keys: List[str],
+                       separators: List[str]) -> str:
     return separators[1].join([
         separators[0].join([
             key, data[key]
@@ -243,13 +248,15 @@ def dict_to_textlabels(data, keys, separators):
 # text_nolabels  = 'ABC:123'
 # data = {'term':'ABC', 'id':123}
 
-def _is_text_nolabels(text, separators=[':','|']):
+def _is_text_nolabels(text: str, separators: List[str]=[':','|']) -> bool:
     # Only first separator present
     if (separators[0] in text) and not (separators[1] in text):
         return True
     return False
 
-def textnolabels_to_dict(text, keys, separator=':'):
+def textnolabels_to_dict(text: str,
+                         keys: List[str],
+                         separator: str=':') -> Dict[str,str]:
     """
     @param text: str
     @param keys: list
@@ -269,7 +276,9 @@ def textnolabels_to_dict(text, keys, separator=':'):
     }
     return data
 
-def dict_to_textnolabels(data, keys, separator):
+def dict_to_textnolabels(data: Dict[str,str],
+                         keys: List[str],
+                         separator: str) -> str:
     return separator.join([
         data[key] for key in keys
     ])
@@ -280,7 +289,7 @@ def dict_to_textnolabels(data, keys, separator):
 TEXT_BRACKETID_TEMPLATE = '{term} [{id}]'
 TEXT_BRACKETID_REGEX = re.compile(r'(?P<term>[\w\d -:()_,`\'"]+)\s\[(?P<id>\d+)\]')
 
-def _is_text_bracketid(text):
+def _is_text_bracketid(text: str) -> Union[Match[str], bool]:
     if text:
         m = re.search(TEXT_BRACKETID_REGEX, text)
         if m and (len(m.groups()) == 2) and m.groups()[1].isdigit():
@@ -310,7 +319,7 @@ def textbracketid_to_dict(text, keys=['term', 'id'], pattern=TEXT_BRACKETID_REGE
             }
     return {}
 
-def dict_to_textbracketid(data, keys):
+def dict_to_textbracketid(data: Dict[str,str], keys: List[str]) -> str:
     if isinstance(data, str):
         return data
     if len(keys) != 2:
@@ -322,7 +331,7 @@ def dict_to_textbracketid(data, keys):
     d['term'] = list(data_.values())[0]
     return TEXT_BRACKETID_TEMPLATE.format(**d)
 
-def text_to_dict(text, keys):
+def text_to_dict(text: str, keys: List[str]) -> Dict[str,str]:
     """Convert various text formats to dict
     
     If text cannot be converted it will be assigned to keys[0] in a dict
@@ -352,7 +361,11 @@ def text_to_dict(text, keys):
             d[key] = val
     return d
 
-def dict_to_text(data, keys, style='labels', nolabelsep=':', labelseps=[':','|']):
+def dict_to_text(data: Dict[str,str],
+                 keys: List[str],
+                 style: str='labels',
+                 nolabelsep: str=':',
+                 labelseps: List[str]=[':','|']) -> str:
     """Renders single dict record to text in specified style.
     
     @param data: dict
@@ -362,11 +375,12 @@ def dict_to_text(data, keys, style='labels', nolabelsep=':', labelseps=[':','|']
     @param labelseps: list
     @returns: str
     """
+    assert style in ['labels', 'nolabels', 'bracketid']
     if style == 'bracketid':
         return dict_to_textbracketid(data, keys)
     elif style == 'nolabels':
         return dict_to_textnolabels(data, keys, nolabelsep)
-    elif style == 'labels':
+    else:
         return dict_to_textlabels(data, keys, labelseps)
 
 
@@ -379,7 +393,7 @@ def dict_to_text(data, keys, style='labels', nolabelsep=':', labelseps=[':','|']
 # ]
 # 
 
-def _is_kvlist(text):
+def _is_kvlist(text: str) -> bool:
     if isinstance(text, list):
         matches = 0
         for item in text:
@@ -389,7 +403,7 @@ def _is_kvlist(text):
             return True
     return False
 
-def text_to_kvlist(text):
+def text_to_kvlist(text: str) -> Union[Any, List[Dict[str,str]]]:
     if _is_kvlist(text):
         return text
     text = normalize_string(text)
@@ -407,7 +421,7 @@ def text_to_kvlist(text):
             })
     return data
 
-def kvlist_to_text(data):
+def kvlist_to_text(data: List[Dict[str,str]]) -> str:
     items = []
     for d in data:
         i = [k+':'+v for k,v in d.items()]
@@ -432,7 +446,7 @@ def kvlist_to_text(data):
 # data = [u'eng', u'jpn']
 # 
     
-def text_to_labelledlist(text):
+def text_to_labelledlist(text: str) -> List[str]:
     text = normalize_string(text)
     if not text:
         return []
@@ -448,7 +462,7 @@ def text_to_labelledlist(text):
                 data.append(x.strip())
     return data
 
-def labelledlist_to_text(data, separator=u'; '):
+def labelledlist_to_text(data: List[str], separator: str='; ') -> str:
     return separator.join(data)
 
 
@@ -475,7 +489,7 @@ def labelledlist_to_text(data, separator=u'; '):
 # ]
 # 
 
-def _is_listofdicts(data):
+def _is_listofdicts(data: Union[Any, List[Dict[str,str]]]) -> bool:
     if isinstance(data, list):
         num_dicts = 0
         for x in data:
@@ -485,7 +499,9 @@ def _is_listofdicts(data):
             return True
     return False
 
-def text_to_dicts(text, terms, separator=';'):
+def text_to_dicts(text: str,
+                  terms: List[str],
+                  separator: str=';') -> Union[Any, List[Dict[str,str]]]:
     if _is_listofdicts(text):
         return text
     text = normalize_string(text)
@@ -499,7 +515,7 @@ def text_to_dicts(text, terms, separator=';'):
             dicts.append(d)
     return dicts
     
-def _setsplitnum(separator, split1x):
+def _setsplitnum(separator: str, split1x: List[str]) -> int:
     if separator in split1x:
         return 1
     return -1
@@ -507,7 +523,10 @@ def _setsplitnum(separator, split1x):
 LISTOFDICTS_SEPARATORS = [':', '|', ';']
 LISTOFDICTS_SPLIT1X = [':']
 
-def text_to_listofdicts(text, separators=LISTOFDICTS_SEPARATORS, split1x=LISTOFDICTS_SPLIT1X):
+def text_to_listofdicts(text: str,
+                        separators: List[str]=LISTOFDICTS_SEPARATORS,
+                        split1x: List[str]=LISTOFDICTS_SPLIT1X
+) -> List[Dict[str,str]]:
     text = normalize_string(text).replace('\\n','').replace('\n','')
     if not text:
         return []
@@ -534,7 +553,10 @@ def text_to_listofdicts(text, separators=LISTOFDICTS_SEPARATORS, split1x=LISTOFD
             dicts.append(d)
     return dicts
 
-def listofdicts_to_text(data, terms=[], separators=LISTOFDICTS_SEPARATORS, newlines=True):
+def listofdicts_to_text(data: List[Dict[str,str]],
+                        terms: List[str]=[],
+                        separators: List[str]=LISTOFDICTS_SEPARATORS,
+                        newlines: bool=True) -> str:
     if not data:
         return ''
     if isinstance(data, str):
@@ -604,7 +626,11 @@ def listofdicts_to_text(data, terms=[], separators=LISTOFDICTS_SEPARATORS, newli
 
 TEXTNOLABELS_LISTOFDICTS_SEPARATORS = [':', ';']
 
-def textnolabels_to_listofdicts(text, keys, separators=TEXTNOLABELS_LISTOFDICTS_SEPARATORS):
+def textnolabels_to_listofdicts(
+        text: str,
+        keys: List[str],
+        separators: List[str]=TEXTNOLABELS_LISTOFDICTS_SEPARATORS
+) -> List[Dict[str,str]]:
     """
     @param text: str
     @param keys: list
@@ -624,7 +650,11 @@ def textnolabels_to_listofdicts(text, keys, separators=TEXTNOLABELS_LISTOFDICTS_
         data.append(d)
     return data
 
-def listofdicts_to_textnolabels(data, keys, separators=TEXTNOLABELS_LISTOFDICTS_SEPARATORS, separator=':'):
+def listofdicts_to_textnolabels(
+        data: List[Dict[str,str]],
+        keys: List[str],
+        separators: List[str]=TEXTNOLABELS_LISTOFDICTS_SEPARATORS,
+        separator: str=':') -> str:
     """
     @param data: list of dicts
     @param keys: list
@@ -674,7 +704,8 @@ def listofdicts_to_textnolabels(data, keys, separators=TEXTNOLABELS_LISTOFDICTS_
 #     {"term": "ABC: XYZ", "id": '456'},
 # ]
 
-def text_to_bracketids(text, fieldnames=[]):
+def text_to_bracketids(text: str,
+                       fieldnames: List[str]=[]) -> List[Dict[str,str]]:
     data = []
     # might already be listofdicts or listofstrs
     if text and isinstance(text, list):
@@ -726,7 +757,7 @@ def text_to_bracketids(text, fieldnames=[]):
 # ]
 #
 
-def _filter_rolepeople(data):
+def _filter_rolepeople(data: List[Dict[str,str]]) -> List[Dict[str,str]]:
     """filters out items with empty nameparts
     prevents this: [{'namepart': '', 'role': 'author'}]
     """
@@ -735,6 +766,7 @@ def _filter_rolepeople(data):
         if item.get('namepart') and item.get('role')
     ]
 
+# TODO add type hints
 def _parse_rolepeople_text(texts):
     data = []
     for text in texts:
@@ -771,7 +803,7 @@ def _parse_rolepeople_text(texts):
             data.append(item)
     return data
 
-def text_to_rolepeople(text):
+def text_to_rolepeople(text: str) -> List[Dict[str,str]]:
     if not text:
         return []
     
@@ -807,7 +839,7 @@ def text_to_rolepeople(text):
 ROLEPEOPLE_TEXT_TEMPLATE_W_ID = 'namepart:{{ data.namepart }}|role:{{ data.role }}|id:{{ data.id }}'
 ROLEPEOPLE_TEXT_TEMPLATE_NOID = 'namepart:{{ data.namepart }}|role:{{ data.role }}'
 
-def rolepeople_to_text(data):
+def rolepeople_to_text(data: List[Dict[str,str]]) -> str:
     if isinstance(data, str):
         text = data
     else:

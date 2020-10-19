@@ -24,5 +24,6 @@ requests==2.23.0          # Apache   y
 # development
 
 bpython
+mypy
 pytest
 pytest-cov

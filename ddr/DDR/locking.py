@@ -1,7 +1,8 @@
 import os
+from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 
-def lock( lock_path, text ):
+def lock(lock_path: str, text: str) -> str:
     """Writes lockfile to collection dir; complains if can't.
     
     Celery tasks don't seem to know their own task_id, and there don't
@@ -35,7 +36,7 @@ def lock( lock_path, text ):
         f.write(text)
     return 'ok'
 
-def unlock( lock_path, text ):
+def unlock(lock_path: str, text: str) -> str:
     """Removes lockfile or complains if can't
     
     This method should be called by celery Task.after_return()
@@ -72,7 +73,7 @@ def unlock( lock_path, text ):
         return 'blocked'
     return 'ok'
 
-def locked( lock_path ):
+def locked(lock_path: str) -> Union[str, bool]:
     """Returns contents of lockfile if collection repo is locked, False if not
     
     >>> c = Collection('/tmp/ddr-testing-123')

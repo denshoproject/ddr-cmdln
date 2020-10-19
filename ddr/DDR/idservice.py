@@ -1,5 +1,6 @@
 import logging
 logger = logging.getLogger(__name__)
+from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 import requests
 
@@ -43,7 +44,10 @@ class IDServiceClient():
     username = None
     token = None
 
-    def login(self, username, password, url=config.IDSERVICE_API_BASE):
+    def login(self,
+              username: str,
+              password: str,
+              url: str=config.IDSERVICE_API_BASE) -> Tuple[int,str]:
         """Initiate a session.
         
         @param username: str
@@ -64,10 +68,10 @@ class IDServiceClient():
             pass
         return r.status_code,r.reason
     
-    def _auth_headers(self):
+    def _auth_headers(self) -> Dict[str,str]:
         return {'Authorization': 'Token %s' % self.token}
     
-    def resume(self, token):
+    def resume(self, token: str) -> Tuple[int,str]:
         """Resume a session without logging in.
         
         @param token: str
@@ -77,7 +81,7 @@ class IDServiceClient():
         status_code,reason,data = self.user_info()
         return status_code,reason
     
-    def logout(self):
+    def logout(self) -> Tuple[int,str]:
         """End a session.
         
         @return: int,str (status_code,reason)
@@ -90,7 +94,7 @@ class IDServiceClient():
         )
         return r.status_code,r.reason
     
-    def user_info(self):
+    def user_info(self) -> Tuple[int,str,str]:
         """Get user information (username, first/last name, email)
         
         @return: int,str,dict (status code, reason, userinfo dict)
@@ -102,7 +106,10 @@ class IDServiceClient():
         )
         return r.status_code,r.reason,r.json()
     
-    def next_object_id(self, oidentifier, model, register=False):
+    def next_object_id(self,
+                       oidentifier: identifier.Identifier,
+                       model: str,
+                       register: bool=False) -> Tuple[int,str,Optional[str]]:
         """GET or POST the next object ID of the specified type
         
         @param oidentifier: identifier.Identifier
@@ -128,7 +135,7 @@ class IDServiceClient():
         return r.status_code,r.reason,objectid
     
     @staticmethod
-    def check_object_id(object_id):
+    def check_object_id(object_id: str) -> Dict[str, Union[str,int]]:
         url = '%s/objectids/%s/' % (config.IDSERVICE_API_BASE, object_id)
         try:
             r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
@@ -142,7 +149,7 @@ class IDServiceClient():
         }
 
     @staticmethod
-    def child_ids(object_id):
+    def child_ids(object_id: str) -> Tuple[int,str,List[str]]:
         """Returns all object IDs that contain the parent
         
         @param object_id: str
@@ -155,6 +162,7 @@ class IDServiceClient():
             oids = [o['id'] for o in r.json()]
         return r.status_code,r.reason,oids
     
+    # TODO type hints
     @staticmethod
     def check_object_ids(object_ids):
         """Given list of IDs, indicate whether they are registered
@@ -169,7 +177,9 @@ class IDServiceClient():
             for r in [check_object_id(oid) for oid in object_ids]
         }
     
-    def check_eids(self, cidentifier, entity_ids):
+    def check_eids(self,
+                   cidentifier: identifier.Identifier,
+                   entity_ids: List[str]) -> Tuple[int,str,List[str],List[str]]:
         """Given list of EIDs, indicates which are registered,unregistered.
         
         @param cidentifier: identifier.Identifier object
@@ -187,7 +197,9 @@ class IDServiceClient():
         #logging.debug(data)
         return r.status_code,r.reason,data['registered'],data['unregistered']
     
-    def register_eids(self, cidentifier, entity_ids):
+    def register_eids(self,
+                      cidentifier: identifier.Identifier,
+                      entity_ids: List[str]) -> Tuple[int,str,List[str]]:
         """Register the specified entity IDs with the ID service
         
         @param cidentifier: identifier.Identifier object

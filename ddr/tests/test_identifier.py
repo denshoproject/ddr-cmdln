@@ -1089,10 +1089,10 @@ def test_parent_id():
     ent = identifier.Identifier(PARENT_ENTITY_ID)
     rol = identifier.Identifier(PARENT_FILEROLE_ID)
     fil = identifier.Identifier(PARENT_FILE_ID)
-    assert col.parent_id() == None
+    assert col.parent_id() == ''
     assert ent.parent_id() == PARENT_COLLECTION_ID
     assert fil.parent_id() == PARENT_ENTITY_ID
-    assert rep.parent_id(stubs=1) == None
+    assert rep.parent_id(stubs=1) == ''
     assert org.parent_id(stubs=1) == PARENT_REPO_ID
     assert col.parent_id(stubs=1) == PARENT_ORG_ID
     assert ent.parent_id(stubs=1) == PARENT_COLLECTION_ID
@@ -1106,7 +1106,7 @@ def test_parent_path():
     ei = identifier.Identifier(id='ddr-test-123-456', base_path=basepath)
     assert ei.parent_path() == '/tmp/ddr-test-123/ddr-test-123'
     ci = identifier.Identifier(id='ddr-test-123', base_path=basepath)
-    assert ci.parent_path() == None
+    assert ci.parent_path() == ''
 
 def test_parent():
     i = identifier.Identifier(id='ddr-test-123-456-master-abcde12345')

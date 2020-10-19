@@ -1,10 +1,11 @@
 import os
+from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 from DDR import identifier
 from DDR import util
 
 
-def _child_jsons( path, testing=False ):
+def _child_jsons(path: str, testing: bool=False) -> List[str]:
     """List all the .json files under path directory; excludes specified dir.
     
     @param path: str Absolute directory path.
@@ -18,7 +19,8 @@ def _child_jsons( path, testing=False ):
         if os.path.dirname(p) != path
     ]
 
-def _selected_field_values( parent_object, inheritables ):
+# TODO type hints
+def _selected_field_values(parent_object, inheritables):
     """Gets list of selected inherited fieldnames and their values from the parent object
     
     @param parent_object: DDRObject
@@ -33,7 +35,7 @@ def _selected_field_values( parent_object, inheritables ):
         for field in inheritables
     ]
 
-def _child_field(parent_model_field, child_model):
+def _child_field(parent_model_field: str, child_model: str) -> Optional[str]:
     """Get name of child field from identifier.INHERITABLE_FIELDS
     
     @param parent_model_field: str '{parent_model}.{fieldname}'
@@ -46,7 +48,8 @@ def _child_field(parent_model_field, child_model):
             return field
     return None
 
-def inheritable_fields( MODEL_FIELDS ):
+# TODO type hints
+def inheritable_fields(MODEL_FIELDS):
     """Returns a list of fields that can inherit or grant values.
     
     Inheritable fields are marked 'inheritable':True in MODEL_FIELDS.
@@ -60,7 +63,8 @@ def inheritable_fields( MODEL_FIELDS ):
         if '.'.join([field['model'], field['name']]) in list(identifier.INHERITABLE_FIELDS.keys())
     ]
 
-def selected_inheritables( inheritables, cleaned_data ):
+def selected_inheritables(inheritables: List[str],
+                          cleaned_data: Dict[str,str]) -> List[str]:
     """Indicates listed inheritable fields that are selected in the form.
     
     Selector fields are BooleanFields named "FIELD_inherit".
@@ -82,7 +86,8 @@ def selected_inheritables( inheritables, cleaned_data ):
         ]
     return selected
     
-def update_inheritables( parent_object, selected_fields ):
+# TODO type hints
+def update_inheritables(parent_object, selected_fields):
     """Update specified inheritable fields of child objects
     
     @param parent_object: Collection or Entity
@@ -125,7 +130,8 @@ def update_inheritables( parent_object, selected_fields ):
                     changed_files.append(json_path)
     return child_ids,changed_files
 
-def inherit( parent, child ):
+# TODO type hints
+def inherit(parent, child):
     """Set inheritable fields in child object with values from parent.
     
     @param parent: A webui.models.Collection or webui.models.Entity

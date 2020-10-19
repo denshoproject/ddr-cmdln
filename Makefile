@@ -353,6 +353,12 @@ coverage-ddr-cmdln:
 	source $(VIRTUALENV)/bin/activate; \
 	cd $(INSTALL_CMDLN)/; pytest --cov-config=ddr-cmdln/.coveragerc --cov-report=html --cov=DDR ddr-cmdln/ddr/tests/
 
+mypy-ddr-cmdln:
+	@echo ""
+	@echo "mypy-ddr-cmdln ---------------------------------------------------------"
+	source $(VIRTUALENV)/bin/activate; \
+	cd $(INSTALL_CMDLN)/; mypy ddr/DDR/
+
 uninstall-ddr-cmdln: install-setuptools
 	@echo ""
 	@echo "uninstall-ddr-cmdln ----------------------------------------------------"
