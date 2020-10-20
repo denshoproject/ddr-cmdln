@@ -3,6 +3,7 @@ import logging
 import os
 from pathlib import Path
 import sys
+from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 import click
 import envoy
@@ -82,26 +83,26 @@ def ddrpubcopy(fileroles, collection, destbase, force):
     click.echo('')
 
 
-def dtfmt(dt):
+def dtfmt(dt: datetime) -> str:
     """Consistent date format.
     """
     return dt.strftime('%Y-%m-%dT%H:%M:%S.%f')
 
-def logprint(filename, msg):
+def logprint(filename: Path, msg: str):
     """Print to log file and console, with timestamp.
     """
     msg = '%s - %s\n' % (dtfmt(datetime.now()), msg)
     fileio.append_text(msg, str(filename))
     click.echo(msg.strip('\n'))
 
-def logprint_nots(filename, msg):
+def logprint_nots(filename: Path, msg: str):
     """Print to log file and console, no timestamp.
     """
     msg = '%s\n' % msg
     fileio.append_text(msg, str(filename))
     click.echo(msg.strip('\n'))
 
-def find_files(collection_path):
+def find_files(collection_path: Path) -> List[Path]:
     """List files using git-annex-find.
     
     Only includes files present in local filesystem.
@@ -113,7 +114,10 @@ def find_files(collection_path):
     # strip out blank lines
     return [Path(path) for path in files if path]
 
-def filter_files(files, roles, force, LOG):
+def filter_files(files: List[Path],
+                 roles: List[str],
+                 force: bool,
+                 LOG: Path) -> List[Path]:
     """Binary and access files for each File in roles
     """
     logprint(LOG, '%s files in filesystem' % len(files))
@@ -146,7 +150,10 @@ def filter_files(files, roles, force, LOG):
     logprint(LOG, '%s files' % len(paths))
     return paths
 
-def rsync_files(to_copy, collection_path, destdir, LOG):
+def rsync_files(to_copy: List[Path],
+                collection_path: Path,
+                destdir: Path,
+                LOG: Path) -> List[str]:
     os.chdir(collection_path)
     errs = []
     for n,f in enumerate(to_copy):
