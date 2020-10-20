@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 import os
+from pathlib import Path
 import sys
 
 import click
@@ -41,18 +42,20 @@ def ddrpubcopy(fileroles, collection, destbase, force):
     Example:
         ddrpubcopy mezzanine,transcript /var/www/media/ddr/ddr-test-123 /media/USBHARDDRIVE
     """
+    collection = Path(collection)
+    destbase = Path(destbase)
     if destbase == collection:
         click.echo('ERROR: Source and destination are the same!')
         sys.exit(1)
     
     started = datetime.now()
-    LOG = os.path.join(destbase, 'ddrpubcopy.log')
+    LOG = destbase / 'ddrpubcopy.log'
     
-    cid = os.path.basename(collection)
-    destdir = os.path.normpath(os.path.join(destbase, cid))
+    cid = collection.name
+    destdir = destbase / cid
     # if collection dir doesn't exist in destdir, mkdir
-    if not os.path.exists(destdir):
-        os.makedirs(destdir)
+    if not destdir.exists():
+        destdir.mkdir(parents=True)
     
     logprint(LOG, 'Source      %s' % collection)
     logprint(LOG, 'Destination %s' % destdir)
@@ -88,14 +91,14 @@ def logprint(filename, msg):
     """Print to log file and console, with timestamp.
     """
     msg = '%s - %s\n' % (dtfmt(datetime.now()), msg)
-    fileio.append_text(msg, filename)
+    fileio.append_text(msg, str(filename))
     click.echo(msg.strip('\n'))
 
 def logprint_nots(filename, msg):
     """Print to log file and console, no timestamp.
     """
     msg = '%s\n' % msg
-    fileio.append_text(msg, filename)
+    fileio.append_text(msg, str(filename))
     click.echo(msg.strip('\n'))
 
 def find_files(collection_path):
@@ -108,7 +111,7 @@ def find_files(collection_path):
     r0 = envoy.run('git annex find')
     files = r0.std_out.strip().split('\n')
     # strip out blank lines
-    return [path for path in files if path]
+    return [Path(path) for path in files if path]
 
 def filter_files(files, roles, force, LOG):
     """Binary and access files for each File in roles
@@ -118,7 +121,7 @@ def filter_files(files, roles, force, LOG):
     # extract file IDs from list of files, rm duplicates
     oids = sorted(list(set([
         os.path.splitext(os.path.basename(
-            path.replace(config.ACCESS_FILE_SUFFIX, '')
+            str(path).replace(config.ACCESS_FILE_SUFFIX, '')
         ))[0]
         for path in files
     ])))
@@ -147,9 +150,9 @@ def rsync_files(to_copy, collection_path, destdir, LOG):
     os.chdir(collection_path)
     errs = []
     for n,f in enumerate(to_copy):
-        src = os.path.join(collection_path, f)
+        src = collection_path / f
         src = f
-        dest = os.path.join(destdir, f)
+        dest = destdir / f
         cmd = 'rsync --copy-links %s %s/' % (src, destdir)
         logprint(LOG, '%s/%s %s' % (n, len(to_copy), cmd))
         r1 = envoy.run(cmd)
