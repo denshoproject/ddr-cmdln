@@ -24,30 +24,34 @@ logging.basicConfig(
 
 @click.command()
 @click.argument('fileroles')
-@click.argument('collection')
+@click.argument('sourcedir')
 @click.argument('destbase')
 @click.option('--force','-f',  is_flag=True, help='Force')
 @click.option('--b2sync','-b',  is_flag=True, help='Sync with Backblaze (requires environment vars)')
-def ddrpubcopy(fileroles, collection, destbase, force, b2sync):
-    """ddrpubcopy - Copies binaries from collection to dest dir for publication.
+def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync):
+    """ddrpubcopy - Copies binaries from source dir to dest dir for publication.
     
     \b
     This command copies specified types of binaries from a collection to a
     destination folder.  Destination files are in a very simple hierarchy (just
     files within a single directory per collection) that is suitable for use by
     ddr-public.
-     
+    
     \b
     ddr-pubcopy produces a very simple file layout:
         $BASE/$COLLECTION_ID/$FILENAME
+
+    An individual run of ddrpubcopy may copy from a subdirectory of a collection
+    but these files will go into the collection's destination folder.
     
     \b
     Example:
         ddrpubcopy mezzanine,transcript /var/www/media/ddr/ddr-test-123 /media/USBHARDDRIVE
     """
     collection = Path(collection)
+    sourcedir = Path(sourcedir)
     destbase = Path(destbase)
-    if destbase == collection:
+    if destbase == sourcedir:
         click.echo('ERROR: Source and destination are the same!')
         sys.exit(1)
     # b2
@@ -60,12 +64,19 @@ def ddrpubcopy(fileroles, collection, destbase, force, b2sync):
             'B2KEYID, B2APPKEY, B2BUCKET.'
         )
         sys.exit(1)
+    try:
+        sourcedir_oi = identifier.Identifier(path=sourcedir)
+        cidentifier = sourcedir_oi.collection()
+    except:
+        click.echo('ERROR: Source dir must be part of a DDR collection.')
+        sys.exit(1)
+        
     # prepare
     started = datetime.now()
     LOG = destbase / 'ddrpubcopy.log'
-    
-    cid = collection.name
-    destdir = destbase / cid
+    # Note: Files from subdirectories of a collection will all go to a single
+    # collection tmpdir
+    destdir = destbase / cidentifier.id
     # if collection dir doesn't exist in destdir, mkdir
     if not destdir.exists():
         destdir.mkdir(parents=True)
@@ -80,19 +91,24 @@ def ddrpubcopy(fileroles, collection, destbase, force, b2sync):
     logprint(LOG, 'Copying {}'.format(', '.join(roles)))
     
     # do the work
-    files = find_files(collection, LOG)
+    logprint(LOG, f'Finding files')
+    files = find_files(sourcedir, LOG)
+    logprint(LOG, f'found {len(files)}')    
+    logprint(LOG, 'Filtering: {}'.format(','.join(roles)))
     to_copy = filter_files(files, roles, force, LOG)
-    num = len(to_copy)
-    for n,path_status in enumerate(rsync_files(to_copy, collection, destdir, LOG)):
-        path,status = path_status
-        logprint(LOG, f'{n}/{num} {status} {path}')
-    if b2sync:
-        logprint(LOG, 'Backblaze: authenticating')
-        b2 = storage.Backblaze(B2KEYID, B2APPKEY, B2BUCKET)
-        logprint(LOG, f'Backblaze: syncing {destdir}')
-        for line in b2.sync_dir(destdir):
-            #logprint(LOG, line)
-            pass
+    if to_copy:
+        num = len(to_copy)
+        for n,path_status in enumerate(rsync_files(to_copy, cidentifier.path_abs(), destdir, LOG)):
+            path,status = path_status
+            logprint(LOG, f'{n}/{num} {status} {path}')
+        logprint(LOG, f'Copied to {destdir}')
+        if b2sync:
+            logprint(LOG, 'Backblaze: authenticating')
+            b2 = storage.Backblaze(B2KEYID, B2APPKEY, B2BUCKET)
+            logprint(LOG, f'Backblaze: syncing {destdir}')
+            for line in b2.sync_dir(destdir):
+                #logprint(LOG, line)
+                pass
     finished = datetime.now()
     elapsed = finished - started
     logprint(LOG, 'DONE!')
@@ -130,13 +146,13 @@ def _subproc(cmd):
     if return_code:
         raise subprocess.CalledProcessError(return_code, cmd)
 
-def find_files(collection_path: Path, LOG) -> List[Path]:
+def find_files(sourcedir: Path, LOG) -> List[Path]:
     """List files using git-annex-find.
     
     Only includes files present in local filesystem.
     This avoids rsync errors for missing files.
     """
-    os.chdir(collection_path)
+    os.chdir(sourcedir)
     cmd = 'git annex find'
     return [
         Path(path.strip())
