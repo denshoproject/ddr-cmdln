@@ -273,10 +273,12 @@ install-setuptools: install-virtualenv
 install-dependencies: install-core install-misc-tools
 	@echo ""
 	@echo "install-dependencies ---------------------------------------------------"
-	apt-get --assume-yes install python3-dev python3-pip python3-venv
-	apt-get --assume-yes install git-core git-annex libxml2-dev libxslt1-dev libz-dev pmount udisks2
-	apt-get --assume-yes install imagemagick libssl-dev libxml2 libxml2-dev libxslt1-dev
-	apt-get --assume-yes install $(LIBEXEMPI3_PKG)
+	apt-get --assume-yes install \
+	    python3-dev python3-pip python3-venv \
+	    git-core git-annex \
+	    libssl-dev libxml2 libxml2-dev libxslt1-dev libz-dev \
+	    pmount udisks2 \
+	    imagemagick $(LIBEXEMPI3_PKG)
 
 mkdirs: mkdir-ddr-cmdln
 
