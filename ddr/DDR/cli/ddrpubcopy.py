@@ -2,11 +2,11 @@ from datetime import datetime
 import logging
 import os
 from pathlib import Path
+import subprocess
 import sys
 from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 import click
-import envoy
 
 from DDR import config
 from DDR import docstore
@@ -67,15 +67,13 @@ def ddrpubcopy(fileroles, collection, destbase, force):
         roles = fileroles.replace(' ','').split(',')
     logprint(LOG, 'Copying {}'.format(', '.join(roles)))
     
-    files = find_files(collection)
+    # do the work
+    files = find_files(collection, LOG)
     to_copy = filter_files(files, roles, force, LOG)
-    errs = rsync_files(to_copy, collection, destdir, LOG)
-    if errs:
-        logprint(LOG, '%s FAILS:' % len(errs))
-        for path in errs:
-            logprint(LOG, path)
-        logprint(LOG, 'Note: Numbers represent rsync exit codes')
-    
+    num = len(to_copy)
+    for n,path_status in enumerate(rsync_files(to_copy, collection, destdir, LOG)):
+        path,status = path_status
+        logprint(LOG, f'{n}/{num} {status} {path}')
     finished = datetime.now()
     elapsed = finished - started
     logprint(LOG, 'DONE!')
@@ -102,17 +100,32 @@ def logprint_nots(filename: Path, msg: str):
     fileio.append_text(msg, str(filename))
     click.echo(msg.strip('\n'))
 
-def find_files(collection_path: Path) -> List[Path]:
+def _subproc(cmd):
+    """Run a command and yield stdout as it appears
+    """
+    popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True)
+    for stdout_line in iter(popen.stdout.readline, ""):
+        yield stdout_line
+    popen.stdout.close()
+    return_code = popen.wait()
+    if return_code:
+        raise subprocess.CalledProcessError(return_code, cmd)
+
+def find_files(collection_path: Path, LOG) -> List[Path]:
     """List files using git-annex-find.
     
     Only includes files present in local filesystem.
     This avoids rsync errors for missing files.
     """
     os.chdir(collection_path)
-    r0 = envoy.run('git annex find')
-    files = r0.std_out.strip().split('\n')
-    # strip out blank lines
-    return [Path(path) for path in files if path]
+    cmd = 'git annex find'
+    return [
+        Path(path.strip())
+        for path in [
+            line for line in _subproc(cmd.split())
+        ]
+        if path
+    ]
 
 def filter_files(files: List[Path],
                  roles: List[str],
@@ -154,16 +167,21 @@ def rsync_files(to_copy: List[Path],
                 collection_path: Path,
                 destdir: Path,
                 LOG: Path) -> List[str]:
+    """Rsync files from collection to S3-style bucket tmpdir
+    
+    Skip files already present in destdir
+    """
     os.chdir(collection_path)
     errs = []
     for n,f in enumerate(to_copy):
         src = collection_path / f
         src = f
-        dest = destdir / f
-        cmd = 'rsync --copy-links %s %s/' % (src, destdir)
-        logprint(LOG, '%s/%s %s' % (n, len(to_copy), cmd))
-        r1 = envoy.run(cmd)
-        if r1.status_code:
-            logprint(LOG, 'STATUS {}'.format(r1.status_code))
-            errs.append((r1.status_code,src))
-    return errs
+        dest = destdir / f.name
+        if dest.exists():
+            yield dest,'exists'
+        else:
+            cmd = 'rsync --copy-links %s %s/' % (src, destdir)
+            for x in _subproc(cmd.split()):
+                pass
+            yield dest,'rsync'
+    
