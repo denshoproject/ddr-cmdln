@@ -48,7 +48,17 @@ def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync):
     Example:
         ddrpubcopy mezzanine,transcript /var/www/media/ddr/ddr-test-123 /media/USBHARDDRIVE
     """
-    collection = Path(collection)
+    # validate inputs
+    if fileroles == 'all':
+        roles = identifier.VALID_COMPONENTS['role']
+    else:
+        roles = fileroles.replace(' ','').split(',')
+        for role in roles:
+            if role not in identifier.VALID_COMPONENTS['role']:
+                valid_roles = ','.join(identifier.VALID_COMPONENTS['role'])
+                click.echo(f'ERROR: File role "{role}" is invalid.')
+                click.echo(f'Valid roles: {valid_roles}, or all')
+                sys.exit(1)
     sourcedir = Path(sourcedir)
     destbase = Path(destbase)
     if destbase == sourcedir:
@@ -80,15 +90,6 @@ def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync):
     # if collection dir doesn't exist in destdir, mkdir
     if not destdir.exists():
         destdir.mkdir(parents=True)
-    
-    logprint(LOG, 'Source      %s' % collection)
-    logprint(LOG, 'Destination %s' % destdir)
-    
-    if fileroles == 'all':
-        roles = [role for fileroles in identifier.VALID_COMPONENTS['role']]
-    else:
-        roles = fileroles.replace(' ','').split(',')
-    logprint(LOG, 'Copying {}'.format(', '.join(roles)))
     
     # do the work
     logprint(LOG, f'Finding files')
@@ -178,8 +179,12 @@ def filter_files(files: List[Path],
         for path in files
     ])))
     oidentifiers = [
-        identifier.Identifier(oid, config.MEDIA_BASE)
-        for oid in oids
+        oi
+        for oi in [
+            identifier.Identifier(oid, config.MEDIA_BASE)
+            for oid in oids
+        ]
+        if oi.idparts['role'] in roles
     ]
     parents = {
         oid: oi.object()
