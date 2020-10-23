@@ -12,6 +12,7 @@ from DDR import config
 from DDR import docstore
 from DDR import fileio
 from DDR import identifier
+from DDR import storage
 from DDR import util
 
 logging.basicConfig(
@@ -26,7 +27,8 @@ logging.basicConfig(
 @click.argument('collection')
 @click.argument('destbase')
 @click.option('--force','-f',  is_flag=True, help='Force')
-def ddrpubcopy(fileroles, collection, destbase, force):
+@click.option('--b2sync','-b',  is_flag=True, help='Sync with Backblaze (requires environment vars)')
+def ddrpubcopy(fileroles, collection, destbase, force, b2sync):
     """ddrpubcopy - Copies binaries from collection to dest dir for publication.
     
     \b
@@ -48,7 +50,17 @@ def ddrpubcopy(fileroles, collection, destbase, force):
     if destbase == collection:
         click.echo('ERROR: Source and destination are the same!')
         sys.exit(1)
-    
+    # b2
+    B2KEYID = os.environ.get('B2KEYID')
+    B2APPKEY = os.environ.get('B2APPKEY')
+    B2BUCKET = os.environ.get('B2BUCKET')
+    if b2sync and not (B2KEYID and B2APPKEY and B2BUCKET):
+        click.echo(
+            'ERROR: b2sync requires environment variables ' \
+            'B2KEYID, B2APPKEY, B2BUCKET.'
+        )
+        sys.exit(1)
+    # prepare
     started = datetime.now()
     LOG = destbase / 'ddrpubcopy.log'
     
@@ -74,6 +86,13 @@ def ddrpubcopy(fileroles, collection, destbase, force):
     for n,path_status in enumerate(rsync_files(to_copy, collection, destdir, LOG)):
         path,status = path_status
         logprint(LOG, f'{n}/{num} {status} {path}')
+    if b2sync:
+        logprint(LOG, 'Backblaze: authenticating')
+        b2 = storage.Backblaze(B2KEYID, B2APPKEY, B2BUCKET)
+        logprint(LOG, f'Backblaze: syncing {destdir}')
+        for line in b2.sync_dir(destdir):
+            #logprint(LOG, line)
+            pass
     finished = datetime.now()
     elapsed = finished - started
     logprint(LOG, 'DONE!')

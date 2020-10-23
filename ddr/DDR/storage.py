@@ -1,13 +1,24 @@
+from contextlib import redirect_stdout
 from copy import deepcopy
+from datetime import datetime
+import io
 import logging
 logger = logging.getLogger(__name__)
 import os
+from pathlib import Path
 import shlex
+import sys
+import time
+from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
+from b2sdk.bucket import Bucket
+from b2sdk.v1 import B2Api, CompareVersionMode, InMemoryAccountInfo, ScanPoliciesManager
+from b2sdk.v1 import Synchronizer, SyncReport, parse_sync_folder
 import envoy
 import psutil
 
 from DDR import config
+from DDR.identifier import Identifier, VALID_COMPONENTS
 
 DEVICE_TYPES = ['hdd', 'usb']
 
@@ -484,3 +495,87 @@ def disk_space( mountpath ):
     @returns: OrderedDict total, used, free, percent
     """
     return psutil.disk_usage(mountpath)._asdict()
+
+
+class Backblaze():
+
+    def __init__(self, key_id, app_key, bucketname):
+        self.keyid = key_id
+        self.appkey = app_key
+        self.bucketname = bucketname
+        self.b2_api,self.bucket = self._authorize(
+            self.keyid, self.appkey, self.bucketname
+        )
+
+    def _authorize(self, keyid: str, appkey: str, bucketname: str):
+        b2_api = B2Api(InMemoryAccountInfo())
+        b2_api.authorize_account("production", keyid, appkey)
+        bucket = b2_api.get_bucket_by_name(bucketname,)
+        return b2_api,bucket
+
+    def upload_dir(self, srcdir: Path) -> List[Dict]:
+        """Upload a series of files to Backblaze
+        """
+        results = []
+        for filepath in srcdir.iterdir():
+            oi = identifier_from_path(filepath)
+            r = self.upload_file(filepath, oi)
+            print(r)
+            results.append(r)
+        return results
+
+    def upload_file(self, filepath: Path, oi: Identifier) -> Dict:
+        """Upload a single file to Backblaze
+        """
+        info = {
+            'id': oi.id,
+            'role': oi.idparts['role'],
+        }
+        result = self.bucket.upload_local_file(
+            local_file=str(filepath),
+            file_name=filepath.name,
+            file_infos=info,
+        )
+        return result
+
+    def sync_dir(self, srcdir: Path) -> str:
+        """Sync the entire tmpdir (see rsync_files) to Backblaze
+        """
+        dest = f'b2://{self.bucket.name}'
+        source = parse_sync_folder(str(srcdir), self.b2_api)
+        destination = parse_sync_folder(dest, self.b2_api)
+        synchronizer = Synchronizer(
+            max_workers=8,
+            policies_manager=ScanPoliciesManager(exclude_all_symlinks=True),
+            dry_run=False,
+            allow_empty_source=True,
+            compare_version_mode=CompareVersionMode.SIZE,
+            compare_threshold=1
+        )
+        # return stdout as synchronizer
+        with SyncReport(sys.stdout, no_progress=0) as reporter:
+            synchronizer.sync_folders(
+                source_folder=source,
+                dest_folder=destination,
+                now_millis=int(round(time.time() * 1000)),
+                reporter=reporter,
+            )
+            yield reporter
+
+    def list_files(self):
+        """List contents of S2-style bucket (expects no nesting)
+        """
+        files = []
+        for f,dir in self.bucket.ls(show_versions=False):
+            if dir:
+                fname = f'{dir}/{f.file_name}'
+            else:
+                fname = f.file_name
+            files.append(fname)
+        return files
+
+def oid_from_path(path: Path) -> str:
+    return path.name.replace(config.ACCESS_FILE_APPEND, '')
+
+def identifier_from_path(path: Path) -> Identifier:
+    return Identifier(oid_from_path(path))
