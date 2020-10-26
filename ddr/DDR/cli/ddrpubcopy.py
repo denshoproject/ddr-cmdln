@@ -47,6 +47,14 @@ def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync):
     \b
     Example:
         ddrpubcopy mezzanine,transcript /var/www/media/ddr/ddr-test-123 /media/USBHARDDRIVE
+    
+    \b
+    Use the --b2sync/-b flag to upload files to Backblaze after rsyncing them
+    to the dest dir.  In order to use this flag you must define the following
+    environment values:
+        B2KEYID   Backblaze Key ID
+        B2APPKEY  Backblaze Application Key
+        B2BUCKET  Backblaze target bucket name
     """
     # validate inputs
     if fileroles == 'all':
