@@ -61,6 +61,9 @@ LOG_BASE=/var/log/ddr
 
 DDR_REPO_BASE=/var/www/media/ddr
 
+MEDIA_BASE=/var/www
+MEDIA_ROOT=$(MEDIA_BASE)/media
+
 LIBEXEMPI3_PKG=
 ifeq ($(DEBIAN_CODENAME), stretch)
 	LIBEXEMPI3_PKG=libexempi3
@@ -91,7 +94,8 @@ ELASTICSEARCH=elasticsearch-7.3.1-amd64.deb
 TGZ_BRANCH := $(shell python3 bin/package-branch.py)
 TGZ_FILE=$(APP)_$(APP_VERSION)
 TGZ_DIR=$(INSTALL_CMDLN)/$(TGZ_FILE)
-TGZ_CMDLN_ASSETS=$(TGZ_DIR)/ddr-cmdln-assets
+TGZ_CMDLN=$(TGZ_DIR)/ddr-cmdln
+TGZ_CMDLN_ASSETS=$(TGZ_DIR)/ddr-cmdln/ddr-cmdln-assets
 TGZ_DEFS=$(TGZ_DIR)/ddr-defs
 TGZ_VOCAB=$(TGZ_DIR)/densho-vocab
 TGZ_MANUAL=$(TGZ_DIR)/ddr-manual
@@ -193,6 +197,12 @@ ddr-user:
 	-addgroup ddr vboxsf
 	printf "\n\n# ddrlocal: Activate virtualnv on login\nsource $(VIRTUALENV)/bin/activate\n" >> /home/ddr/.bashrc; \
 
+apt-backports:
+ifeq "$(DEBIAN_CODENAME)" "buster"
+	cp $(INSTALLDIR)/conf/ddr-buster-backports.list /etc/apt/sources.list.d/
+	apt-get update
+endif
+
 install-core:
 	apt-get --assume-yes install bzip2 curl gdebi-core git-core logrotate ntp p7zip-full wget
 
@@ -270,15 +280,14 @@ install-setuptools: install-virtualenv
 	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) setuptools
 
 
-install-dependencies: install-core install-misc-tools
+install-dependencies: apt-backports
 	@echo ""
 	@echo "install-dependencies ---------------------------------------------------"
-	apt-get --assume-yes install \
-	    python3-dev python3-pip python3-venv \
-	    git-core git-annex \
-	    libssl-dev libxml2 libxml2-dev libxslt1-dev libz-dev \
-	    pmount udisks2 \
-	    imagemagick $(LIBEXEMPI3_PKG)
+	apt-get --assume-yes install python3-dev python3-pip python3-venv
+	apt-get --assume-yes install libxml2-dev libxslt1-dev libz-dev pmount udisks2
+	apt-get --assume-yes install imagemagick libssl-dev libxml2 libxml2-dev libxslt1-dev
+	apt-get --assume-yes install $(LIBEXEMPI3_PKG)
+	apt-get -t buster-backports --assume-yes install git-annex git-core
 
 mkdirs: mkdir-ddr-cmdln
 
