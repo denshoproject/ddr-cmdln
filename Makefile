@@ -546,7 +546,7 @@ deb-buster:
 	--depends "python3-pip"   \
 	--depends "python3-venv"   \
 	--depends "udisks2"   \
-	--after-install "bin/after-install.sh"   \
+	--after-install "bin/fpm-after-install.sh"   \
 	--chdir $(INSTALL_CMDLN)   \
 	conf/ddrlocal.cfg=etc/ddr/ddrlocal.cfg   \
 	conf/README-logs=$(LOG_BASE)/README  \
