@@ -1,6 +1,18 @@
+# archivedotorg - Get entity file metadata from Internet Archive
+# 
+# NOTES/ASSUMPTIONS:
+# - All Densho items uploaded to IA are video interviews
+# - Each item has an original file (what we uploaded) and some derivatives.
+# - The original file is always an MPEG-2.
+# - For some items streaming has been disabled and the original file does not
+#   appear in publicly-available metadata.
+
+
+from collections import Counter
 import mimetypes
 mimetypes.init()
 import os
+from pathlib import Path
 from typing import List
 
 from bs4 import BeautifulSoup
@@ -23,7 +35,7 @@ SEGMENT_XML_URL = '{base}/{segmentid}/{segmentid}_files.xml'
 
 # https://archive.org/download/ddr-densho-1003-1-24/ddr-densho-1003-1-24-mezzanine-2b247c16c0.mp4
 FILE_DOWNLOAD_URL = '{base}/{segmentid}/{fileid}'
-FORMATS = ['mp3', 'mp4', 'mpg', 'ogv', 'png',]
+FORMATS = ['mp3', 'mp4', 'h.264', 'mpg', 'mpeg2', 'ogv', 'ogg video', 'png',]
 FIELDNAMES = ['sha1','size','length','height','width','title',]
 
 DUMMY_OBJECTS = {
@@ -116,27 +128,19 @@ class IAObject():
         """Returns filename of original master object
         
         Archive.org objects correspond to DDR *Entity* or *Segment*, not *File*.
-        Archive.org objects have files, each marked "original" or "derivative".
-        Many files marked "original" are not actually original, e.g. *.asr.srt.
-        One file marked "original" *should* be the one uploaded by Densho.
-        Files uploaded by Densho are in a limited set of formats.
-        
-        NO: <file name="ddr-densho-1000-210-1-mezzanine-a709bc73aa.asr.js" source="original">
-        NO: <file name="ddr-densho-1000-210-1-mezzanine-a709bc73aa.mp3" source="derivative">
-        YES: <file name="ddr-densho-1000-210-1-mezzanine-a709bc73aa.mpg" source="original">
+        Archive.org XML lists <file> tags which each contain an <original> tag.
+        Some files are second-order derivatives (e.g. thumbnail from MP3 make
+        from the original MPEG-2) and just getting the first or last <original>
+        may not be correct file.  Return the <original> that appears most often.
         
         @returns: str Filename
         """
-        files = [
-            tag for tag in soup('file', source='original')
-            if os.path.splitext(tag['name'])[1].replace('.','') in FORMATS
-        ]
-        if not files:
-            return None
-        if len(files) > 1:
-            raise Exception('Found multiple original files for %s' % self.id)
-        orig = files[0]
-        return orig['name']
+        counter = Counter()
+        for f in soup.findAll('file'):
+            if f.find('original'):
+                filename = f.find('original').string
+                counter[filename] += 1
+        return counter.most_common()[0][0]
     
     def _gather_files_meta(self, soup):
         """Populate self.files with info for supported formats
