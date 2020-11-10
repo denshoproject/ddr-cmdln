@@ -1,7 +1,18 @@
-from collections import OrderedDict
+# archivedotorg - Get entity file metadata from Internet Archive
+# 
+# NOTES/ASSUMPTIONS:
+# - All Densho items uploaded to IA are video interviews
+# - Each item has an original file (what we uploaded) and some derivatives.
+# - The original file is always an MPEG-2.
+# - For some items streaming has been disabled and the original file does not
+#   appear in publicly-available metadata.
+
+
+from collections import Counter
 import mimetypes
 mimetypes.init()
 import os
+from pathlib import Path
 from typing import List
 
 from bs4 import BeautifulSoup
@@ -24,7 +35,7 @@ SEGMENT_XML_URL = '{base}/{segmentid}/{segmentid}_files.xml'
 
 # https://archive.org/download/ddr-densho-1003-1-24/ddr-densho-1003-1-24-mezzanine-2b247c16c0.mp4
 FILE_DOWNLOAD_URL = '{base}/{segmentid}/{fileid}'
-FORMATS = ['mp3', 'mp4', 'mpg', 'ogv', 'png',]
+FORMATS = ['mp3', 'mp4', 'h.264', 'mpg', 'mpeg2', 'ogv', 'ogg video', 'png',]
 FIELDNAMES = ['sha1','size','length','height','width','title',]
 
 DUMMY_OBJECTS = {
@@ -71,14 +82,17 @@ class IAObject():
     http_status = -1
     original = ''
     mimetype = ''
-    files: OrderedDict = OrderedDict()
+    files = {}
     
-    def __repr__(self):
-        return "<%s.%s %s>" % (
-            self.__module__,
-            self.__class__.__name__,
-            self.id
-        )
+    def dict(self):
+        return {
+            'id': self.id,
+            'xml_url': self.xml_url,
+            'http_status': self.http_status,
+            'original': self.original,
+            'mimetype': self.mimetype,
+            'files': self.files,
+        }
 
     def __init__(self, oid, http_status=None, xml=None, *args, **kwargs):
         """Get segment file metadata from Archive.org
@@ -89,140 +103,68 @@ class IAObject():
         @returns: dict
         """
         self.id = oid
-        self.xml_url = _xml_url(self.id)
+        self.xml_url = SEGMENT_XML_URL.format(
+            base=IA_DOWNLOAD_URL,
+            segmentid=self.id
+        )
         if http_status and xml:
-            self.http_status,self.xml = http_status,xml
+            self.http_status,xml = http_status,xml
         else:
-            self.http_status,self.xml = get_xml(oid)
-        self.soup = BeautifulSoup(self.xml, 'html.parser')
-        self.original = self._get_original()
-        if not self.original:
-            # interview entities don't have any actual files
-            return None
-        self._gather_files_meta()
-        self._assign_mimetype()
-    
-    def _get_original(self):
+            r = requests.get(self.xml_url, timeout=config.REQUESTS_TIMEOUT)
+            if r.status_code == 200:
+                self.http_status,xml = r.status_code,r.text
+            else:
+                self.http_status,xml = r.status_code,''
+        if xml:
+            soup = BeautifulSoup(xml, 'html.parser')
+            self.original = self._get_original(soup)
+            if not self.original:
+                # interview entities don't have any actual files
+                return None
+            self._gather_files_meta(soup)
+            self.mimetype = mimetypes.guess_type(self.original)[0]
+        
+    def _get_original(self, soup):
         """Returns filename of original master object
         
         Archive.org objects correspond to DDR *Entity* or *Segment*, not *File*.
-        Archive.org objects have files, each marked "original" or "derivative".
-        Many files marked "original" are not actually original, e.g. *.asr.srt.
-        One file marked "original" *should* be the one uploaded by Densho.
-        Files uploaded by Densho are in a limited set of formats.
-        
-        NO: <file name="ddr-densho-1000-210-1-mezzanine-a709bc73aa.asr.js" source="original">
-        NO: <file name="ddr-densho-1000-210-1-mezzanine-a709bc73aa.mp3" source="derivative">
-        YES: <file name="ddr-densho-1000-210-1-mezzanine-a709bc73aa.mpg" source="original">
+        Archive.org XML lists <file> tags which each contain an <original> tag.
+        Some files are second-order derivatives (e.g. thumbnail from MP3 make
+        from the original MPEG-2) and just getting the first or last <original>
+        may not be correct file.  Return the <original> that appears most often.
         
         @returns: str Filename
         """
-        files = [
-            tag for tag in self.soup('file', source='original')
-            if os.path.splitext(tag['name'])[1].replace('.','') in FORMATS
-        ]
-        if not files:
-            return None
-        if len(files) > 1:
-            raise Exception('Found multiple original files for %s' % self.id)
-        orig = files[0]
-        return orig['name']
+        counter = Counter()
+        for f in soup.findAll('file'):
+            if f.find('original'):
+                filename = f.find('original').string
+                counter[filename] += 1
+        return counter.most_common()[0][0]
     
-    def _gather_files_meta(self):
+    def _gather_files_meta(self, soup):
         """Populate self.files with info for supported formats
         """
         for format_ in FORMATS:
-            for tag in self.soup.files.children:
+            for tag in soup.files.children:
                 if isinstance(tag, Tag) and (tag['name'].endswith(format_)):
-                    self.files[format_] = IAFile(self.id, format_, tag)
-    
-    def _assign_mimetype(self):
-        """Assign self the mimetype of the original file
-        """
-        self.mimetype = mimetypes.guess_type(self.original)[0]
-    
-    def original_file(self):
-        """
-        """
-        base,ext = os.path.splitext(self.original)
-        ext = ext.replace('.','')
-        return self.files[ext]
-    
-    def dict(self):
-        return {
-            'id': self.id,
-            'xml_url': self.xml_url,
-            'http_status': self.http_status,
-            'original': self.original,
-            'mimetype': self.mimetype,
-            'files': {
-                format_:f.dict()
-                for format_,f in self.files.items()
-            }
-        }
-
-class IAFile():
-    name = ''
-    format = ''
-    url = ''
-    mimetype = ''
-    encoding = ''
-    _fields: List[str] = []
-    
-    def __init__(self, oid, format_, tag):
-        self.name = tag['name']
-        self.format = format_
-        self.url = _file_url(oid, tag)
-        self.mimetype,self.encoding = mimetypes.guess_type(tag['name'])
-        for field in FIELDNAMES:
-            self._fields.append(field)
-            try:
-                setattr(self, field, tag.find(field).contents[0])
-            except AttributeError:
-                setattr(self, field, '')
-            except IndexError:
-                setattr(self, field, '')
-    
-    def __repr__(self):
-        return "<%s.%s %s>" % (
-            self.__module__,
-            self.__class__.__name__,
-            self.name
-        )
-
-    def dict(self):
-        data = {
-            'name': self.name,
-            'format': self.format,
-            'url': self.url,
-            'mimetype': self.mimetype,
-            'encoding': self.encoding,
-        }
-        for field in self._fields:
-            data[field] = getattr(self, field)
-        return data
-
-    
-def _xml_url(oid):
-    return SEGMENT_XML_URL.format(
-        base=IA_DOWNLOAD_URL,
-        segmentid=oid
-    )
-
-def get_xml(oid):
-    """HTTP request for IA metadata, returns HTTP code w data
-    
-    @param oid: str object ID
-    @returns: http_status,xml int,str
-    """
-    r = requests.get(_xml_url(oid), timeout=config.REQUESTS_TIMEOUT)
-    if r.status_code == 200:
-        return r.status_code,r.text
-    return r.status_code,''
-
-def _file_url(oid, tag):
-    return FILE_DOWNLOAD_URL.format(
-        base=IA_DOWNLOAD_URL,
-        segmentid=oid,
-        fileid=tag['name']
-    )
+                    mimetype,encoding = mimetypes.guess_type(tag['name'])
+                    f = {
+                        'name': tag['name'],
+                        'format': format_,
+                        'url': FILE_DOWNLOAD_URL.format(
+                            base=IA_DOWNLOAD_URL,
+                            segmentid=self.id,
+                            fileid=tag['name']
+                        ),
+                        'mimetype': mimetype,
+                        'encoding': encoding,
+                    }
+                    for field in FIELDNAMES:
+                        try:
+                            f[field] = tag.find(field).contents[0]
+                        except AttributeError:
+                            f[field] = ''
+                        except IndexError:
+                            f[field] = ''
+                    self.files[format_] = f
