@@ -42,12 +42,11 @@ def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync, rsync):
     ddr-pubcopy produces a very simple file layout:
         $BASE/$COLLECTION_ID/$FILENAME
 
+    \b
     An individual run of ddrpubcopy may copy from a subdirectory of a collection
     but these files will go into the collection's destination folder.
-    
-    \b
     Example:
-        ddrpubcopy mezzanine,transcript /var/www/media/ddr/ddr-test-123 /media/USBHARDDRIVE
+        $ ddrpubcopy mezzanine /var/www/media/ddr/ddr-test-123 /media/USBHARDDRIVE
     
     \b
     Use the --b2sync/-b flag to upload files to Backblaze after rsyncing them
@@ -56,6 +55,19 @@ def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync, rsync):
         B2KEYID   Backblaze Key ID
         B2APPKEY  Backblaze Application Key
         B2BUCKET  Backblaze target bucket name
+    Example:
+        $ export  B2KEYID=REDACTED
+        $ export B2APPKEY=REDACTED
+        $ export B2BUCKET=REDACTED
+        $ ddrpubcopy mezzanine,transcript /var/www/media/ddr/ddr-test-123 \\
+            /media/USBHARDDRIVE --b2sync
+    
+    \b
+    Use the --rsync/-r arg to rsync files to another server after rsyncing them
+    to the dest dir.  You will be asked for your password when rsyncing starts.
+    Example:
+        $ ddrpubcopy mezzanine,transcript /var/www/media/ddr/ddr-test-123 \\
+            /media/USBHARDDRIVE --rsync=USER@HOST:/var/www/media
     """
     # validate inputs
     if fileroles == 'all':
