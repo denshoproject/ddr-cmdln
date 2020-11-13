@@ -28,7 +28,8 @@ logging.basicConfig(
 @click.argument('destbase')
 @click.option('--force','-f',  is_flag=True, help='Force')
 @click.option('--b2sync','-b',  is_flag=True, help='Sync with Backblaze (requires environment vars)')
-def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync):
+@click.option('--rsync','-r',  help='Rsync to specified target')
+def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync, rsync):
     """ddrpubcopy - Copies binaries from source dir to dest dir for publication.
     
     \b
@@ -72,6 +73,12 @@ def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync):
     if destbase == sourcedir:
         click.echo('ERROR: Source and destination are the same!')
         sys.exit(1)
+    try:
+        sourcedir_oi = identifier.Identifier(path=sourcedir)
+        cidentifier = sourcedir_oi.collection()
+    except:
+        click.echo('ERROR: Source dir must be part of a DDR collection.')
+        sys.exit(1)
     # b2
     B2KEYID = os.environ.get('B2KEYID')
     B2APPKEY = os.environ.get('B2APPKEY')
@@ -81,12 +88,6 @@ def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync):
             'ERROR: b2sync requires environment variables ' \
             'B2KEYID, B2APPKEY, B2BUCKET.'
         )
-        sys.exit(1)
-    try:
-        sourcedir_oi = identifier.Identifier(path=sourcedir)
-        cidentifier = sourcedir_oi.collection()
-    except:
-        click.echo('ERROR: Source dir must be part of a DDR collection.')
         sys.exit(1)
         
     # prepare
@@ -107,7 +108,9 @@ def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync):
     to_copy = filter_files(files, roles, force, LOG)
     if to_copy:
         num = len(to_copy)
-        for n,path_status in enumerate(rsync_files(to_copy, cidentifier.path_abs(), destdir, LOG)):
+        for n,path_status in enumerate(
+                rsync_to_tmpdir(to_copy, cidentifier.path_abs(), destdir, LOG)
+        ):
             path,status = path_status
             logprint(LOG, f'{n}/{num} {status} {path}')
         logprint(LOG, f'Copied to {destdir}')
@@ -118,6 +121,10 @@ def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync):
             for line in b2.sync_dir(destdir):
                 #logprint(LOG, line)
                 pass
+        if rsync:
+            logprint(LOG, f'Rsyncing')
+            for output in rsync_to_target(destdir, rsync, LOG):
+                logprint(LOG, f'{output}')
     finished = datetime.now()
     elapsed = finished - started
     logprint(LOG, 'DONE!')
@@ -211,7 +218,7 @@ def filter_files(files: List[Path],
     logprint(LOG, '%s files' % len(paths))
     return paths
 
-def rsync_files(to_copy: List[Path],
+def rsync_to_tmpdir(to_copy: List[Path],
                 collection_path: Path,
                 destdir: Path,
                 LOG: Path) -> List[str]:
@@ -232,4 +239,15 @@ def rsync_files(to_copy: List[Path],
             for x in _subproc(cmd.split()):
                 pass
             yield dest,'rsync'
-    
+
+def rsync_to_target(
+        tmpdir: Path,
+        target: str,
+        LOG: Path) -> List[str]:
+    """Rsync from tmpdir/COLLECTIONID to target
+    """
+    os.chdir(tmpdir)
+    cmd = f'rsync -avz {tmpdir} {target}'
+    logprint(LOG, cmd)
+    for x in _subproc(cmd.split()):
+        yield x
