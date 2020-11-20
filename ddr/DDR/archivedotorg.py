@@ -116,12 +116,12 @@ class IAObject():
             else:
                 self.http_status,xml = r.status_code,''
         if xml:
-            soup = BeautifulSoup(xml, 'html.parser')
-            self.original = self._get_original(soup)
+            self.soup = BeautifulSoup(xml, 'html.parser')
+            self.original = self._get_original(self.soup)
             if not self.original:
                 # interview entities don't have any actual files
                 return None
-            self._gather_files_meta(soup)
+            self._gather_files_meta(self.soup)
             self.mimetype = mimetypes.guess_type(self.original)[0]
         
     def _get_original(self, soup):
