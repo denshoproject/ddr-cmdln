@@ -47,7 +47,7 @@ class SigIdentifier(identifier.Identifier):
     
     NOTE: Reads object JSON file during construction.
     """
-    model = None
+    model = ''
     public = None
     status = None
     sort = 999999

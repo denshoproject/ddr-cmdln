@@ -1,4 +1,5 @@
 import json
+from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 from DDR import dvcs
 
@@ -15,10 +16,10 @@ class Module(object):
         if self.module and self.module.__file__:
             self.path = self.module.__file__.replace('.pyc', '.py')
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s.%s '%s'>" % (self.__module__, self.__class__.__name__, self.path)
     
-    def field_names(self):
+    def field_names(self) -> List[str]:
         """Returns list of module fieldnames.
         
         @returns: list of field names
@@ -29,7 +30,7 @@ class Module(object):
         ]
         return field_names
     
-    def required_fields(self, exceptions=[]):
+    def required_fields(self, exceptions: List[str]=[]) -> List[str]:
         """Reads module.FIELDS and returns names of required fields.
         
         TODO refactor to add context (e.g. csv, form, elasticsearch, etc)
@@ -56,7 +57,7 @@ class Module(object):
             and (field['name'] not in exceptions)
         ]
 
-    def csv_export_fields(self, required_only=False):
+    def csv_export_fields(self, required_only: bool=False) -> List[str]:
         """Returns list of module fields marked for CSV export
         
         @param required_only: boolean
@@ -73,7 +74,7 @@ class Module(object):
             if not ('ignore' in export_directives[f])
         ]
     
-    def is_valid(self):
+    def is_valid(self) -> Tuple[bool,str]:
         """Indicates whether this is a proper module
     
         TODO determine required fields for models
@@ -96,7 +97,7 @@ class Module(object):
             return False,'%s.FIELDS is not a list.' % self.module.__name__
         return True,'ok'
     
-    def function(self, function_name, value):
+    def function(self, function_name: str, value: Optional[Any]) -> Optional[Any]:
         """If named function is present in module and callable, pass value to it and return result.
         
         Among other things this may be used to prep data for display, prepare it
@@ -112,7 +113,7 @@ class Module(object):
             value = function(value)
         return value
     
-    def labels_values(self, document):
+    def labels_values(self, document: object) -> List[Any]:
         """Apply display_{field} functions to prep object data for the UI.
         
         Certain fields require special processing.  For example, structured data
@@ -136,16 +137,16 @@ class Module(object):
                 lv.append( {'label':label, 'value':value,} )
         return lv
     
-    def field_choices(self, field_name):
+    def field_choices(self, field_name: str) -> Optional[List[Tuple[str,str]]]:
         for f in self.module.FIELDS:
             if (f['name'] == field_name) and (f['form'].get('choices')):
                 return f['form']['choices']
         return None
     
-    def _parse_commit(self, text):
+    def _parse_commit(self, text: str) -> Optional[str]:
         return text.strip().split(' ')[0]
     
-    def document_commit(self, document):
+    def document_commit(self, document: object) -> Optional[str]:
         doc_metadata = getattr(document, 'object_metadata', {})
         if doc_metadata:
             # defs_commit used to be called models_commit
@@ -154,10 +155,12 @@ class Module(object):
                 document_commit_raw = doc_metadata.get('models_commit','')
             return self._parse_commit(document_commit_raw)
         return None
-
+    
+    # TODO type hints
     def module_commit(self):
         return self._parse_commit(dvcs.latest_commit(self.path))
-        
+    
+    # TODO type hints
     def cmp_model_definition_commits(self, document_commit, module_commit):
         """Indicate document's model defs are newer or older than module's.
         
@@ -184,7 +187,8 @@ class Module(object):
             module_commit
         )
     
-    def cmp_model_definition_fields(self, document_json):
+    def cmp_model_definition_fields(self,
+                                    document_json: str) -> Dict[str,List[str]]:
         """Indicate whether module adds or removes fields from document
         
         @param document_json: Raw contents of document *.json file

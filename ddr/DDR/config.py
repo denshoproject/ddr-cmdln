@@ -1,6 +1,7 @@
 import configparser
 import os
 import sys
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import pytz
 
@@ -11,25 +12,25 @@ CONFIG_FILES = [
 ]
 
 class NoConfigError(Exception):
-    def __init__(self, value):
+    def __init__(self, value: str):
         self.value = value
-    def __str__(self):
+    def __str__(self) -> str:
         return repr(self.value)
 
-def read_configs(paths):
+def read_configs(paths: list) -> tuple:
     cfg = configparser.RawConfigParser()
     configs_read = cfg.read(paths)
     if not configs_read:
         raise NoConfigError('No config file!')
     return cfg,configs_read
 
-def _parse_alt_timezones(text):
+def _parse_alt_timezones(text: str) -> dict:
     """Parses contents of [cmdln]alt_timezones
     Format: ORG:TIMEZONENAME;ORG:TIMEZONENAME
     Example: hmwf:America/Boise;janm:America/Los_Angeles
     NOTE: TIMEZONENAMEs must be valid IANA timezones.
     """
-    data = {}
+    data: Dict[str, Any] = {}
     for item in [item for item in text.strip().split(';') if item]:
         key,val = item.strip().split(':')
         if key not in list(data.keys()):
@@ -50,7 +51,7 @@ REPO_MODELS_PATH = CONFIG.get('cmdln','repo_models_path')
 if REPO_MODELS_PATH not in sys.path:
     sys.path.append(REPO_MODELS_PATH)
 
-APP_METADATA = {}
+APP_METADATA: Dict[str, str] = {}
 
 MEDIA_BASE = CONFIG.get('cmdln','media_base')
 # Location of Repository 'ddr' repo, which should contain repo_models
@@ -139,6 +140,6 @@ VOCABS_URL = CONFIG.get('cmdln', 'vocabs_url')
 VOCABS_PRECOORD_PATH_SEP = ' -- '
 
 # vocab.get_vocabs will cache data here
-VOCABS = {}  # keys = vocab keyword
+VOCABS: Dict[str, str] = {}  # keys = vocab keyword
 
 TESTING_BASE_DIR = '/tmp/ddr-cmdln-testing'

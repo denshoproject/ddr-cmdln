@@ -63,23 +63,8 @@ def test_iaobject_get():
     )
     out0 = str(o0)
     out1 = o0.xml_url
-    assert out0 == '<DDR.archivedotorg.IAObject ddr-densho-1000-1-1>'
+    print(f'out1 {out1}')
     assert out1 == 'https://archive.org/download/ddr-densho-1000-1-1/ddr-densho-1000-1-1_files.xml'
-
-@pytest.mark.skipif(no_iarchive(), reason=NO_IARCHIVE_ERR)
-def test_file_url():
-    FORMATS = archivedotorg.FORMATS
-    o = archivedotorg.IAObject(
-        'ddr-densho-1000-1-1', 200, SEGMENT_XML
-    )
-    for tag in o.soup('file', source='original'):
-        if os.path.splitext(tag['name'])[1].replace('.','') in FORMATS:
-            pass
-    out = archivedotorg._file_url(o.id, tag)
-    expected = 'https://archive.org/download/ddr-densho-1000-1-1/ddr-densho-1000-1-1_meta.xml'
-    assert out == expected
-
-#def test_iaobject_get_xml():
 
 @pytest.mark.skipif(no_iarchive(), reason=NO_IARCHIVE_ERR)
 def test_iaobject_get_original():
@@ -87,35 +72,21 @@ def test_iaobject_get_original():
         'ddr-densho-1000-1-1', 200, SEGMENT_XML
     )
     o.soup = BeautifulSoup(SEGMENT_XML, 'html.parser')
-    out0 = o._get_original()
+    out0 = o._get_original(o.soup)
     expected0 = 'ddr-densho-1000-1-1-mezzanine-0762419626.mpg'
     assert out0 == expected0
-    
-    o.id = 'ddr-densho-1000-1-1'
-    o.soup = BeautifulSoup(SEGMENT_XML_NO_FILES, 'html.parser')
-    out1 = o._get_original()
-    expected1 = None
-    assert out1 == expected1
-    
-    with pytest.raises(Exception):
-        o.id = 'ddr-densho-1000-1-1',
-        o.soup = BeautifulSoup(SEGMENT_XML_MULT_FILES, 'html.parser')
-        out2 = o._get_original()
 
 @pytest.mark.skipif(no_iarchive(), reason=NO_IARCHIVE_ERR)
 def test_iaobject_original_file():
     o = archivedotorg.IAObject(
         'ddr-densho-1000-1-1', 200, SEGMENT_XML
     )
-    o.xml_url = archivedotorg._xml_url(o.id)
     o.xml = SEGMENT_XML
-    o.soup = BeautifulSoup(SEGMENT_XML, 'html.parser')
-    o.original = o._get_original()
-    o._gather_files_meta()
-    o._assign_mimetype()
+    o.original = o._get_original(o.soup)
+    o._gather_files_meta(o.soup)
     print('o.original %s' % o.original)
     print('o.files %s' % o.files)
-    f = o.original_file()
+    f = o.original
     print('f %s' % f)
     out = str(f)
     expected = '<DDR.archivedotorg.IAFile ddr-densho-1000-1-1-mezzanine-0762419626.mpg>'

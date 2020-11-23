@@ -6,6 +6,7 @@ import importlib
 import os
 import re
 import string
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from urllib.parse import urlparse
 
 
@@ -19,7 +20,7 @@ class Definitions():
     """
 
     @staticmethod
-    def models(identifiers):
+    def models(identifiers: list) -> List[str]:
         # Models in this Repository
         models = [i['model'] for i in identifiers]
         models.reverse()
@@ -490,7 +491,7 @@ INHERITABLE_FIELDS = Definitions.inheritable_fields(MODULES)
 
 # ----------------------------------------------------------------------
 
-def render_models_digraph(output_path):
+def render_models_digraph(output_path: str):
     """Generates DAG of model child->parent relationships
     
     @param path: str Absolute path to output file
@@ -514,7 +515,7 @@ def render_models_digraph(output_path):
     return g.render(filename)
 
 
-def identify_object(text, patterns):
+def identify_object(text: str, patterns: list):
     """Split ID, path, or URL into model and tokens and assign to Identifier
     
     Like Django URL router, look for pattern than matches the given text.
@@ -543,7 +544,7 @@ def identify_object(text, patterns):
     #        raise Exception('Invalid ID keyword: "%s"' % val)
     return model,memo,groupdict
 
-def identify_filepath(path):
+def identify_filepath(path: str) -> Optional[str]:
     """Indicates file role or if path is an access file.
     
     TODO use VALID_COMPONENTS or similar rather than hard-coding
@@ -662,7 +663,7 @@ def format_url(i, model, url_type, templates=URL_TEMPLATES):
             pass
     raise IdentifierFormatException('Could not format URL for %s' % i.parts)
 
-def matches_pattern(text, patterns):
+def matches_pattern(text: str, patterns: list) -> Dict[str, int]:
     """True if text matches one of patterns
     
     Used for telling what kind of pattern (id, path, url) an arg is.
@@ -680,28 +681,28 @@ def matches_pattern(text, patterns):
             return idparts
     return {}
 
-def _is_id(text):
+def _is_id(text: str) -> Dict[str, int]:
     """
     @param text: str
     @returns: dict of idparts including model
     """
     return matches_pattern(text, ID_PATTERNS)
 
-def _is_path(text):
+def _is_path(text: str) -> Dict[str, int]:
     """
     @param text: str
     @returns: dict of idparts including model
     """
     return matches_pattern(text, PATH_PATTERNS)
 
-def _is_url(text):
+def _is_url(text: str) -> Dict[str, int]:
     """
     @param text: str
     @returns: dict of idparts including model
     """
     return matches_pattern(text, URL_PATTERNS)
 
-def _is_abspath(text):
+def _is_abspath(text: str) -> bool:
     if isinstance(text, str) and os.path.isabs(text):
         return True
     return False
@@ -732,7 +733,7 @@ def _parse_args_kwargs(keys, args, kwargs):
                 blargs[key] = val
     return blargs
 
-def module_for_name(module_name):
+def module_for_name(module_name: str):
     """Returns specified module.
     
     @param module_name: str
@@ -741,7 +742,7 @@ def module_for_name(module_name):
     # load the module, will raise ImportError if module cannot be loaded
     return importlib.import_module(module_name)
 
-def class_for_name(module_name, class_name):
+def class_for_name(module_name: str, class_name: str):
     """Returns specified class from specified module.
     
     @param module_name: str
@@ -754,12 +755,12 @@ def class_for_name(module_name, class_name):
     )
     return c
 
-def _field_names(template):
+def _field_names(template: str) -> List[Optional[str]]:
     """Extract field names from string formatting template.
     """
     return [v[1] for v in string.Formatter().parse(template)]
 
-def first_id(model, i):
+def first_id(model: str, i):
     """Returns first child Identifier in series
     
     No guarantee that it's a legal Identifier...
@@ -775,7 +776,7 @@ def first_id(model, i):
     new = Identifier(parts=parts)
     return new
 
-def max_id(model, identifiers):
+def max_id(model: str, identifiers):
     """Returns highest *existing* ID for the specied model
     
     @param model: str
@@ -806,7 +807,7 @@ def max_id(model, identifiers):
     parts[component] = max_component
     return Identifier(parts=parts)
 
-def add_ids(num_new, model, identifiers, startwith=None):
+def add_ids(num_new: int, model: str, identifiers, startwith: Optional[int]=None):
     """Add {num} {model} IDs to {list} starting with {n}; complain if duplicates
     
     >>> model = 'entity'
@@ -889,14 +890,14 @@ KWARG_KEYS = [
 class Identifier(object):
     raw = None
     method = None
-    model = None
-    parts = OrderedDict()
+    model = ''
+    parts: Any = OrderedDict()
     basepath = None
     id = None
-    id_sort = None
+    id_sort = 0
     
     @staticmethod
-    def wellformed(idtype, text, models=MODELS):
+    def wellformed(idtype: str, text: str, models: list=MODELS) -> Dict[str, int]:
         """Checks if text is well-formed ID of specified type and (optionally) model.
         
         @param idtype: str one of ['id', 'path', 'url']
@@ -904,7 +905,7 @@ class Identifier(object):
         @param models: list
         @returns: dict (populated if well-formed)
         """
-        idparts = None
+        idparts = {}
         if idtype == 'id': idparts = _is_id(text)
         elif idtype == 'path': idparts = _is_path(text)
         elif idtype == 'url': idparts = _is_url(text)
@@ -940,7 +941,7 @@ class Identifier(object):
         else:
             raise InvalidInputException('Could not grok Identifier input: %s' % blargs)
 
-    def _from_id(self, object_id, base_path=None):
+    def _from_id(self, object_id: str, base_path: str=None):
         """Make Identifier from object ID.
         
         >>> Identifier(id='ddr-testing-123-456')
@@ -997,7 +998,7 @@ class Identifier(object):
         if base_path and not self.basepath:
             self.basepath = base_path
     
-    def _from_path(self, path_abs, base_path=None):
+    def _from_path(self, path_abs: str, base_path: str=None):
         """Make Identifier from absolute path.
         
         >>> path = '/tmp/ddr-testing-123/files/ddr-testing-123-456/entity.json
@@ -1023,7 +1024,7 @@ class Identifier(object):
         set_idparts_sort(self, VALID_COMPONENTS)
         self.id = format_id(self, self.model)
     
-    def _from_url(self, url, base_path=None):
+    def _from_url(self, url: str, base_path: str=None):
         """Make Identifier from URL or URI.
         
         >>> Identifier(url='http://ddr.densho.org/ddr/testing/123/456')
@@ -1057,28 +1058,32 @@ class Identifier(object):
         if base_path and not self.basepath:
             self.basepath = base_path
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s.%s %s:%s>" % (self.__module__, self.__class__.__name__, self.model, self.id)
     
     # NOTE: uses functools.total_ordering to derive the rest of rich comparisons
     # from __eq__ and __lt__.  Might be a performance problem.
     # https://docs.python.org/2/library/functools.html#functools.total_ordering
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """Enable Pythonic sorting"""
+        if not isinstance(other, Identifier):
+            return NotImplemented
         return self.path_abs() == other.path_abs()
     
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         """Enable Pythonic sorting"""
+        if not isinstance(other, Identifier):
+            return NotImplemented
         return self._key() < other._key()
     
-    def _key(self):
+    def _key(self) -> int:
         """Key for Pythonic object sorting.
         Integer components are returned as ints, enabling natural sorting.
         """
         return self.id_sort
 
     @staticmethod
-    def nextable(model):
+    def nextable(model: str) -> bool:
         if model in NEXTABLE_MODELS:
             return True
         return False
@@ -1097,21 +1102,21 @@ class Identifier(object):
         partsd[k] = v + 1
         return Identifier(parts=partsd, base_path=self.basepath)
     
-    def components(self):
+    def components(self) -> List[Union[str, int]]:
         """Model and parts of the ID as a list.
         """
         parts = [val for val in self.parts.values()]
         parts.insert(0, self.model)
         return parts
 
-    def fields_module(self, mappings=MODEL_REPO_MODELS):
+    def fields_module(self, mappings: dict=MODEL_REPO_MODELS) -> object:
         """Identifier's fields definitions module from repo_models.
         """
         return module_for_name(
             mappings[self.model]['module']
         )
         
-    def object_class(self, mappings=MODEL_CLASSES):
+    def object_class(self, mappings: dict=MODEL_CLASSES) -> object:
         """Identifier's object class according to mappings.
         """
         return class_for_name(
@@ -1128,17 +1133,17 @@ class Identifier(object):
             return self.object_class(mappings).new(self)
         return self.object_class(mappings).from_identifier(self)
 
-    def organization_id(self):
+    def organization_id(self) -> str:
         return format_id(self, 'organization')
     
-    def collection_id(self):
+    def collection_id(self) -> str:
         """ID of the collection to which the Identifier belongs, if any.
         """
         if not self.model in COLLECTION_MODELS:
             raise Exception('%s objects do not have collection IDs' % self.model.capitalize())
         return format_id(self, 'collection')
     
-    def collection_path(self):
+    def collection_path(self) -> str:
         """Absolute path of the collection to which the Identifier belongs, if any.
         """
         if not self.model in COLLECTION_MODELS:
@@ -1152,7 +1157,7 @@ class Identifier(object):
         """
         return self.__class__(id=self.collection_id(), base_path=self.basepath)
     
-    def parent_id(self, stubs=False):
+    def parent_id(self, stubs: bool=False) -> str:
         """ID of the Identifier's parent, if any.
         
         @param stubs: boolean Whether or not to include Stub objects.
@@ -1160,9 +1165,9 @@ class Identifier(object):
         parent = self.parent(stubs=stubs)
         if parent:
             return parent.id
-        return None
+        return ''
     
-    def parent_path(self, stubs=False):
+    def parent_path(self, stubs: bool=False) -> str:
         """Absolute path to parent object
         
         @param stubs: boolean Whether or not to include Stub objects.
@@ -1170,9 +1175,9 @@ class Identifier(object):
         parent = self.parent(stubs=stubs)
         if parent:
             return parent.path_abs()
-        return None
+        return ''
 
-    def _parent_parts(self):
+    def _parent_parts(self) -> dict:
         return {
             k:v
             for k,v in [
@@ -1180,12 +1185,12 @@ class Identifier(object):
             ][:-1]
         }
 
-    def _parent_models(self, stubs=False):
+    def _parent_models(self, stubs: bool=False) -> List[list]:
         if stubs:
             return PARENTS_ALL.get(self.model, [])
         return PARENTS.get(self.model, [])
         
-    def parent(self, stubs=False):
+    def parent(self, stubs: bool=False):
         """Parent of the Identifier
         
         @param stub: boolean An archival object not just a Stub
@@ -1200,7 +1205,7 @@ class Identifier(object):
                 pass
         return None
     
-    def lineage(self, stubs=False):
+    def lineage(self, stubs: bool=False) -> List[Any]:
         """Identifier's lineage, starting with the Identifier itself.
         
         @param stubs: boolean Whether or not to include Stub objects.
@@ -1212,12 +1217,12 @@ class Identifier(object):
             identifiers.append(i)
         return identifiers
     
-    def child_models(self, stubs=False):
+    def child_models(self, stubs: bool=False) -> List[Any]:
         if stubs:
             return CHILDREN_ALL.get(self.model, [])
         return CHILDREN.get(self.model, [])
         
-    def child(self, model, idparts, base_path=None):
+    def child(self, model: str, idparts: dict, base_path: str=''):
         """Returns a *new* child Identifier with specified properties.
         
         Does not return an existing child of the Identifier!
@@ -1235,7 +1240,7 @@ class Identifier(object):
                 child_parts[key] = val
         return self.__class__(child_parts, base_path=base_path)
 
-    def path_abs(self, append=None):
+    def path_abs(self, append: str='') -> str:
         """Return absolute path to object with optional file appended.
         
         @param append: str File descriptor. Must be present in ADDITIONAL_PATHS!
@@ -1256,10 +1261,10 @@ class Identifier(object):
                 # to the end of the path
                 path = os.path.join(path, filename)
             else:
-                return None
+                return ''
         return os.path.normpath(path)
     
-    def path_rel(self, append=None):
+    def path_rel(self, append: str='') -> str:
         """Return relative path to object with optional file appended.
         
         Note: paths relative to repository, intended for use in Git commands.
@@ -1282,7 +1287,7 @@ class Identifier(object):
             path = os.path.normpath(path)
         return path
     
-    def urlpath(self, url_type):
+    def urlpath(self, url_type: str) -> str:
         """Return object URL or URI.
         
         @param url_type: str 'public' or 'editor'

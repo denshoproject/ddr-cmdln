@@ -6,6 +6,7 @@
 
                           # LICENSE  PyPy
 
+b2sdk                     # MIT      y
 beautifulsoup4==4.8.2     # MIT
 click==7.1.1              # BSD      y
 deepdiff==3.3.0           # MIT      y
@@ -24,5 +25,6 @@ requests==2.23.0          # Apache   y
 # development
 
 bpython
+mypy
 pytest
 pytest-cov

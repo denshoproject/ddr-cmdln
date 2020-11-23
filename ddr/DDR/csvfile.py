@@ -1,10 +1,11 @@
 from collections import OrderedDict
 import logging
+from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 from DDR import identifier
 
 
-def make_row_dict(headers, row):
+def make_row_dict(headers: List[str], row: List[str]) -> OrderedDict:
     """Turns CSV row into a dict with the headers as keys
     
     >>> headers0 = ['id', 'created', 'lastmod', 'title', 'description']
@@ -20,7 +21,11 @@ def make_row_dict(headers, row):
         d[headers[n]] = _strip_str(row[n])
     return d
     
-def make_rowds(rows, row_start=0, row_end=9999999):
+def make_rowds(
+        rows: List[List[str]],
+        row_start: int=0,
+        row_end: int=9999999
+):  # -> Tuple[List[str], List[OrderedDict[str,str]], List[str]]:
     """Takes list of rows (from csv lib) and turns into list of rowds (dicts)
     
     @param rows: list
@@ -38,7 +43,7 @@ def make_rowds(rows, row_start=0, row_end=9999999):
             errors.append(msg)
     return headers,rowds,errors
     
-def make_rows(rowds):
+def make_rows(rowds: List[Dict[str,str]]) -> Tuple[List[str], List[List[str]]]:
     """Takes list of rowds (dicts) and turns into list of rows (for writing CSV)
     
     @param rowds: list of dicts
@@ -48,12 +53,15 @@ def make_rows(rowds):
     rows = [list(rowd.values()) for rowd in rowds]
     return headers,rows
 
-def _strip_str(data):
+def _strip_str(data: str) -> str:
     if isinstance(data, str):
         data = data.strip()
     return data
 
-def validate_headers(headers, field_names, exceptions, additional):
+def validate_headers(headers: List[str],
+                     field_names: List[str],
+                     exceptions: List[str],
+                     additional: List[str]) -> Dict[str, List[str]]:
     """Validates headers and crashes if problems.
     
     >>> model = 'entity'
@@ -75,19 +83,19 @@ def validate_headers(headers, field_names, exceptions, additional):
     @param additional: List of nonrequired fields which may appear
     """
     
-    def ignore_header(header):
+    def ignore_header(header: str) -> bool:
         if header.isupper():
             return True
         return False
     
-    def header_is_bad(header):
+    def header_is_bad(header: str) -> bool:
         if (header not in field_names) \
         and (header not in additional) \
         and (not ignore_header(header)):
             return True
         return False
     
-    def header_or_empty(header):
+    def header_or_empty(header: str) -> str:
         # mark blank headers as [blank]
         if header:
             return header
@@ -116,7 +124,8 @@ def validate_headers(headers, field_names, exceptions, additional):
         errs['Bad headers'] = bad_headers
     return errs
     
-def account_row(required_fields, rowd):
+def account_row(required_fields: List[str],
+                rowd: Dict[str,str]) -> List[str]:
     """Returns list of any required fields that are missing from rowd.
     
     >>> required_fields = ['id', 'title']
@@ -136,14 +145,14 @@ def account_row(required_fields, rowd):
         if (f not in list(rowd.keys())) or (not rowd.get(f,None))
     ]
 
-def validate_id(text):
+def validate_id(text: str) -> Union[identifier.Identifier, bool]:
     try:
         i = identifier.Identifier(id=text)
         return i
     except:
         pass
     return False
-    
+
 def check_row_values(module, headers, valid_values, rowd):
     """Examines row values and returns names of invalid fields.
     
