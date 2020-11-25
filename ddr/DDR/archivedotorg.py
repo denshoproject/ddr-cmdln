@@ -140,11 +140,14 @@ class IAObject():
             if f.find('original'):
                 filename = f.find('original').string
                 counter[filename] += 1
-        return counter.most_common()[0][0]
+        if counter.most_common():
+            return counter.most_common()[0][0]
+        return None
     
     def _gather_files_meta(self, soup):
         """Populate self.files with info for supported formats
         """
+        self.files = {}
         for format_ in FORMATS:
             for tag in soup.files.children:
                 if isinstance(tag, Tag) and (tag['name'].endswith(format_)):
