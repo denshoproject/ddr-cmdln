@@ -147,6 +147,7 @@ class IAObject():
     def _gather_files_meta(self, soup):
         """Populate self.files with info for supported formats
         """
+        self.files = {}
         for format_ in FORMATS:
             for tag in soup.files.children:
                 if isinstance(tag, Tag) and (tag['name'].endswith(format_)):
