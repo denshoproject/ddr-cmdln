@@ -130,7 +130,7 @@ def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync, rsync):
             logprint(LOG, 'Backblaze: authenticating')
             b2 = storage.Backblaze(B2KEYID, B2APPKEY, B2BUCKET)
             logprint(LOG, f'Backblaze: syncing {destdir}')
-            for line in b2.sync_dir(destdir):
+            for line in b2.sync_dir(destdir, basedir=cidentifier.id):
                 #logprint(LOG, line)
                 pass
         if rsync:

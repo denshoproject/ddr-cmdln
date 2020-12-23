@@ -538,10 +538,11 @@ class Backblaze():
         )
         return result
 
-    def sync_dir(self, srcdir: Path) -> str:
+    def sync_dir(self, srcdir: Path, basedir: Optional[Path]) -> str:
         """Sync the entire tmpdir (see rsync_files) to Backblaze
         """
-        dest = f'b2://{self.bucket.name}'
+        destpath = Path(self.bucket.name) / basedir
+        dest = f'b2://{destpath}'
         source = parse_sync_folder(str(srcdir), self.b2_api)
         destination = parse_sync_folder(dest, self.b2_api)
         synchronizer = Synchronizer(
