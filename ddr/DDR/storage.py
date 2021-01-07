@@ -563,16 +563,14 @@ class Backblaze():
             )
             yield reporter
 
-    def list_files(self):
+    def list_files(self, folder=None):
         """List contents of S2-style bucket (expects no nesting)
         """
         files = []
-        for f,dir in self.bucket.ls(show_versions=False):
-            if dir:
-                fname = f'{dir}/{f.file_name}'
-            else:
-                fname = f.file_name
-            files.append(fname)
+        for f,dir in self.bucket.ls(
+                folder_to_list=folder, recursive=True, show_versions=False
+        ):
+            files.append(f.file_name)
         return files
 
 def oid_from_path(path: Path) -> str:

@@ -303,12 +303,13 @@ def postjson(hosts, doctype, object_id, path):
               help='Elasticsearch hosts.')
 @click.option('--recurse','-r', is_flag=True, help='Publish documents under this one.')
 @click.option('--force','-f', is_flag=True, help='Publish regardless of status.')
+@click.option('--b2','-b', is_flag=True, help='Mark files uploaded to Backblaze.')
 @click.argument('path')
-def publish(hosts, recurse, force, path):
+def publish(hosts, recurse, force, b2, path):
     """Post the document and its children to Elasticsearch
     """
     status = docstore.Docstore(hosts).post_multi(
-        path, recursive=recurse, force=force
+        path, recursive=recurse, force=force, b2=b2
     )
     click.echo(status)
 
