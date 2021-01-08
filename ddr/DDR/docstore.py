@@ -528,7 +528,7 @@ class Docstore():
             public_fields=[],
             additional_fields={},
             parents={},
-            b2path=None,
+            b2=False,
             force=False
     ):
         """Add a new document to an index or update an existing one.
@@ -551,7 +551,7 @@ class Docstore():
         @param public_fields: list
         @param additional_fields: dict
         @param parents: dict Basic metadata for parent documents.
-        @param b2path: str (optional) Path in Backblaze bucket
+        @param b2: boolean File uploaded to Backblaze bucket
         @param force: boolean Bypass status and public checks.
         @returns: JSON dict with status code and response
         """
@@ -574,7 +574,7 @@ class Docstore():
             return {'status':403, 'response':'object not publishable'}
         
         d = document.to_esobject(
-            public_fields=public_fields, public=public, b2path=b2path
+            public_fields=public_fields, public=public, b2=b2
         )
         logger.debug('saving')
         results = d.save(
@@ -681,17 +681,17 @@ class Docstore():
                 existing_v = d.meta.version
             
             # see if file uploaded to Backblaze
-            b2path = None
+            b2 = False
             if (oi.model == 'file') and b2files:
                 dir_filename = str(ci_path / Path(document.path).name)
                 if dir_filename in b2files:
-                    b2path = dir_filename
+                    b2 = True
                     b2files.remove(dir_filename)
             
             # post document
             if path['action'] == 'POST':
                 created = self.post(
-                    document, parents=parents, b2path=b2path, force=True
+                    document, parents=parents, b2=b2, force=True
                 )
                 # force=True bypasses publishable in post() function
             # delete previously published items now marked incomplete/private
