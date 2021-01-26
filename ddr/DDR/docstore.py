@@ -637,15 +637,15 @@ class Docstore():
 
         # list files in b2 bucket
         # TODO do this in parallel with util.find_meta_files?
-        b2files = []
+        b2_files = []
         B2KEYID = os.environ.get('B2KEYID')
         B2APPKEY = os.environ.get('B2APPKEY')
         B2BUCKET = os.environ.get('B2BUCKET')
         if b2 and B2KEYID and B2APPKEY and B2BUCKET:
             logger.debug(f'Checking Backblaze for uploaded files ({B2BUCKET})')
-            b2 = storage.Backblaze(B2KEYID, B2APPKEY, B2BUCKET)
-            b2files = b2.list_files(folder=ci.id)
-            logger.debug(f'{len(b2files)} files')
+            bb = storage.Backblaze(B2KEYID, B2APPKEY, B2BUCKET)
+            b2_files = bb.list_files(folder=ci.id)
+            logger.debug(f'{len(b2_files)} files')
         
         skipped = 0
         successful = 0
@@ -681,17 +681,17 @@ class Docstore():
                 existing_v = d.meta.version
             
             # see if file uploaded to Backblaze
-            b2 = False
-            if (oi.model == 'file') and b2files:
+            b2_synced = False
+            if (oi.model == 'file') and b2_files:
                 dir_filename = str(ci_path / Path(document.path).name)
-                if dir_filename in b2files:
-                    b2 = True
-                    b2files.remove(dir_filename)
+                if dir_filename in b2_files:
+                    b2_synced = True
+                    b2_files.remove(dir_filename)
             
             # post document
             if path['action'] == 'POST':
                 created = self.post(
-                    document, parents=parents, b2=b2, force=True
+                    document, parents=parents, b2=b2_synced, force=True
                 )
                 # force=True bypasses publishable in post() function
             # delete previously published items now marked incomplete/private
