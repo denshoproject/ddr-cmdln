@@ -224,8 +224,12 @@ def filter_files(files: List[Path],
     ] 
     logprint(LOG, '%s publishable objects' % len(publishable))
     # list binaries and access files
-    binaries = [Path(o.path_rel) for o in publishable]
-    accesses = [Path(o.access_rel) for o in publishable]
+    binaries = [
+        Path(o.path_rel) for o in publishable if Path(o.path_rel).exists()
+    ]
+    accesses = [
+        Path(o.access_rel) for o in publishable if Path(o.access_rel).exists()
+    ]
     paths = sorted(list(set(binaries + accesses)))
     logprint(LOG, '%s files' % len(paths))
     return paths
