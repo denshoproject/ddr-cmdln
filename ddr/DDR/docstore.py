@@ -736,6 +736,13 @@ class Docstore():
             id=document_id
         )
     
+    def url(self, model, document_id):
+        """
+        @param model:
+        @param document_id:
+        """
+        return f'http://{config.DOCSTORE_HOST}/ddr{model}/_doc/{document_id}'
+    
     def get(self, model, document_id, fields=None):
         """Get a single document by its id.
         

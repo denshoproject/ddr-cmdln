@@ -400,6 +400,18 @@ def get(hosts, json, doctype, object_id):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
+@click.argument('doctype')
+@click.argument('object_id')
+def url(hosts, json, doctype, object_id):
+    """Get Elasticsearch URL for document
+    """
+    click.echo(docstore.Docstore(hosts).url(doctype, object_id))
+
+
+@ddrindex.command()
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
 def status(hosts):
     """Print status info.
     
