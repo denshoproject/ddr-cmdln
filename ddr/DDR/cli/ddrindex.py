@@ -402,7 +402,7 @@ def get(hosts, json, doctype, object_id):
               help='Elasticsearch hosts.')
 @click.argument('doctype')
 @click.argument('object_id')
-def url(hosts, json, doctype, object_id):
+def url(hosts, doctype, object_id):
     """Get Elasticsearch URL for document
     """
     click.echo(docstore.Docstore(hosts).url(doctype, object_id))
