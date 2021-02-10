@@ -97,8 +97,8 @@ def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync, rsync):
     B2BUCKET = os.environ.get('B2BUCKET')
     if b2sync and not (B2KEYID and B2APPKEY and B2BUCKET):
         click.echo(
-            'ERROR: b2sync requires environment variables ' \
-            'B2KEYID, B2APPKEY, B2BUCKET.'
+            'ERROR: --b2sync requires environment variables ' \
+            'B2KEYID, B2APPKEY, B2BUCKET'
         )
         sys.exit(1)
         
@@ -124,24 +124,29 @@ def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync, rsync):
                 rsync_to_tmpdir(to_copy, cidentifier.path_abs(), destdir, LOG)
         ):
             path,status = path_status
-            logprint(LOG, f'{n}/{num} {status} {path}')
-        logprint(LOG, f'Copied to {destdir}')
+            if status != 'exists':
+                logprint(LOG, f'{n}/{num} {status} {path}')
+        num_files = len([f for f in destdir.iterdir()])
+        logprint(LOG, f'{num_files} files in {destdir}')
         if b2sync:
             logprint(LOG, 'Backblaze: authenticating')
-            b2 = storage.Backblaze(B2KEYID, B2APPKEY, B2BUCKET)
+            try:
+                b2 = storage.Backblaze(B2KEYID, B2APPKEY, B2BUCKET)
+            except Exception as err:
+                logprint(LOG, f'ERROR: {err}')
+                sys.exit(1)
             logprint(LOG, f'Backblaze: syncing {destdir}')
             for line in b2.sync_dir(destdir, basedir=cidentifier.id):
-                #logprint(LOG, line)
+                # b2sdk output is passed to STDOUT
                 pass
         if rsync:
-            logprint(LOG, f'Rsyncing')
             for output in rsync_to_target(destdir, rsync, LOG):
-                logprint(LOG, f'{output}')
+                if output:
+                    logprint(LOG, output)
     finished = datetime.now()
     elapsed = finished - started
     logprint(LOG, 'DONE!')
     logprint_nots(LOG, '%s elapsed' % elapsed)
-    click.echo('')
 
 
 def dtfmt(dt: datetime) -> str:
@@ -196,7 +201,8 @@ def filter_files(files: List[Path],
                  LOG: Path) -> List[Path]:
     """Binary and access files for each File in roles
     """
-    logprint(LOG, '%s files in filesystem' % len(files))
+    num_files_total = len(files)
+    logprint(LOG, f'{num_files_total} collection files')
     # load objects
     # extract file IDs from list of files, rm duplicates
     oids = sorted(list(set([
@@ -205,6 +211,7 @@ def filter_files(files: List[Path],
         ))[0]
         for path in files
     ])))
+    num_objects_total = len(oids)
     oidentifiers = [
         oi
         for oi in [
@@ -221,8 +228,9 @@ def filter_files(files: List[Path],
         x['identifier'].object()
         for x in docstore.publishable(oidentifiers, parents)
         if x['action'] == 'POST'
-    ] 
-    logprint(LOG, '%s publishable objects' % len(publishable))
+    ]
+    num_objects_publishable = len(publishable)
+    logprint(LOG, f'{num_objects_publishable}/{num_objects_total} publishable objects')
     # list binaries and access files
     binaries = [
         Path(o.path_rel) for o in publishable if Path(o.path_rel).exists()
@@ -231,7 +239,8 @@ def filter_files(files: List[Path],
         Path(o.access_rel) for o in publishable if Path(o.access_rel).exists()
     ]
     paths = sorted(list(set(binaries + accesses)))
-    logprint(LOG, '%s files' % len(paths))
+    num_files_tocopy = len(paths)
+    logprint(LOG, f'{num_files_tocopy}/{num_files_total} publishable files')
     return paths
 
 def rsync_to_tmpdir(to_copy: List[Path],
