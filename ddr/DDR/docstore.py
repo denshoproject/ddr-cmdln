@@ -36,6 +36,7 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 import os
+from pathlib import Path
 
 from elasticsearch import Elasticsearch, TransportError
 from elasticsearch.client import SnapshotClient
@@ -52,6 +53,7 @@ from DDR.identifier import ID_COMPONENTS, InvalidInputException
 from DDR.identifier import MODEL_REPO_MODELS
 from DDR.identifier import MODULES, module_for_name
 from DDR import modules
+from DDR import storage
 from DDR import util
 from DDR import vocab
 
@@ -520,7 +522,15 @@ class Docstore():
         logger.debug('post_json(%s, %s)' % (indexname, document_id))
         return self.es.index(index=indexname, id=document_id, body=json_text)
 
-    def post(self, document, public_fields=[], additional_fields={}, parents={}, force=False):
+    def post(
+            self,
+            document,
+            public_fields=[],
+            additional_fields={},
+            parents={},
+            b2=False,
+            force=False
+    ):
         """Add a new document to an index or update an existing one.
         
         This function can produce ElasticSearch documents in two formats:
@@ -541,6 +551,7 @@ class Docstore():
         @param public_fields: list
         @param additional_fields: dict
         @param parents: dict Basic metadata for parent documents.
+        @param b2: boolean File uploaded to Backblaze bucket
         @param force: boolean Bypass status and public checks.
         @returns: JSON dict with status code and response
         """
@@ -562,7 +573,9 @@ class Docstore():
         if not can_publish:
             return {'status':403, 'response':'object not publishable'}
         
-        d = document.to_esobject(public_fields=public_fields, public=public)
+        d = document.to_esobject(
+            public_fields=public_fields, public=public, b2=b2
+        )
         logger.debug('saving')
         results = d.save(
             index=self.index_name(document.identifier.model),
@@ -571,7 +584,7 @@ class Docstore():
         logger.debug(str(results))
         return results
     
-    def post_multi(self, path, recursive=False, force=False):
+    def post_multi(self, path, recursive=False, force=False, b2=False):
         """Publish (index) specified document and (optionally) its children.
         
         After receiving a list of metadata files, index() iterates through the
@@ -586,9 +599,18 @@ class Docstore():
         @param path: Absolute path to directory containing object metadata files.
         @param recursive: Whether or not to recurse into subdirectories.
         @param force: boolean Just publish the damn collection already.
+        @param b2: boolean Look in b2sync tmpdir and mark files uploaded to Backblaze.
         @returns: number successful,list of paths that didn't work out
         """
-        logger.debug('index(%s, %s, %s)' % (path, recursive, force))
+        logger.debug(f'post_multi({path}, {recursive}, {force}, {b2})')
+        # Check that path
+        try:
+            ci = Identifier(path).collection()
+        except:
+            raise Exception(
+                'Docstore.post_multi path must point to a collection or subdirectory.'
+            )
+        ci_path = Path(ci.id)
         
         publicfields = _public_fields()
         
@@ -597,9 +619,11 @@ class Docstore():
             paths = [path]
         else:
             # files listed first, then entities, then collections
+            logger.debug(f'Finding files in {path}')
             paths = util.find_meta_files(path, recursive, files_first=1)
         
         # Determine if paths are publishable or not
+        logger.debug(f'Checking for publishability')
         identifiers = [Identifier(path) for path in paths]
         parents = {
             oid: oi.object()
@@ -610,6 +634,18 @@ class Docstore():
             parents,
             force=force
         )
+
+        # list files in b2 bucket
+        # TODO do this in parallel with util.find_meta_files?
+        b2_files = []
+        B2KEYID = os.environ.get('B2KEYID')
+        B2APPKEY = os.environ.get('B2APPKEY')
+        B2BUCKET = os.environ.get('B2BUCKET')
+        if b2 and B2KEYID and B2APPKEY and B2BUCKET:
+            logger.debug(f'Checking Backblaze for uploaded files ({B2BUCKET})')
+            bb = storage.Backblaze(B2KEYID, B2APPKEY, B2BUCKET)
+            b2_files = bb.list_files(folder=ci.id)
+            logger.debug(f'{len(b2_files)} files')
         
         skipped = 0
         successful = 0
@@ -644,9 +680,19 @@ class Docstore():
             if d:
                 existing_v = d.meta.version
             
+            # see if file uploaded to Backblaze
+            b2_synced = False
+            if (oi.model == 'file') and b2_files:
+                dir_filename = str(ci_path / Path(document.path).name)
+                if dir_filename in b2_files:
+                    b2_synced = True
+                    b2_files.remove(dir_filename)
+            
             # post document
             if path['action'] == 'POST':
-                created = self.post(document, parents=parents, force=True)
+                created = self.post(
+                    document, parents=parents, b2=b2_synced, force=True
+                )
                 # force=True bypasses publishable in post() function
             # delete previously published items now marked incomplete/private
             elif existing_v and (path['action'] == 'SKIP'):
@@ -689,6 +735,13 @@ class Docstore():
             index=self.index_name(model),
             id=document_id
         )
+    
+    def url(self, model, document_id):
+        """
+        @param model:
+        @param document_id:
+        """
+        return f'http://{config.DOCSTORE_HOST}/ddr{model}/_doc/{document_id}'
     
     def get(self, model, document_id, fields=None):
         """Get a single document by its id.

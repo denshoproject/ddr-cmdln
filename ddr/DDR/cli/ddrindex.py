@@ -303,12 +303,13 @@ def postjson(hosts, doctype, object_id, path):
               help='Elasticsearch hosts.')
 @click.option('--recurse','-r', is_flag=True, help='Publish documents under this one.')
 @click.option('--force','-f', is_flag=True, help='Publish regardless of status.')
+@click.option('--b2','-b', is_flag=True, help='Mark files uploaded to Backblaze.')
 @click.argument('path')
-def publish(hosts, recurse, force, path):
+def publish(hosts, recurse, force, b2, path):
     """Post the document and its children to Elasticsearch
     """
     status = docstore.Docstore(hosts).post_multi(
-        path, recursive=recurse, force=force
+        path, recursive=recurse, force=force, b2=b2
     )
     click.echo(status)
 
@@ -393,6 +394,18 @@ def get(hosts, json, doctype, object_id):
         click.echo(format_json(document.to_dict()))
     else:
         click.echo(document)
+
+
+@ddrindex.command()
+@click.option('--hosts','-h',
+              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+              help='Elasticsearch hosts.')
+@click.argument('doctype')
+@click.argument('object_id')
+def url(hosts, doctype, object_id):
+    """Get Elasticsearch URL for document
+    """
+    click.echo(docstore.Docstore(hosts).url(doctype, object_id))
 
 
 @ddrindex.command()

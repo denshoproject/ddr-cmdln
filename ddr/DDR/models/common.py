@@ -289,11 +289,12 @@ class DDRObject(object):
     #load_json
     #dump_json
     
-    def to_esobject(self, public_fields=[], public=True):
+    def to_esobject(self, public_fields=[], public=True, b2=False):
         """Returns an Elasticsearch DSL version of the object
         
         @param public_fields: list
         @param public: boolean
+        @param b2: boolean File uploaded to Backblaze
         @returns: subclass of repo_models.elastic.ESObject
         """
         # instantiate appropriate subclass of ESObject / DocType
@@ -327,13 +328,6 @@ class DDRObject(object):
                 access_filename(self.signature_id),
             )
         
-        download_path = ''
-        if (self.identifier.model in ['file']):
-            download_path = os.path.join(
-                self.identifier.collection_id(),
-                '%s%s' % (self.id, self.ext),
-            )
-        
         d = ES_Class()
         d.meta.id = self.identifier.id
         d.id = self.identifier.id
@@ -361,6 +355,14 @@ class DDRObject(object):
         d.links_children = self.identifier.id
         d.links_img = img_path
         d.links_thumb = img_path
+        if (self.identifier.model in ['file']):
+            d.links_download = os.path.join(
+                self.identifier.collection_id(),
+                '%s%s' % (self.id, self.ext),
+            )
+            if b2:
+                d.backblaze = True
+
         # title,description
         if hasattr(self, 'title'): d.title = self.title
         else: d.title = self.label
@@ -421,10 +423,6 @@ class DDRObject(object):
                         self.format,
                         d.ia_meta['mimetype'].split('/')[0]
                     ])
-
-        if (self.identifier.model in ['file']):
-            if download_path:
-                d.links_download = download_path
         return d
     
     def is_modified(self):

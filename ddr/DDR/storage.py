@@ -538,10 +538,11 @@ class Backblaze():
         )
         return result
 
-    def sync_dir(self, srcdir: Path) -> str:
+    def sync_dir(self, srcdir: Path, basedir: Optional[Path]) -> str:
         """Sync the entire tmpdir (see rsync_files) to Backblaze
         """
-        dest = f'b2://{self.bucket.name}'
+        destpath = Path(self.bucket.name) / basedir
+        dest = f'b2://{destpath}'
         source = parse_sync_folder(str(srcdir), self.b2_api)
         destination = parse_sync_folder(dest, self.b2_api)
         synchronizer = Synchronizer(
@@ -562,16 +563,14 @@ class Backblaze():
             )
             yield reporter
 
-    def list_files(self):
+    def list_files(self, folder=None):
         """List contents of S2-style bucket (expects no nesting)
         """
         files = []
-        for f,dir in self.bucket.ls(show_versions=False):
-            if dir:
-                fname = f'{dir}/{f.file_name}'
-            else:
-                fname = f.file_name
-            files.append(fname)
+        for f,dir in self.bucket.ls(
+                folder_to_list=folder, recursive=True, show_versions=False
+        ):
+            files.append(f.file_name)
         return files
 
 def oid_from_path(path: Path) -> str:
