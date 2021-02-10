@@ -233,10 +233,10 @@ def filter_files(files: List[Path],
     logprint(LOG, f'{num_objects_publishable}/{num_objects_total} publishable objects')
     # list binaries and access files
     binaries = [
-        Path(o.path_rel) for o in publishable if Path(o.path_rel).exists()
+        Path(o.path_rel) for o in publishable if Path(o.path_abs).exists()
     ]
     accesses = [
-        Path(o.access_rel) for o in publishable if Path(o.access_rel).exists()
+        Path(o.access_rel) for o in publishable if Path(o.access_abs).exists()
     ]
     paths = sorted(list(set(binaries + accesses)))
     num_files_tocopy = len(paths)
