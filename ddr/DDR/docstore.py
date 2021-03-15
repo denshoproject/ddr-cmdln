@@ -584,7 +584,7 @@ class Docstore():
         logger.debug(str(results))
         return results
     
-    def post_multi(self, path, recursive=False, force=False, b2=False):
+    def post_multi(self, path, recursive=False, force=False, backblaze=None):
         """Publish (index) specified document and (optionally) its children.
         
         After receiving a list of metadata files, index() iterates through the
@@ -599,10 +599,11 @@ class Docstore():
         @param path: Absolute path to directory containing object metadata files.
         @param recursive: Whether or not to recurse into subdirectories.
         @param force: boolean Just publish the damn collection already.
-        @param b2: boolean Look in b2sync tmpdir and mark files uploaded to Backblaze.
+        @param backblaze: storage.Backblaze object Look in b2sync tmpdir and mark
+                   files uploaded to Backblaze.
         @returns: number successful,list of paths that didn't work out
         """
-        logger.debug(f'post_multi({path}, {recursive}, {force}, {b2})')
+        logger.debug(f'post_multi({path}, {recursive}, {force}, {backblaze})')
         # Check that path
         try:
             ci = Identifier(path).collection()
@@ -638,13 +639,11 @@ class Docstore():
         # list files in b2 bucket
         # TODO do this in parallel with util.find_meta_files?
         b2_files = []
-        B2KEYID = os.environ.get('B2KEYID')
-        B2APPKEY = os.environ.get('B2APPKEY')
-        B2BUCKET = os.environ.get('B2BUCKET')
-        if b2 and B2KEYID and B2APPKEY and B2BUCKET:
-            logger.debug(f'Checking Backblaze for uploaded files ({B2BUCKET})')
-            bb = storage.Backblaze(B2KEYID, B2APPKEY, B2BUCKET)
-            b2_files = bb.list_files(folder=ci.id)
+        if backblaze:
+            logger.debug(
+                f'Checking Backblaze for uploaded files ({backblaze.bucketname})'
+            )
+            b2_files = backblaze.list_files(folder=ci.id)
             logger.debug(f'{len(b2_files)} files')
         
         skipped = 0
