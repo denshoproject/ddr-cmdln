@@ -103,6 +103,9 @@ def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync, rsync):
             )
             sys.exit(1)
         click.echo('Backblaze: authenticating')
+        click.echo(f'  B2BUCKET {B2BUCKET}')
+        click.echo(f'  B2APPKEY ...{B2APPKEY[-6:]}')
+        click.echo(f'  B2KEYID  ...{B2KEYID[-6:]}')
         try:
             backblaze = storage.Backblaze(B2KEYID, B2APPKEY, B2BUCKET)
         except Exception as err:
