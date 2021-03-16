@@ -653,11 +653,6 @@ class Docstore():
         num = len(paths)
         for n,path in enumerate(paths):
             oi = path.get('identifier')
-            # TODO write logs instead of print
-            print('%s | %s/%s %s %s %s' % (
-                datetime.now(config.TZ), n+1, num, path['action'], oi.id, path['note'])
-            )
-            
             if not oi:
                 path['note'] = 'No identifier'
                 bad_paths.append(path)
@@ -665,7 +660,7 @@ class Docstore():
             try:
                 document = oi.object()
             except Exception as err:
-                path['note'] = 'Could not instantiate: %s' % err
+                path['note'] = f'Could not instantiate: {err}'
                 bad_paths.append(path)
                 continue
             if not document:
@@ -673,19 +668,25 @@ class Docstore():
                 bad_paths.append(path)
                 continue
             
+            # see if file uploaded to Backblaze
+            b2_synced = False; b2str = ''
+            if (oi.model == 'file') and b2_files:
+                dir_filename = str(ci_path / Path(document.path).name)
+                if dir_filename in b2_files:
+                    b2_synced = True; b2str = '(b2)'
+                    b2_files.remove(dir_filename)
+            
+            # TODO write logs instead of print
+            now = datetime.now(config.TZ)
+            action = path['action']
+            path_note = path['note'].strip()
+            print(f'{now} | {n+1}/{num} {action} {oi.id} {path_note}{b2str}')
+            
             # see if document exists
             existing_v = None
             d = self.get(oi.model, oi.id)
             if d:
                 existing_v = d.meta.version
-            
-            # see if file uploaded to Backblaze
-            b2_synced = False
-            if (oi.model == 'file') and b2_files:
-                dir_filename = str(ci_path / Path(document.path).name)
-                if dir_filename in b2_files:
-                    b2_synced = True
-                    b2_files.remove(dir_filename)
             
             # post document
             if path['action'] == 'POST':
