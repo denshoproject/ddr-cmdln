@@ -14,7 +14,7 @@ elasticsearch>=7.0.0,<8.0.0     # Apache  y
 elasticsearch-dsl>=7.0.0,<8.0.0 # Apache  y
 envoy==0.0.3              # MIT             TODO replace!
 gitpython==3.1.1          # BSD
-Jinja2==2.11.1            # BSD
+Jinja2==2.11.3            # BSD
 natsort==7.0.1            # MIT
 psutil==5.7.0             # BSD      y
 python-dateutil==2.8.1    # BSD
