@@ -8,6 +8,7 @@ import pytest
 import requests
 
 from DDR import archivedotorg
+from DDR import config
 from DDR import identifier
 
 
@@ -65,6 +66,24 @@ def test_iaobject_get():
     out1 = o0.xml_url
     print(f'out1 {out1}')
     assert out1 == 'https://archive.org/download/ddr-densho-1000-1-1/ddr-densho-1000-1-1_files.xml'
+
+@pytest.mark.skipif(no_iarchive(), reason=NO_IARCHIVE_ERR)
+def test_format_mimetype():
+    # not in Internet Archive
+    o0 = identifier.Identifier('ddr-densho-10-1', config.MEDIA_BASE).object()
+    meta0 = archivedotorg.get_ia_meta(o0)
+    out0 = archivedotorg.format_mimetype(o0, meta0)
+    assert out0 == ''
+    
+    o1 = identifier.Identifier('ddr-densho-1000-1-1', config.MEDIA_BASE).object()
+    meta1 = archivedotorg.get_ia_meta(o1)
+    out1 = archivedotorg.format_mimetype(o1, meta1)
+    assert out1 == 'vh:video'
+    
+    o2 = identifier.Identifier('ddr-densho-1020-13', config.MEDIA_BASE).object()
+    meta2 = archivedotorg.get_ia_meta(o2)
+    out2 = archivedotorg.format_mimetype(o2, meta2)
+    assert out2 == 'av:video'
 
 @pytest.mark.skipif(no_iarchive(), reason=NO_IARCHIVE_ERR)
 def test_iaobject_get_original():

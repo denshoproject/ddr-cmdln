@@ -74,6 +74,20 @@ def is_iaobject(o):
         return True
     return False
 
+def format_mimetype(o, meta):
+    """Returns object format and mimetype if present in Internet Archive
+    
+    @param o: models.Entity
+    @param meta: dict
+    @returns: str
+    """
+    if meta:
+        return ':'.join([
+            o.format,
+            meta['mimetype'].split('/')[0]
+        ])
+    return ''
+
 
 class IAObject():
     id = ''
