@@ -13,13 +13,14 @@ IA_HOSTED_FORMATS = ['av','vh',]
 
 FORMATS = [
     'mp3', 'vbr mp3',
-    'mp4', 'h.264', 'mpg', 'mpeg2', 'mpeg4', 'ogv', 'ogg video',
+    'mp4', 'h.264', 'h.264 ia', 'mpg', 'mpeg2', 'mpeg4', 'ogv', 'ogg video',
     'png',
 ]
 CONVERT_FORMATS = {
     'vbr mp3': 'mp3',
     'h.264': 'mp4',
     'mpeg2': 'mpg',
+    'mpeg4': 'mpg',
     'ogg video': 'ogv',
 }
 
@@ -49,6 +50,7 @@ def get_ia_meta(o):
             raise Exception(msg)
         iaobject = json.loads(out)
         files = {}
+        # only include the files we're interested in
         for f in iaobject.get('files', []):
             if f['format'].lower() in FORMATS:
                 fmt = f['format'].lower()
@@ -59,9 +61,21 @@ def get_ia_meta(o):
                 f['mimetype'],encoding = mimetypes.guess_type(f['name'])
                 f['url'] = f'https://archive.org/download/{o.identifier.id}/{f["name"]}'
                 files[fmt] = f
+        # IA makes a smaller derivative MP4 for streaming
+        # Replace the mp4 if 'h.264 ia' is present and call it 'original'.
         for key,f in files.items():
-            if f['source'] == 'original':
+            if (key == 'h.264 ia'):
+                files['mp4'] = files.pop('h.264 ia')
+                files['mp4']['source'] = 'streaming'
+        # pick out the original file, but prefer the streaming one
+        for key,f in files.items():
+            if f['source'] == 'streaming':
                 data['original'] = f['name']
+        if not data.get('original'):
+            for key,f in files.items():
+                if f['source'] == 'original':
+                    data['original'] = f['name']
+        # mimetype for the original file
         if data['original']:
             data['mimetype'],encoding = mimetypes.guess_type(data['original'])
         data['files'] = files
