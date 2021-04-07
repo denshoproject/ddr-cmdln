@@ -1,0 +1,244 @@
+{
+  "created": 1617735126,
+  "d1": "ia601204.us.archive.org",
+  "d2": "ia801204.us.archive.org",
+  "dir": "/15/items/ddr-densho-1000-1-1",
+  "files": [
+    {
+      "name": "ddr-densho-1000-1-1-mezzanine-0762419626.asr.js",
+      "source": "original",
+      "format": "Unknown",
+      "mtime": "1478807469",
+      "size": "36915",
+      "md5": "1804baea96db733543d60e867185b73c",
+      "crc32": "5deab6cb",
+      "sha1": "170d21c3ff9d93b903784b120f16177f77480ead"
+    },
+    {
+      "name": "ddr-densho-1000-1-1-mezzanine-0762419626.asr.srt",
+      "source": "original",
+      "format": "SubRip",
+      "mtime": "1478807469",
+      "size": "3764",
+      "md5": "eba67f30b05748073e1f9c0064f914ea",
+      "crc32": "40076942",
+      "sha1": "cbcb0e2cd2bd4b38c5c8ef67264d92009ee21dc9"
+    },
+    {
+      "name": "ddr-densho-1000-1-1-mezzanine-0762419626.mp3",
+      "source": "derivative",
+      "bitrate": "96",
+      "length": "03:44",
+      "format": "MP3",
+      "original": "ddr-densho-1000-1-1-mezzanine-0762419626.mpg",
+      "mtime": "1478805354",
+      "size": "2692096",
+      "md5": "19b45227bc97bad0798b1da54c924fa5",
+      "crc32": "67543729",
+      "sha1": "2f50018d54bfffab0e85e48d4a49171bd46cb46f",
+      "height": "0",
+      "width": "0"
+    },
+    {
+      "name": "ddr-densho-1000-1-1-mezzanine-0762419626.mp4",
+      "source": "derivative",
+      "format": "h.264",
+      "original": "ddr-densho-1000-1-1-mezzanine-0762419626.mpg",
+      "mtime": "1471373252",
+      "size": "23450965",
+      "md5": "9045f541092e6e8c9b87d0aa5fed757d",
+      "crc32": "91b3061c",
+      "sha1": "7321dd3f500213376db5ecf632c6a5982680d2b4",
+      "length": "224.23",
+      "height": "480",
+      "width": "640"
+    },
+    {
+      "name": "ddr-densho-1000-1-1-mezzanine-0762419626.mpg",
+      "source": "original",
+      "mtime": "1471370469",
+      "size": "179126276",
+      "md5": "08a1967b090f4b3957f3460564d8151a",
+      "crc32": "378d9f87",
+      "sha1": "0762419626fed35e60d829d6c5f94e3f49b9a653",
+      "format": "MPEG2",
+      "length": "224.21",
+      "height": "480",
+      "width": "640"
+    },
+    {
+      "name": "ddr-densho-1000-1-1-mezzanine-0762419626.ogv",
+      "source": "derivative",
+      "format": "Ogg Video",
+      "original": "ddr-densho-1000-1-1-mezzanine-0762419626.mpg",
+      "mtime": "1471373730",
+      "size": "16803041",
+      "md5": "3218879c4c53752815682ceceab7e599",
+      "crc32": "4f85584a",
+      "sha1": "245ef23a56ac2d8f17d56b473a02c13c9a0490a9",
+      "length": "224.21",
+      "height": "300",
+      "width": "400"
+    },
+    {
+      "name": "ddr-densho-1000-1-1-mezzanine-0762419626.png",
+      "source": "derivative",
+      "format": "PNG",
+      "original": "ddr-densho-1000-1-1-mezzanine-0762419626.mp3",
+      "mtime": "1478805366",
+      "size": "13287",
+      "md5": "24f990615301cea5a55a2a4682b04e46",
+      "crc32": "8a7dd42c",
+      "sha1": "c6584266072971fb1d062686d1a4a5f8c9dd5ac9"
+    },
+    {
+      "name": "ddr-densho-1000-1-1.thumbs/ddr-densho-1000-1-1-mezzanine-0762419626_000001.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "original": "ddr-densho-1000-1-1-mezzanine-0762419626.mpg",
+      "mtime": "1471372577",
+      "size": "8403",
+      "md5": "439e87432e8893610a731730d6cabc53",
+      "crc32": "d8cac77f",
+      "sha1": "495bca2cc9ab7f353add41a70feea4b152dfe83c"
+    },
+    {
+      "name": "ddr-densho-1000-1-1.thumbs/ddr-densho-1000-1-1-mezzanine-0762419626_000057.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "original": "ddr-densho-1000-1-1-mezzanine-0762419626.mpg",
+      "mtime": "1471372587",
+      "size": "8439",
+      "md5": "769581d15c6e5818de0205583b33775d",
+      "crc32": "cd27d3da",
+      "sha1": "1f509b95cabf67bd87c64a1362bd97ddb81f7ce3"
+    },
+    {
+      "name": "ddr-densho-1000-1-1.thumbs/ddr-densho-1000-1-1-mezzanine-0762419626_000087.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "original": "ddr-densho-1000-1-1-mezzanine-0762419626.mpg",
+      "mtime": "1471372596",
+      "size": "8376",
+      "md5": "6dea07b001452015cb26911c5a449393",
+      "crc32": "371521a2",
+      "sha1": "cceee73db826fcafa1ae93675d1b328270d2f479"
+    },
+    {
+      "name": "ddr-densho-1000-1-1.thumbs/ddr-densho-1000-1-1-mezzanine-0762419626_000117.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "original": "ddr-densho-1000-1-1-mezzanine-0762419626.mpg",
+      "mtime": "1471372604",
+      "size": "8518",
+      "md5": "2120f22bea4b34d2d1f8d662b62cfc06",
+      "crc32": "639e2120",
+      "sha1": "a2b1128a1c5177e777a823f9446d0c89848fdcf5"
+    },
+    {
+      "name": "ddr-densho-1000-1-1.thumbs/ddr-densho-1000-1-1-mezzanine-0762419626_000147.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "original": "ddr-densho-1000-1-1-mezzanine-0762419626.mpg",
+      "mtime": "1471372613",
+      "size": "8406",
+      "md5": "c06d55ac5271622636b1072caeda381f",
+      "crc32": "122f7696",
+      "sha1": "60de95e61d9bcce201f60b9825736855ecf872cd"
+    },
+    {
+      "name": "ddr-densho-1000-1-1.thumbs/ddr-densho-1000-1-1-mezzanine-0762419626_000177.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "original": "ddr-densho-1000-1-1-mezzanine-0762419626.mpg",
+      "mtime": "1471372621",
+      "size": "8395",
+      "md5": "ff63c6688c105d8512521a5ca5f432ea",
+      "crc32": "a3d2b732",
+      "sha1": "6fced4dcc14b6bd5f0c815516554b642a1b225b8"
+    },
+    {
+      "name": "ddr-densho-1000-1-1.thumbs/ddr-densho-1000-1-1-mezzanine-0762419626_000207.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "original": "ddr-densho-1000-1-1-mezzanine-0762419626.mpg",
+      "mtime": "1471372630",
+      "size": "8449",
+      "md5": "6a9d8dc23a274cd93ff35f80e87132e4",
+      "crc32": "42a4b83f",
+      "sha1": "ef80cda085f24f7dc55596d5ab4c0e18cc78dfdb"
+    },
+    {
+      "name": "ddr-densho-1000-1-1_archive.torrent",
+      "source": "metadata",
+      "btih": "6fc4c68f078fefddecf3b6c3985aa35dba200080",
+      "mtime": "1483640986",
+      "size": "11408",
+      "md5": "977037029778e3a317120c7884d44d35",
+      "crc32": "66b5fec0",
+      "sha1": "2d24d6f3db2b27018538b54bae2db625f9900781",
+      "format": "Archive BitTorrent"
+    },
+    {
+      "name": "ddr-densho-1000-1-1_files.xml",
+      "source": "original",
+      "format": "Metadata",
+      "md5": "a6e28a019adb30a53f4f399677c82ca6"
+    },
+    {
+      "name": "ddr-densho-1000-1-1_meta.sqlite",
+      "source": "original",
+      "mtime": "1471370487",
+      "size": "8192",
+      "md5": "67206f2e2f612105300d5492683f5332",
+      "crc32": "98c63d85",
+      "sha1": "3fc2246d0f29556dd6a0a52fb3aace4d12bc7257",
+      "format": "Metadata"
+    },
+    {
+      "name": "ddr-densho-1000-1-1_meta.xml",
+      "source": "original",
+      "mtime": "1483640983",
+      "size": "1378",
+      "format": "Metadata",
+      "md5": "efa6244c1ec372646f4bbdda9a3d4571",
+      "crc32": "a27ce23e",
+      "sha1": "a1e852e5bdb91b197bdf101e2732f1b1b15d8fe5"
+    }
+  ],
+  "files_count": 18,
+  "item_last_updated": 1483640986,
+  "item_size": 222206308,
+  "metadata": {
+    "identifier": "ddr-densho-1000-1-1",
+    "collection": [
+      "ddr-densho-1000-1",
+      "densho"
+    ],
+    "scanner": "Internet Archive Python library 1.0.7",
+    "title": "Gene Akutsu Interview I Segment 01",
+    "mediatype": "movies",
+    "uploader": "jake@archive.org",
+    "addeddate": "2016-08-16 18:01:10",
+    "creator": "Densho Visual History Collection",
+    "description": "Interview location: Seattle, Washington<p>Immigrant parent's arrival in U.S. and means of making a living</p><p>Segment 1 of 37</p><p>[ <a href=\"https://archive.org/details/ddr-densho-1000-1-2\" rel=\"nofollow\">Next segment</a> ]</p><p>For more information, visit <a href=\"http://www.densho.org\" rel=\"nofollow\">Densho</a></p>",
+    "date": "1997-07-25",
+    "licenseurl": "http://creativecommons.org/licenses/by-nc-sa/4.0/",
+    "contributor": "Densho",
+    "credits": "Interviewer: Larry Hashima, Stephen Fugita<br />Videographer: Matt Emery",
+    "runtime": "00:03:44",
+    "subject": [
+      "Japanese Americans",
+      "Oral history"
+    ],
+    "publicdate": "2016-08-16 18:36:00",
+    "closed_captioning": "no",
+    "backup_location": "ia906204_18"
+  },
+  "server": "ia601204.us.archive.org",
+  "uniq": 1378961220,
+  "workable_servers": [
+    "ia601204.us.archive.org",
+    "ia801204.us.archive.org"
+  ]
+}
