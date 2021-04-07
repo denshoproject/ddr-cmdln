@@ -21,7 +21,10 @@ def get_ia_meta(o):
     data = {}
     if is_iaobject(o):
         iaobject = get_ia_metadata(o.identifier.id)
-        data = process_ia_metadata(o.identifier.id, iaobject['files'])
+        if iaobject:
+            data = process_ia_metadata(o.identifier.id, iaobject['files'])
+        else:
+            raise FileNotFoundError(f'No Internet Archive data for {o.identifier.id}.')
     return data
 
 def is_iaobject(o):
