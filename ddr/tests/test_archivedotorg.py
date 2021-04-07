@@ -113,9 +113,20 @@ def test_format_mimetype():
     assert out == 'vh:video'
     
 def test_filter_ia_files():
-    # Prep test metadata thusly:
-    #   ia metadata ddr-densho-10-1-1 | jq '.' > archivedotorg_ddr-densho-10-1-1.json
-
+    """
+    Prep test metadata thusly:
+        ia metadata ddr-densho-10-1-1 | jq '.' > archivedotorg_ddr-densho-10-1-1.json
+    
+    Index collections
+        ddrindex publish -r /var/www/media/ddr/ddr-densho-400
+        ddrindex publish -r /var/www/media/ddr/ddr-csujad-30
+        ddrindex publish /var/www/media/ddr/ddr-densho-1000
+        ddrindex publish -r /var/www/media/ddr/ddr-densho-1000/files/ddr-densho-1000-1
+        ddrindex publish -r /var/www/media/ddr/ddr-densho-1020-13
+        ddrindex publish /var/www/media/ddr/ddr-densho-122
+        ddrindex publish -r /var/www/media/ddr/ddr-densho-122/files/ddr-densho-122-4
+    """
+    
     oid = 'ddr-densho-400-1'
     ia_meta = load_ia_json(oid)
     data = archivedotorg.process_ia_metadata(oid, ia_meta['files'])
