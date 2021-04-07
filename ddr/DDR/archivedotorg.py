@@ -109,6 +109,14 @@ def process_ia_metadata(oid, files_list):
         for key,f in files.items():
             if f['source'] == 'original':
                 data['original'] = f['name']
+    # All files are derivatives (original not available, ex: ddr-densho-122-4-1)
+    # Find derivative that is the same type (i.e. video/*) as the original
+    if not data.get('original'):
+        for f in files.values():
+            file_mimetype,encoding = mimetypes.guess_type(f['name'])
+            orig_mimetype,encoding = mimetypes.guess_type(f['original'])
+            if file_mimetype.split('/')[0] == orig_mimetype.split('/')[0]:
+                data['original'] = f['name']
     
     if data['original']:
         data['mimetype'],encoding = mimetypes.guess_type(data['original'])

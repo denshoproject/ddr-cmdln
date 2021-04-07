@@ -151,3 +151,14 @@ def test_filter_ia_files():
     assert data['files']['mp4'].get('url')
     assert data['files']['mp4']['url'] == 'https://archive.org/download/' \
         'ddr-densho-1020-13/ddr-densho-1020-13-mezzanine-5c4e884556.ia.mp4'
+
+    oid = 'ddr-densho-122-4-1'
+    ia_meta = load_ia_json(oid)
+    data = archivedotorg.process_ia_metadata(oid, ia_meta['files'])
+    assert data['mimetype'] == 'video/mp4'
+    assert data['original'] == 'ddr-densho-122-4-1-mezzanine-51479225cf.mp4'
+    assert data['files'].get('mp4')
+    assert data['files']['mp4'].get('url')
+    assert data['files']['mp4']['url'] == 'https://archive.org/download/' \
+        'ddr-densho-122-4-1/ddr-densho-122-4-1-mezzanine-51479225cf.mp4'
+    assert not data['files'].get('mpg')
