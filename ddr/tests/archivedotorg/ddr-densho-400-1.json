@@ -1,0 +1,158 @@
+{
+  "created": 1617733821,
+  "d1": "ia902808.us.archive.org",
+  "d2": "ia802808.us.archive.org",
+  "dir": "/22/items/ddr-densho-400-1",
+  "files": [
+    {
+      "name": "_HOUR_00_ddr-densho-400-1-mezzanine-70dda47d00.afpk",
+      "source": "derivative",
+      "format": "Columbia Peaks",
+      "original": "ddr-densho-400-1-mezzanine-70dda47d00.mp3",
+      "mtime": "1580165766",
+      "size": "523640",
+      "md5": "9f4a04f0594512b860067727d9d2cb4a",
+      "crc32": "ac7fe758",
+      "sha1": "908865bed52adf6fdc383a3a7c0f8132b3c9238f"
+    },
+    {
+      "name": "_HOUR_01_ddr-densho-400-1-mezzanine-70dda47d00.afpk",
+      "source": "derivative",
+      "format": "Columbia Peaks",
+      "original": "ddr-densho-400-1-mezzanine-70dda47d00.mp3",
+      "mtime": "1580165792",
+      "size": "379688",
+      "md5": "45af756d091ec52ab4b0f5a715f9782b",
+      "crc32": "4cc1d660",
+      "sha1": "ecc206dbdb37991f5761dab2571fbf92b4fac45d"
+    },
+    {
+      "name": "__ia_thumb.jpg",
+      "source": "original",
+      "mtime": "1580165856",
+      "size": "3328",
+      "md5": "505310f732b1769d20dab59b4ff86340",
+      "crc32": "7622f5b3",
+      "sha1": "2ea15b7bc55d9b302ded03c379f274286877d9ac",
+      "format": "Item Tile",
+      "rotation": "0"
+    },
+    {
+      "name": "ddr-densho-400-1-mezzanine-70dda47d00.afpk",
+      "source": "derivative",
+      "format": "Columbia Peaks",
+      "original": "ddr-densho-400-1-mezzanine-70dda47d00.mp3",
+      "mtime": "1580165852",
+      "size": "903768",
+      "md5": "678805b5bc72ed8552ff1cfd987b0ebf",
+      "crc32": "df96826e",
+      "sha1": "77ac178011928dbc96fd95200b9dd51c3ed84b87"
+    },
+    {
+      "name": "ddr-densho-400-1-mezzanine-70dda47d00.mp3",
+      "source": "original",
+      "mtime": "1580165562",
+      "size": "88533104",
+      "md5": "f052cd5230260b6b4a4d4e1786853f5d",
+      "crc32": "9aaf13be",
+      "sha1": "70dda47d002cb0d2f15cbcbb4594cdef0387f92b",
+      "format": "VBR MP3",
+      "length": "6226.73",
+      "height": "0",
+      "width": "0",
+      "track": "01",
+      "genre": "Blues"
+    },
+    {
+      "name": "ddr-densho-400-1-mezzanine-70dda47d00.png",
+      "source": "derivative",
+      "format": "PNG",
+      "original": "ddr-densho-400-1-mezzanine-70dda47d00.mp3",
+      "mtime": "1580165667",
+      "size": "40668",
+      "md5": "8a254b631a5e0af6b1dedbe787460431",
+      "crc32": "e8d57a63",
+      "sha1": "b0d7afa56d3a9efa57b5bd94aca866b48f9d9a71"
+    },
+    {
+      "name": "ddr-densho-400-1-mezzanine-70dda47d00_spectrogram.png",
+      "source": "derivative",
+      "format": "Spectrogram",
+      "original": "ddr-densho-400-1-mezzanine-70dda47d00.mp3",
+      "mtime": "1580165708",
+      "size": "213701",
+      "md5": "57ac182c324f1389908472ea8b8779b7",
+      "crc32": "fabf2986",
+      "sha1": "a5a962ef103078883cd1a8a07a6dfddf9ae86d06"
+    },
+    {
+      "name": "ddr-densho-400-1_archive.torrent",
+      "source": "metadata",
+      "btih": "a839edaa033516a54ba460add27515de6ffbabe8",
+      "mtime": "1601885344",
+      "size": "6305",
+      "md5": "0195ee298746abc0c5e9aa27095bef11",
+      "crc32": "a4e082e9",
+      "sha1": "3ed6bc1f511e2c90635ed3df1db2fc3fa4113a2a",
+      "format": "Archive BitTorrent"
+    },
+    {
+      "name": "ddr-densho-400-1_files.xml",
+      "source": "original",
+      "format": "Metadata",
+      "md5": "0d761a04f6f4ca6c39c6aa63c2c285dd"
+    },
+    {
+      "name": "ddr-densho-400-1_meta.sqlite",
+      "source": "original",
+      "mtime": "1580165629",
+      "size": "14336",
+      "format": "Metadata",
+      "md5": "71e90ad20cc7b3d34269964be59e329d",
+      "crc32": "392f4800",
+      "sha1": "7987ec593eea3b16d3d6a9d04cfaba1439d80890"
+    },
+    {
+      "name": "ddr-densho-400-1_meta.xml",
+      "source": "original",
+      "mtime": "1601885344",
+      "size": "1843",
+      "format": "Metadata",
+      "md5": "9dd637d53f0fe33d65e18e297166fb88",
+      "crc32": "7e0ff438",
+      "sha1": "edbf15ff93fb6279c34e24c048a3c87d699f16d3"
+    }
+  ],
+  "files_count": 11,
+  "item_last_updated": 1601885344,
+  "item_size": 90620381,
+  "metadata": {
+    "identifier": "ddr-densho-400-1",
+    "collection": "densho",
+    "contributor": "South Bay JACL",
+    "creator": "Narrator: Frank Endo, Interviewer: Ike Hachimonji",
+    "credits": "Narrator: Frank Endo, Interviewer: Ike Hachimonji",
+    "date": "April 23, 2004",
+    "description": "Location: Gardena, California<p>Frank Endo was born in Wilmington, California, on April 20,1923, and grew up on Terminal Island, California. He taught gymnastics at Santa Anita, California, Race Track and at the concentration camp in Amache, Colorado, where he was imprisoned. Endo worked in Chicago during WWII and served in the U.S. Army's Military Intelligence Service. He participated in the war crimes tribunal investigations in Osaka, Japan. Endo married in Japan and brought his wife back to live in Gardena, California.\\n\\nThis interview is part of the South Bay History Project created by the South Bay Chapter of the Japanese American Citizens League.</p><p>See this item in the <a href=\"https://ddr.densho.org/\" rel=\"nofollow\">Densho Digital Repository</a> at: <a href=\"https://ddr.densho.org/ddr-densho-400-1/\" rel=\"nofollow\">https://ddr.densho.org/ddr-densho-400-1/</a>.</p>",
+    "licenseurl": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+    "mediatype": "audio",
+    "runtime": "1:43:46",
+    "scanner": "Internet Archive Python library 1.8.3",
+    "subject": [
+      "Japanese Americans",
+      "Oral history",
+      "Santa Anita"
+    ],
+    "title": "Frank Endo Interview",
+    "uploader": "admin@densho.org",
+    "publicdate": "2020-01-27 22:53:17",
+    "addeddate": "2020-01-27 22:53:17",
+    "backup_location": "ia907103_8"
+  },
+  "server": "ia802808.us.archive.org",
+  "uniq": 1897037725,
+  "workable_servers": [
+    "ia802808.us.archive.org",
+    "ia902808.us.archive.org"
+  ]
+}

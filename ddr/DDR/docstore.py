@@ -690,9 +690,12 @@ class Docstore():
             
             # post document
             if path['action'] == 'POST':
-                created = self.post(
-                    document, parents=parents, b2=b2_synced, force=True
-                )
+                try:
+                    created = self.post(
+                        document, parents=parents, b2=b2_synced, force=True
+                    )
+                except FileNotFoundError as err:
+                    print(f'ERROR: {err}')
                 # force=True bypasses publishable in post() function
             # delete previously published items now marked incomplete/private
             elif existing_v and (path['action'] == 'SKIP'):
