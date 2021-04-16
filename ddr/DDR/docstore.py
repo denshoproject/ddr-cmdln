@@ -584,7 +584,7 @@ class Docstore():
         logger.debug(str(results))
         return results
     
-    def post_multi(self, path, recursive=False, force=False, b2=False):
+    def post_multi(self, path, recursive=False, force=False, backblaze=None):
         """Publish (index) specified document and (optionally) its children.
         
         After receiving a list of metadata files, index() iterates through the
@@ -599,10 +599,11 @@ class Docstore():
         @param path: Absolute path to directory containing object metadata files.
         @param recursive: Whether or not to recurse into subdirectories.
         @param force: boolean Just publish the damn collection already.
-        @param b2: boolean Look in b2sync tmpdir and mark files uploaded to Backblaze.
+        @param backblaze: storage.Backblaze object Look in b2sync tmpdir and mark
+                   files uploaded to Backblaze.
         @returns: number successful,list of paths that didn't work out
         """
-        logger.debug(f'post_multi({path}, {recursive}, {force}, {b2})')
+        logger.debug(f'post_multi({path}, {recursive}, {force}, {backblaze})')
         # Check that path
         try:
             ci = Identifier(path).collection()
@@ -638,13 +639,11 @@ class Docstore():
         # list files in b2 bucket
         # TODO do this in parallel with util.find_meta_files?
         b2_files = []
-        B2KEYID = os.environ.get('B2KEYID')
-        B2APPKEY = os.environ.get('B2APPKEY')
-        B2BUCKET = os.environ.get('B2BUCKET')
-        if b2 and B2KEYID and B2APPKEY and B2BUCKET:
-            logger.debug(f'Checking Backblaze for uploaded files ({B2BUCKET})')
-            bb = storage.Backblaze(B2KEYID, B2APPKEY, B2BUCKET)
-            b2_files = bb.list_files(folder=ci.id)
+        if backblaze:
+            logger.debug(
+                f'Checking Backblaze for uploaded files ({backblaze.bucketname})'
+            )
+            b2_files = backblaze.list_files(folder=ci.id)
             logger.debug(f'{len(b2_files)} files')
         
         skipped = 0
@@ -654,11 +653,6 @@ class Docstore():
         num = len(paths)
         for n,path in enumerate(paths):
             oi = path.get('identifier')
-            # TODO write logs instead of print
-            print('%s | %s/%s %s %s %s' % (
-                datetime.now(config.TZ), n+1, num, path['action'], oi.id, path['note'])
-            )
-            
             if not oi:
                 path['note'] = 'No identifier'
                 bad_paths.append(path)
@@ -666,7 +660,7 @@ class Docstore():
             try:
                 document = oi.object()
             except Exception as err:
-                path['note'] = 'Could not instantiate: %s' % err
+                path['note'] = f'Could not instantiate: {err}'
                 bad_paths.append(path)
                 continue
             if not document:
@@ -674,25 +668,34 @@ class Docstore():
                 bad_paths.append(path)
                 continue
             
+            # see if file uploaded to Backblaze
+            b2_synced = False; b2str = ''
+            if (oi.model == 'file') and b2_files:
+                dir_filename = str(ci_path / Path(document.path).name)
+                if dir_filename in b2_files:
+                    b2_synced = True; b2str = '(b2)'
+                    b2_files.remove(dir_filename)
+            
+            # TODO write logs instead of print
+            now = datetime.now(config.TZ)
+            action = path['action']
+            path_note = path['note'].strip()
+            print(f'{now} | {n+1}/{num} {action} {oi.id} {path_note}{b2str}')
+            
             # see if document exists
             existing_v = None
             d = self.get(oi.model, oi.id)
             if d:
                 existing_v = d.meta.version
             
-            # see if file uploaded to Backblaze
-            b2_synced = False
-            if (oi.model == 'file') and b2_files:
-                dir_filename = str(ci_path / Path(document.path).name)
-                if dir_filename in b2_files:
-                    b2_synced = True
-                    b2_files.remove(dir_filename)
-            
             # post document
             if path['action'] == 'POST':
-                created = self.post(
-                    document, parents=parents, b2=b2_synced, force=True
-                )
+                try:
+                    created = self.post(
+                        document, parents=parents, b2=b2_synced, force=True
+                    )
+                except FileNotFoundError as err:
+                    print(f'ERROR: {err}')
                 # force=True bypasses publishable in post() function
             # delete previously published items now marked incomplete/private
             elif existing_v and (path['action'] == 'SKIP'):

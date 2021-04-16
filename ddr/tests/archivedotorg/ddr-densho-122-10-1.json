@@ -1,0 +1,253 @@
+{
+  "created": 1617733820,
+  "d1": "ia601202.us.archive.org",
+  "d2": "ia801202.us.archive.org",
+  "dir": "/18/items/ddr-densho-122-10-1",
+  "files": [
+    {
+      "name": "__ia_thumb.jpg",
+      "source": "original",
+      "mtime": "1603928456",
+      "size": "4155",
+      "md5": "188e412484a1fae21713a170d56afcfd",
+      "crc32": "a80c0b3b",
+      "sha1": "f87cd7808b4ba85e80646e6836d5cfe2ec7b870d",
+      "format": "Item Tile",
+      "rotation": "0"
+    },
+    {
+      "name": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.asr.js",
+      "source": "original",
+      "format": "Unknown",
+      "mtime": "1479407380",
+      "size": "36192",
+      "md5": "04ff987ab6b6d76b28522a4404c92d9c",
+      "crc32": "ebfd27dd",
+      "sha1": "a9b3ec7bc230fdca930898d6af7fea497bf36859"
+    },
+    {
+      "name": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.asr.srt",
+      "source": "original",
+      "format": "SubRip",
+      "mtime": "1479407379",
+      "size": "4106",
+      "md5": "c6a0df83514ddf789cb585325b91a2dd",
+      "crc32": "e00d9410",
+      "sha1": "a3e829dd0643f184bad9a47d01f9da88d518e3f3"
+    },
+    {
+      "name": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.mp3",
+      "source": "derivative",
+      "bitrate": "96",
+      "length": "04:39",
+      "format": "MP3",
+      "original": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.mpg",
+      "mtime": "1479398583",
+      "size": "3351040",
+      "md5": "c8273207722eb2b5754b7679f5f06065",
+      "crc32": "5adf6add",
+      "sha1": "dee2e06d1585fe2a3f3cd4645080f63b7ff8bb2a",
+      "height": "0",
+      "width": "0",
+      "private": "true"
+    },
+    {
+      "name": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.mp4",
+      "source": "derivative",
+      "format": "h.264",
+      "original": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.mpg",
+      "mtime": "1472580637",
+      "size": "29144265",
+      "md5": "85976b992cb3e8085235c089fe3073ac",
+      "crc32": "c5843ea9",
+      "sha1": "06eec7ab71b432d73b9d15ed098a106e4adab531",
+      "length": "279.17",
+      "height": "480",
+      "width": "640"
+    },
+    {
+      "name": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.png",
+      "source": "derivative",
+      "format": "PNG",
+      "original": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.mp3",
+      "mtime": "1479398599",
+      "size": "12650",
+      "md5": "4819191c5f4d30f61ff9d27fc4d932cd",
+      "crc32": "1bf88149",
+      "sha1": "640ba1795d5cc608d16e9cb9fe598c3b9872f918"
+    },
+    {
+      "name": "ddr-densho-122-10-1.thumbs/ddr-densho-122-10-1-mezzanine-30ffb2b3e9_000001.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "original": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.mpg",
+      "mtime": "1472580219",
+      "size": "3624",
+      "md5": "abfd740ebc5d0b44bce00928011c69bc",
+      "crc32": "a2ba65f7",
+      "sha1": "8f7f57832ca46058c1a0b9f592641c83a2122545"
+    },
+    {
+      "name": "ddr-densho-122-10-1.thumbs/ddr-densho-122-10-1-mezzanine-30ffb2b3e9_000057.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "original": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.mpg",
+      "mtime": "1472580225",
+      "size": "3447",
+      "md5": "d3334647cbe4dc5fea85ef5a8dad617c",
+      "crc32": "65bf57e0",
+      "sha1": "98c52970058ba84442343227243104f714ee9bd1"
+    },
+    {
+      "name": "ddr-densho-122-10-1.thumbs/ddr-densho-122-10-1-mezzanine-30ffb2b3e9_000087.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "original": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.mpg",
+      "mtime": "1472580230",
+      "size": "3944",
+      "md5": "7a7b83c32b7ce2ace80efd1a54ccf358",
+      "crc32": "8bd3e19d",
+      "sha1": "10c5016fce2cfcc5bba4c81effbab1746e6efc70"
+    },
+    {
+      "name": "ddr-densho-122-10-1.thumbs/ddr-densho-122-10-1-mezzanine-30ffb2b3e9_000117.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "original": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.mpg",
+      "mtime": "1472580235",
+      "size": "4014",
+      "md5": "5e3e4f37c5edccb87e9e5181f9abedcd",
+      "crc32": "4a498837",
+      "sha1": "b05b7a6742f0e8cf31d422644aa0c08d48d9b86c"
+    },
+    {
+      "name": "ddr-densho-122-10-1.thumbs/ddr-densho-122-10-1-mezzanine-30ffb2b3e9_000147.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "original": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.mpg",
+      "mtime": "1472580241",
+      "size": "5003",
+      "md5": "41c81a09c0de7bd6dcba265e10b6be69",
+      "crc32": "ad6b8a60",
+      "sha1": "3462bcd08fcac0d5a76b9e3e0661f2c1241105c8"
+    },
+    {
+      "name": "ddr-densho-122-10-1.thumbs/ddr-densho-122-10-1-mezzanine-30ffb2b3e9_000177.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "original": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.mpg",
+      "mtime": "1472580247",
+      "size": "5043",
+      "md5": "4d51c7f739c1db0e634abb8af4ac4ae9",
+      "crc32": "94f7d48b",
+      "sha1": "931d947505cc39d568fba30d512e254b231c3437"
+    },
+    {
+      "name": "ddr-densho-122-10-1.thumbs/ddr-densho-122-10-1-mezzanine-30ffb2b3e9_000207.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "original": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.mpg",
+      "mtime": "1472580254",
+      "size": "5031",
+      "md5": "69e76390159f8e03a69c84b749ebb8e2",
+      "crc32": "858421ac",
+      "sha1": "109e8ff5ae9ceea31608225eb3b75ff02cea0b85"
+    },
+    {
+      "name": "ddr-densho-122-10-1.thumbs/ddr-densho-122-10-1-mezzanine-30ffb2b3e9_000237.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "original": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.mpg",
+      "mtime": "1472580261",
+      "size": "5250",
+      "md5": "a694e7c072a6e7015b3e9e57417963fa",
+      "crc32": "8d386650",
+      "sha1": "3f760dcb18b78ea6425ccb8b7eb2d1e6fa8fc565"
+    },
+    {
+      "name": "ddr-densho-122-10-1.thumbs/ddr-densho-122-10-1-mezzanine-30ffb2b3e9_000267.jpg",
+      "source": "derivative",
+      "format": "Thumbnail",
+      "original": "ddr-densho-122-10-1-mezzanine-30ffb2b3e9.mpg",
+      "mtime": "1472580268",
+      "size": "5090",
+      "md5": "641661a9b302b5c293769355cfb20cea",
+      "crc32": "4eff798c",
+      "sha1": "a282e2e6b18203648ae482e321c9d8f4c884c0c3"
+    },
+    {
+      "name": "ddr-densho-122-10-1_archive.torrent",
+      "source": "metadata",
+      "btih": "81a2be9de56eab9b6df7c6ba9124d3a70acfcaa5",
+      "mtime": "1472582081",
+      "size": "12549",
+      "md5": "4bc8d3692e4835611b6ce58cea8b493d",
+      "crc32": "8cc6551c",
+      "sha1": "d36269687ca29b156657b9fc5a9e958a56cde2f4",
+      "format": "Archive BitTorrent",
+      "private": "true"
+    },
+    {
+      "name": "ddr-densho-122-10-1_files.xml",
+      "source": "original",
+      "format": "Metadata",
+      "md5": "8b2589d38adce640b9f412d6677f18ca"
+    },
+    {
+      "name": "ddr-densho-122-10-1_meta.sqlite",
+      "source": "original",
+      "mtime": "1603928559",
+      "size": "8192",
+      "md5": "8397d02fe0a0c26c83164b9ff6edc186",
+      "crc32": "511cef22",
+      "sha1": "d6ec70fddcec4e81e7c5e0baa107e054d79d9932",
+      "format": "Metadata"
+    },
+    {
+      "name": "ddr-densho-122-10-1_meta.xml",
+      "source": "original",
+      "mtime": "1603928457",
+      "size": "1330",
+      "format": "Metadata",
+      "md5": "fc3b888ea3fc6f3a95fae70b482d19ab",
+      "crc32": "23f7df22",
+      "sha1": "976605d3040bad14a8875ba3bbad79de6214e971"
+    }
+  ],
+  "files_count": 19,
+  "item_last_updated": 1603928559,
+  "item_size": 32614925,
+  "metadata": {
+    "identifier": "ddr-densho-122-10-1",
+    "collection": [
+      "ddr-densho-122-10",
+      "densho",
+      "stream_only"
+    ],
+    "scanner": "Internet Archive Python library 1.0.7",
+    "title": "Mits Koshiyama Interview Segment 01",
+    "mediatype": "movies",
+    "uploader": "jake@archive.org",
+    "addeddate": "2016-08-30 18:02:56",
+    "closed_captioning": "no",
+    "publicdate": "2016-08-30 18:16:20",
+    "creator": "Frank Abe Collection",
+    "description": "Interview location: Los Angeles, California<p>Memories of draft resistance trial</p><p>Segment 1 of 12</p><p>[ <a href=\"https://archive.org/details/ddr-densho-122-10-2\" rel=\"nofollow\">Next segment</a> ]</p><p>For more information, visit <a href=\"http://www.densho.org\" rel=\"nofollow\">Densho</a></p>",
+    "date": "1993-08-15",
+    "contributor": "Densho",
+    "credits": "Interviewer: Frank Abe<br />Videographer: ",
+    "runtime": "00:04:39",
+    "subject": [
+      "Japanese Americans",
+      "Oral history"
+    ],
+    "backup_location": "ia906205_28",
+    "access-restricted-item": "true"
+  },
+  "server": "ia801202.us.archive.org",
+  "uniq": 444433180,
+  "workable_servers": [
+    "ia801202.us.archive.org",
+    "ia601202.us.archive.org"
+  ]
+}

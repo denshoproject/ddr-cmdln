@@ -95,12 +95,22 @@ def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync, rsync):
     B2KEYID = os.environ.get('B2KEYID')
     B2APPKEY = os.environ.get('B2APPKEY')
     B2BUCKET = os.environ.get('B2BUCKET')
-    if b2sync and not (B2KEYID and B2APPKEY and B2BUCKET):
-        click.echo(
-            'ERROR: --b2sync requires environment variables ' \
-            'B2KEYID, B2APPKEY, B2BUCKET'
-        )
-        sys.exit(1)
+    if b2sync:
+        if not (B2KEYID and B2APPKEY and B2BUCKET):
+            click.echo(
+                'ERROR: --b2sync requires environment variables ' \
+                'B2KEYID, B2APPKEY, B2BUCKET'
+            )
+            sys.exit(1)
+        click.echo('Backblaze: authenticating')
+        click.echo(f'  B2BUCKET {B2BUCKET}')
+        click.echo(f'  B2APPKEY ...{B2APPKEY[-6:]}')
+        click.echo(f'  B2KEYID  ...{B2KEYID[-6:]}')
+        try:
+            backblaze = storage.Backblaze(B2KEYID, B2APPKEY, B2BUCKET)
+        except Exception as err:
+            click.echo(f'ERROR: {err}')
+            sys.exit(1)
         
     # prepare
     started = datetime.now()
@@ -129,14 +139,8 @@ def ddrpubcopy(fileroles, sourcedir, destbase, force, b2sync, rsync):
         num_files = len([f for f in destdir.iterdir()])
         logprint(LOG, f'{num_files} files in {destdir}')
         if b2sync:
-            logprint(LOG, 'Backblaze: authenticating')
-            try:
-                b2 = storage.Backblaze(B2KEYID, B2APPKEY, B2BUCKET)
-            except Exception as err:
-                logprint(LOG, f'ERROR: {err}')
-                sys.exit(1)
             logprint(LOG, f'Backblaze: syncing {destdir}')
-            for line in b2.sync_dir(destdir, basedir=cidentifier.id):
+            for line in backblaze.sync_dir(destdir, basedir=cidentifier.id):
                 # b2sdk output is passed to STDOUT
                 pass
         if rsync:

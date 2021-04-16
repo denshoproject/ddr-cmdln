@@ -65,6 +65,8 @@ from datetime import datetime
 import json
 import logging
 logger = logging.getLogger(__name__)
+import os
+import sys
 
 import click
 import elasticsearch
@@ -75,6 +77,7 @@ from DDR import fileio
 from DDR import identifier
 from DDR import models
 from DDR import search as search_
+from DDR import storage
 
 
 def logprint(level, msg, ts=True):
@@ -308,8 +311,28 @@ def postjson(hosts, doctype, object_id, path):
 def publish(hosts, recurse, force, b2, path):
     """Post the document and its children to Elasticsearch
     """
+    B2KEYID = os.environ.get('B2KEYID')
+    B2APPKEY = os.environ.get('B2APPKEY')
+    B2BUCKET = os.environ.get('B2BUCKET')
+    backblaze = None
+    if b2:
+        if not (B2KEYID and B2APPKEY and B2BUCKET):
+            click.echo(
+                'ERROR: --b2sync requires environment variables ' \
+                'B2KEYID, B2APPKEY, B2BUCKET'
+            )
+            sys.exit(1)
+        click.echo('Backblaze: authenticating')
+        click.echo(f'  B2BUCKET {B2BUCKET}')
+        click.echo(f'  B2APPKEY ...{B2APPKEY[-6:]}')
+        click.echo(f'  B2KEYID  ...{B2KEYID[-6:]}')
+        try:
+            backblaze = storage.Backblaze(B2KEYID, B2APPKEY, B2BUCKET)
+        except Exception as err:
+            click.echo(f'ERROR: {err}')
+            sys.exit(1)
     status = docstore.Docstore(hosts).post_multi(
-        path, recursive=recurse, force=force, b2=b2
+        path, recursive=recurse, force=force, backblaze=backblaze
     )
     click.echo(status)
 

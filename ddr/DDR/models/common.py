@@ -419,10 +419,7 @@ class DDRObject(object):
             if not config.OFFLINE:
                 d.ia_meta = archivedotorg.get_ia_meta(self)
                 if d.ia_meta:
-                    d.template = ':'.join([
-                        self.format,
-                        d.ia_meta['mimetype'].split('/')[0]
-                    ])
+                    d.template = archivedotorg.format_mimetype(self, d.ia_meta)
         return d
     
     def is_modified(self):
