@@ -85,7 +85,7 @@ def process_ia_metadata(oid, files_list):
         #'h.264 ia' - IA streaming don't replace see below
         'h.264': 'mp4',
         'mpeg2': 'mpg',
-        'mpeg4': 'mpg',
+        'mpeg4': 'mp4',
         'ogg video': 'ogv',
         'vbr mp3': 'mp3',
     }
@@ -101,7 +101,9 @@ def process_ia_metadata(oid, files_list):
             files[fmt] = f
     # IA makes a smaller derivative MP4 for streaming large files.
     # Replace 'mp4' with the streaming file if present.
-    for key,f in files.items():
+    file_items = [(key,f) for key,f in files.items()]
+    while file_items:
+        key,f = file_items.pop(0)
         if (key == 'h.264 ia'):
             files['mp4'] = files.pop('h.264 ia')
             files['mp4']['source'] = 'streaming'
