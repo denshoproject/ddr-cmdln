@@ -59,6 +59,10 @@ def test_is_iaobject():
     assert out3 == False
 
 def load_ia_json(oid):
+    """Load local copy of metadata
+    
+    $ ia metadata $OBJECTID > /opt/ddr-cmdln/ddr/tests/archivedotorg/$OBJECTID.json
+    """
     testdir = Path(os.path.dirname(os.path.abspath(__file__)))
     path = testdir / 'archivedotorg' / f'{oid}.json'
     if path.exists():
@@ -82,6 +86,14 @@ def test_format_mimetype():
     print(oid)
     meta = load_ia_json(oid)
     data = archivedotorg.process_ia_metadata(oid, meta['files'])    
+    assert data
+    out = archivedotorg.format_mimetype(o, data)
+    assert out == 'av:audio'
+    
+    oid = 'ddr-csujad-29-1'; o = DummyObject(); o.format = 'av'
+    print(oid)
+    meta = load_ia_json(oid)
+    data = archivedotorg.process_ia_metadata(oid, meta['files'])
     assert data
     out = archivedotorg.format_mimetype(o, data)
     assert out == 'av:audio'
@@ -111,6 +123,15 @@ def test_format_mimetype():
     assert data
     out = archivedotorg.format_mimetype(o, data)
     assert out == 'vh:video'
+    
+    oid = 'ddr-csujad-51-1'; o = DummyObject(); o.format = 'av'
+    print(oid)
+    meta = load_ia_json(oid)
+    data = archivedotorg.process_ia_metadata(oid, meta['files'])
+    assert data
+    out = archivedotorg.format_mimetype(o, data)
+    assert out == 'av:video'
+
     
 def test_filter_ia_files():
     """

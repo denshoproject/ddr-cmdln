@@ -100,6 +100,10 @@ def process_ia_metadata(oid, files_list):
             f['format'] = fmt
             f['mimetype'],encoding = mimetypes.guess_type(f['name'])
             f['url'] = f'https://archive.org/download/{oid}/{f["name"]}'
+            # filter out weird outliers
+            if ('history/files/' in f['name']) or ( '~1~' in f['name']):
+                break
+            # looks good
             files[fmt] = f
     # IA makes a smaller derivative MP4 for streaming large files.
     # Replace 'mp4' with the streaming file if present.
