@@ -22,6 +22,8 @@ def get_ia_meta(o):
     if is_iaobject(o):
         iaobject = get_ia_metadata(o.identifier.id)
         if iaobject:
+            if 'error' in iaobject.keys():
+                raise FileNotFoundError(iaobject)
             data = process_ia_metadata(o.identifier.id, iaobject['files'])
         else:
             raise FileNotFoundError(f'No Internet Archive data for {o.identifier.id}.')
