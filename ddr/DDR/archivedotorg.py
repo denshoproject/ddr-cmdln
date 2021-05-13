@@ -22,6 +22,8 @@ def get_ia_meta(o):
     if is_iaobject(o):
         iaobject = get_ia_metadata(o.identifier.id)
         if iaobject:
+            if 'error' in iaobject.keys():
+                raise FileNotFoundError(iaobject)
             data = process_ia_metadata(o.identifier.id, iaobject['files'])
         else:
             raise FileNotFoundError(f'No Internet Archive data for {o.identifier.id}.')
@@ -85,7 +87,7 @@ def process_ia_metadata(oid, files_list):
         #'h.264 ia' - IA streaming don't replace see below
         'h.264': 'mp4',
         'mpeg2': 'mpg',
-        'mpeg4': 'mpg',
+        'mpeg4': 'mp4',
         'ogg video': 'ogv',
         'vbr mp3': 'mp3',
     }
@@ -98,10 +100,16 @@ def process_ia_metadata(oid, files_list):
             f['format'] = fmt
             f['mimetype'],encoding = mimetypes.guess_type(f['name'])
             f['url'] = f'https://archive.org/download/{oid}/{f["name"]}'
+            # filter out weird outliers
+            if ('history/files/' in f['name']) or ( '~1~' in f['name']):
+                break
+            # looks good
             files[fmt] = f
     # IA makes a smaller derivative MP4 for streaming large files.
     # Replace 'mp4' with the streaming file if present.
-    for key,f in files.items():
+    file_items = [(key,f) for key,f in files.items()]
+    while file_items:
+        key,f = file_items.pop(0)
         if (key == 'h.264 ia'):
             files['mp4'] = files.pop('h.264 ia')
             files['mp4']['source'] = 'streaming'
