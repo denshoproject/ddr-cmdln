@@ -37,6 +37,7 @@ import logging
 logger = logging.getLogger(__name__)
 import os
 from pathlib import Path
+import traceback
 
 from elasticsearch import Elasticsearch, TransportError
 from elasticsearch.client import SnapshotClient
@@ -694,8 +695,8 @@ class Docstore():
                     created = self.post(
                         document, parents=parents, b2=b2_synced, force=True
                     )
-                except FileNotFoundError as err:
-                    print(f'ERROR: {err}')
+                except Exception as err:
+                    traceback.print_exc()
                 # force=True bypasses publishable in post() function
             # delete previously published items now marked incomplete/private
             elif existing_v and (path['action'] == 'SKIP'):
