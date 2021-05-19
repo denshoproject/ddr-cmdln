@@ -124,6 +124,10 @@ def process_ia_metadata(oid, files_list):
     # Find derivative that is the same type (i.e. video/*) as the original
     if not data.get('original'):
         for f in files.values():
+            # Some files have a '~1~' weird outlier as their original which
+            # confuses the mimetype guesser.
+            if '~1~' in f['original']:
+                f['original'] = f['original'].replace('.~1~', '')
             file_mimetype,encoding = mimetypes.guess_type(f['name'])
             orig_mimetype,encoding = mimetypes.guess_type(f['original'])
             if file_mimetype.split('/')[0] == orig_mimetype.split('/')[0]:
