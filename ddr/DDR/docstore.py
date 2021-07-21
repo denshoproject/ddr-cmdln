@@ -92,14 +92,22 @@ def load_json(path):
         raise Exception('json.errors.JSONDecodeError reading %s' % path)
     return data
 
+def get_elasticsearch():
+    return Elasticsearch(
+        config.DOCSTORE_HOST,
+        http_auth=(
+            config.DOCSTORE_USERNAME, config.DOCSTORE_PASSWORD
+        ),
+        #scheme="https",
+        #port=443,
+    )
+
+
 class Docstore():
 
-    def __init__(self, hosts=config.DOCSTORE_HOST, connection=None):
+    def __init__(self, hosts=config.DOCSTORE_HOST):
         self.hosts = hosts
-        if connection:
-            self.es = connection
-        else:
-            self.es = Elasticsearch(hosts, timeout=config.DOCSTORE_TIMEOUT)
+        self.es = get_elasticsearch()
     
     def index_name(self, model):
         return '{}{}'.format(INDEX_PREFIX, model)
