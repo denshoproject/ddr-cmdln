@@ -121,6 +121,10 @@ DEB_DESCRIPTION=Densho Digital Repository editor
 DEB_BASE=opt/ddr-cmdln
 
 
+# Type make print-VARNAME to print value of any variable
+print-%: ; @echo $*=$($*)
+
+
 debug:
 	@echo "ddr-cmdln: $(COMMIT_CMDLN)"
 	@echo "ddr-defs:  $(COMMIT_DEFS)"
