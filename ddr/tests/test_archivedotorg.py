@@ -15,6 +15,14 @@ from DDR import config
 from DDR import identifier
 
 
+def test_ia():
+    try:
+        import internetarchive
+        imported = True
+    except:
+        imported = False
+    assert imported
+
 NO_IARCHIVE_ERR = 'ID service is not available.'
 def no_iarchive():
     """Returns True if cannot contact IA API; use to skip tests
