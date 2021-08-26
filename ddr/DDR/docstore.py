@@ -37,6 +37,7 @@ import logging
 logger = logging.getLogger(__name__)
 import os
 from pathlib import Path
+from ssl import create_default_context
 import traceback
 
 from elasticsearch import Elasticsearch, TransportError
@@ -93,14 +94,30 @@ def load_json(path):
     return data
 
 def get_elasticsearch():
-    return Elasticsearch(
-        config.DOCSTORE_HOST,
-        http_auth=(
-            config.DOCSTORE_USERNAME, config.DOCSTORE_PASSWORD
-        ),
-        #scheme="https",
-        #port=443,
-    )
+    # TODO simplify this once everything is using SSL/passwords
+    if config.DOCSTORE_SSL_CERTFILE and config.DOCSTORE_PASSWORD:
+        context = create_default_context(cafile=config.DOCSTORE_SSL_CERTFILE)
+        context.check_hostname = False
+        return Elasticsearch(
+            config.DOCSTORE_HOST,
+            scheme='https', ssl_context=context,
+            port=9200,
+            http_auth=(config.DOCSTORE_USERNAME, config.DOCSTORE_PASSWORD),
+        )
+    elif config.DOCSTORE_SSL_CERTFILE:
+        context = create_default_context(cafile=config.DOCSTORE_SSL_CERTFILE)
+        context.check_hostname = False
+        return Elasticsearch(
+            config.DOCSTORE_HOST,
+            scheme='https', ssl_context=context,
+            port=9200,
+        )
+    else:
+        return Elasticsearch(
+            config.DOCSTORE_HOST,
+            scheme='http',
+            port=9200,
+        )
 
 
 class Docstore():
