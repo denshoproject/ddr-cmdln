@@ -75,6 +75,7 @@ setup(
         ddrinfo=DDR.cli.ddrinfo:ddrinfo
         ddrimport=DDR.cli.ddrimport:ddrimport
         ddrpubcopy=DDR.cli.ddrpubcopy:ddrpubcopy
+        ddrsignatures=DDR.cli.ddrsignatures:ddrsignatures
         ddrtransform=DDR.cli.ddrtransform:ddrtransform
     ''',
     scripts = [
@@ -84,7 +85,6 @@ setup(
         'bin/ddr-filter',
         'bin/ddr-massupdate',
         'bin/ddr-missing',
-        'bin/ddr-signatures',
         'bin/ddr-update',
         'bin/ddrdensho255fix',
     ],
