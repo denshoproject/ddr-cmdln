@@ -488,7 +488,12 @@ tgz:
 install-fpm:
 	@echo "install-fpm ------------------------------------------------------------"
 	apt-get install --assume-yes ruby ruby-dev rubygems build-essential
+ifeq ($(DEBIAN_CODENAME), buster)
 	gem install --no-ri --no-rdoc fpm
+endif
+ifeq ($(DEBIAN_CODENAME), bullseye)
+	gem install --no-document fpm
+endif
 
 # https://stackoverflow.com/questions/32094205/set-a-custom-install-directory-when-making-a-deb-package-with-fpm
 # https://brejoc.com/tag/fpm/
@@ -609,7 +614,7 @@ deb-bullseye:
 	@echo "FPM packaging (bullseye) -----------------------------------------------"
 	-rm -Rf $(DEB_FILE_BULLSEYE)
 # Copy .git/ dir from master worktree
-	python bin/deb-prep-post.py before
+	python3 bin/deb-prep-post.py before
 # Make package
 	fpm   \
 	--verbose   \
@@ -657,4 +662,4 @@ deb-bullseye:
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
-	python bin/deb-prep-post.py after
+	python3 bin/deb-prep-post.py after
