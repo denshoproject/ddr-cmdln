@@ -70,6 +70,7 @@ setup(
         ddrcheckbinaries=DDR.cli.ddrcheckbinaries:ddrcheckbinaries
         ddrcheckencoding=DDR.cli.ddrcheckencoding:ddrcheckencoding
         ddrconfig=DDR.cli.ddrconfig:ddrconfig
+        ddrdesc=DDR.cli.ddrdesc:ddrdesc
         ddrexport=DDR.cli.ddrexport:ddrexport
         ddrindex=DDR.cli.ddrindex:ddrindex
         ddrinfo=DDR.cli.ddrinfo:ddrinfo
