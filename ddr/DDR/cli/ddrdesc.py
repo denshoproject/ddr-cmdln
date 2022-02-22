@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import json
 import logging
 import os
@@ -98,3 +100,6 @@ def set_description(orig_path, title):
         logging.debug('ok')
     else:
         logging.debug('No title')
+
+if __name__ == '__main__':
+    ddrdesc()
