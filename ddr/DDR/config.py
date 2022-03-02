@@ -126,7 +126,10 @@ IDSERVICE_PASSWORD = CONFIG.get('cmdln', 'idservice_password', fallback='')
 DOCSTORE_ENABLED = CONFIG.getboolean('local','docstore_enabled')
 DOCSTORE_TIMEOUT = int(CONFIG.get('local','docstore_timeout'))
 DOCSTORE_HOST_LOCAL = CONFIG.get('local','docstore_host')
+DOCSTORE_SSL_CERTFILE = CONFIG.get('public', 'docstore_ssl_certfile')
 DOCSTORE_HOST = CONFIG.get('public','docstore_host')
+DOCSTORE_USERNAME = 'elastic'
+DOCSTORE_PASSWORD = CONFIG.get('public', 'docstore_password')
 RESULTS_PER_PAGE = 25
 ELASTICSEARCH_MAX_SIZE = 10000
 ELASTICSEARCH_DEFAULT_LIMIT = RESULTS_PER_PAGE

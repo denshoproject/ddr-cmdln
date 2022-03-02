@@ -37,6 +37,7 @@ import logging
 logger = logging.getLogger(__name__)
 import os
 from pathlib import Path
+from ssl import create_default_context
 import traceback
 
 from elasticsearch import Elasticsearch, TransportError
@@ -92,14 +93,38 @@ def load_json(path):
         raise Exception('json.errors.JSONDecodeError reading %s' % path)
     return data
 
+def get_elasticsearch():
+    # TODO simplify this once everything is using SSL/passwords
+    if config.DOCSTORE_SSL_CERTFILE and config.DOCSTORE_PASSWORD:
+        context = create_default_context(cafile=config.DOCSTORE_SSL_CERTFILE)
+        context.check_hostname = False
+        return Elasticsearch(
+            config.DOCSTORE_HOST,
+            scheme='https', ssl_context=context,
+            port=9200,
+            http_auth=(config.DOCSTORE_USERNAME, config.DOCSTORE_PASSWORD),
+        )
+    elif config.DOCSTORE_SSL_CERTFILE:
+        context = create_default_context(cafile=config.DOCSTORE_SSL_CERTFILE)
+        context.check_hostname = False
+        return Elasticsearch(
+            config.DOCSTORE_HOST,
+            scheme='https', ssl_context=context,
+            port=9200,
+        )
+    else:
+        return Elasticsearch(
+            config.DOCSTORE_HOST,
+            scheme='http',
+            port=9200,
+        )
+
+
 class Docstore():
 
-    def __init__(self, hosts=config.DOCSTORE_HOST, connection=None):
+    def __init__(self, hosts=config.DOCSTORE_HOST):
         self.hosts = hosts
-        if connection:
-            self.es = connection
-        else:
-            self.es = Elasticsearch(hosts, timeout=config.DOCSTORE_TIMEOUT)
+        self.es = get_elasticsearch()
     
     def index_name(self, model):
         return '{}{}'.format(INDEX_PREFIX, model)
