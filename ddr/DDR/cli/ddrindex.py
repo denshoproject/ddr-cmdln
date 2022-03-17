@@ -76,7 +76,7 @@ from DDR import docstore
 from DDR import fileio
 from DDR import identifier
 from DDR import models
-from DDR import search as search_
+from elastictools import search as search_
 from DDR import storage
 
 
@@ -143,7 +143,7 @@ def conf(hosts):
     
     More detail since you asked.
     """
-    docstore.Docstore(hosts).print_configs()
+    docstore.DOCSTORE.print_configs()
 
 
 @ddrindex.command()
@@ -154,7 +154,7 @@ def create(hosts):
     """Create new indices.
     """
     try:
-        docstore.Docstore(hosts).create_indices()
+        docstore.DOCSTORE.create_indices()
     except Exception as err:
         logprint('error', err)
 
@@ -171,7 +171,7 @@ def backup(hosts, indices, snapshot):
     """
     indices = [i.strip() for i in indices.split(',')]
     try:
-        r = docstore.Docstore(hosts).backup(snapshot, indices)
+        r = docstore.DOCSTORE.backup(snapshot, indices)
     except Exception as err:
         logprint('error', err)
         r = {}
@@ -219,7 +219,7 @@ def restore(hosts, indices, snapshot):
     """Restore a snapshot backup.
     """
     indices = [i.strip() for i in indices.split(',')]
-    r = docstore.Docstore(hosts).restore_snapshot(snapshot, indices)
+    r = docstore.DOCSTORE.restore_snapshot(snapshot, indices)
     click.echo(r)
 
 
@@ -238,7 +238,7 @@ def destroy(hosts, confirm):
     """
     if confirm:
         try:
-            docstore.Docstore(hosts).delete_indices()
+            docstore.DOCSTORE.delete_indices()
         except Exception as err:
             logprint('error', err)
     else:
@@ -253,7 +253,7 @@ def destroy(hosts, confirm):
 def mappings(hosts, indices):
     """Display mappings for the specified index/indices.
     """
-    data = docstore.Docstore(hosts).get_mappings()
+    data = docstore.DOCSTORE.get_mappings()
     text = json.dumps(data)
     click.echo(text)
 
@@ -276,7 +276,7 @@ def vocabs(hosts, path):
     Example:
       $ ddrindex vocabs /opt/ddr-local/ddr-vocab/api/0.2/
     """
-    docstore.Docstore(hosts).post_vocabs(path=path)
+    docstore.DOCSTORE.post_vocabs(path=path)
 
 
 @ddrindex.command()
@@ -292,7 +292,7 @@ def postjson(hosts, doctype, object_id, path):
     This command is for posting raw JSON files.  If the file you wish to post
     is a DDR object, please use "ddrindex post".
     """
-    status = docstore.Docstore(hosts).post_json(
+    status = docstore.DOCSTORE.post_json(
         doctype,
         object_id,
         fileio.read_text(path)
@@ -331,7 +331,7 @@ def publish(hosts, recurse, force, b2, path):
         except Exception as err:
             click.echo(f'ERROR: {err}')
             sys.exit(1)
-    status = docstore.Docstore(hosts).post_multi(
+    status = docstore.DOCSTORE.post_multi(
         path, recursive=recurse, force=force, backblaze=backblaze
     )
     click.echo(status)
@@ -345,7 +345,7 @@ def publish(hosts, recurse, force, b2, path):
 def repo(hosts, path):
     """Post the repository record to Elasticsearch
     """
-    status = docstore.Docstore(hosts).repo(path)
+    status = docstore.DOCSTORE.repo(path)
     click.echo(status)
 
 
@@ -357,7 +357,7 @@ def repo(hosts, path):
 def org(hosts, path):
     """Post the organization record to Elasticsearch
     """
-    status = docstore.Docstore(hosts).org(path)
+    status = docstore.DOCSTORE.org(path)
     click.echo(status)
 
 
@@ -369,7 +369,7 @@ def org(hosts, path):
 def narrators(hosts, path):
     """Post the DDR narrators file to Elasticsearch
     """
-    status = docstore.Docstore(hosts).narrators(path)
+    status = docstore.DOCSTORE.narrators(path)
     click.echo(status)
 
 
@@ -384,7 +384,7 @@ def delete(hosts, recurse, confirm, object_id):
     """Delete the specified document from Elasticsearch
     """
     if confirm:
-        click.echo(docstore.Docstore(hosts).delete(object_id, recursive=recurse))
+        click.echo(docstore.DOCSTORE.delete(object_id, recursive=recurse))
     else:
         click.echo("Add '--confirm' if you're sure you want to do this.")
 
@@ -398,7 +398,7 @@ def delete(hosts, recurse, confirm, object_id):
 def exists(hosts, doctype, object_id):
     """Indicate whether the specified document exists
     """
-    ds = docstore.Docstore(hosts)
+    ds = docstore.DOCSTORE
     click.echo(ds.exists(doctype, object_id))
 
 
@@ -412,7 +412,7 @@ def exists(hosts, doctype, object_id):
 def get(hosts, json, doctype, object_id):
     """Print a single document
     """
-    document = docstore.Docstore(hosts).get(doctype, object_id)
+    document = docstore.DOCSTORE.get(doctype, object_id)
     if json:
         click.echo(format_json(document.to_dict()))
     else:
@@ -428,7 +428,7 @@ def get(hosts, json, doctype, object_id):
 def url(hosts, doctype, object_id):
     """Get Elasticsearch URL for document
     """
-    click.echo(docstore.Docstore(hosts).url(doctype, object_id))
+    click.echo(docstore.DOCSTORE.url(doctype, object_id))
 
 
 @ddrindex.command()
@@ -440,7 +440,7 @@ def status(hosts):
     
     More detail since you asked.
     """
-    ds = docstore.Docstore(hosts)
+    ds = docstore.DOCSTORE
     s = ds.status()
     
     logprint('debug', '------------------------------------------------------------------------',0)
