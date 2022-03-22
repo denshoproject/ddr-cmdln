@@ -345,6 +345,23 @@ def test_identify_object():
     assert identifier.identify_object(id1, patterns) == (id1_expected_model,id1_expected_memo,id1_expected_gd)
     assert identifier.identify_object(id2, patterns) == (id2_expected_model,id2_expected_memo,id2_expected_gd)
 
+def test_validate_idparts():
+    VALID_COMPONENTS = {
+        'repo': ['ddr'],
+        'org': ['densho', 'testing'],
+        'role': ['mezzanine', 'master']
+    }
+    idparts = {
+        'model':'file',
+        'repo':'ddr', 'org':'densho', 'cid':'1000', 'eid':'485', 'role':'master'
+    }
+    oid = 'ddr-densho-1000-485-master'
+    identifier.validate_idparts('ddr-densho-1000-485-master', idparts, VALID_COMPONENTS)
+    idparts['repo'] = 'dd'; oid = 'dd-densho-1000-485-master'
+    assert_raises(Exception, identifier.validate_idparts, oid, idparts, VALID_COMPONENTS)
+    idparts['repo'] = 'ddr'; idparts['role'] = '0'; oid = 'ddr-densho-1000-485-0'
+    assert_raises(Exception, identifier.validate_idparts, oid, idparts, VALID_COMPONENTS)
+
 def test_identify_filepath():
     assert identifier.identify_filepath('something-a.jpg') == 'access'
     assert identifier.identify_filepath('ddr-test-123-456-mezzanine-abc123') == 'mezzanine'
