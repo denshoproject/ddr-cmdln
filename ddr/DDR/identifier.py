@@ -443,6 +443,7 @@ class Definitions():
 
 try:
     from repo_models.identifier import IDENTIFIERS
+    from repo_models.identifier import __file__ as IDENTIFIERS_FILE
     from repo_models.elastic import ELASTICSEARCH_CLASSES
     from repo_models.elastic import ELASTICSEARCH_LIST_FIELDS
 except ImportError:
@@ -537,12 +538,20 @@ def identify_object(text: str, patterns: list):
             pattern,memo,model = tpl
             groupdict = m.groupdict()
             break
-    ## validate components
-    #for key in VALID_COMPONENTS.keys():
-    #    val = groupdict.get(key, None)
-    #    if val and (val not in VALID_COMPONENTS[key]):
-    #        raise Exception('Invalid ID keyword: "%s"' % val)
     return model,memo,groupdict
+
+def validate_idparts(oid, idparts, valid_components):
+    """Throw exception if Identifier keywords are not in lists of valid ones
+    
+    See ddr-defs:repo_models/identifier.py IDENTIFIERS[n]['component']['valid']
+    """
+    for key in valid_components.keys():
+        val = idparts.get(key, None)
+        if val and (val not in valid_components[key]):
+            raise Exception(
+                f'Identifier: Invalid {key} "{val}" in "{oid}"' \
+                + f' (see {IDENTIFIERS_FILE}).'
+            )
 
 def identify_filepath(path: str) -> Optional[str]:
     """Indicates file role or if path is an access file.
@@ -964,6 +973,7 @@ class Identifier(object):
         self.model = model
         set_idparts(self, groupdict)
         set_idparts_sort(self, VALID_COMPONENTS)
+        validate_idparts(self.id, self.idparts, VALID_COMPONENTS)
         if base_path and not self.basepath:
             self.basepath = base_path
     
@@ -994,6 +1004,7 @@ class Identifier(object):
         id_components.insert(0, ('model', self.model))
         self.idparts = OrderedDict(id_components)
         set_idparts_sort(self, VALID_COMPONENTS)
+        validate_idparts(self.id, self.idparts, VALID_COMPONENTS)
         self.id = format_id(self, self.model)
         if base_path and not self.basepath:
             self.basepath = base_path
@@ -1022,6 +1033,7 @@ class Identifier(object):
         self.model = model
         set_idparts(self, groupdict)
         set_idparts_sort(self, VALID_COMPONENTS)
+        validate_idparts(self.id, self.idparts, VALID_COMPONENTS)
         self.id = format_id(self, self.model)
     
     def _from_url(self, url: str, base_path: str=None):
@@ -1054,6 +1066,7 @@ class Identifier(object):
         self.model = model
         set_idparts(self, groupdict)
         set_idparts_sort(self, VALID_COMPONENTS)
+        validate_idparts(self.id, self.idparts, VALID_COMPONENTS)
         self.id = format_id(self, self.model)
         if base_path and not self.basepath:
             self.basepath = base_path

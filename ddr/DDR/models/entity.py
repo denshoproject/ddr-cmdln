@@ -471,7 +471,7 @@ class Entity(common.DDRObject):
     
     def post_json(self):
         # NOTE: this is same basic code as docstore.index
-        return docstore.Docstore().post(
+        return docstore.DOCSTORE.post(
             self,
             docstore._public_fields().get(self.identifier.model, []),
             {
