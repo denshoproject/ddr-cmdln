@@ -26,5 +26,6 @@ git+https://github.com/denshoproject/densho-elastictools.git
 
 bpython
 mypy
+nose
 pytest
 pytest-cov
