@@ -93,13 +93,22 @@ def load_json(path):
     return data
 
 
-class Docstore(docstore.DocstoreManager):
-    
+class DocstoreManager(docstore.DocstoreManager):
+
+    def __init__(self, index_prefix, host, settings):
+        super(DocstoreManager, self).__init__(index_prefix, host, settings)
+
     def print_configs(self):
         print('CONFIG_FILES:           %s' % config.CONFIG_FILES)
         print('')
         print('DOCSTORE_HOST:          %s' % config.DOCSTORE_HOST)
         print('')
+
+    def create_indices(self):
+        return super(DocstoreManager,self).create_indices(ELASTICSEARCH_CLASSES['all'])
+
+    def delete_indices(self):
+        return super(DocstoreManager,self).delete_indices(ELASTICSEARCH_CLASSES['all'])
     
     def model_fields_lists(self):
         """
@@ -636,10 +645,10 @@ class Docstore(docstore.DocstoreManager):
 
 
 # see if cluster is available, quit with nice message if not
-Docstore(INDEX_PREFIX, config.DOCSTORE_HOST, config).start_test()
+DocstoreManager(INDEX_PREFIX, config.DOCSTORE_HOST, config).start_test()
 
 # set default hosts and index
-DOCSTORE = Docstore(INDEX_PREFIX, config.DOCSTORE_HOST, config)
+DOCSTORE = DocstoreManager(INDEX_PREFIX, config.DOCSTORE_HOST, config)
 
 
 def make_index_name(text):
