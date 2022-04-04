@@ -98,10 +98,10 @@ class DocstoreManager(docstore.DocstoreManager):
     def __init__(self, index_prefix, host, settings):
         super(DocstoreManager, self).__init__(index_prefix, host, settings)
 
-    def print_configs(self):
+    def print_configs(self, host=config.DOCSTORE_HOST):
         print('CONFIG_FILES:           %s' % config.CONFIG_FILES)
         print('')
-        print('DOCSTORE_HOST:          %s' % config.DOCSTORE_HOST)
+        print('DOCSTORE_HOST:          %s' % host)
         print('')
 
     def create_indices(self):
@@ -642,13 +642,6 @@ class DocstoreManager(docstore.DocstoreManager):
                 oi.id,
                 r.status_code, r.reason
             ))
-
-
-# see if cluster is available, quit with nice message if not
-DocstoreManager(INDEX_PREFIX, config.DOCSTORE_HOST, config).start_test()
-
-# set default hosts and index
-DOCSTORE = DocstoreManager(INDEX_PREFIX, config.DOCSTORE_HOST, config)
 
 
 def make_index_name(text):
