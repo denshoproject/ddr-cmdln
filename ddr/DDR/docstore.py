@@ -546,7 +546,6 @@ class DocstoreManager(docstore.DocstoreManager):
             
             # see if document exists
             existing_v = None
-            print(f'self.get {self.get}')
             d = self.get(
                 model=oi.model,
                 es_class=ELASTICSEARCH_CLASSES_BY_MODEL[oi.model],
