@@ -6,7 +6,7 @@
 
                           # LICENSE  PyPy
 
-b2sdk==1.4.0              # MIT      y
+b2sdk>=1.14.1,<1.15.0     # MIT      y
 beautifulsoup4==4.8.2     # MIT
 click==7.1.1              # BSD      y
 deepdiff==3.3.0           # MIT      y
