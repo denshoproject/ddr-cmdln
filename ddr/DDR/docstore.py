@@ -88,6 +88,12 @@ def load_json(path):
     return data
 
 
+class Docstore(docstore.Docstore):
+
+    def __init__(self, index_prefix, host, settings):
+        super(Docstore, self).__init__(index_prefix, host, settings)
+
+
 class DocstoreManager(docstore.DocstoreManager):
 
     def __init__(self, index_prefix, host, settings):
