@@ -40,11 +40,6 @@ from pathlib import Path
 from ssl import create_default_context
 import traceback
 
-from elasticsearch import Elasticsearch, TransportError
-from elasticsearch.client import SnapshotClient
-import elasticsearch_dsl
-import requests
-
 from elastictools import docstore
 from DDR import config
 from DDR import converters
@@ -91,6 +86,12 @@ def load_json(path):
     except json.JSONDecodeError:
         raise Exception('json.errors.JSONDecodeError reading %s' % path)
     return data
+
+
+class Docstore(docstore.Docstore):
+
+    def __init__(self, index_prefix, host, settings):
+        super(Docstore, self).__init__(index_prefix, host, settings)
 
 
 class DocstoreManager(docstore.DocstoreManager):
@@ -629,18 +630,11 @@ class DocstoreManager(docstore.DocstoreManager):
                 model = 'entity'
             else:
                 model = oi.model
-            url = 'http://{}/{}/_doc/{}/'.format(
-                self.host,
-                self.index_name(model),
-                oi.id
-            )
-            r = requests.request('DELETE', url)
-            print('{}/{} DELETE {} {} -> {} {}'.format(
-                n, num,
-                self.index_name(model),
-                oi.id,
-                r.status_code, r.reason
-            ))
+            try:
+                result = self.es.delete(index=self.index_name(model), id=oi.id)
+                print(f'{n}/{num} DELETE {self.index_name(model)} {oi.id} -> {result["result"]}')
+            except docstore.NotFoundError as err:
+                print(f'{n}/{num} DELETE {self.index_name(model)} {oi.id} -> 404 Not Found')
 
 
 def make_index_name(text):

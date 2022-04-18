@@ -41,7 +41,7 @@ def no_elasticsearch():
 
 #@attr('elasticsearch')
 #def test_get_connection():
-#    d = docstore.Docstore(hosts=HOSTS, index=None)
+#    d = docstore.Docstore(docstore.INDEX_PREFIX, config.DOCSTORE_HOST, config)
 #    assert d.es
 #    assert d.es.cat.client.ping() == True
 
@@ -243,7 +243,7 @@ POST_OBJECT_IDS = [
 def test_post(publishable_objects):
     """Right now this only tests if you can post() without raising exceptions
     """
-    ds = docstore.DOCSTORE
+    ds = docstore.DocstoreManager(docstore.INDEX_PREFIX, config.DOCSTORE_HOST, config)
     post_these = [o for o in publishable_objects if o.id in POST_OBJECT_IDS]
     for o in post_these:
         print(o)
@@ -257,7 +257,7 @@ def test_post(publishable_objects):
 def test_post_multi(publishable_objects):
     """Right now this only tests if you can post() without raising exceptions
     """
-    ds = docstore.DOCSTORE
+    ds = docstore.DocstoreManager(docstore.INDEX_PREFIX, config.DOCSTORE_HOST, config)
     print(ds)
     post_these = [o for o in publishable_objects if o.id in POST_OBJECT_IDS]
     collection_path = post_these[0].identifier.collection_path()
@@ -276,7 +276,7 @@ def test_post_multi(publishable_objects):
 # this should come last...
 @pytest.mark.skipif(no_elasticsearch(), reason=NO_ELASTICSEARCH_ERR)
 def test_delete(publishable_objects):
-    ds = docstore.DOCSTORE
+    ds = docstore.DocstoreManager(docstore.INDEX_PREFIX, config.DOCSTORE_HOST, config)
     print(ds)
     # delete single
     f = None
