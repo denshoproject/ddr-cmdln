@@ -3,11 +3,15 @@
 from collections import OrderedDict
 from functools import total_ordering
 import importlib
+import json
 import os
+from pathlib import Path
 import re
 import string
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from urllib.parse import urlparse
+
+from DDR import config
 
 
 DEFINITIONS_IMPORT_ERR = """Could not import {}.
@@ -218,14 +222,27 @@ class Definitions():
         }
 
     @staticmethod
-    def valid_components(identifiers):
-        """Components in VALID_COMPONENTS.keys() must appear in VALID_COMPONENTS[key] to be valid.
+    def valid_components(identifiers, media_base):
+        """Components in VALID_COMPONENTS.keys() must appear in VALID_COMPONENTS[key]
+        
+        NOTE: repository ID and organization IDs from ddr/repository.json
+        override those in ddr-defs/repo_models/identifiers.py
         """
-        return {
+        # repo, org, role from ddr-defs/repo_models/identifiers.py
+        components = {
             i['component']['name']: i['component']['valid']
             for i in identifiers
             if i['component']['valid']
         }
+        # repo ID and organization IDs from ddr/repository.json
+        path = Path(media_base) / 'ddr/repository.json'
+        with path.open('r') as f:
+            data = json.loads(f.read())
+            components['repo'] = data['repo']
+            components['org'] = [
+                org_id.split('-')[1] for org_id in data.get('organizations', [])
+            ]
+        return components
 
     @staticmethod
     def nextable_models(identifiers):
@@ -468,7 +485,7 @@ NODES = Definitions.endpoints(IDENTIFIERS, 'children_all')
 ID_COMPONENTS = Definitions.id_components(IDENTIFIERS)
 COMPONENT_TYPES = Definitions.component_types(IDENTIFIERS)
 COMPONENT_FORMFIELDS = Definitions.component_formfields(IDENTIFIERS)
-VALID_COMPONENTS = Definitions.valid_components(IDENTIFIERS)
+VALID_COMPONENTS = Definitions.valid_components(IDENTIFIERS, config.MEDIA_BASE)
 NEXTABLE_MODELS = Definitions.nextable_models(IDENTIFIERS)
 # Bits of file paths that uniquely identify file types.
 # Suitable for use on command-line e.g. in git-annex-whereis.
