@@ -239,10 +239,12 @@ class Definitions():
         with path.open('r') as f:
             data = json.loads(f.read())
             components['repo'] = data['repo']
-            components['org'] = [
-                org_id.split('-')[1] for org_id in data.get('organizations', [])
-            ]
-            components['role'] = data['file-roles']
+            if data.get('org'):
+                components['org'] = [
+                    org_id.split('-')[1] for org_id in data['org']
+                ]
+            if data.get('role'):
+                components['role'] = data['role']
         return components
 
     @staticmethod
