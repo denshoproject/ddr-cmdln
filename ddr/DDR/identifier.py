@@ -242,6 +242,7 @@ class Definitions():
             components['org'] = [
                 org_id.split('-')[1] for org_id in data.get('organizations', [])
             ]
+            components['role'] = data['file-roles']
         return components
 
     @staticmethod
