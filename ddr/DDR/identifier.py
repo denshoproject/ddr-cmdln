@@ -560,6 +560,9 @@ def identify_object(text: str, patterns: list):
             break
     return model,memo,groupdict
 
+class InvalidIdentifierException(Exception):
+    pass
+
 def validate_idparts(oid, idparts, valid_components):
     """Throw exception if Identifier keywords are not in lists of valid ones
     
@@ -568,9 +571,10 @@ def validate_idparts(oid, idparts, valid_components):
     for key in valid_components.keys():
         val = idparts.get(key, None)
         if val and (val not in valid_components[key]):
-            raise Exception(
-                f'Identifier: Invalid {key} "{val}" in "{oid}"' \
-                + f' (see {IDENTIFIERS_FILE}).'
+            raise InvalidIdentifierException(
+                f'Invalid {key} "{val}" in "{oid}"' \
+                + f' (see {config.MEDIA_BASE}/ddr/repository.json' \
+                + f' or {IDENTIFIERS_FILE}).'
             )
 
 def identify_filepath(path: str) -> Optional[str]:
