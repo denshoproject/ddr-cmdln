@@ -367,7 +367,9 @@ class Collection(common.DDRObject):
     
     def post_json(self):
         # NOTE: this is same basic code as Docstore.index
-        return docstore.DOCSTORE.post(
+        return docstore.DocstoreManager(
+            docstore.INDEX_PREFIX, config.DOCSTORE_HOST, config
+        ).post(
             self,
             docstore._public_fields().get(self.identifier.model, []),
             {
@@ -378,7 +380,9 @@ class Collection(common.DDRObject):
     def reindex(self):
         """Reindex Collection objects to Elasticsearch
         """
-        ds = docstore.DOCSTORE
+        ds = docstore.DocstoreManager(
+            docstore.INDEX_PREFIX, config.DOCSTORE_HOST, config
+        )
         # check for ES connection before going to all the trouble
         health = ds.health()
         index_name = ds.index_name(self.identifier.model)
