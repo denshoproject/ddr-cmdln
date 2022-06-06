@@ -145,7 +145,7 @@ def datetime_to_text(data: datetime, fmt: str=config.DATETIME_FORMAT) -> Optiona
     if isinstance(data, str):
         return data
     if not isinstance(data, datetime):
-        raise Exception('Cannot strformat "%s": not a datetime.' % data)
+        raise Exception(f'Cannot strformat "{date}": not a datetime.')
     return datetime.strftime(data, fmt)
 
 

@@ -1,12 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import os
-
+from zoneinfo import ZoneInfo
 import pytest
-import pytz
 
 from DDR import changelog
 
-TZ = pytz.utc
+UTC = ZoneInfo('UTC')
 
 
 def test_is_old_entry():
@@ -23,7 +22,7 @@ def test_read_old_entry():
     out_UTC = []
     for entry in out:
         dt = entry['timestamp']
-        entry['timestamp'] = datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, dt.microsecond, tzinfo=TZ)
+        entry['timestamp'] = datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, dt.microsecond, tzinfo=UTC)
         out_UTC.append(entry)
     # now compare
     assert out_UTC == expected_read_old
@@ -47,7 +46,7 @@ def test_read_entries():
     out_UTC = []
     for entry in out:
         dt = entry['timestamp']
-        entry['timestamp'] = datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, dt.microsecond, tzinfo=TZ)
+        entry['timestamp'] = datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, dt.microsecond, tzinfo=UTC)
         out_UTC.append(entry)
     # now compare
     assert out_UTC == expected_read_entries
@@ -80,7 +79,7 @@ def test_write_changelog_entry(tmpdir):
     user = 'gjost'
     mail = 'gjost@densho.org'
     messages = ['testing', 'testing', '123']
-    timestamp = datetime(2014,5,29, 14,38,55,tzinfo=TZ)
+    timestamp = datetime(2014,5,29, 14,38,55,tzinfo=UTC)
     expected1 = '* testing\n* testing\n* 123\n' \
                 '-- gjost <gjost@densho.org>  Thu, 29 May 2014, 02:38 PM UTC \n'
     expected2 = '* testing\n* testing\n* 123\n' \
@@ -113,7 +112,7 @@ SAMPLE_OLD_CHANGELOG = """* Added entity file files/ddr-testing-160-1-master-c70
 * Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/files/ddr-testing-160-1-master-c703e5ece1.json
 -- Geoffrey Jost <geoffrey.jost@densho.org>  Wed, 02 Oct 2013 10:11:08 """
 
-expected_read_old = [{'timestamp': datetime(2013, 10, 1, 14, 33, 35, tzinfo=TZ), 'messages': ['Added entity file files/ddr-testing-160-1-master-c703e5ece1-a.jpg'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 2, 10, 10, 45, tzinfo=TZ), 'messages': ['Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/entity.json', 'Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/mets.xml'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 2, 10, 11, 8, tzinfo=TZ), 'messages': ['Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/files/ddr-testing-160-1-master-c703e5ece1.json'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}]
+expected_read_old = [{'timestamp': datetime(2013, 10, 1, 14, 33, 35, tzinfo=UTC), 'messages': ['Added entity file files/ddr-testing-160-1-master-c703e5ece1-a.jpg'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 2, 10, 10, 45, tzinfo=UTC), 'messages': ['Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/entity.json', 'Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/mets.xml'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 2, 10, 11, 8, tzinfo=UTC), 'messages': ['Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/files/ddr-testing-160-1-master-c703e5ece1.json'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}]
 
 SAMPLE_NEW_CHANGELOG = """2013-10-01T14:33:35UTC+0000 -- Geoffrey Jost <geoffrey.jost@densho.org>
 * Added entity file files/ddr-testing-160-1-master-c703e5ece1-a.jpg
@@ -125,6 +124,6 @@ SAMPLE_NEW_CHANGELOG = """2013-10-01T14:33:35UTC+0000 -- Geoffrey Jost <geoffrey
 2013-10-02T10:11:08UTC+0000 -- Geoffrey Jost <geoffrey.jost@densho.org>
 * Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/files/ddr-testing-160-1-master-c703e5ece1.json"""
 
-expected_read_new = [{'timestamp': datetime(2013, 10, 1, 14, 33, 35, tzinfo=TZ), 'messages': ['Added entity file files/ddr-testing-160-1-master-c703e5ece1-a.jpg'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 2, 10, 10, 45, tzinfo=TZ), 'messages': ['Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/entity.json', 'Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/mets.xml'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 2, 10, 11, 8, tzinfo=TZ), 'messages': ['Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/files/ddr-testing-160-1-master-c703e5ece1.json'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}]
+expected_read_new = [{'timestamp': datetime(2013, 10, 1, 14, 33, 35, tzinfo=UTC), 'messages': ['Added entity file files/ddr-testing-160-1-master-c703e5ece1-a.jpg'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 2, 10, 10, 45, tzinfo=UTC), 'messages': ['Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/entity.json', 'Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/mets.xml'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 2, 10, 11, 8, tzinfo=UTC), 'messages': ['Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/files/ddr-testing-160-1-master-c703e5ece1.json'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}]
 
-expected_read_entries = [{'timestamp': datetime(2013, 10, 1, 14, 33, 35, tzinfo=TZ), 'messages': ['Added entity file files/ddr-testing-160-1-master-c703e5ece1-a.jpg'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 2, 10, 10, 45, tzinfo=TZ), 'messages': ['Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/entity.json', 'Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/mets.xml'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 2, 10, 11, 8, tzinfo=TZ), 'messages': ['Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/files/ddr-testing-160-1-master-c703e5ece1.json'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 1, 14, 33, 35, tzinfo=TZ), 'messages': ['Added entity file files/ddr-testing-160-1-master-c703e5ece1-a.jpg'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 2, 10, 10, 45, tzinfo=TZ), 'messages': ['Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/entity.json', 'Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/mets.xml'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 2, 10, 11, 8, tzinfo=TZ), 'messages': ['Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/files/ddr-testing-160-1-master-c703e5ece1.json'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}]
+expected_read_entries = [{'timestamp': datetime(2013, 10, 1, 14, 33, 35, tzinfo=UTC), 'messages': ['Added entity file files/ddr-testing-160-1-master-c703e5ece1-a.jpg'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 2, 10, 10, 45, tzinfo=UTC), 'messages': ['Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/entity.json', 'Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/mets.xml'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 2, 10, 11, 8, tzinfo=UTC), 'messages': ['Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/files/ddr-testing-160-1-master-c703e5ece1.json'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 1, 14, 33, 35, tzinfo=UTC), 'messages': ['Added entity file files/ddr-testing-160-1-master-c703e5ece1-a.jpg'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 2, 10, 10, 45, tzinfo=UTC), 'messages': ['Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/entity.json', 'Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/mets.xml'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}, {'timestamp': datetime(2013, 10, 2, 10, 11, 8, tzinfo=UTC), 'messages': ['Updated entity file /var/www/media/base/ddr-testing-160/files/ddr-testing-160-1/files/ddr-testing-160-1-master-c703e5ece1.json'], 'user': 'Geoffrey Jost', 'mail': 'geoffrey.jost@densho.org'}]

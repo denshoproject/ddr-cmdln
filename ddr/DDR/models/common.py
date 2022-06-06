@@ -740,7 +740,8 @@ def apply_timezone(document, module):
                     timezone = config.ALT_TIMEZONES[document.identifier.idparts['org']]
                 else:
                     timezone = config.TZ
-                setattr(document, fieldname, timezone.localize(dt))
+                dt = dt.replace(tzinfo=timezone)
+                setattr(document, fieldname, dt)
 
 def dump_json(obj, module, template=False,
               template_passthru=['id', 'record_created', 'record_lastmod'],
