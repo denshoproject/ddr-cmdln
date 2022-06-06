@@ -2,8 +2,7 @@ import configparser
 import os
 import sys
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
-
-import pytz
+from zoneinfo import ZoneInfo
 
 
 CONFIG_FILES = [
@@ -34,7 +33,7 @@ def _parse_alt_timezones(text: str) -> dict:
     for item in [item for item in text.strip().split(';') if item]:
         key,val = item.strip().split(':')
         if key not in list(data.keys()):
-            data[key] = pytz.timezone(val)
+            data[key] = ZoneInfo(val)
     return data
 
 
@@ -66,7 +65,7 @@ try:
     DEFAULT_TIMEZONE = CONFIG.get('cmdln','default_timezone')
 except:
     DEFAULT_TIMEZONE = 'America/Los_Angeles'
-TZ = pytz.timezone(DEFAULT_TIMEZONE)
+TZ = ZoneInfo(DEFAULT_TIMEZONE)
 ALT_TIMEZONES = _parse_alt_timezones(CONFIG.get('cmdln','alt_timezones'))
 DATETIME_FORMAT = CONFIG.get('cmdln','datetime_format')
 DATE_FORMAT = CONFIG.get('cmdln','date_format')
