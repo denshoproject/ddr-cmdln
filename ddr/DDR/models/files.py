@@ -282,7 +282,7 @@ class File(common.DDRObject):
         #we want to be able to e.g. delete mezz w/out deleting master
         
         # parent entity
-        entity.remove_child(self.id)
+        entity.remove_children(self.id)
         entity.write_json(force=True)
         updated_files = [
             entity.identifier.path_rel('json'),

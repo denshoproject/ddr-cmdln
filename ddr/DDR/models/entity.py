@@ -384,12 +384,12 @@ class Entity(common.DDRObject):
         self._children_objects.append(obj)
         self._children_objects = _sort_children(self._children_objects)
 
-    def remove_child(self, object_id):
+    def remove_children(self, object_id):
         """Remove child entity from this Entity's children list.
         
         @param object_id: str Child object ID
         """
-        logger.debug('%s.remove_child(%s)' % (self, object_id))
+        logger.debug('%s.remove_children(%s)' % (self, object_id))
         self.children()
         copy_objects = [
             o for o in self._children_objects if not o.id == object_id
