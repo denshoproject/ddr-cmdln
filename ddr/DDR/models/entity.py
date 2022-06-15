@@ -277,16 +277,6 @@ class Entity(common.DDRObject):
         parent = self.identifier.parent().object()
         collection = self.identifier.collection().object()
         
-        # metadata jsons
-        # NOTE: child File objects are deleted in commands.entity_destroy
-        
-        # parent entity
-        parent.remove_child(self.id)
-        parent.write_json(force=True)
-        updated_files = [
-            parent.identifier.path_rel('json'),
-        ]
-        
         # write files and commit
         return commands.entity_destroy(
             git_name, git_mail,
