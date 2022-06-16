@@ -604,12 +604,12 @@ def test_add_child():
     assert added in after
     assert added.id == new_child.id
 
-def test_remove_child():
+def test_remove_children():
     e = deepcopy(CHILDREN_ENTITY)
     e._children_objects = [
         CHILDREN_FILES[0]
     ]
-    e.remove_child(CHILDREN_FILES[0].id)
+    e.remove_children(CHILDREN_FILES[0].id)
     assert e._children_objects == []
 
 def test_children_counts():
