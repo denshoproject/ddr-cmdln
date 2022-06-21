@@ -17,7 +17,6 @@ natsort==7.0.1            # MIT
 psutil==5.7.0             # BSD      y
 python-dateutil==2.8.1    # BSD
 python-xmp-toolkit==2.0.1 # New BSD
-pytz==2019.3              # MIT
 requests==2.25.1          # Apache   y
 
 git+https://github.com/denshoproject/densho-elastictools.git

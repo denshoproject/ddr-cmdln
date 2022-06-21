@@ -122,9 +122,9 @@ def test_children():
     assert data[0]['group'] == 'testing'
     assert data[0]['model'] in ['entity','segment']
     assert 'ddr-testing-' in data[0]['id']
-    assert data[1]['group'] == 'testing'
-    assert data[1]['model'] in ['entity','segment']
-    assert 'ddr-testing-' in data[1]['id']
+    #assert data[1]['group'] == 'testing'
+    #assert data[1]['model'] in ['entity','segment']
+    #assert 'ddr-testing-' in data[1]['id']
 
 #@pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
 #@pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)

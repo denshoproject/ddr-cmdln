@@ -99,7 +99,6 @@ def parse_timestamp(text: str, mail: str) -> datetime:
             timezone = config.ALT_TIMEZONES[domain]
         else:
             timezone = config.TZ
-        dt = timezone.localize(dt)
     return dt
 
 def read_entries(log: str) -> List[Dict[str, object]]:
