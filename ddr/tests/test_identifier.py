@@ -165,11 +165,24 @@ def test_definitions_valid_components():
         {'model': 'organization', 'component': {'name': 'org',  'valid': ['densho', 'testing']}},
         {'model': 'collection',   'component': {'name': 'cid',  'valid': []}},
     ]
+    # TODO These values are set in git@mits.densho.org:ddr.git.
+    #      Figure out a way to pass these as function args or we will have to
+    #      update tests whenever we update ddr.git
     expected = {
-        'repo': ['ddr'],
-        'org': ['densho', 'testing'],
+        'repo': 'ddr',
+        'org': [
+            'densho', 'ajah', 'chi', 'csujad', 'fom', 'hmwf', 'jamsj', 'janm',
+            'jcch', 'manz', 'njpa', 'one', 'pc', 'sbbt', 'sjacl', 'dev',
+            'qumulo', 'test', 'testing'
+        ],
+        'role': [
+            'mezzanine', 'master', 'transcript', 'gloss', 'preservation',
+            'administrative'
+        ]
     }
-    out = identifier.Definitions.valid_components(IDENTIFIERS)
+    out = identifier.Definitions.valid_components(IDENTIFIERS, media_base='/var/www/media/ddr')
+    print(f'expected {expected}')
+    print(f'out {out}')
     assert out == expected
 
 def test_definitions_nextable_models():
