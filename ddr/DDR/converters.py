@@ -799,6 +799,8 @@ def _parse_rolepeople_text(texts):
                 item['id'] = match.groupdict()['id'].strip()
             if item.get('id') and item['id'].isdigit():
                 item['id'] = int(item['id'])
+            if item.get('nr_id') and item['nr_id'].isdigit():
+                item['nr_id'] = int(item['nr_id'])
             
             data.append(item)
     return data
