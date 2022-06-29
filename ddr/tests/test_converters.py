@@ -394,10 +394,26 @@ TEXTROLEPEOPLE_SINGLE_ID_DATA = [
     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
 ]
 
+TEXTROLEPEOPLE_SINGLE_NRID_TEXT = 'namepart:Masuda, Kikuye|nr_id:88922/nr014m435|role:narrator'
+TEXTROLEPEOPLE_SINGLE_NRID_DATA = [
+    {'namepart': 'Masuda, Kikuye', 'nr_id': '88922/nr014m435', 'role': 'narrator'},
+]
+
+TEXTROLEPEOPLE_SINGLE_NRIDID_TEXT = 'namepart:Masuda, Kikuye|nr_id:88922/nr014m435|role:narrator|id:42'
+TEXTROLEPEOPLE_SINGLE_NRIDID_DATA = [
+    {'namepart': 'Masuda, Kikuye', 'nr_id': '88922/nr014m435', 'role': 'narrator', 'id': 42},
+]
+
 TEXTROLEPEOPLE_MULTI_TEXT = 'namepart:Watanabe, Joe|role:author; namepart:Masuda, Kikuye|role:narrator|id:42'
 TEXTROLEPEOPLE_MULTI_DATA = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'},
     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
+]
+
+TEXTROLEPEOPLE_MULTI_NRID_TEXT = 'namepart:Watanabe, Joe|role:author; namepart:Masuda, Kikuye|nr_id:88922/nr014m435|role:narrator'
+TEXTROLEPEOPLE_MULTI_NRID_DATA = [
+    {'namepart': 'Watanabe, Joe', 'role': 'author'},
+    {'namepart': 'Masuda, Kikuye', 'nr_id': '88922/nr014m435', 'role': 'narrator'},
 ]
 
 TEXTROLEPEOPLE_LISTSTRSNAME_TEXT = [
@@ -441,7 +457,10 @@ def test_text_to_rolepeople():
     assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_NAME_TEXT,         TEXTROLEPEOPLE_NAME_DATA)
     assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_SINGLE_TEXT,       TEXTROLEPEOPLE_SINGLE_DATA)
     assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_SINGLE_ID_TEXT,    TEXTROLEPEOPLE_SINGLE_ID_DATA)
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_SINGLE_NRID_TEXT,  TEXTROLEPEOPLE_SINGLE_NRID_DATA)
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_SINGLE_NRIDID_TEXT,TEXTROLEPEOPLE_SINGLE_NRIDID_DATA)
     assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_MULTI_TEXT,        TEXTROLEPEOPLE_MULTI_DATA)
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_MULTI_NRID_TEXT,   TEXTROLEPEOPLE_MULTI_NRID_DATA)
     assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_LISTSTRSNAME_TEXT, TEXTROLEPEOPLE_LISTSTRSNAME_DATA)
     assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_LISTSTRS_TEXT,     TEXTROLEPEOPLE_LISTSTRS_DATA)
     assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_MULTI_DATA,        TEXTROLEPEOPLE_MULTI_DATA)
@@ -453,3 +472,5 @@ def test_rolepeople_to_text():
     assert converters.rolepeople_to_text(TEXTROLEPEOPLE_NAME_DATA) == TEXTROLEPEOPLE_NAME_OUT
     assert converters.rolepeople_to_text(TEXTROLEPEOPLE_SINGLE_DATA) == TEXTROLEPEOPLE_SINGLE_TEXT
     assert converters.rolepeople_to_text(TEXTROLEPEOPLE_MULTI_DATA) == TEXTROLEPEOPLE_MULTI_TEXT
+    assert converters.rolepeople_to_text(TEXTROLEPEOPLE_SINGLE_NRID_DATA) == TEXTROLEPEOPLE_SINGLE_NRID_TEXT
+    assert converters.rolepeople_to_text(TEXTROLEPEOPLE_MULTI_NRID_DATA) == TEXTROLEPEOPLE_MULTI_NRID_TEXT
