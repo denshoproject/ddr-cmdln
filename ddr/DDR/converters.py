@@ -836,10 +836,9 @@ def text_to_rolepeople(text: str) -> List[Dict[str,str]]:
         )
     )
 
-ROLEPEOPLE_TEXT_TEMPLATE_W_ID = 'namepart:{{ data.namepart }}|role:{{ data.role }}|id:{{ data.id }}'
-ROLEPEOPLE_TEXT_TEMPLATE_NOID = 'namepart:{{ data.namepart }}|role:{{ data.role }}'
-
 def rolepeople_to_text(data: List[Dict[str,str]]) -> str:
+    """Convert list of dicts to string "KEY:VAL|KEY:VAL|...; KEY:VAL|KEY:VAL|..."
+    """
     if isinstance(data, str):
         text = data
     else:
@@ -849,13 +848,10 @@ def rolepeople_to_text(data: List[Dict[str,str]]) -> str:
             if isinstance(d, str):
                 items.append(d)
             elif isinstance(d, dict):
-                if d.get('namepart') and d.get('id'):
-                    items.append(
-                        render(ROLEPEOPLE_TEXT_TEMPLATE_W_ID, data=d)
+                items.append(
+                    '|'.join(
+                        [f'{key}:{val}' for key,val in d.items()]
                     )
-                elif d.get('namepart'):
-                    items.append(
-                        render(ROLEPEOPLE_TEXT_TEMPLATE_NOID, data=d)
-                    )
+                )
         text = '; '.join(items)
     return text
