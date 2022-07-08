@@ -778,7 +778,7 @@ def _parse_rolepeople_text(texts):
                 # ex: "namepart:Sadako Kashiwagi|role:narrator|id:856"
                 for chunk in txt.split('|'):
                     key,val = chunk.split(':')
-                    item[key] = val.strip()
+                    item[key.strip()] = val.strip()
                 if item.get('name') and not item.get('namepart'):
                     item['namepart'] = item.pop('name')
             
@@ -851,9 +851,9 @@ def rolepeople_to_text(data: List[Dict[str,str]]) -> str:
                 items.append(d)
             elif isinstance(d, dict):
                 items.append(
-                    '|'.join(
-                        [f'{key}:{val}' for key,val in d.items()]
+                    ' | '.join(
+                        [f'{key}: {val}' for key,val in d.items()]
                     )
                 )
-        text = '; '.join(items)
+        text = '; '.join(items).strip()
     return text
