@@ -453,6 +453,12 @@ TEXTROLEPEOPLE_PIPES_DATA = [
     {'namepart': 'Joi Ito', 'role': 'techie', 'id': 123},
 ]
 
+TEXTROLEPEOPLE_NOSPACES_TEXT = 'namepart:Watanabe, Joe|role:author; namepart:Masuda, Kikuye [42]|role:narrator;'
+TEXTROLEPEOPLE_NOSPACES_DATA = [
+    {'namepart': 'Watanabe, Joe', 'role': 'author'},
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
+]
+
 # many legacy files have this pattern
 TEXTROLEPEOPLE_MULTIERR_TEXT = [
     {'namepart': '', 'role': 'author'},
@@ -473,6 +479,7 @@ def test_text_to_rolepeople():
     assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_LISTSTRS_TEXT,     TEXTROLEPEOPLE_LISTSTRS_DATA)
     assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_MULTI_DATA,        TEXTROLEPEOPLE_MULTI_DATA)
     assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_PIPES_TEXT,        TEXTROLEPEOPLE_PIPES_DATA)
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_NOSPACES_TEXT,     TEXTROLEPEOPLE_NOSPACES_DATA)
     assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_MULTIERR_TEXT,     TEXTROLEPEOPLE_MULTIERR_DATA)
 
 def test_rolepeople_to_text():
