@@ -515,7 +515,7 @@ def status(hosts):
               default='',
               help='ID of parent object.')
 @click.option('--filters','-f',
-              default='', multiple=True,
+              default=[], multiple=True,
               help='Filter on certain fields (FIELD:VALUE,VALUE,...).')
 @click.option('--limit','-l',
               default=config.RESULTS_PER_PAGE,
