@@ -5,7 +5,6 @@ import re
 import shutil
 import sys
 
-import envoy
 import git
 
 from DDR import config
