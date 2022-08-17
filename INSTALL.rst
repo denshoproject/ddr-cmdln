@@ -26,7 +26,7 @@ using the `gdebi` command.  The `virtualenv` is installed ready to go
 and Debian packaged dependencies (Nginx, Redis, etc) are automatically
 installed as required.
 ::
-    $ sudo apt-get install gdebi
+    $ sudo apt install gdebi
     $ sudo gdebi ddrcmdln-BRANCH_VERSION_ARCH.deb
     ...
 
@@ -59,18 +59,18 @@ list of APT sources. Commands for accomplishing this are listed below
 (for completeness we include commands to install curl and the apt
 tools - you may already have these installed).
 ::
-    $ sudo apt-get update && sudo apt-get install curl apt-transport-https gnupg
+    $ sudo apt update && sudo apt install curl apt-transport-https gnupg
     ...
-    $ sudo curl -s http://packages.densho.org/debian/keys/archive.asc | sudo apt-key add -
+    $ sudo apt-key adv --keyserver keys.openpgp.org --recv-keys 6C55FA292B127AF2
     ...
-    $ echo "deb http://packages.densho.org/debian/ jessie main" | sudo tee /etc/apt/sources.list.d/packages_densho_org_debian.list
+    $ echo "deb http://packages.densho.org/debian/ bullseye main" | sudo tee /etc/apt/sources.list.d/packages_densho_org_debian.list
     ...
 
 **Installing the Package**
 
 You can now install the DDR Editor with a single command:
 ::
-    $ sudo apt-get update && sudo apt-get install ddrcmdln-master
+    $ sudo apt update && sudo apt install ddrcmdln-master
     ...
 
 If you wish to use the develop branch instead of the master branch,
@@ -84,7 +84,7 @@ should consider a source install.
 A normal `apt-get remove` uninstalls the software from your system,
 leaving config and data files in place.
 ::
-    $ sudo apt-get remove ddrcmdln-master
+    $ sudo apt remove ddrcmdln-master
     ...
 
 To completely remove all files installed as part of `ddr-cmdln`
@@ -92,7 +92,7 @@ To completely remove all files installed as part of `ddr-cmdln`
 IMPORTANT: this removes the `/media/` directory which contains your
 data!
 ::
-    $ sudo apt-get purge ddrcmdln-master
+    $ sudo apt purge ddrcmdln-master
     ...
     $ sudo rm /etc/apt/sources.list.d/packages_densho_org_debian.list && apt-get update
     ...
