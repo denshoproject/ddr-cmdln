@@ -7,17 +7,16 @@
                           # LICENSE  PyPy
 
 b2sdk>=1.14.1,<1.15.0     # MIT      y
-beautifulsoup4==4.8.2     # MIT
-click==7.1.1              # BSD      y
-deepdiff==3.3.0           # MIT      y
+click>=8.1.0,<8.2         # BSD      y
+deepdiff>=3.3.0,<4.0      # MIT      y
 envoy==0.0.3              # MIT             TODO replace!
-gitpython==3.1.1          # BSD
+gitpython>=3.1.0,<3.2     # BSD
 Jinja2>=3.0.0,<3.1.0      # BSD
-natsort==7.0.1            # MIT
-psutil==5.7.0             # BSD      y
+natsort>=8.1.0,<8.2       # MIT
+psutil>=5.9.1,<6.0        # BSD      y
 python-dateutil==2.8.1    # BSD
 python-xmp-toolkit==2.0.1 # New BSD
-requests==2.25.1          # Apache   y
+requests>=2.28.0,<2.29    # Apache   y
 
 git+https://github.com/denshoproject/densho-elastictools.git
 

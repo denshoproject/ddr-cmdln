@@ -226,6 +226,10 @@ class DocstoreManager(docstore.DocstoreManager):
                 vocab.get_vocabs(config.VOCABS_URL)['genre'],
                 'genre'
             ),
+            'language-choices': vocab.form_vocab_choices(
+                vocab.get_vocabs(config.VOCABS_URL)['language'],
+                'language'
+            ),
             'rights-choices': vocab.form_vocab_choices(
                 vocab.get_vocabs(config.VOCABS_URL)['rights'],
                 'rights'

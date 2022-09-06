@@ -38,8 +38,6 @@ import os
 import re
 import sys
 
-import envoy
-
 from DDR import format_json
 from DDR import fileio
 from DDR import models

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import envoy
 import git
 from nose.tools import assert_raises
 

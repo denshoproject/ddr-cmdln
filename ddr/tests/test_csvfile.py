@@ -3,7 +3,6 @@
 from collections import OrderedDict
 from copy import deepcopy
 
-import envoy
 import git
 from nose.tools import assert_raises
 

@@ -5,7 +5,6 @@ import json
 import os
 from pathlib import Path
 
-from bs4 import BeautifulSoup
 import pytest
 import requests
 

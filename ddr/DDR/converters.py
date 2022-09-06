@@ -778,7 +778,7 @@ def _parse_rolepeople_text(texts):
                 # ex: "namepart:Sadako Kashiwagi|role:narrator|id:856"
                 for chunk in txt.split('|'):
                     key,val = chunk.split(':')
-                    item[key] = val.strip()
+                    item[key.strip()] = val.strip()
                 if item.get('name') and not item.get('namepart'):
                     item['namepart'] = item.pop('name')
             
@@ -799,6 +799,8 @@ def _parse_rolepeople_text(texts):
                 item['id'] = match.groupdict()['id'].strip()
             if item.get('id') and item['id'].isdigit():
                 item['id'] = int(item['id'])
+            if item.get('nr_id') and item['nr_id'].isdigit():
+                item['nr_id'] = int(item['nr_id'])
             
             data.append(item)
     return data
@@ -836,10 +838,9 @@ def text_to_rolepeople(text: str) -> List[Dict[str,str]]:
         )
     )
 
-ROLEPEOPLE_TEXT_TEMPLATE_W_ID = 'namepart:{{ data.namepart }}|role:{{ data.role }}|id:{{ data.id }}'
-ROLEPEOPLE_TEXT_TEMPLATE_NOID = 'namepart:{{ data.namepart }}|role:{{ data.role }}'
-
 def rolepeople_to_text(data: List[Dict[str,str]]) -> str:
+    """Convert list of dicts to string "KEY:VAL|KEY:VAL|...; KEY:VAL|KEY:VAL|..."
+    """
     if isinstance(data, str):
         text = data
     else:
@@ -849,13 +850,10 @@ def rolepeople_to_text(data: List[Dict[str,str]]) -> str:
             if isinstance(d, str):
                 items.append(d)
             elif isinstance(d, dict):
-                if d.get('namepart') and d.get('id'):
-                    items.append(
-                        render(ROLEPEOPLE_TEXT_TEMPLATE_W_ID, data=d)
+                items.append(
+                    ' | '.join(
+                        [f'{key}: {val}' for key,val in d.items()]
                     )
-                elif d.get('namepart'):
-                    items.append(
-                        render(ROLEPEOPLE_TEXT_TEMPLATE_NOID, data=d)
-                    )
-        text = '; '.join(items)
+                )
+        text = '; '.join(items).strip()
     return text
