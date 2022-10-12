@@ -1,7 +1,12 @@
 HELP = """
-ddrnames - Interact with the namesdb-editor
+ddrnames - Export names from repositories to be matched with NamesDB records
 
-DESCRIPTION TEXT GOES HERE
+Export creators and persons names from entire DDR collections in CSV format.
+Examples:
+ddrnames export creators /var/www/media/ddr/ddr-csujad-30
+ddrnames export persons /var/www/media/ddr/ddr-densho-10
+
+Feed output of this command to `namesdb searchmulti` for match recommendations.
 """
 
 import click
