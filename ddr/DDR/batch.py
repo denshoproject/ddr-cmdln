@@ -38,6 +38,12 @@ COLLECTION_FILES_PREFIX = 'files'
 # TODO get these from ddr-defs/repo_modules/file.py
 FILE_UPDATE_IGNORE_FIELDS = ['sha1', 'sha256', 'md5', 'size']
 
+# fields that only appear in File objects
+# TODO get these from ddr-defs/repo_modules/file.py
+FILE_ONLY_FIELDS = [
+    'external', 'basename_orig', 'role', 'sort', 'mimetype', 'tech_notes',
+]
+
 
 class Exporter():
     
@@ -330,10 +336,16 @@ class Checker():
         if len(models) > 1:
             errors.append('More than one model type in imput file!')
         model = models[0]
-        # new files don't have their own IDs - they have their parent entity IDs
-        # the parent entity may be duplicated
+        # New files don't have their own IDs - they have their parent entity IDs
+        # Note: the parent entity may be duplicated
+        def has_file_only_fields(headers):
+            """Scan for fields unique to File objects TODO hard-coded values"""
+            for fieldname in headers:
+                if fieldname in FILE_ONLY_FIELDS:
+                    return True
+            return False
         PARENT_MODELS = ['entity', 'segment']
-        if (model in PARENT_MODELS) and rowds and ('basename_orig' in list(rowds[0].keys())):
+        if (model in PARENT_MODELS) and has_file_only_fields(rowds[0]):
             model = 'file'
         # TODO should not know model name
         if model == 'file-role':
