@@ -334,7 +334,7 @@ class Checker():
         if not models:
             errors.append('Cannot guess model type!')
         if len(models) > 1:
-            errors.append('More than one model type in imput file!')
+            errors.append('More than one model type in input file!')
         model = models[0]
         # New files don't have their own IDs - they have their parent entity IDs
         # Note: the parent entity may be duplicated
