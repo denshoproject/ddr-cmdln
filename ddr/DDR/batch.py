@@ -229,8 +229,8 @@ class Checker():
             logging.error('CSV errors:')
             for csv_err in csv_errs:
                 logging.error('* %s' % csv_err)
-            logging.error('NOTE: Line numbers may not be exact.')
-            logging.error('      Numbering starts at zero and may not include header row.')
+            logging.warning('NOTE: Line numbers may not be exact.')
+            logging.warning('      Numbering starts at zero and may not include header row.')
         for rowd in rowds:
             if rowd.get('id'):
                 rowd['identifier'] = identifier.Identifier(rowd['id'])
@@ -244,8 +244,8 @@ class Checker():
             module, vocabs, headers, rowds, model
         )
         if model_errs or header_errs or csv_errs or rowds_errs:
-            logging.error('NOTE: Line numbers in errors may not be exact.')
-            logging.error('      Numbering starts at zero and may not include header row.')
+            logging.warning('NOTE: Line numbers in errors may not be exact.')
+            logging.warning('      Numbering starts at zero and may not include header row.')
         else:
             passed = True
             logging.info('ok')
