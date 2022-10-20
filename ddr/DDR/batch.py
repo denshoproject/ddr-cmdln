@@ -199,7 +199,7 @@ class Checker():
         }
 
     @staticmethod
-    def check_csv(csv_path, cidentifier, vocabs_url):
+    def check_csv(model, csv_path, cidentifier, vocabs_url):
         """Load CSV, validate headers and rows
         
         An import file must be a valid CSV file.
@@ -215,6 +215,7 @@ class Checker():
         - 'header_errs'
         - 'rowds_errs'
         
+        @param model: str
         @param csv_path: Absolute path to CSV data file.
         @param cidentifier: Identifier
         @param vocabs_url: str URL or path to vocabs
@@ -237,7 +238,6 @@ class Checker():
             else:
                 rowd['identifier'] = None
         logging.info('%s rows' % len(rowds))
-        model,model_errs = Checker._guess_model(rowds)
         module = Checker._get_module(model)
         vocabs = vocab.get_vocabs(config.VOCABS_URL)
         header_errs,rowds_errs = Checker._validate_csv_file(
@@ -311,47 +311,6 @@ class Checker():
         }
 
     # ----------------------------------------------------------------------
-
-    @staticmethod
-    def _guess_model(rowds):
-        """Loops through rowds and guesses model
-        
-        IMPORTANT: All rows must resolve to the same model.
-        # TODO guess schema too
-        
-        @param rowds: list
-        @returns: str model keyword
-        """
-        logging.debug('Guessing model based on %s rows' % len(rowds))
-        models = []
-        errors = []
-        for n,rowd in enumerate(rowds):
-            if rowd.get('identifier'):
-                if rowd['identifier'].model not in models:
-                    models.append(rowd['identifier'].model)
-            else:
-                errors.append('No Identifier for row %s!' % (n))
-        if not models:
-            errors.append('Cannot guess model type!')
-        if len(models) > 1:
-            errors.append('More than one model type in input file!')
-        model = models[0]
-        # New files don't have their own IDs - they have their parent entity IDs
-        # Note: the parent entity may be duplicated
-        def has_file_only_fields(headers):
-            """Scan for fields unique to File objects TODO hard-coded values"""
-            for fieldname in headers:
-                if fieldname in FILE_ONLY_FIELDS:
-                    return True
-            return False
-        PARENT_MODELS = ['entity', 'segment']
-        if (model in PARENT_MODELS) and has_file_only_fields(rowds[0]):
-            model = 'file'
-        # TODO should not know model name
-        if model == 'file-role':
-            model = 'file'
-        logging.debug('model: %s' % model)
-        return model,errors
 
     @staticmethod
     def _get_module(model):

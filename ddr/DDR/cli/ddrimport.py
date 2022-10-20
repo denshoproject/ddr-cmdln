@@ -87,12 +87,13 @@ def help():
 
 
 @ddrimport.command()
+@click.argument('model')
 @click.argument('csv')
 @click.argument('collection')
 @click.option('--username','-U', help='ID service username. Use flag to avoid being prompted.')
 @click.option('--password','-P', help='ID service password. Use flag to avoid being prompted. Passwords args will remain in ~/.bash_history.')
 @click.option('--idservice','-i', help='Override URL of ID service in configs.')
-def check(csv, collection, username, password, idservice):
+def check(model, csv, collection, username, password, idservice):
     """Validates CSV file, performs integrity checks.
     """
     start = datetime.now()
@@ -101,7 +102,7 @@ def check(csv, collection, username, password, idservice):
     ci = identifier.Identifier(collection_path)
     logging.debug(ci)
     run_checks(
-        csv_path, ci, config.VOCABS_URL,
+        model, csv_path, ci, config.VOCABS_URL,
         idservice_api_login(username, password, idservice)
     )
     
@@ -158,7 +159,7 @@ def entity(csv, collection, user, mail, username, password, idservice, nocheck, 
     if not nocheck:
         idservice_client = idservice_api_login(username, password, idservice)
         run_checks(
-            csv_path, ci, config.VOCABS_URL, idservice_client
+            'entity', csv_path, ci, config.VOCABS_URL, idservice_client
         )
     #row_start,row_end = rows_start_end(fromto)
     imported = batch.Importer.import_entities(
@@ -199,7 +200,7 @@ def file(csv, collection, user, mail, nocheck, dryrun, fromto, log):
     logging.debug(ci)
     if not nocheck:
         run_checks(
-            csv_path, ci, config.VOCABS_URL, idservice_client=None
+            'file', csv_path, ci, config.VOCABS_URL, idservice_client=None
         )
     row_start,row_end = rows_start_end(fromto)
     imported = batch.Importer.import_files(
@@ -272,7 +273,7 @@ def make_paths(csv, collection):
         sys.exit(1)
     return csv_path,collection_path
 
-def run_checks(csv_path, ci, vocabs_url, idservice_client):
+def run_checks(model, csv_path, ci, vocabs_url, idservice_client):
     """run the actual checks on the CSV doc,repo
     """
     tests = 0
@@ -283,7 +284,7 @@ def run_checks(csv_path, ci, vocabs_url, idservice_client):
             passed += 1
         return tests,passed
     
-    chkcsv = batch.Checker.check_csv(csv_path, ci, vocabs_url)
+    chkcsv = batch.Checker.check_csv(model, csv_path, ci, vocabs_url)
     chkrepo = batch.Checker.check_repository(ci)
     tests,passed = passfail(chkcsv, tests, passed)
     tests,passed = passfail(chkrepo, tests, passed)
