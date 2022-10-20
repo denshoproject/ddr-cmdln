@@ -232,7 +232,7 @@ class Checker():
         module = Checker._get_module(model)
         vocabs = vocab.get_vocabs(config.VOCABS_URL)
         Checker._validate_csv_file(
-            module, vocabs, headers, rowds, model
+            csv_path, module, vocabs, headers, rowds, model
         )
     
     @staticmethod
@@ -346,9 +346,10 @@ class Checker():
         return valid_values
 
     @staticmethod
-    def _validate_csv_file(module, vocabs, headers, rowds, model=''):
+    def _validate_csv_file(csv_path, module, vocabs, headers, rowds, model=''):
         """Validate CSV headers and data against schema/field definitions
         
+        @param csv_path: Absolute path to CSV data file.
         @param module: modules.Module
         @param vocabs: dict Output of _prep_valid_values()
         @param headers: list
@@ -390,6 +391,22 @@ class Checker():
         if rowds_errs:
             log_errors(rowds_errs)
             raise InvalidCSVException('One or more problems with row(s)')
+        if model == 'file' and 'basename_orig' in headers:
+            logging.info('Validating file imports')
+            file_errs = []
+            for rowd in rowds:
+                path = os.path.join(csv_path, rowd['basename_orig'])
+                if not os.path.exists(path):
+                    file_errs.append({'Missing': path}); continue
+                if not os.path.isfile(path):
+                    file_errs.append({'Not a file': path}); continue
+                if not os.access(path, os.R_OK):
+                    file_errs.append({'Not readable': path}); continue
+            if file_errs:
+                for err in file_errs:
+                    for k,v in err.items():
+                        logging.error(f'{k} {v}')
+                raise InvalidCSVException('Invalid file(s).')
 
 
 class ModifiedFilesError(Exception):
