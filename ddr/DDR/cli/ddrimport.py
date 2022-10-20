@@ -276,24 +276,13 @@ def make_paths(csv, collection):
 def run_checks(model, csv_path, ci, vocabs_url, idservice_client):
     """run the actual checks on the CSV doc,repo
     """
-    tests = 0
-    passed = 0
-    def passfail(results, tests, passed):
-        tests += 1
-        if results['passed']:
-            passed += 1
-        return tests,passed
-    
-    chkcsv = batch.Checker.check_csv(model, csv_path, ci, vocabs_url)
-    chkrepo = batch.Checker.check_repository(ci)
-    tests,passed = passfail(chkcsv, tests, passed)
-    tests,passed = passfail(chkrepo, tests, passed)
-    if (chkcsv.get('model') == 'entity') and idservice_client:
-        chkeids = batch.Checker.check_eids(chkcsv['rowds'], ci, idservice_client)
-        tests,passed = passfail(chkeids, tests, passed)
-    
-    if passed != tests:
-        logging.error('TESTS FAILED--QUITTING!')
+    try:
+        chkcsv = batch.Checker.check_csv(model, csv_path, ci, vocabs_url)
+        chkrepo = batch.Checker.check_repository(ci)
+        if (chkcsv.get('model') == 'entity') and idservice_client:
+            chkeids = batch.Checker.check_eids(chkcsv['rowds'], ci, idservice_client)
+    except batch.InvalidCSVException as err:
+        logging.error(err)
         sys.exit(1)
 
 def rows_start_end(fromto):
