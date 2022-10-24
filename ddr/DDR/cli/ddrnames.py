@@ -59,9 +59,11 @@ def _read_collection_files(collection_path, fieldname):
     for name in names:
         yield (oid, name)
     # objects
-    for path in util.find_meta_files(
-        basedir=collection_path, model='entity', recursive=1, force_read=1
-    ):
+    for path in util.natural_sort([
+        path for path in util.find_meta_files(
+            basedir=collection_path, model='entity', recursive=1, force_read=1
+        )
+    ]):
         oid,names = _extract_field_values(path, fieldname)
         for name in names:
             yield (oid, name)
