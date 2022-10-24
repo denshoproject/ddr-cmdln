@@ -47,6 +47,7 @@ def export(fieldname, collection):
     assert fieldname in ['creators','persons']
     # all the .jsons in collection
     # for each one, extract id and field
+    click.echo('id,fieldname,name' )
     for oid,name in _read_collection_files(collection, fieldname):
         click.echo( f'{oid}, {fieldname}, "{name}"' )
 
