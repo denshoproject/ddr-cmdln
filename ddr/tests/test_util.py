@@ -118,3 +118,60 @@ def test_normalize_text():
     assert util.normalize_text('this\\nis a test') == 'this\\nis a test'
     assert util.normalize_text(['this is a test']) == ['this is a test']
     assert util.normalize_text({'this': 'is a test'}) == {'this': 'is a test'}
+
+
+from DDR import identifier
+
+COLLECTION_ID = 'ddr-testing-123'
+ENTITY_ID     = 'ddr-testing-123-4'
+LOGPATH_REL = os.path.join('addfile', COLLECTION_ID, f'{ENTITY_ID}.log')
+
+@pytest.fixture(scope="session")
+def logpath(tmpdir_factory):
+    return os.path.join(
+        str(tmpdir_factory.mktemp('addfile')), COLLECTION_ID, '%s.log' % ENTITY_ID
+    )
+
+@pytest.fixture(scope="session")
+def entity_identifier(tmpdir_factory):
+    tmp = tmpdir_factory.mktemp(COLLECTION_ID)
+    return identifier.Identifier(ENTITY_ID, str(tmp))
+
+class TestAddFileLogger():
+    
+    def test_repr(self, tmpdir, entity_identifier):
+        log = util.FileLogger(
+            identifier=entity_identifier, base_dir=str(tmpdir)
+        )
+        out = log.__repr__()
+        assert LOGPATH_REL in str(out)
+
+    # TODO def test_entry(self):
+    # TODO def test_debug(self):
+    # TODO def test_info(self):
+    # TODO def test_warning(self):
+    # TODO def test_error(self):
+    # TODO def test_critical(self):
+    # TODO def test_log(self):
+    # TODO def test_crash(self):
+
+def test_log_path(tmpdir, logpath, entity_identifier):
+    out = util.FileLogger.log_path(identifier=entity_identifier, base_dir=str(tmpdir))
+    print(f'{LOGPATH_REL=}')
+    print(f'{out=}')
+    assert LOGPATH_REL in str(out)
+
+def test_addfile_logger(tmpdir, logpath, entity_identifier):
+    out0 = util.FileLogger(
+        identifier=entity_identifier, base_dir=str(tmpdir)
+    ).path
+    print('out0 %s' % out0)
+    assert LOGPATH_REL in str(out0)
+
+    #out1 = util.FileLogger(
+    #    log_path=logpath, base_dir=str(tmpdir)
+    #).path
+    #print('out1 %s' % out1)
+    #print('LOGPATH_REL %s' % LOGPATH_REL)
+    #assert LOGPATH_REL in str(out1)
+    #assert False

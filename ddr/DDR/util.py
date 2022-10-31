@@ -1,9 +1,12 @@
+from datetime import datetime
 import hashlib
 import os
+from pathlib import Path
 import re
 from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 from DDR import config
+from DDR import fileio
 from DDR import identifier
 
 
@@ -182,3 +185,65 @@ def validate_email(email: str) -> bool:
         if re.match(EMAIL_PATTERN, email) != None:
             return True
     return False
+
+
+class FileLogger():
+    path = None
+    
+    def __repr__(self):
+        return "<%s.%s '%s'>" % (self.__module__, self.__class__.__name__, self.path)
+
+    def __init__(self, log_path=None, identifier=None, base_dir=config.LOG_DIR):
+        if identifier:
+            self.path = FileLogger.log_path(identifier, base_dir)
+        elif log_path:
+            if isinstance(log_path, str):
+                self.path = Path(log_path)
+            elif isinstance(log_path, Path):
+                self.path = log_path
+            else:
+                raise Exception('Bad arg for log_path')
+        if not self.path.parent.exists():
+            os.makedirs(self.path.parent)
+
+    def entry(self, status, msg):
+        """Returns log of add_files activity; adds an entry if status,msg given.
+        
+        @param ok: Boolean. ok or not ok.
+        @param msg: Text message.
+        @returns log: A text file.
+        """
+        dt = datetime.now(config.TZ).strftime('%Y-%m-%d %H:%M:%S,%f')
+        entry = f'{dt} {status.upper():8} {msg}'
+        fileio.append_text(entry, str(self.path))
+
+    def debug(self, msg): self.entry('debug', msg)
+    def info(self, msg): self.entry('info', msg)
+    def warning(self, msg): self.entry('warning', msg)
+    def error(self, msg): self.entry('error', msg)
+    def critical(self, msg): self.entry('critical', msg)
+
+    def crash(self, msg, exception=Exception):
+        """Write to addfile log and raise an exception."""
+        self.error(msg)
+        raise exception(msg)
+
+    def log(self):
+        log = ''
+        if self.path.exists():
+            log = fileio.read_text(self.path)
+        return log
+
+    @staticmethod
+    def log_path(identifier, base_dir=config.LOG_DIR):
+        """Generates path to collection addfiles.log.
+        
+        Previously each entity had its own addfile.log.
+        Going forward each collection will have a single log file.
+            /STORE/log/REPO-ORG-CID-addfile.log
+        
+        @param identifier: Identifier
+        @param base_dir: [optional] str
+        @returns: absolute path to logfile
+        """
+        return Path(config.LOG_DIR) / 'addfile' / identifier.collection_id() / f'{identifier.id}.log'

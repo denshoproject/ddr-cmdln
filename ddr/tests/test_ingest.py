@@ -11,6 +11,7 @@ from DDR import dvcs
 from DDR import identifier
 from DDR import ingest
 from DDR.models import Entity, File
+from DDR import util
 
 IMG_URL = 'https://web.archive.org/web/20011221151014im_/http://densho.org/images/logo.jpg'
 IMG_FILENAME = 'test-imaging.jpg'
@@ -67,28 +68,6 @@ def file_identifier(tmpdir_factory):
     return identifier.Identifier(FILE_ID, str(tmp))
 
 
-class TestAddFileLogger():
-    
-    def test_repr(self, tmpdir, entity_identifier):
-        log = ingest.addfile_logger(
-            identifier=entity_identifier, base_dir=str(tmpdir)
-        )
-        out = log.__repr__()
-        assert LOGPATH_REL in out
-
-    # TODO def test_entry(self):
-    # TODO def test_ok(self):
-    # TODO def test_not_ok(self):
-
-    def test_log(self, tmpdir, entity_identifier):
-        log = ingest.addfile_logger(
-            identifier=entity_identifier, base_dir=str(tmpdir)
-        )
-        log.log()
-
-    # TODO def test_crash(self):
-
-
 def test_file_import_actions():
     rowd00a = {
         'external': False,
@@ -124,27 +103,8 @@ def test_file_import_actions():
     out11 = ingest.import_actions(rowd11, True)
     assert out11 == expected11
 
-def test_log_path(tmpdir, logpath, entity_identifier):
-    out = ingest._log_path(entity_identifier, base_dir=str(tmpdir))
-    assert LOGPATH_REL in out
-
-def test_addfile_logger(tmpdir, logpath, entity_identifier):
-    out0 = ingest.addfile_logger(
-        identifier=entity_identifier, base_dir=str(tmpdir)
-    ).logpath
-    print('out0 %s' % out0)
-    assert LOGPATH_REL in out0
-
-    #out1 = ingest.addfile_logger(
-    #    log_path=logpath, base_dir=str(tmpdir)
-    #).logpath
-    #print('out1 %s' % out1)
-    #print('LOGPATH_REL %s' % LOGPATH_REL)
-    #assert LOGPATH_REL in out1
-    #assert False
-
 def test_check_dir(tmpdir, entity_identifier):
-    log = ingest.addfile_logger(entity_identifier, base_dir=str(tmpdir))
+    log = util.FileLogger(identifier=entity_identifier, base_dir=str(tmpdir))
     label = 'testing'
     assert ingest.check_dir('tmp', '/tmp', log)
     assert_raises(
@@ -153,7 +113,7 @@ def test_check_dir(tmpdir, entity_identifier):
     )
 
 def test_checksums(tmpdir, test_base_dir, entity_identifier, test_image):
-    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    log = util.FileLogger(identifier=entity_identifier, base_dir=test_base_dir)
     md5,sha1,sha256 = ingest.checksums(
         test_image,
         log
@@ -178,7 +138,7 @@ def test_destination_path(test_base_dir, file_identifier):
 def test_temporary_path(test_base_dir, file_identifier):
     src_path = os.path.join(test_base_dir, 'testfile.tif')
     out = ingest.temporary_path(src_path, test_base_dir, file_identifier)
-    assert TMP_PATH_REL in out
+    assert TMP_PATH_REL in str(out)
 
 def test_temporary_path_renamed(test_base_dir):
     src_path = os.path.join(test_base_dir, 'testfile.tif')
@@ -197,7 +157,7 @@ def test_access_path(test_base_dir, file_identifier):
     assert out == expected
 
 def test_copy_to_workdir(test_base_dir, entity_identifier):
-    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    log = util.FileLogger(identifier=entity_identifier, base_dir=test_base_dir)
     # prep
     src_path = os.path.join(test_base_dir, 'src', 'somefile.tif')
     tmp_path = os.path.join(test_base_dir, 'tmp', 'somefile.tif')
@@ -249,7 +209,7 @@ def test_make_access_file(test_base_dir, entity_identifier, test_image):
     src_path = test_image
     access_path = os.path.join(test_base_dir, '%s-a.jpg' % FILE_ID)
     # inputs
-    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    log = util.FileLogger(identifier=entity_identifier, base_dir=test_base_dir)
     # no src_path so fails
     missing_file = os.path.join(test_base_dir, 'src', 'somefile.png')
     assert ingest.make_access_file(missing_file, access_path, log) == None
@@ -276,7 +236,7 @@ def test_move_files(test_base_dir, entity_identifier):
             os.path.join(test_base_dir, 'dest', 'file2.txt')
         ),
     ]
-    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    log = util.FileLogger(identifier=entity_identifier, base_dir=test_base_dir)
     # fresh start
     for tmp,dest in files:
         shutil.rmtree(os.path.dirname(tmp), ignore_errors=True)
