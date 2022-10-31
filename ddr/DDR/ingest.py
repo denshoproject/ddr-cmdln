@@ -21,7 +21,7 @@ FILE_BINARY_FIELDS = [
 # Decision table for various ways to process file data for batch operations
 # +---binary present
 # |+--external
-# ||+-attrs present
+# ||+-attrs (see FILE_BINARY_FIELDS)
 # ||| KEY                    LABEL              ACTIONS
 # 000 nobin,local,noattrs    ERROR
 # 001 nobin,local,attrs      ERROR
@@ -31,7 +31,11 @@ FILE_BINARY_FIELDS = [
 # 101 bin,local,attrs        new-internal       Binary in repo; calc bin attrs (ignore CSV attrs)
 # 110 bin,external,noattrs   new-external-bin   Binary external; calc bin attrs; rename bin w fileID
 # 111 bin,external,attrs     new-external-bin   Binary external; calc bin attrs; rename bin w fileID
-
+UNSUPPORTED_ACTIONS = [
+    'nobin,local,noattrs',
+    'nobin,local,attrs',
+    'nobin,external,noattrs',
+]
 FILE_IMPORT_ACTIONS = {
 'nobin,external,attrs':{'label':'new-external-nobin', 'attrs':'fromcsv',   'ingest':0, 'rename':0, 'access':0},
 'bin,local,noattrs':   {'label':'new-internal',       'attrs':'calculate', 'ingest':1, 'rename':0, 'access':1},
@@ -67,7 +71,9 @@ def import_actions(rowd, file_present):
     key = ','.join(factors)
     if FILE_IMPORT_ACTIONS.get(key):
         return FILE_IMPORT_ACTIONS[key]
-    raise Exception('No file ingest action for "%s".' % key)
+    elif key in UNSUPPORTED_ACTIONS:
+        raise Exception(f'Unsupported action "{key}".')
+    raise Exception(f'No file ingest action for "{key}".')
 
 
 class FileExistsException(Exception):
