@@ -87,26 +87,26 @@ class TestChecker():
         print(f'{file0=}')
         print(f'{file0.exists()=}')
         # untracked
-        results = batch.Checker.check_repository(collection_identifier)
-        print(f'{results=}')
-        assert results['passed'] == True
-        assert results['staged'] == []
-        assert results['modified'] == []
+        staged,modified = batch.Checker.check_repository(collection_identifier)
+        print(f'{staged=}')
+        print(f'{modified=}')
+        assert staged == []
+        assert modified == []
         # staged
         repo.git.add([file0])
-        results = batch.Checker.check_repository(collection_identifier)
-        print(f'{results=}')
-        assert results['passed'] == False
-        assert results['staged'] == ['file0']
-        assert results['modified'] == []
+        staged,modified = batch.Checker.check_repository(collection_identifier)
+        print(f'{staged=}')
+        print(f'{modified=}')
+        assert staged == ['file0']
+        assert modified == []
         # modified
         with file0.open('w') as f:
             f.write('test_0_modified')
-        results = batch.Checker.check_repository(collection_identifier)
-        print(f'{results=}')
-        assert results['passed'] == False
-        assert results['staged'] == ['file0']
-        assert results['modified'] == ['file0']
+        staged,modified = batch.Checker.check_repository(collection_identifier)
+        print(f'{staged=}')
+        print(f'{modified=}')
+        assert staged == ['file0']
+        assert modified == ['file0']
 
     #def test_check_csv(self, test_base_dir, collection_identifier):
     #    csv_path = test_base_dir / 'test.csv'

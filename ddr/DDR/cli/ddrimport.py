@@ -42,7 +42,9 @@ import click
 
 from DDR import config
 from DDR import batch
+from DDR import csvfile
 from DDR import dvcs
+from DDR import fileio
 from DDR import identifier
 from DDR import idservice
 
@@ -101,9 +103,10 @@ def check(model, csv, collection, username, password, idservice):
     csv_path,collection_path = make_paths(csv, collection)
     ci = identifier.Identifier(collection_path)
     logging.debug(ci)
+    headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
     run_checks(
-        model, csv_path, ci, config.VOCABS_URL,
-        idservice_api_login(username, password, idservice)
+        'file', csv_path, rowds, headers, csv_errs, ci,
+        config.VOCABS_URL, idservice_client=None
     )
     
     finish = datetime.now()
@@ -194,17 +197,19 @@ def file(csv, collection, user, mail, nocheck, dryrun, fromto, log):
     """Import file records from CSV.
     """
     start = datetime.now()
-    
     csv_path,collection_path = make_paths(csv, collection)
     ci = identifier.Identifier(collection_path)
     logging.debug(ci)
+    headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
     if not nocheck:
         run_checks(
-            'file', csv_path, ci, config.VOCABS_URL, idservice_client=None
+            'file', csv_path, rowds, headers, csv_errs, ci,
+            config.VOCABS_URL, idservice_client=None
         )
     row_start,row_end = rows_start_end(fromto)
     imported = batch.Importer.import_files(
         csv_path=csv_path,
+        rowds=rowds,
         cidentifier=ci,
         vocabs_url=config.VOCABS_URL,
         git_name=user,
@@ -273,20 +278,40 @@ def make_paths(csv, collection):
         sys.exit(1)
     return csv_path,collection_path
 
-def run_checks(model, csv_path, ci, vocabs_url, idservice_client):
-    """run the actual checks on the CSV doc,repo
+def run_checks(model, csv_path, rowds, headers, csv_errs, ci, vocabs_url, idservice_client):
+    """run checks on the CSV doc,repo and quit if errors
     """
-    try:
-        chkcsv = batch.Checker.check_csv(model, csv_path, ci, vocabs_url)
-        chkrepo = batch.Checker.check_repository(ci)
-        if (chkcsv.get('model') == 'entity') and idservice_client:
-            chkeids = batch.Checker.check_eids(chkcsv['rowds'], ci, idservice_client)
-    except batch.InvalidCSVException as err:
-        logging.error(err)
+    # csv
+    csv_errs,id_errs,validation_errs = batch.Checker.check_csv(
+        model, csv_path, rowds, headers, csv_errs, ci, vocabs_url
+    )
+    header_errs,rowds_errs,file_errs = validation_errs
+    for err in csv_errs: logging.error(f'CSV: {err}')
+    for err in id_errs: logging.error(f'Identifier: {err}')
+    for key,val in header_errs.items():
+        logging.error(f"CSV header: {key}: {','.join(val)}")
+    for err in rowds_errs: logging.error(f'CSV row: {err}')
+    for err in file_errs:
+        for key,val in err.items():
+            logging.error(f"{key}: {val}")
+    # repository
+    staged,modified = batch.Checker.check_repository(ci)
+    for f in staged: logging.error(f'staged: {f}')
+    for f in modified: logging.error(f'modified: {f}')
+    if csv_errs or id_errs or validation_errs or staged or modified:
         sys.exit(1)
+    # eids
+    if (model == 'entity') and idservice_client:
+        print('TODO batch.Checker.check_eids')
+        sys.exit(1)
+        chkeids = batch.Checker.check_eids(rowds, ci, idservice_client)
+        for err in chkeids:
+            logging.error(f'entity ID?: {err}')
+        if chkeids:
+            sys.exit(1)
 
 def rows_start_end(fromto):
-    """
+    """Returns start/end rows, or the first/last rows
     @param fromto: str "NUM0:NUM1"
     """
     row_start = 0

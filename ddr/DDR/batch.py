@@ -173,24 +173,15 @@ class Checker():
         - 'modified': list of modified files
         
         @param cidentifier: Identifier
-        @returns: dict
+        @returns: list of staged and modified files
         """
         logging.info('Checking repository')
         repo = dvcs.repository(cidentifier.path_abs())
         logging.info(repo)
-        staged = dvcs.list_staged(repo)
-        if staged:
-            for f in staged:
-                logging.error(f'staged: {f}')
-            raise InvalidCSVException(f'Staged files in {repo.working_dir}')
-        modified = dvcs.list_modified(repo)
-        if modified:
-            for f in modified:
-                logging.error(f'modified: {f}')
-            raise InvalidCSVException(f'Modified files in {repo.working_dir}')
+        return dvcs.list_staged(repo), dvcs.list_modified(repo)
 
     @staticmethod
-    def check_csv(model, csv_path, cidentifier, vocabs_url):
+    def check_csv(model, csv_path, rowds, headers, csv_errs, cidentifier, vocabs_url):
         """Load CSV, validate headers and rows
         
         An import file must be a valid CSV file.
@@ -211,29 +202,27 @@ class Checker():
         @param cidentifier: Identifier
         @param vocabs_url: str URL or path to vocabs
         @param session: requests.session object
-        @returns: dict of status info
+        @returns: list of validation errors
         """
         logging.info('Checking CSV file')
         # Validate format of CSV and DDR IDs
-        headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
         logging.info('%s rows' % len(rowds))
-        if csv_errs:
-            logging.warning('NOTE: Line numbers may not be exact.')
-            logging.warning('      Numbering starts at zero and may not include header row.')
-            for csv_err in csv_errs:
-                logging.error(f'CSV {csv_err}')
-            raise InvalidCSVException(f'One or more problems with {csv_path}')
+        id_errs = []
         for rowd in rowds:
             if rowd.get('id'):
-                rowd['identifier'] = identifier.Identifier(rowd['id'])
+                try:
+                    rowd['identifier'] = identifier.Identifier(rowd['id'])
+                except identifier.InvalidIdentifierException:
+                    id_errs.append(f'Bad Identifier: {rowd["id"]}')
             else:
                 rowd['identifier'] = None
         # Validate file content
         module = Checker._get_module(model)
         vocabs = vocab.get_vocabs(config.VOCABS_URL)
-        Checker._validate_csv_file(
-            csv_path, module, vocabs, headers, rowds, model
+        validation_errs = Checker._validate_csv_file(
+            model, csv_path, rowds, headers, module, vocabs
         )
+        return csv_errs,id_errs,validation_errs
     
     @staticmethod
     def check_eids(rowds, cidentifier, idservice_client):
@@ -346,15 +335,14 @@ class Checker():
         return valid_values
 
     @staticmethod
-    def _validate_csv_file(csv_path, module, vocabs, headers, rowds, model=''):
+    def _validate_csv_file(model, csv_path, rowds, headers, module, vocabs):
         """Validate CSV headers and data against schema/field definitions
         
+        @param model: str
+        @param rowds: list
         @param csv_path: Absolute path to CSV data file.
         @param module: modules.Module
         @param vocabs: dict Output of _prep_valid_values()
-        @param headers: list
-        @param rowds: list
-        @param model: str
         @returns: list [header_errs, rowds_errs]
         """
         # gather data
@@ -366,48 +354,34 @@ class Checker():
         required_fields = module.required_fields(nonrequired_fields)
         valid_values = Checker._prep_valid_values(vocabs)
         # check
-        def log_errors(errors):
-            if errors:
-                for name,errs in errors.items():
-                    if errs:
-                        for err in errs:
-                            logging.error('* %s: "%s"' % (name, err))
 
         logging.info('Validating headers')
         header_errs = csvfile.validate_headers(
             headers, field_names, exceptions=nonrequired_fields,
             additional=['access_path'],  # used for custom access files
         )
-        if header_errs:
-            log_errors(header_errs)
-            raise InvalidCSVException('One or more problems with CSV header')
         logging.info('Validating rows')
         find_dupes = True
         if model and (model == 'file'):
             find_dupes = False
-        rowds_errs = csvfile.validate_rowds(
-            module, headers, required_fields, valid_values, rowds, find_dupes
-        )
-        if rowds_errs:
-            log_errors(rowds_errs)
-            raise InvalidCSVException('One or more problems with row(s)')
+        try:
+            rowds_errs = csvfile.validate_rowds(
+                module, headers, required_fields, valid_values, rowds, find_dupes
+            )
+        except identifier.InvalidIdentifierException:
+            rowds_errs = []
+        file_errs = []
         if model == 'file' and 'basename_orig' in headers:
             logging.info('Validating file imports')
-            file_errs = []
             for rowd in rowds:
-                path = os.path.join(csv_path, rowd['basename_orig'])
+                path = os.path.join(os.path.dirname(csv_path), rowd['basename_orig'])
                 if not os.path.exists(path):
-                    file_errs.append({'Missing': path}); continue
+                    file_errs.append({'Missing file': path}); continue
                 if not os.path.isfile(path):
                     file_errs.append({'Not a file': path}); continue
                 if not os.access(path, os.R_OK):
                     file_errs.append({'Not readable': path}); continue
-            if file_errs:
-                for err in file_errs:
-                    for k,v in err.items():
-                        logging.error(f'{k} {v}')
-                raise InvalidCSVException('Invalid file(s).')
-
+        return header_errs,rowds_errs,file_errs
 
 class ModifiedFilesError(Exception):
     pass
