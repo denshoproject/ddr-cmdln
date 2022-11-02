@@ -34,7 +34,7 @@ def help():
 @ddrvocab.command()
 #@click.option('--datasette','-d', default=config.DATASETTE, help='Datasette HOST:IP.')
 @click.argument('jsonpath')
-def jsontocsv(jsonpath):
+def topicstocsv(jsonpath):
     """Export JSON vocabulary data to CSV
     
     \b
@@ -50,7 +50,7 @@ def jsontocsv(jsonpath):
 @ddrvocab.command()
 #@click.option('--datasette','-d', default=config.DATASETTE, help='Datasette HOST:IP.')
 @click.argument('csvpath')
-def csvtojson(csvpath):
+def topicstojson(csvpath):
     """Convert CSV vocabulary data to JSON
     
     \b
