@@ -68,7 +68,7 @@ and reimported from CSV.::
     $ ./manage.py shell
     >>> from DDR import vocab
     >>> index = vocab.Index()
-    >>> index.read('/PATH/TO/BASE/ddr/facets/topics.json')
+    >>> index.read('/opt/densho-vocab/api/0.2/topics.json')
     >>> index.write('/tmp/topics-exported.csv')
     
     # Import to and export from Google Docs using the default settings.
@@ -77,9 +77,8 @@ and reimported from CSV.::
     $ ./manage.py shell
     >>> from DDR import vocab
     >>> index = vocab.Index()
-    >>> index.read('/tmp/updated-finished.csv')
-    >>> index.write('/PATH/TO/BASE/ddr/facets/topics.json')
-
+    >>> index.read('/tmp/topics-finished.csv')
+    >>> index.write('/opt/densho-vocab/api/0.2/topics.json')
 
 ::
     
