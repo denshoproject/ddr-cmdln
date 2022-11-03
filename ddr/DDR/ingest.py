@@ -109,6 +109,7 @@ def add_file(rowd, entity, git_name, git_mail, agent,
     log.info('parent: %s' % entity.id)
     
     src_path = rowd.pop('basename_orig')
+    log.info(f'{src_path=}')
     
     actions = import_actions(rowd, os.path.exists(src_path))
     log.debug('actions %s' % actions)

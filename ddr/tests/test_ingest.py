@@ -187,7 +187,7 @@ def test_copy_to_workdir(test_base_dir, entity_identifier):
 
 def test_copy_to_file_path(test_base_dir, entity_identifier):
     file_ = identifier.Identifier('ddr-test-123-456-master-abc123', test_base_dir).object()
-    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    log = util.FileLogger(identifier=entity_identifier, base_dir=test_base_dir)
     # prep
     src_path = Path(test_base_dir) / 'src' / 'somefile.tif'
     tmp_path = Path(test_base_dir) / 'tmp' / 'somefile.tif'
@@ -219,7 +219,7 @@ def test_make_access_file(test_base_dir, entity_identifier, test_image):
 def test_write_object_metadata(test_base_dir, entity_identifier):
     obj = identifier.Identifier('ddr-test-123-456-master-abc123', test_base_dir).object()
     tmp_dir = test_base_dir
-    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    log = util.FileLogger(identifier=entity_identifier, base_dir=test_base_dir)
     tmp_json = ingest.write_object_metadata(obj, tmp_dir, log)
     assert Path(tmp_json).exists()
 
@@ -279,7 +279,7 @@ def test_reverse_files_list():
 
 def test_rename_in_place(entity_identifier, test_base_dir, test_image):
     src_path = Path(test_image).parent / 'rename-image.jpg'
-    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    log = util.FileLogger(identifier=entity_identifier, base_dir=test_base_dir)
     #
     with src_path.open('w') as f:
         f.write('test_rename_in_place')
@@ -292,7 +292,7 @@ def test_rename_in_place(entity_identifier, test_base_dir, test_image):
 def test_copy_in_place(entity_identifier, test_base_dir, test_image):
     src_path = Path(test_image).parent / 'rename-image.jpg'
     file_ = identifier.Identifier('ddr-test-123-456-master-abc123', test_base_dir).object()
-    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    log = util.FileLogger(identifier=entity_identifier, base_dir=test_base_dir)
     #
     with src_path.open('w') as f:
         f.write('test_rename_in_place')
@@ -312,7 +312,7 @@ def test_stage_files(entity_identifier, test_base_dir, test_image):
     entity = Entity(
         entity_identifier.path_abs(), entity_identifier.id, entity_identifier
     )
-    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    log = util.FileLogger(identifier=entity_identifier, base_dir=test_base_dir)
     print(f'{log=}')
     # set up repo
     repo_dir = Path(test_base_dir) / 'test_stage_files_repo'
@@ -369,7 +369,7 @@ def test_stage_files(entity_identifier, test_base_dir, test_image):
     untracked = dvcs.list_untracked(repo) == ['file3']
 
 def test_repo_status(entity_identifier, test_base_dir):
-    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    log = util.FileLogger(identifier=entity_identifier, base_dir=test_base_dir)
     # set up repo
     repo_dir = Path(test_base_dir) / 'test_repo_status_repo'
     repo_dir.mkdir()
@@ -401,7 +401,7 @@ def test_repo_status(entity_identifier, test_base_dir):
 
 def test_file_info(entity_identifier, test_base_dir, test_image):
     src_path = Path(test_image)
-    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    log = util.FileLogger(identifier=entity_identifier, base_dir=test_base_dir)
     #
     print(f'{src_path=}')
     print(f'{src_path.exists()=}')
@@ -424,7 +424,7 @@ def test_file_identifier(entity_identifier, test_base_dir):
     data = entity.identifier.idparts
     data['role'] = 'master'
     sha1 = IMG_SHA1[:10]
-    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    log = util.FileLogger(identifier=entity_identifier, base_dir=test_base_dir)
     #
     fi = ingest.file_identifier(entity, data, sha1, log)
     assert fi
@@ -442,7 +442,7 @@ def test_file_object(entity_identifier, file_identifier, test_base_dir, test_ima
     sha1 = IMG_SHA1[:10]
     src_path = Path(test_image)
     print(f'{src_path=}')
-    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    log = util.FileLogger(identifier=entity_identifier, base_dir=test_base_dir)
     #
     file_ = ingest.file_object(
         file_identifier, entity, data, src_path,

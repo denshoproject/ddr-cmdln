@@ -204,7 +204,8 @@ def file(csv, collection, user, mail, nocheck, dryrun, fromto, log):
     if not nocheck:
         run_checks(
             'file', csv_path, rowds, headers, csv_errs, ci,
-            config.VOCABS_URL, idservice_client=None
+            config.VOCABS_URL, idservice_client=None,
+            log_path=log,
         )
     row_start,row_end = rows_start_end(fromto)
     imported = batch.Importer.import_files(
@@ -278,7 +279,7 @@ def make_paths(csv, collection):
         sys.exit(1)
     return csv_path,collection_path
 
-def run_checks(model, csv_path, rowds, headers, csv_errs, ci, vocabs_url, idservice_client):
+def run_checks(model, csv_path, rowds, headers, csv_errs, ci, vocabs_url, log_path=None, idservice_client=None):
     """run checks on the CSV doc,repo and quit if errors
     """
     # csv

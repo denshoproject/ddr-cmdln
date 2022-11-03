@@ -696,7 +696,13 @@ class Importer():
         @param dryrun: boolean
         @returns: list git_files
         """
-        logging.info('batch import files ----------------------------')
+        if log_path:
+            log = util.FileLogger(log_path=log_path)
+        else:
+            cpath = Path(csv_path)
+            log = util.FileLogger(log_path=cpath.with_name(f'{cpath.stem}.log'))
+        
+        log.info('batch import files ----------------------------')
         
         # TODO hard-coded model name...
         model = 'file'
@@ -707,14 +713,14 @@ class Importer():
             identifier.MODEL_CLASSES['entity']['class']
         )
         repository = dvcs.repository(cidentifier.path_abs())
-        logging.debug('csv_dir %s' % csv_dir)
-        logging.debug('entity_class %s' % entity_class)
-        logging.debug(repository)
+        log.debug(f'{csv_dir=}')
+        log.debug(f'{entity_class=}')
+        log.debug(repository)
         
-        logging.info('Reading %s' % csv_path)
+        log.info(f'Reading {csv_path}')
         headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path), row_start, row_end)
-        logging.info('%s rows' % len(rowds))
-        logging.info('csv_load rowds')
+        log.info(f'{len(rowds)} rows')
+        log.info(f'csv_load rowds')
         module = Checker._get_module(model)
         rowds = Importer._csv_load(module, rowds)
         
@@ -728,35 +734,35 @@ class Importer():
         rowds_new,rowds_existing = Importer._rowds_new_existing(rowds, files)
         if bad_entities:
             for f in bad_entities:
-                logging.error('    %s missing' % f)
+                log.error(f'    {f} missing')
             raise Exception(
-                '%s entities could not be loaded! - IMPORT CANCELLED!' % len(bad_entities)
+                f'{len(bad_entities)} entities could not be loaded! - IMPORT CANCELLED!'
             )
         
-        logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
-        logging.info('Updating existing files')
+        log.info('- - - - - - - - - - - - - - - - - - - - - - - -')
+        log.info('Updating existing files')
         git_files = Importer._update_existing_files(
             rowds_existing,
             fid_parents, entities, files, models, repository,
             git_name, git_mail, agent,
-            dryrun
+            log, dryrun
         )
         
-        logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
-        logging.info('Adding new files')
+        log.info('- - - - - - - - - - - - - - - - - - - - - - - -')
+        log.info('Adding new files')
         git_files2 = Importer._add_new_files(
             rowds_new,
             fid_parents, entities, files,
             git_name, git_mail, agent,
-            log_path, dryrun,
+            log, dryrun,
             tmp_dir=tmp_dir
         )
-        logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
+        log.info('- - - - - - - - - - - - - - - - - - - - - - - -')
         
         return git_files
     
     @staticmethod
-    def _update_existing_files(rowds, fid_parents, entities, files, models, repository, git_name, git_mail, agent, dryrun):
+    def _update_existing_files(rowds, fid_parents, entities, files, models, repository, git_name, git_mail, agent, log, dryrun):
         start = datetime.now(config.TZ)
         elapsed_rounds = []
         git_files = []
@@ -766,7 +772,7 @@ class Importer():
         obj_metadata = None
         len_rowds = len(rowds)
         for n,rowd in enumerate(rowds):
-            logging.info('+ %s/%s - %s (%s)' % (
+            log.info('+ %s/%s - %s (%s)' % (
                 n+1, len_rowds, rowd['id'], rowd['basename_orig']
             ))
             start_round = datetime.now(config.TZ)
@@ -792,7 +798,7 @@ class Importer():
 
             # Custom access files
             if rowd.get('access_path'):
-                logging.debug('    replacing access file {}'.format(
+                log.debug('    replacing access file {}'.format(
                     rowd.get('access_path')))
                 new_annex_files = ingest.replace_access(
                     repository, file_, rowd.get('access_path')
@@ -800,7 +806,7 @@ class Importer():
                 annex_files.append(new_annex_files)
             
             if modified and not dryrun:
-                logging.debug('    writing %s' % file_.json_path)
+                log.debug('    writing %s' % file_.json_path)
 
                 exit,status,updated_files = file_.save(
                     git_name=git_name,
@@ -815,13 +821,13 @@ class Importer():
             
             elapsed_round = datetime.now(config.TZ) - start_round
             elapsed_rounds.append(elapsed_round)
-            logging.debug('| %s (%s)' % (file_.identifier, elapsed_round))
+            log.debug('| %s (%s)' % (file_.identifier, elapsed_round))
         
         elapsed = datetime.now(config.TZ) - start
-        logging.debug('%s updated in %s' % (len(elapsed_rounds), elapsed))
+        log.debug('%s updated in %s' % (len(elapsed_rounds), elapsed))
                 
         if (git_files or annex_files) and not dryrun:
-            logging.info('Staging %s modified files' % len(git_files))
+            log.info('Staging %s modified files' % len(git_files))
             start_stage = datetime.now(config.TZ)
             # Stage annex files (binaries) before non-binary git files
             # else binaries might end up in .git/objects/ which would be BAD
@@ -831,28 +837,27 @@ class Importer():
             staged = util.natural_sort(dvcs.list_staged(repository))
             for path in staged:
                 if path in git_files:
-                    logging.debug('+ %s' % path)
+                    log.debug('+ %s' % path)
                 else:
-                    logging.debug('| %s' % path)
+                    log.debug('| %s' % path)
             elapsed_stage = datetime.now(config.TZ) - start_stage
-            logging.debug('ok (%s)' % elapsed_stage)
-            logging.debug('%s staged in %s' % (len(staged), elapsed_stage))
+            log.debug('ok (%s)' % elapsed_stage)
+            log.debug('%s staged in %s' % (len(staged), elapsed_stage))
         
         return git_files
     
     @staticmethod
     def _add_new_files(rowds, fid_parents, entities, files, git_name,
-                       git_mail, agent, log_path, dryrun,
+                       git_mail, agent, log, dryrun,
                        tmp_dir=config.MEDIA_BASE):
-        if log_path:
-            logging.info('addfile logging to %s' % log_path)
+        log.info(f'addfile log to {log.path}')
         git_files = []
         failures = []
         start = datetime.now(config.TZ)
         elapsed_rounds = []
         len_rowds = len(rowds)
         for n,rowd in enumerate(rowds):
-            logging.info('+ %s/%s - %s (%s)' % (
+            log.info('+ %s/%s - %s (%s)' % (
                 n+1, len_rowds, rowd['id'], rowd['basename_orig']
             ))
             start_round = datetime.now(config.TZ)
@@ -870,13 +875,13 @@ class Importer():
             if file_ and (file_.identifier.model not in identifier.NODES):
                 parent = file_
             
-            logging.debug('| parent %s' % (parent))
+            log.debug('| parent %s' % (parent))
             
             if not dryrun:
                 file_,repo2,log2 = ingest.add_file(
                     rowd, parent,
                     git_name, git_mail, agent,
-                    tmp_dir=tmp_dir, log_path=log_path, show_staged=False
+                    tmp_dir=tmp_dir, log_path=log.path, show_staged=False
                 )
                 # TODO integrate into ingest.add_file
                 if rowd.get('access_path'):
@@ -889,16 +894,16 @@ class Importer():
             
             elapsed_round = datetime.now(config.TZ) - start_round
             elapsed_rounds.append(elapsed_round)
-            logging.debug('| file   %s' % (file_))
-            logging.debug('| %s' % (elapsed_round))
+            log.debug('| file   %s' % (file_))
+            log.debug('| %s' % (elapsed_round))
                   
         elapsed = datetime.now(config.TZ) - start
-        logging.debug('%s added in %s' % (len(elapsed_rounds), elapsed))
+        log.debug('%s added in %s' % (len(elapsed_rounds), elapsed))
         if failures:
-            logging.error('************************************************************************')
+            log.error('************************************************************************')
             for e in failures:
-                logging.error(e)
-            logging.error('************************************************************************')
+                log.error(e)
+            log.error('************************************************************************')
         return git_files,failures
     
     @staticmethod
@@ -910,37 +915,37 @@ class Importer():
         @param register: boolean Whether or not to register IDs
         @returns: nothing
         """
-        logging.info('-----------------------------------------------')
-        logging.info('Reading %s' % csv_path)
+        log.info('-----------------------------------------------')
+        log.info('Reading %s' % csv_path)
         headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
-        logging.info('%s rows' % len(rowds))
+        log.info('%s rows' % len(rowds))
         
-        logging.info('Looking up already registered IDs')
+        log.info('Looking up already registered IDs')
         csv_eids = [rowd['id'] for rowd in rowds]
         status1,reason1,registered,unregistered = idservice_client.check_eids(cidentifier, csv_eids)
-        logging.info('%s %s' % (status1,reason1))
+        log.info('%s %s' % (status1,reason1))
         if status1 != 200:
             raise Exception('%s %s' % (status1,reason1))
         
         num_unregistered = len(unregistered)
-        logging.info('%s IDs to register.' % num_unregistered)
+        log.info('%s IDs to register.' % num_unregistered)
         
         if unregistered and dryrun:
-            logging.info('These IDs would be registered if not --dryrun')
+            log.info('These IDs would be registered if not --dryrun')
             for n,eid in enumerate(unregistered):
-                logging.info('| %s/%s %s' % (n, num_unregistered, eid))
+                log.info('| %s/%s %s' % (n, num_unregistered, eid))
         
         elif unregistered:
-            logging.info('Registering IDs')
+            log.info('Registering IDs')
             for n,eid in enumerate(unregistered):
-                logging.info('| %s/%s %s' % (n, num_unregistered, eid))
+                log.info('| %s/%s %s' % (n, num_unregistered, eid))
             status2,reason2,created = idservice_client.register_eids(cidentifier, unregistered)
-            logging.info('%s %s' % (status2,reason2))
+            log.info('%s %s' % (status2,reason2))
             if status2 != 201:
                 raise Exception('%s %s' % (status2,reason2))
-            logging.info('%s registered' % len(created))
+            log.info('%s registered' % len(created))
         
-        logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
+        log.info('- - - - - - - - - - - - - - - - - - - - - - - -')
 
 
 class UpdaterMetrics():
