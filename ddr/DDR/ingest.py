@@ -2,6 +2,7 @@ from datetime import datetime
 import logging
 logger = logging.getLogger(__name__)
 import os
+from pathlib import Path
 import shutil
 import sys
 import traceback
@@ -108,7 +109,8 @@ def add_file(rowd, entity, git_name, git_mail, agent,
     log.info('rowd: %s' % rowd)
     log.info('parent: %s' % entity.id)
     
-    src_path = rowd.pop('basename_orig')
+    basename_orig = rowd.pop('basename_orig')
+    src_path = rowd.pop('path_abs')
     log.info(f'{src_path=}')
     
     actions = import_actions(rowd, os.path.exists(src_path))
@@ -520,21 +522,21 @@ def file_object(fidentifier, entity, data, src_path, src_size, md5, sha1, sha256
     """
     log.debug('File object')
     file_ = fidentifier.object_class().new(fidentifier, parent=entity)
-    file_.basename_orig = os.path.basename(src_path)
+    file_.basename_orig = src_path.name
     # add extension to path_abs
-    basename_ext = os.path.splitext(file_.basename_orig)[1]
-    path_abs_ext = os.path.splitext(file_.path_abs)[1]
+    basename_ext = src_path.suffix
+    path_abs_ext = src_path.suffix
     if basename_ext and not path_abs_ext:
         file_.path_abs = file_.path_abs + basename_ext
         log.debug('| basename_ext %s' % basename_ext)
-    file_.role = data['role']
     log.debug('| file_ %s' % file_)
     log.debug('| file_.basename_orig: %s' % file_.basename_orig)
     log.debug('| file_.path_abs: %s' % file_.path_abs)
     log.debug('| file_.mimetype: %s' % file_.mimetype)
-    # remove 'id' from forms/CSV data so it doesn't overwrite file_.id later
-    if data.get('id'):
-        data.pop('id')
+    # remove fields from forms/CSV data so it doesn't overwrite things
+    for fieldname in ['id','identifier']:
+        if data.get(fieldname):
+            data.pop(fieldname)
     # form data
     for field in data:
         setattr(file_, field, data[field])

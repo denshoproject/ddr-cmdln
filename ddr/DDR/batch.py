@@ -14,6 +14,7 @@ from datetime import datetime
 import json
 import logging
 import os
+from pathlib import Path
 import shutil
 import sys
 import traceback
@@ -720,9 +721,12 @@ class Importer():
         
         log.info(f'{len(rowds)} rows')
         log.info(f'csv_load rowds')
-        module = Checker._get_module(model)
-        rowds = Importer._csv_load(module, rowds)
-        
+         # Apply module's csvload_* methods to rowd data
+        rowds = Importer._csv_load(Checker._get_module(model), rowds)
+        # add file abs path; enables importing from subdirs of /tmp/ddrshared
+        for rowd in rowds:
+            rowd['path_abs'] = Path(csv_dir) / rowd['basename_orig']
+
         # various dicts and lists instantiated here so we don't do it
         # multiple times later
         fidentifiers = Importer._fidentifiers(rowds, cidentifier)
