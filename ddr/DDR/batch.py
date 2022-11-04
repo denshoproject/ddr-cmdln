@@ -679,7 +679,7 @@ class Importer():
         return False
     
     @staticmethod
-    def import_files(csv_path, cidentifier, vocabs_url, git_name, git_mail,
+    def import_files(csv_path, rowds, cidentifier, vocabs_url, git_name, git_mail,
                      agent, row_start=0, row_end=9999999,
                      tmp_dir=config.MEDIA_BASE, log_path=None, dryrun=False):
         """Adds or updates files from a CSV file
@@ -687,6 +687,7 @@ class Importer():
         TODO how to handle excluded fields like XMP???
         
         @param csv_path: Absolute path to CSV data file.
+        @param rowds: list of rowd dicts
         @param cidentifier: Identifier
         @param vocabs_url: str URL or path to vocabs
         @param git_name: str
@@ -717,8 +718,6 @@ class Importer():
         log.debug(f'{entity_class=}')
         log.debug(repository)
         
-        log.info(f'Reading {csv_path}')
-        headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path), row_start, row_end)
         log.info(f'{len(rowds)} rows')
         log.info(f'csv_load rowds')
         module = Checker._get_module(model)

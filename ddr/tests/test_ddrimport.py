@@ -156,8 +156,10 @@ def test_files_import_external(tmpdir, collection, test_csv_dir, test_files_dir)
     log_path = os.path.join(
         test_files_dir, 'ddrimport-files-import-external.log'
     )
+    headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(file_csv_path))
     out = batch.Importer.import_files(
         file_csv_path,
+        rowds,
         collection.identifier,
         VOCABS_URL,
         GIT_USER, GIT_MAIL, AGENT,
@@ -186,9 +188,11 @@ def test_files_import_external_emptyhashes_nofile(tmpdir, collection, test_csv_d
     log_path = os.path.join(
         test_files_dir, 'ddrimport-files-import-external-emptyhashes-nofile.log'
     )
+    headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(file_csv_path))
     with pytest.raises(Exception):
         out = batch.Importer.import_files(
             file_csv_path,
+            rowds,
             collection.identifier,
             VOCABS_URL,
             GIT_USER, GIT_MAIL, AGENT,
@@ -207,9 +211,11 @@ def test_files_import_external_nohashes_nofile(tmpdir, collection, test_csv_dir,
     log_path = os.path.join(
         test_files_dir, 'ddrimport-files-import-external-nohashes-nofile.log'
     )
+    headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(file_csv_path))
     with pytest.raises(Exception):
         out = batch.Importer.import_files(
             file_csv_path,
+            rowds,
             collection.identifier,
             VOCABS_URL,
             GIT_USER, GIT_MAIL, AGENT,
@@ -275,6 +281,7 @@ def test_files_import_external_nohashes_rename(tmpdir, collection,
     
     out = batch.Importer.import_files(
         file_csv_path,
+        rowds,
         collection.identifier,
         VOCABS_URL,
         GIT_USER, GIT_MAIL, AGENT,
@@ -358,8 +365,10 @@ def test_files_import_internal(tmpdir, collection, test_csv_dir, test_files_dir)
     log_path = os.path.join(
         test_files_dir, 'ddrimport-files-import-internal.log'
     )
+    headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(file_csv_path))
     out = batch.Importer.import_files(
         file_csv_path,
+        rowds,
         collection.identifier,
         VOCABS_URL,
         GIT_USER, GIT_MAIL, AGENT,
@@ -392,8 +401,10 @@ def test_files_import_internal_nohashes(tmpdir, collection, test_csv_dir, test_f
     log_path = os.path.join(
         test_files_dir, 'ddrimport-files-import-internal-nohashes.log'
     )
+    headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(file_csv_path))
     out = batch.Importer.import_files(
         file_csv_path,
+        rowds,
         collection.identifier,
         VOCABS_URL,
         GIT_USER, GIT_MAIL, AGENT,
@@ -438,8 +449,10 @@ def test_update_files(tmpdir, collection, test_csv_dir, test_files_dir):
     log_path = os.path.join(
         test_files_dir, 'ddrimport-file-update.log'
     )
+    headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(file_csv_path))
     out = batch.Importer.import_files(
         file_csv_path,
+        rowds,
         collection.identifier,
         VOCABS_URL,
         GIT_USER, GIT_MAIL, AGENT,
