@@ -523,16 +523,13 @@ def file_object(fidentifier, entity, data, src_path, src_size, md5, sha1, sha256
     log.debug('File object')
     file_ = fidentifier.object_class().new(fidentifier, parent=entity)
     file_.basename_orig = src_path.name
-    # add extension to path_abs
-    basename_ext = src_path.suffix
-    path_abs_ext = src_path.suffix
-    if basename_ext and not path_abs_ext:
-        file_.path_abs = file_.path_abs + basename_ext
-        log.debug('| basename_ext %s' % basename_ext)
-    log.debug('| file_ %s' % file_)
-    log.debug('| file_.basename_orig: %s' % file_.basename_orig)
-    log.debug('| file_.path_abs: %s' % file_.path_abs)
-    log.debug('| file_.mimetype: %s' % file_.mimetype)
+    # make sure path_abs has an extension
+    if src_path.suffix and not Path(file_.path_abs).suffix:
+        file_.path_abs = f'{file_.path_abs}{src_path.suffix}'
+    log.debug(f'| {file_=}')
+    log.debug(f'| {file_.basename_orig=}')
+    log.debug(f'| {file_.path_abs=}')
+    log.debug(f'| {file_.mimetype=}')
     # remove fields from forms/CSV data so it doesn't overwrite things
     for fieldname in ['id','identifier']:
         if data.get(fieldname):
