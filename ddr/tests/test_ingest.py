@@ -1,10 +1,13 @@
 import os
+from pathlib import Path
 import shutil
 import urllib
 
+import git
 from nose.tools import assert_raises
 import pytest
 
+from DDR import dvcs
 from DDR import identifier
 from DDR import ingest
 from DDR.models import Entity, File
@@ -12,9 +15,11 @@ from DDR.models import Entity, File
 IMG_URL = 'https://web.archive.org/web/20011221151014im_/http://densho.org/images/logo.jpg'
 IMG_FILENAME = 'test-imaging.jpg'
 # checksums of test file test-imaging.jpg
+IMG_SIZE   = 12529
 IMG_MD5    = 'c034f564e3ae1b603270cd332c3e858d'
 IMG_SHA1   = 'f7ab5eada2e30f274b0b3166d658fe7f74f22b65'
 IMG_SHA256 = 'b27c8443d393392a743c57ee348a29139c61f0f5d5363d6cfb474f35fcba2174'
+IMG_XMP    = None
 
 COLLECTION_ID = 'ddr-testing-123'
 ENTITY_ID     = 'ddr-testing-123-4'
@@ -74,7 +79,13 @@ class TestAddFileLogger():
     # TODO def test_entry(self):
     # TODO def test_ok(self):
     # TODO def test_not_ok(self):
-    # TODO def test_log(self):
+
+    def test_log(self, tmpdir, entity_identifier):
+        log = ingest.addfile_logger(
+            identifier=entity_identifier, base_dir=str(tmpdir)
+        )
+        log.log()
+
     # TODO def test_crash(self):
 
 
@@ -214,6 +225,26 @@ def test_copy_to_workdir(test_base_dir, entity_identifier):
     if os.path.exists(tmp_dir):
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
+def test_copy_to_file_path(test_base_dir, entity_identifier):
+    file_ = identifier.Identifier('ddr-test-123-456-master-abc123', test_base_dir).object()
+    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    # prep
+    src_path = Path(test_base_dir) / 'src' / 'somefile.tif'
+    tmp_path = Path(test_base_dir) / 'tmp' / 'somefile.tif'
+    tmp_path_renamed = Path(test_base_dir) / 'ddr-test-123-456-master-abc123.tif'
+    src_dir = src_path.parent
+    tmp_dir = tmp_path.parent
+    # clean slate
+    if src_dir.exists():
+        shutil.rmtree(src_dir, ignore_errors=True)
+    if tmp_dir.exists():
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+    os.makedirs(src_dir)
+    os.makedirs(tmp_dir)
+    with src_path.open('w') as f:
+        f.write('test_copy_to_file_path')
+    ingest.copy_to_file_path(file_, str(src_path), log)
+
 def test_make_access_file(test_base_dir, entity_identifier, test_image):
     src_path = test_image
     access_path = os.path.join(test_base_dir, '%s-a.jpg' % FILE_ID)
@@ -225,7 +256,12 @@ def test_make_access_file(test_base_dir, entity_identifier, test_image):
     # get test jpg
     assert ingest.make_access_file(src_path, access_path, log) == access_path
 
-# TODO def test_write_object_metadata():
+def test_write_object_metadata(test_base_dir, entity_identifier):
+    obj = identifier.Identifier('ddr-test-123-456-master-abc123', test_base_dir).object()
+    tmp_dir = test_base_dir
+    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    tmp_json = ingest.write_object_metadata(obj, tmp_dir, log)
+    assert Path(tmp_json).exists()
 
 def test_move_files(test_base_dir, entity_identifier):
     # this seems way too complicated
@@ -281,13 +317,201 @@ def test_reverse_files_list():
 # TODO def test_move_new_files_back():
 # TODO def test_move_existing_files_back():
 
+def test_rename_in_place(entity_identifier, test_base_dir, test_image):
+    src_path = Path(test_image).parent / 'rename-image.jpg'
+    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    #
+    with src_path.open('w') as f:
+        f.write('test_rename_in_place')
+    new_path = src_path.parent / 'new.jpg'
+    #
+    assert src_path.exists() and not new_path.exists()
+    ingest.rename_in_place(src_path, new_path, log)
+    assert new_path.exists() and not src_path.exists()
+
+def test_copy_in_place(entity_identifier, test_base_dir, test_image):
+    src_path = Path(test_image).parent / 'rename-image.jpg'
+    file_ = identifier.Identifier('ddr-test-123-456-master-abc123', test_base_dir).object()
+    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    #
+    with src_path.open('w') as f:
+        f.write('test_rename_in_place')
+    new_path = src_path.parent / f'{file_.id}{src_path.suffix}'
+    #
+    assert src_path.exists() and not new_path.exists()
+    ingest.copy_in_place(src_path, file_, log)
+    assert src_path.exists() and new_path.exists()
+
 def test_predict_staged():
     already = ['a', 'b']
     planned = ['a', 'c', 'd']
     expected = ['a', 'b', 'c', 'd']
     assert ingest.predict_staged(already, planned) == expected
 
-# TODO def test_stage_files():
+def test_stage_files(entity_identifier, test_base_dir, test_image):
+    entity = Entity(
+        entity_identifier.path_abs(), entity_identifier.id, entity_identifier
+    )
+    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    print(f'{log=}')
+    # set up repo
+    repo_dir = Path(test_base_dir) / 'test_stage_files_repo'
+    repo_dir.mkdir()
+    print(f'{repo_dir=}')
+    repo = git.Repo.init(repo_dir)
+    repo.git.annex('init')
+    print(f'{repo=}')
+    entity.collection_path = repo_dir
+    # prep text files
+    file0 = repo_dir / 'file0'
+    file1 = repo_dir / 'file1'
+    file2 = repo_dir / 'file2'
+    file3 = repo_dir / 'file3'
+    with file0.open('w') as f:
+        f.write('test_repo_status_0')
+    with file1.open('w') as f:
+        f.write('test_repo_status_1')
+    with file2.open('w') as f:
+        f.write('test_repo_status_2')
+    with file3.open('w') as f:
+        f.write('test_repo_status_3')
+    print(f'{file0=}')
+    print(f'{file0.exists()=}')
+    print(f'{file1=}')
+    print(f'{file1.exists()=}')
+    print(f'{file2=}')
+    print(f'{file2.exists()=}')
+    print(f'{file3=}')
+    print(f'{file3.exists()=}')
+    # prep binary file
+    test_image = Path(test_image)
+    print(f'{test_image=}')
+    file4 = file1.parent / f'file4{test_image.suffix}'
+    shutil.copyfile(test_image, file4)
+    print(f'{file4=}')
+    print(f'{file4.exists()=}')
+    # stage files0-2, leave file3 untracked
+    git_files = [str(file0), str(file1), str(file2)]
+    annex_files = [str(file4)]
+    print(f'{git_files=}')
+    print(f'{annex_files=}')
+    repo = ingest.stage_files(
+        entity=entity, git_files=git_files, annex_files=annex_files,
+        log=log, show_staged=0
+    )
+    print(f'{repo=}')
+    # modify file2
+    with file2.open('w') as f:
+        f.write('test_repo_status_2_modified')
+    # assert
+    staged = dvcs.list_staged(repo) == ['file0', 'file1', 'file2', 'file4.jpg']
+    modified = dvcs.list_modified(repo) == ['file2']
+    untracked = dvcs.list_untracked(repo) == ['file3']
+
+def test_repo_status(entity_identifier, test_base_dir):
+    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    # set up repo
+    repo_dir = Path(test_base_dir) / 'test_repo_status_repo'
+    repo_dir.mkdir()
+    print(f'{repo_dir=}')
+    import git
+    repo = git.Repo.init(repo_dir)
+    print(f'{repo=}')
+    # prep files
+    file0 = repo_dir / 'file0'
+    file1 = repo_dir / 'file1'
+    file2 = repo_dir / 'file2'
+    with file0.open('w') as f:
+        f.write('test_repo_status_0')
+    with file1.open('w') as f:
+        f.write('test_repo_status_1')
+    with file2.open('w') as f:
+        f.write('test_repo_status_2')
+    # modify and stage
+    repo.git.add(['file0'])
+    # modify
+    repo.git.add(['file1'])
+    with file1.open('w') as f:
+        f.write('test_repo_status_1 modified')
+    #
+    staged, modified, untracked = ingest.repo_status(repo, log)
+    assert staged == ['file0', 'file1']
+    assert modified == ['file1']
+    assert untracked == ['file2']
+
+def test_file_info(entity_identifier, test_base_dir, test_image):
+    src_path = Path(test_image)
+    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    #
+    print(f'{src_path=}')
+    print(f'{src_path.exists()=}')
+    #with src_path.open('w') as f:
+    #    f.write('test_file_info')
+    #
+    size,md5,sha1,sha256,xmp = ingest.file_info(src_path, log)
+    assert size == IMG_SIZE
+    assert md5 == IMG_MD5
+    assert sha1 == IMG_SHA1
+    assert sha256 == IMG_SHA256
+    assert xmp == IMG_XMP
+
+class FakeEntity():
+    def __init__(self, identifier):
+        self.identifier = identifier
+
+def test_file_identifier(entity_identifier, test_base_dir):
+    entity = FakeEntity(identifier=entity_identifier)
+    data = entity.identifier.idparts
+    data['role'] = 'master'
+    sha1 = IMG_SHA1[:10]
+    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    #
+    fi = ingest.file_identifier(entity, data, sha1, log)
+    assert fi
+    assert fi.id == 'ddr-testing-123-4-master-f7ab5eada2'
+
+def test_file_object(entity_identifier, file_identifier, test_base_dir, test_image):
+    entity = Entity(
+        entity_identifier.path_abs(), entity_identifier.id, entity_identifier
+    )
+    print(f'{entity=}')
+    print(f'{entity.path_abs=}')
+    data = entity.identifier.idparts
+    data['role'] = 'master'
+    data['id'] = file_identifier.id
+    sha1 = IMG_SHA1[:10]
+    src_path = Path(test_image)
+    print(f'{src_path=}')
+    log = ingest.addfile_logger(entity_identifier, base_dir=test_base_dir)
+    #
+    file_ = ingest.file_object(
+        file_identifier, entity, data, src_path,
+        IMG_SIZE, IMG_MD5, IMG_SHA1, IMG_SHA256, IMG_XMP,
+        log
+    )
+    print(f'{file_}')
+    assert file_.basename_orig == Path(test_image).name
+    fname = f'{file_identifier.id}{src_path.suffix}'
+    file_path_abs = Path(entity.path_abs) / 'files' / fname
+    print(f'{str(file_path_abs)=}')
+    print(f'{file_.path_abs=}')
+    file_path_expected = file_path_abs.relative_to(
+        file_path_abs.parent.parent.parent.parent.parent
+    )
+    file_path_out = Path(file_.path_abs).relative_to(
+        Path(file_.path_abs).parent.parent.parent.parent.parent
+    )
+    print('{file_path_expected=}')
+    print('{file_path_out=}')
+    assert file_path_out == file_path_expected
+    #assert file_.mimetype == IMG_MIMETYPE
+    assert file_.size == IMG_SIZE
+    assert file_.sha1 == IMG_SHA1
+    assert file_.md5 == IMG_MD5
+    assert file_.sha256 == IMG_SHA256
+    assert file_.xmp == IMG_XMP
+    assert file_.id == file_identifier.id
+
 # TODO def test_add_local_file():
 # TODO def test_add_external_file():
 # TODO def test_add_access():

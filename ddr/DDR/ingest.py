@@ -230,6 +230,7 @@ def addfile_logger(identifier=None, log_path=None, base_dir=config.LOG_DIR):
     return log
 
 def check_dir(label, path, log, mkdir=False, perm=os.W_OK):
+    """Check dirs, make dirs if necessary, complain about permissions"""
     log.ok('| check dir %s (%s)' % (path, label))
     if mkdir and not os.path.exists(path):
         os.makedirs(path)
@@ -245,6 +246,7 @@ def check_dir(label, path, log, mkdir=False, perm=os.W_OK):
     return True
 
 def checksums(src_path, log):
+    """Get MD5, SHA1, SHA256 hashes for specified file"""
     md5    = util.file_hash(src_path, 'md5');    log.ok('| md5: %s' % md5)
     sha1   = util.file_hash(src_path, 'sha1');   log.ok('| sha1: %s' % sha1)
     sha256 = util.file_hash(src_path, 'sha256'); log.ok('| sha256: %s' % sha256)
@@ -253,12 +255,14 @@ def checksums(src_path, log):
     return md5,sha1,sha256
 
 def destination_path(src_path, dest_dir, fidentifier):
+    """Make a destination path for a given source file and dest dir"""
     src_basename = os.path.basename(src_path)
     src_ext = os.path.splitext(src_basename)[1]
     dest_basename = '{}{}'.format(fidentifier.id, src_ext)
     return os.path.join(dest_dir, dest_basename)
 
 def temporary_path(src_path, base_dir, fidentifier):
+    """Make a temporary path for a given source file and dest dir"""
     src_basename = os.path.basename(src_path)
     return os.path.join(
         base_dir,
@@ -282,6 +286,7 @@ def access_path(file_class, tmp_path_renamed):
     )
 
 def copy_to_workdir(src_path, tmp_path, tmp_path_renamed, log):
+    """Copy file to tmp_path"""
     if not os.path.exists(os.path.dirname(tmp_path)):
         os.makedirs(os.path.dirname(tmp_path))
     log.ok('| cp %s %s' % (src_path, tmp_path))
@@ -300,6 +305,7 @@ def copy_to_workdir(src_path, tmp_path, tmp_path_renamed, log):
         log.crash('File rename failed: %s -> %s' % (tmp_path, tmp_path_renamed))
 
 def copy_to_file_path(file_, src_path, log):
+    """Copy file to its place in the repository"""
     log.ok('Copying')
     log.ok('| cp %s %s' % (src_path, file_.path_abs))
     if not os.path.exists(file_.entity_files_path):
@@ -315,6 +321,7 @@ def copy_to_file_path(file_, src_path, log):
         )
 
 def make_access_file(src_path, access_dest_path, log):
+    """Generate an access file and write to dest_path"""
     log.ok('Making access file')
     if os.path.exists(access_dest_path):
         log.not_ok('Access tmpfile already exists: %s' % access_dest_path)
@@ -356,6 +363,7 @@ def make_access_file(src_path, access_dest_path, log):
     return tmp_access_path
 
 def write_object_metadata(obj, tmp_dir, log):
+    """Write object JSON file to tmp_dir"""
     tmp_json = os.path.join(tmp_dir, os.path.basename(obj.json_path))
     log.ok('| %s' % tmp_json)
     fileio.write_text(obj.dump_json(), tmp_json)
@@ -364,6 +372,12 @@ def write_object_metadata(obj, tmp_dir, log):
     return tmp_json
 
 def move_files(files, log):
+    """Move list of files to temp dir
+    
+    @param files: list of (temp_path, destination_path) pairs
+    @param log: DDR.util.FileLogger
+    @returns: list of failure tmp paths
+    """
     failures = []
     for tmp,dest in files:
         log.ok('| mv %s %s' % (tmp,dest))
@@ -378,10 +392,20 @@ def reverse_files_list(files):
     return [(dest,tmp) for tmp,dest in files]
 
 def move_new_files_back(files, failures, log):
+    """Move list of recently copied files back to temp dir
+    
+    TODO BROKEN
+    @param files: list of (temp_path, destination_path) pairs
+    @param failures: list of files that failed to copy?
+    @param log: DDR.util.FileLogger
+    @returns: nothing
+    """
     # one of files failed to copy, so move all back to tmp
     # these are new files
     log.not_ok('%s failures: %s' % (len(failures), failures))
     log.not_ok('Moving new files back to tmp_dir')
+    # TODO `reverse` is defined but never used
+    # does this function actually do what it says it dows?
     reverse = reverse_files_list(files)
     fails = []
     try:
@@ -397,6 +421,7 @@ def move_new_files_back(files, failures, log):
         log.crash('Bailing out. We are done here.')
 
 def move_existing_files_back(files, log):
+    # TODO broken?
     # these are files that already exist in repo
     log.ok('| mv %s %s' % (tmp_entity_json, entity.json_path))
     shutil.move(tmp_entity_json, entity.json_path)
@@ -404,15 +429,14 @@ def move_existing_files_back(files, log):
         log.crash('Failed to place entity.json in destination repo')
 
 def rename_in_place(source, new_name, log):
-    """Rename original file in-place
-    """
+    """Rename original file in place"""
     src_dir = os.path.dirname(source)
     dest = os.path.join(src_dir, os.path.basename(new_name))
     log.ok('| mv %s %s' % (source, dest))
     shutil.move(source, dest)
 
 def copy_in_place(src_path, file_, log):
-    """Make copy of original file in same dir
+    """Make copy of original file with DDR ID name in same directory
     """
     base,ext = os.path.splitext(src_path)
     dest = os.path.join(
@@ -516,6 +540,12 @@ def repo_status(repo, log):
     return staged, modified, untracked
 
 def file_info(src_path, log):
+    """Get file size, hashes, and XMP
+    
+    @param src_path: str
+    @param log: DDR.util.FileLogger
+    @returns: size,md5,sha1,sha256,xmp
+    """
     log.ok('Examining source file')
     check_dir('| src_path', src_path, log, mkdir=False, perm=os.R_OK)
     size = os.path.getsize(src_path)
@@ -531,6 +561,7 @@ def file_info(src_path, log):
     return size,md5,sha1,sha256,xmp
 
 def file_identifier(entity, data, sha1, log):
+    """Make a new Identifier for the file"""
     log.ok('Identifier')
     # note: we can't make this until we have the sha1
     idparts = entity.identifier.idparts
@@ -543,6 +574,10 @@ def file_identifier(entity, data, sha1, log):
     return fidentifier
 
 def file_object(fidentifier, entity, data, src_path, src_size, md5, sha1, sha256, xmp, log):
+    """Make a new File object and set metadata attrs
+    
+    TODO shouldn't this be in DDR.models.files.File?
+    """
     log.ok('File object')
     file_ = fidentifier.object_class().new(fidentifier, parent=entity)
     file_.basename_orig = os.path.basename(src_path)
@@ -724,6 +759,8 @@ def replace_access(repo, file_, src_path):
     return [file_.access_rel]
 
 def add_file_commit(entity, file_, repo, log, git_name, git_mail, agent):
+    """Confirm all files staged, format commit message, and commit
+    """
     log.ok('add_file_commit(%s, %s, %s, %s, %s, %s)' % (file_, repo, log, git_name, git_mail, agent))
     staged = dvcs.list_staged(repo)
     modified = dvcs.list_modified(repo)
