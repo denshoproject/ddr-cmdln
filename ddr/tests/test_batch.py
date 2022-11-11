@@ -87,26 +87,26 @@ class TestChecker():
         print(f'{file0=}')
         print(f'{file0.exists()=}')
         # untracked
-        results = batch.Checker.check_repository(collection_identifier)
-        print(f'{results=}')
-        assert results['passed'] == True
-        assert results['staged'] == []
-        assert results['modified'] == []
+        staged,modified = batch.Checker.check_repository(collection_identifier)
+        print(f'{staged=}')
+        print(f'{modified=}')
+        assert staged == []
+        assert modified == []
         # staged
         repo.git.add([file0])
-        results = batch.Checker.check_repository(collection_identifier)
-        print(f'{results=}')
-        assert results['passed'] == False
-        assert results['staged'] == ['file0']
-        assert results['modified'] == []
+        staged,modified = batch.Checker.check_repository(collection_identifier)
+        print(f'{staged=}')
+        print(f'{modified=}')
+        assert staged == ['file0']
+        assert modified == []
         # modified
         with file0.open('w') as f:
             f.write('test_0_modified')
-        results = batch.Checker.check_repository(collection_identifier)
-        print(f'{results=}')
-        assert results['passed'] == False
-        assert results['staged'] == ['file0']
-        assert results['modified'] == ['file0']
+        staged,modified = batch.Checker.check_repository(collection_identifier)
+        print(f'{staged=}')
+        print(f'{modified=}')
+        assert staged == ['file0']
+        assert modified == ['file0']
 
     #def test_check_csv(self, test_base_dir, collection_identifier):
     #    csv_path = test_base_dir / 'test.csv'
@@ -125,86 +125,6 @@ class TestChecker():
     #    assert 0
 
     # TODO def test_check_eids(self):
-
-    def test_guess_model(self):
-        # no rows
-        rowds0 = []
-        expected0 = []
-        #out0 = batch.Checker._guess_model(rowds0)
-        #assert out0 == expected0
-        assert_raises(Exception, batch.Checker._guess_model, rowds0)
-        # no identifiers
-        rowds1 = [
-            {'id':'ddr-testing-123-1'},
-            {'id':'ddr-testing-123-1'},
-        ]
-        expected1 = []
-        assert_raises(Exception, batch.Checker._guess_model, rowds1)
-        # too many models
-        rowds2 = [
-            {
-                'id':'ddr-testing-123-1',
-                'identifier': identifier.Identifier('ddr-testing-123-1'),
-            },
-            {
-                'id':'ddr-testing-123-2-master',
-                'identifier': identifier.Identifier('ddr-testing-123-2-master'),
-            },
-        ]
-        expected2 = ('entity', ['More than one model type in imput file!'])
-        out2 = batch.Checker._guess_model(rowds2)
-        assert out2 == expected2
-        # entities
-        rowds3 = [
-            {
-                'id':'ddr-testing-123-1',
-                'identifier': identifier.Identifier('ddr-testing-123-1'),
-            },
-        ]
-        expected3 = ('entity',[])
-        out3 = batch.Checker._guess_model(rowds3)
-        assert out3 == expected3
-        # segments
-        rowds3 = [
-            {
-                'id':'ddr-testing-123-4-5',
-                'identifier': identifier.Identifier('ddr-testing-123-4-5'),
-            },
-        ]
-        expected3 = ('segment',[])
-        out3 = batch.Checker._guess_model(rowds3)
-        assert out3 == expected3
-        # files
-        rowds4 = [
-            {
-                'id':'ddr-testing-123-2-master-a1b2c3',
-                'identifier': identifier.Identifier('ddr-testing-123-2-master-a1b2c3'),
-            },
-        ]
-        expected4 = ('file',[])
-        out4 = batch.Checker._guess_model(rowds4)
-        assert out4 == expected4
-        # file-roles are files
-        rowds5 = [
-            {
-                'id':'ddr-testing-123-2-master',
-                'identifier': identifier.Identifier('ddr-testing-123-2-master'),
-            },
-        ]
-        expected5 = ('file',[])
-        out5 = batch.Checker._guess_model(rowds5)
-        assert out5 == expected5
-        # external files
-        rowds6 = [
-            {
-                'id':'ddr-testing-123-1',
-                'identifier': identifier.Identifier('ddr-testing-123-1'),
-                'basename_orig': 'somefile.jpg',
-            },
-        ]
-        expected6 = ('file',[])
-        out6 = batch.Checker._guess_model(rowds6)
-        assert out6 == expected6
 
     # TODO def test_get_module(self):
 
