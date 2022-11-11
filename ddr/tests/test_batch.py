@@ -1,10 +1,70 @@
 # -*- coding: utf-8 -*-
 
+import os
+from pathlib import Path
+import urllib
+
 import git
 from nose.tools import assert_raises
+import pytest
 
 from DDR import batch
+from DDR import config
+from DDR import fileio
+from DDR import dvcs
 from DDR import identifier
+from DDR.models import Collection, Entity, File
+
+IMG_URL = 'https://web.archive.org/web/20011221151014im_/http://densho.org/images/logo.jpg'
+IMG_FILENAME = 'test-imaging.jpg'
+# checksums of test file test-imaging.jpg
+IMG_SIZE   = 12529
+IMG_MD5    = 'c034f564e3ae1b603270cd332c3e858d'
+IMG_SHA1   = 'f7ab5eada2e30f274b0b3166d658fe7f74f22b65'
+IMG_SHA256 = 'b27c8443d393392a743c57ee348a29139c61f0f5d5363d6cfb474f35fcba2174'
+IMG_XMP    = None
+
+COLLECTION_ID = 'ddr-testing-123'
+ENTITY_ID     = 'ddr-testing-123-4'
+FILE_ID       = 'ddr-testing-123-4-master-a1b2c3'
+LOGPATH_REL   = Path(f'addfile/{COLLECTION_ID}/{ENTITY_ID}.log')
+
+TMP_PATH_REL  = Path(f'tmp/file-add/{COLLECTION_ID}/{ENTITY_ID}/testfile.tif')
+
+
+@pytest.fixture(scope="session")
+def test_base_dir(tmpdir_factory):
+    return tmpdir_factory.mktemp('ingest')
+
+@pytest.fixture(scope="session")
+def test_image(tmpdir_factory):
+    base_dir = tmpdir_factory.mktemp('ingest')
+    img_path = base_dir / IMG_FILENAME
+    if not img_path.exists():
+        urllib.request.urlretrieve(
+            IMG_URL,
+            base_dir / IMG_FILENAME
+        )
+    return img_path
+
+@pytest.fixture(scope="session")
+def logpath(tmpdir_factory):
+    return tmpdir_factory.mktemp('addfile') / f'{COLLECTION_ID}/{ENTITY_ID}.log'
+
+@pytest.fixture(scope="session")
+def collection_identifier(tmpdir_factory):
+    tmp = tmpdir_factory.mktemp(COLLECTION_ID)
+    return identifier.Identifier(COLLECTION_ID, str(tmp))
+
+@pytest.fixture(scope="session")
+def entity_identifier(tmpdir_factory):
+    tmp = tmpdir_factory.mktemp(COLLECTION_ID)
+    return identifier.Identifier(ENTITY_ID, str(tmp))
+
+@pytest.fixture(scope="session")
+def file_identifier(tmpdir_factory):
+    tmp = tmpdir_factory.mktemp(COLLECTION_ID)
+    return identifier.Identifier(FILE_ID, str(tmp))
 
 
 class TestExporter():
@@ -15,8 +75,55 @@ class TestExporter():
 
 class TestChecker():
     
-    # TODO def test_check_repository(self):
-    # TODO def test_check_csv(self):
+    def test_check_repository(self, test_base_dir, collection_identifier):
+        repo_dir = Path(collection_identifier.path_abs())
+        # prep repo
+        repo = git.Repo.init(repo_dir)
+        print(f'{repo=}')
+        # prep text files
+        file0 = repo_dir / 'file0'
+        with file0.open('w') as f:
+            f.write('test_0')
+        print(f'{file0=}')
+        print(f'{file0.exists()=}')
+        # untracked
+        results = batch.Checker.check_repository(collection_identifier)
+        print(f'{results=}')
+        assert results['passed'] == True
+        assert results['staged'] == []
+        assert results['modified'] == []
+        # staged
+        repo.git.add([file0])
+        results = batch.Checker.check_repository(collection_identifier)
+        print(f'{results=}')
+        assert results['passed'] == False
+        assert results['staged'] == ['file0']
+        assert results['modified'] == []
+        # modified
+        with file0.open('w') as f:
+            f.write('test_0_modified')
+        results = batch.Checker.check_repository(collection_identifier)
+        print(f'{results=}')
+        assert results['passed'] == False
+        assert results['staged'] == ['file0']
+        assert results['modified'] == ['file0']
+
+    #def test_check_csv(self, test_base_dir, collection_identifier):
+    #    csv_path = test_base_dir / 'test.csv'
+    #    vocabs_url = config.VOCABS_URL
+    #    print(f'{csv_path=}')
+    #    # prep csv
+    #    headers = ['id','title']
+    #    rowds = [
+    #        {'id':'ddr-densho-123-1', 'title':'just testing'},
+    #        {'id':'ddr--123-2', 'title':'moar testing'},
+    #    ]
+    #    fileio.write_csv(csv_path, headers, rowds)
+    #    #
+    #    results = batch.Checker.check_csv(csv_path, collection_identifier, vocabs_url)
+    #    print(f'{results=}')
+    #    assert 0
+
     # TODO def test_check_eids(self):
 
     def test_guess_model(self):
@@ -100,7 +207,37 @@ class TestChecker():
         assert out6 == expected6
 
     # TODO def test_get_module(self):
-    # TODO def test_ids_in_local_repo(self):
+
+    def test_ids_in_local_repo(self, test_base_dir, collection_identifier, entity_identifier, file_identifier):
+        repo_dir = Path(collection_identifier.path_abs())
+        # prep repo
+        repo = git.Repo.init(repo_dir)
+        print(f'{repo=}')
+        ci = identifier.Identifier(COLLECTION_ID, repo_dir)
+        ei = identifier.Identifier(ENTITY_ID, repo_dir)
+        fi = identifier.Identifier(FILE_ID, repo_dir)
+        c = Collection(ci.path_abs(), ci.id, ci)
+        e = Entity(ei.path_abs(), ei.id, ei)
+        f = File(fi.path_abs(), fi.id, fi)
+        c.write_json()
+        e.write_json()
+        f.write_json()
+        cpath = Path(c.identifier.path_abs('json'))
+        epath = Path(e.identifier.path_abs('json'))
+        fpath = Path(f.identifier.path_abs('json'))
+        #
+        rowds = [
+            {'id': 'ddr-testing-123-3'}, {'id': 'ddr-testing-123-4'},
+        ]
+        results = batch.Checker._ids_in_local_repo(rowds, 'entity', repo_dir)
+        assert results == ['ddr-testing-123-4']
+        #
+        rowds = [
+            {'id': 'ddr-testing-123-4-master-a1b2c3'},
+            {'id': 'ddr-testing-123-4-mezzanine-a1b2c3'},
+        ]
+        results = batch.Checker._ids_in_local_repo(rowds, 'file', repo_dir)
+        assert results == ['ddr-testing-123-4-master-a1b2c3']
     
     def test_prep_valid_values(self):
         json_texts = {
@@ -134,10 +271,35 @@ class TestImporter():
         assert out0.id == ei.id
         assert out1.id == si.id
         
-    # TODO def test_write_entity_changelog(self):
-    # TODO def test_write_file_changelogs(self):
+    def test_write_entity_changelog(self, test_base_dir, entity_identifier):
+        entity = Entity(
+            entity_identifier.path_abs(), entity_identifier.id, entity_identifier
+        )
+        git_name = 'pytest' 
+        git_mail = 'pytest@densho.org' 
+        agent = 'pytest'
+        #
+        changelog_path = Path(entity.changelog_path)
+        os.makedirs(str(changelog_path.parent))
+        #
+        assert not changelog_path.exists()
+        batch.Importer._write_entity_changelog(entity, git_name, git_mail, agent)
+        assert changelog_path.exists()
+
+    # NOPE def test_write_file_changelogs(self):
     # TODO def test_import_entities(self):
-    # TODO def test_csv_load(self):
+
+    def test_csv_load(self):
+        # prep
+        rowds_csv = [
+            {'id': 'ddr-testing-123-4', 'title': 'yay testing!'},
+            {'id': 'ddr-testing-123-5', 'title': 'moar testing!'},
+        ]
+        #
+        module = batch.Checker._get_module('entity')
+        rowds_out = batch.Importer._csv_load(module, rowds_csv)
+        print(f'{rowds_out=}')
+        assert rowds_out == rowds_csv
 
     def test_fidentifiers(self):
         ci = identifier.Identifier('ddr-testing-123')
@@ -194,8 +356,7 @@ class TestImporter():
         ]
         for key in out1:
             assert key in expected1
-    
-    # TODO def test_eidentifiers(self):
+
     # TODO def test_existing_bad_entities(self):
     # TODO def test_file_objects(self):
     # TODO def test_rowds_new_existing(self):
