@@ -179,6 +179,9 @@ def check_row_values(module, headers, valid_values, rowd):
             )
             if not valid:
                 invalid.append(field)
+        except KeyError as err:
+            msg = '%s: %s' % (field, str(err))
+            invalid.append(msg)
         except ValueError as err:
             msg = '%s: %s' % (field, str(err))
             invalid.append(msg)
