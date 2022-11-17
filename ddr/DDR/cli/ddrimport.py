@@ -159,10 +159,12 @@ def entity(csv, collection, user, mail, username, password, idservice, nocheck, 
     csv_path,collection_path = make_paths(csv, collection)
     ci = identifier.Identifier(collection_path)
     logging.debug(ci)
+    headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
     if not nocheck:
-        idservice_client = idservice_api_login(username, password, idservice)
         run_checks(
-            'entity', csv_path, ci, config.VOCABS_URL, idservice_client
+            'entity', csv_path, rowds, headers, csv_errs, ci,
+            config.VOCABS_URL,
+            idservice_api_login(username, password, idservice)
         )
     #row_start,row_end = rows_start_end(fromto)
     imported = batch.Importer.import_entities(
