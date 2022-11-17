@@ -120,7 +120,7 @@ def check(model, csv, collection, username, password, idservice):
 @click.option('--username','-U', help='ID service username. Use flag to avoid being prompted.')
 @click.option('--password','-P', help='ID service password. Use flag to avoid being prompted. Passwords args will remain in ~/.bash_history.')
 @click.option('--idservice','-i', help='Override URL of ID service in configs.')
-@click.option('--dryrun','-d', help="Simulated run-through; don't modify files.")
+@click.option('--dryrun','-d', is_flag=True, help="Simulated run-through; don't modify files.")
 def register(csv, collection, username, password, idservice, dryrun):
     """Registers entities in CSV with ID service.
     """
@@ -148,7 +148,7 @@ def register(csv, collection, username, password, idservice, dryrun):
 @click.option('--password','-P', help='ID service password. Use flag to avoid being prompted. Passwords args will remain in ~/.bash_history.')
 @click.option('--idservice','-i', help='Override URL of ID service in configs.')
 @click.option('--nocheck','-N', is_flag=True, help="Disable checking/validation (may take time on large collections).")
-@click.option('--dryrun','-d', help="Simulated run-through; don't modify files.")
+@click.option('--dryrun','-d', is_flag=True, help="Simulated run-through; don't modify files.")
 # TODO @click.option('--fromto', '-F', help="Only import specified rows. Use Python list syntax e.g. '523:711' or ':200' or '100:'.")
 # TODO @click.option('--log','-l', help='Log addfile to this path')
 def entity(csv, collection, user, mail, username, password, idservice, nocheck, dryrun):
@@ -189,7 +189,7 @@ def entity(csv, collection, user, mail, username, password, idservice, nocheck, 
 @click.option('--user','-u', help='(required for commit) Git user name.')
 @click.option('--mail','-m', help='(required for commit) Git user e-mail address.')
 @click.option('--nocheck','-N', is_flag=True, help="Disable checking/validation (may take time on large collections).")
-@click.option('--dryrun','-d', help="Simulated run-through; don't modify files.")
+@click.option('--dryrun','-d', is_flag=True, help="Simulated run-through; don't modify files.")
 @click.option('--fromto', '-F', help="Only import specified rows. Use Python list syntax e.g. '523:711' or ':200' or '100:'.")
 @click.option('--log','-l', help='(optional) Log addfile to this path')
 # TODO @click.option('--nocheck','-N', help="Disable checking/validation (may take time on large collections).")
