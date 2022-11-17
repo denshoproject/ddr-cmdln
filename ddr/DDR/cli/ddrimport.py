@@ -293,7 +293,10 @@ def run_checks(model, csv_path, rowds, headers, csv_errs, ci, vocabs_url, log_pa
     for err in id_errs: logging.error(f'Identifier: {err}')
     for key,val in header_errs.items():
         logging.error(f"CSV header: {key}: {','.join(val)}")
-    for err in rowds_errs: logging.error(f'CSV row: {err}')
+    for err,items in rowds_errs.items():
+        logging.error(err)
+        for item in items:
+            logging.error(item)
     for err in file_errs:
         for key,val in err.items():
             logging.error(f"{key}: {val}")
@@ -301,7 +304,8 @@ def run_checks(model, csv_path, rowds, headers, csv_errs, ci, vocabs_url, log_pa
     staged,modified = batch.Checker.check_repository(ci)
     for f in staged: logging.error(f'staged: {f}')
     for f in modified: logging.error(f'modified: {f}')
-    if csv_errs or id_errs or validation_errs or staged or modified:
+    if csv_errs or id_errs or header_errs or rowds_errs or file_errs or staged or modified:
+        logging.error(f'Quitting--see log for error(s).')
         sys.exit(1)
     # eids
     if (model == 'entity') and idservice_client:
