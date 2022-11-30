@@ -6,6 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 import os
 import re
+import shutil
 import socket
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
@@ -599,11 +600,22 @@ def remove_untracked(repo: git.Repo) -> List[str]:
     ]
     for untracked in untracked_paths:
         try:
-            os.remove(untracked)
-            out.append('OK %s' % untracked)
+            if os.path.isdir(untracked):
+                shutil.rmtree(untracked)
+            elif os.path.isfile(untracked):
+                os.remove(untracked)
+            out.append(f'OK {untracked}')
         except:
-            out.append('FAIL %s' % untracked)
+            out.append(f'FAIL {untracked}')
     return out
+
+def rollback(repo: git.Repo):
+    """Resets, reverts, removes untracked, returns feedback"""
+    result = {}
+    result['reset'] = reset(repo)
+    result['revert'] = revert(repo)
+    result['remove'] = remove_untracked(repo)
+    return result
 
 
 # git merge ------------------------------------------------------------
