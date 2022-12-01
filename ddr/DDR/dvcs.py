@@ -558,20 +558,26 @@ def stage(repo: git.Repo, git_files: List[str]=[]):
     """
     repo.git.add([git_files])
 
-def commit(repo: git.Repo, msg: str, agent: str) -> git.Commit:
+def commit(repo: git.Repo, msg: str, agent: str, log=False) -> git.Commit:
     """Commit some changes.
     
     @param repo: A GitPython repository
     @param msg: str Commit message
     @param agent: str
+    @param log: util.FileLogger
     @returns: GitPython commit object
     """
     # TODO cancel commit if list of staged doesn't match list of files added?
     # TODO complain if list of committed files doesn't match list of staged?
+    logging.info(f'Committing...')
+    if log:
+        log.info(f'Committing...')
     # log staged files
     staged = list_staged(repo)
     staged.sort()
-    logging.debug('STAGED {}'.format(staged))
+    logging.debug(f'STAGED {staged}')
+    if log:
+        log.debug(f'STAGED {staged}')
     # do the commit
     commit_message = compose_commit_message(msg, agent=agent)
     commit = repo.index.commit(commit_message)
@@ -579,17 +585,23 @@ def commit(repo: git.Repo, msg: str, agent: str) -> git.Commit:
     # log committed files
     committed = list_committed(repo, commit)
     committed.sort()
-    logging.debug('COMMITTED {}'.format(committed))
+    logging.debug(f'COMMITTED {committed}')
+    if log:
+        log.debug(f'COMMITTED {committed}')
     # done
     return commit
 
 def reset(repo: git.Repo):
     """Resets all staged files in repo."""
-    return repo.git.reset('HEAD')
+    msg = repo.git.reset('HEAD')
+    logger.debug(msg)
+    return msg
 
 def revert(repo: git.Repo):
     """Reverts all modified files in repo."""
-    return repo.git.checkout('--', '.')
+    msg = repo.git.checkout('--', '.')
+    logger.debug(msg)
+    return msg
 
 def remove_untracked(repo: git.Repo) -> List[str]:
     """Deletes all untracked files in the repo."""
@@ -604,17 +616,31 @@ def remove_untracked(repo: git.Repo) -> List[str]:
                 shutil.rmtree(untracked)
             elif os.path.isfile(untracked):
                 os.remove(untracked)
-            out.append(f'OK {untracked}')
+            msg = f'OK {untracked}'
+            logger.debug(msg)
+            out.append(msg)
         except:
-            out.append(f'FAIL {untracked}')
+            msg = f'FAIL {untracked}'
+            logger.debug(msg)
+            out.append(msg)
     return out
 
-def rollback(repo: git.Repo):
-    """Resets, reverts, removes untracked, returns feedback"""
+def rollback(repo: git.Repo, log=False):
+    """Resets, reverts, removes untracked, returns feedback
+    @param repo: GitPython repository
+    @param log: util.FileLogger
+    """
     result = {}
     result['reset'] = reset(repo)
+    if log:
+        log.debug(result['reset'])
     result['revert'] = revert(repo)
+    if log:
+        log.debug(result['revert'])
     result['remove'] = remove_untracked(repo)
+    if log:
+        for line in result['remove']:
+            log.debug(line)
     return result
 
 
