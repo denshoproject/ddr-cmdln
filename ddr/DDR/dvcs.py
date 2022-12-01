@@ -581,7 +581,6 @@ def commit(repo: git.Repo, msg: str, agent: str, log=False) -> git.Commit:
     # do the commit
     commit_message = compose_commit_message(msg, agent=agent)
     commit = repo.index.commit(commit_message)
-    logging.debug('COMMIT {}'.format(commit))
     # log committed files
     committed = list_committed(repo, commit)
     committed.sort()
@@ -589,7 +588,23 @@ def commit(repo: git.Repo, msg: str, agent: str, log=False) -> git.Commit:
     if log:
         log.debug(f'COMMITTED {committed}')
     # done
+    logging.info(f'COMMIT {commit}\n{log_commit(repo, commit.hexsha)}')
+    if log:
+        log.info(f'COMMIT {commit}\n{log_commit(repo, commit.hexsha)}')
     return commit
+
+def log_commit(repo: git.Repo, revision: str) -> str:
+    """Print commit in same format as `git log`
+    """
+    c = repo.commit(revision)
+    lines = []
+    lines.append(f'commit {c.hexsha}')
+    lines.append(f'Author: {c.author.name} <{c.author.email}>')
+    lines.append(f'Date:   {c.authored_datetime.strftime("%c")}')
+    for line in c.message.splitlines():
+        if line.strip():
+            lines.append(f'    {line}')
+    return '\n'.join(lines)
 
 def reset(repo: git.Repo):
     """Resets all staged files in repo."""
