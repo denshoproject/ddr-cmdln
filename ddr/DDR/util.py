@@ -206,13 +206,17 @@ class FileLogger():
         if not self.path.parent.exists():
             os.makedirs(self.path.parent)
 
-    def entry(self, status, msg):
+    def entry(self, status, msg, blank=False):
         """Returns log of add_files activity; adds an entry if status,msg given.
         
         @param ok: Boolean. ok or not ok.
         @param msg: Text message.
+        @parap blank: bool Print blank line if true
         @returns log: A text file.
         """
+        if blank:
+            fileio.append_text('', str(self.path))
+            return
         dt = datetime.now(config.TZ).strftime('%Y-%m-%d %H:%M:%S,%f')
         entry = f'{dt} {status.upper():8} {msg}'
         fileio.append_text(entry, str(self.path))
@@ -227,6 +231,8 @@ class FileLogger():
         """Write to addfile log and raise an exception."""
         self.error(msg)
         raise exception(msg)
+
+    def blank(self): self.entry('blank', '', True)
 
     def log(self):
         log = ''
