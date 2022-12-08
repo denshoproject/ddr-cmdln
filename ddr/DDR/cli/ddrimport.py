@@ -307,20 +307,19 @@ def run_checks(model, csv_path, rowds, headers, csv_errs, ci, vocabs_url, log_pa
     if csv_errs or id_errs or header_errs or rowds_errs or file_errs or staged or modified:
         logging.error(f'Quitting--see log for error(s).')
         sys.exit(1)
-    # eids
-    entities,missing_entities = batch.Importer._existing_bad_entities(
-        batch.Importer._eidentifiers(
-            batch.Importer._fid_parents(
-                batch.Importer._fidentifiers(rowds, ci), rowds, ci)))
-    if missing_entities:
-        for e in missing_entities:
-            logging.error(f'Entity {e} missing')
-        raise Exception(
-            f'{len(bad_entities)} entities could not be loaded! - IMPORT CANCELLED!'
-        )
+    if model in ['file']:
+        # files with missing parent entities
+        entities,missing_entities = batch.Importer._existing_bad_entities(
+            batch.Importer._eidentifiers(
+                batch.Importer._fid_parents(
+                    batch.Importer._fidentifiers(rowds, ci), rowds, ci)))
+        if missing_entities:
+            for e in missing_entities:
+                logging.error(f'Entity {e} missing')
+            raise Exception(
+                f'{len(bad_entities)} entities could not be loaded! - IMPORT CANCELLED!'
+            )
     if (model == 'entity') and idservice_client:
-        print('TODO batch.Checker.check_eids')
-        sys.exit(1)
         chkeids = batch.Checker.check_eids(rowds, ci, idservice_client)
         for err in chkeids:
             logging.error(f'entity ID?: {err}')
