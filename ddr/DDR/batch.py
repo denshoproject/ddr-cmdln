@@ -918,37 +918,37 @@ class Importer():
         @param register: boolean Whether or not to register IDs
         @returns: nothing
         """
-        log.info('-----------------------------------------------')
-        log.info('Reading %s' % csv_path)
+        logging.info('-----------------------------------------------')
+        logging.info('Reading %s' % csv_path)
         headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
-        log.info('%s rows' % len(rowds))
+        logging.info('%s rows' % len(rowds))
         
-        log.info('Looking up already registered IDs')
+        logging.info('Looking up already registered IDs')
         csv_eids = [rowd['id'] for rowd in rowds]
         status1,reason1,registered,unregistered = idservice_client.check_eids(cidentifier, csv_eids)
-        log.info('%s %s' % (status1,reason1))
+        logging.info('%s %s' % (status1,reason1))
         if status1 != 200:
             raise Exception('%s %s' % (status1,reason1))
         
         num_unregistered = len(unregistered)
-        log.info('%s IDs to register.' % num_unregistered)
+        logging.info('%s IDs to register.' % num_unregistered)
         
         if unregistered and dryrun:
-            log.info('These IDs would be registered if not --dryrun')
+            logging.info('These IDs would be registered if not --dryrun')
             for n,eid in enumerate(unregistered):
-                log.info('| %s/%s %s' % (n, num_unregistered, eid))
+                logging.info('| %s/%s %s' % (n, num_unregistered, eid))
         
         elif unregistered:
-            log.info('Registering IDs')
+            logging.info('Registering IDs')
             for n,eid in enumerate(unregistered):
-                log.info('| %s/%s %s' % (n, num_unregistered, eid))
+                logging.info('| %s/%s %s' % (n, num_unregistered, eid))
             status2,reason2,created = idservice_client.register_eids(cidentifier, unregistered)
-            log.info('%s %s' % (status2,reason2))
+            logging.info('%s %s' % (status2,reason2))
             if status2 != 201:
                 raise Exception('%s %s' % (status2,reason2))
-            log.info('%s registered' % len(created))
+            logging.info('%s registered' % len(created))
         
-        log.info('- - - - - - - - - - - - - - - - - - - - - - - -')
+        logging.info('- - - - - - - - - - - - - - - - - - - - - - - -')
 
 
 class UpdaterMetrics():
