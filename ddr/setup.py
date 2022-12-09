@@ -75,9 +75,11 @@ setup(
         ddrindex=DDR.cli.ddrindex:ddrindex
         ddrinfo=DDR.cli.ddrinfo:ddrinfo
         ddrimport=DDR.cli.ddrimport:ddrimport
+        ddrnames=DDR.cli.ddrnames:ddrnames
         ddrpubcopy=DDR.cli.ddrpubcopy:ddrpubcopy
         ddrsignatures=DDR.cli.ddrsignatures:ddrsignatures
         ddrtransform=DDR.cli.ddrtransform:ddrtransform
+        ddrvocab=DDR.cli.ddrvocab:ddrvocab
     ''',
     scripts = [
         'bin/ddr',

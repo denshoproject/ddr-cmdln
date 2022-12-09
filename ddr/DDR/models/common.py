@@ -402,6 +402,15 @@ class DDRObject(object):
             if field_data:
                 setattr(d, fieldname, field_data)
         # "special" fields
+        if (self.identifier.model in ['collection', 'entity','segment']):
+            # search_hidden
+            # extra field for fulltext searches on e.g. creators.namepart
+            d.search_hidden = ''
+            d.search_hidden = d.search_hidden + '\n'.join([
+                f"{c['namepart']} ({c['role']})" for c in self.creators
+            ])
+            # clean up
+            d.search_hidden = d.search_hidden.strip()
         if (self.identifier.model in ['entity','segment']):
             # TODO find a way to search on creators.id
             # narrator_id

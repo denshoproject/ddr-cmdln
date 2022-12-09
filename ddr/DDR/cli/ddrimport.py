@@ -42,7 +42,9 @@ import click
 
 from DDR import config
 from DDR import batch
+from DDR import csvfile
 from DDR import dvcs
+from DDR import fileio
 from DDR import identifier
 from DDR import idservice
 
@@ -87,12 +89,13 @@ def help():
 
 
 @ddrimport.command()
+@click.argument('model')
 @click.argument('csv')
 @click.argument('collection')
 @click.option('--username','-U', help='ID service username. Use flag to avoid being prompted.')
 @click.option('--password','-P', help='ID service password. Use flag to avoid being prompted. Passwords args will remain in ~/.bash_history.')
 @click.option('--idservice','-i', help='Override URL of ID service in configs.')
-def check(csv, collection, username, password, idservice):
+def check(model, csv, collection, username, password, idservice):
     """Validates CSV file, performs integrity checks.
     """
     start = datetime.now()
@@ -100,9 +103,10 @@ def check(csv, collection, username, password, idservice):
     csv_path,collection_path = make_paths(csv, collection)
     ci = identifier.Identifier(collection_path)
     logging.debug(ci)
+    headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
     run_checks(
-        csv_path, ci, config.VOCABS_URL,
-        idservice_api_login(username, password, idservice)
+        'file', csv_path, rowds, headers, csv_errs, ci,
+        config.VOCABS_URL, idservice_client=None
     )
     
     finish = datetime.now()
@@ -116,7 +120,7 @@ def check(csv, collection, username, password, idservice):
 @click.option('--username','-U', help='ID service username. Use flag to avoid being prompted.')
 @click.option('--password','-P', help='ID service password. Use flag to avoid being prompted. Passwords args will remain in ~/.bash_history.')
 @click.option('--idservice','-i', help='Override URL of ID service in configs.')
-@click.option('--dryrun','-d', help="Simulated run-through; don't modify files.")
+@click.option('--dryrun','-d', is_flag=True, help="Simulated run-through; don't modify files.")
 def register(csv, collection, username, password, idservice, dryrun):
     """Registers entities in CSV with ID service.
     """
@@ -144,7 +148,7 @@ def register(csv, collection, username, password, idservice, dryrun):
 @click.option('--password','-P', help='ID service password. Use flag to avoid being prompted. Passwords args will remain in ~/.bash_history.')
 @click.option('--idservice','-i', help='Override URL of ID service in configs.')
 @click.option('--nocheck','-N', is_flag=True, help="Disable checking/validation (may take time on large collections).")
-@click.option('--dryrun','-d', help="Simulated run-through; don't modify files.")
+@click.option('--dryrun','-d', is_flag=True, help="Simulated run-through; don't modify files.")
 # TODO @click.option('--fromto', '-F', help="Only import specified rows. Use Python list syntax e.g. '523:711' or ':200' or '100:'.")
 # TODO @click.option('--log','-l', help='Log addfile to this path')
 def entity(csv, collection, user, mail, username, password, idservice, nocheck, dryrun):
@@ -155,10 +159,12 @@ def entity(csv, collection, user, mail, username, password, idservice, nocheck, 
     csv_path,collection_path = make_paths(csv, collection)
     ci = identifier.Identifier(collection_path)
     logging.debug(ci)
+    headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
     if not nocheck:
-        idservice_client = idservice_api_login(username, password, idservice)
         run_checks(
-            csv_path, ci, config.VOCABS_URL, idservice_client
+            'entity', csv_path, rowds, headers, csv_errs, ci,
+            config.VOCABS_URL,
+            idservice_api_login(username, password, idservice)
         )
     #row_start,row_end = rows_start_end(fromto)
     imported = batch.Importer.import_entities(
@@ -185,7 +191,7 @@ def entity(csv, collection, user, mail, username, password, idservice, nocheck, 
 @click.option('--user','-u', help='(required for commit) Git user name.')
 @click.option('--mail','-m', help='(required for commit) Git user e-mail address.')
 @click.option('--nocheck','-N', is_flag=True, help="Disable checking/validation (may take time on large collections).")
-@click.option('--dryrun','-d', help="Simulated run-through; don't modify files.")
+@click.option('--dryrun','-d', is_flag=True, help="Simulated run-through; don't modify files.")
 @click.option('--fromto', '-F', help="Only import specified rows. Use Python list syntax e.g. '523:711' or ':200' or '100:'.")
 @click.option('--log','-l', help='(optional) Log addfile to this path')
 # TODO @click.option('--nocheck','-N', help="Disable checking/validation (may take time on large collections).")
@@ -193,17 +199,20 @@ def file(csv, collection, user, mail, nocheck, dryrun, fromto, log):
     """Import file records from CSV.
     """
     start = datetime.now()
-    
     csv_path,collection_path = make_paths(csv, collection)
     ci = identifier.Identifier(collection_path)
     logging.debug(ci)
+    headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
     if not nocheck:
         run_checks(
-            csv_path, ci, config.VOCABS_URL, idservice_client=None
+            'file', csv_path, rowds, headers, csv_errs, ci,
+            config.VOCABS_URL, idservice_client=None,
+            log_path=log,
         )
     row_start,row_end = rows_start_end(fromto)
     imported = batch.Importer.import_files(
         csv_path=csv_path,
+        rowds=rowds,
         cidentifier=ci,
         vocabs_url=config.VOCABS_URL,
         git_name=user,
@@ -272,31 +281,53 @@ def make_paths(csv, collection):
         sys.exit(1)
     return csv_path,collection_path
 
-def run_checks(csv_path, ci, vocabs_url, idservice_client):
-    """run the actual checks on the CSV doc,repo
+def run_checks(model, csv_path, rowds, headers, csv_errs, ci, vocabs_url, log_path=None, idservice_client=None):
+    """run checks on the CSV doc,repo and quit if errors
     """
-    tests = 0
-    passed = 0
-    def passfail(results, tests, passed):
-        tests += 1
-        if results['passed']:
-            passed += 1
-        return tests,passed
-    
-    chkcsv = batch.Checker.check_csv(csv_path, ci, vocabs_url)
-    chkrepo = batch.Checker.check_repository(ci)
-    tests,passed = passfail(chkcsv, tests, passed)
-    tests,passed = passfail(chkrepo, tests, passed)
-    if (chkcsv.get('model') == 'entity') and idservice_client:
-        chkeids = batch.Checker.check_eids(chkcsv['rowds'], ci, idservice_client)
-        tests,passed = passfail(chkeids, tests, passed)
-    
-    if passed != tests:
-        logging.error('TESTS FAILED--QUITTING!')
+    # csv
+    csv_errs,id_errs,validation_errs = batch.Checker.check_csv(
+        model, csv_path, rowds, headers, csv_errs, ci, vocabs_url
+    )
+    header_errs,rowds_errs,file_errs = validation_errs
+    for err in csv_errs: logging.error(f'CSV: {err}')
+    for err in id_errs: logging.error(f'Identifier: {err}')
+    for key,val in header_errs.items():
+        logging.error(f"CSV header: {key}: {','.join(val)}")
+    for err,items in rowds_errs.items():
+        logging.error(err)
+        for item in items:
+            logging.error(item)
+    for err in file_errs:
+        for key,val in err.items():
+            logging.error(f"{key}: {val}")
+    # repository
+    staged,modified = batch.Checker.check_repository(ci)
+    for f in staged: logging.error(f'staged: {f}')
+    for f in modified: logging.error(f'modified: {f}')
+    if csv_errs or id_errs or header_errs or rowds_errs or file_errs or staged or modified:
+        logging.error(f'Quitting--see log for error(s).')
         sys.exit(1)
+    if model in ['file']:
+        # files with missing parent entities
+        entities,missing_entities = batch.Importer._existing_bad_entities(
+            batch.Importer._eidentifiers(
+                batch.Importer._fid_parents(
+                    batch.Importer._fidentifiers(rowds, ci), rowds, ci)))
+        if missing_entities:
+            for e in missing_entities:
+                logging.error(f'Entity {e} missing')
+            raise Exception(
+                f'{len(bad_entities)} entities could not be loaded! - IMPORT CANCELLED!'
+            )
+    if (model == 'entity') and idservice_client:
+        chkeids = batch.Checker.check_eids(rowds, ci, idservice_client)
+        for err in chkeids:
+            logging.error(f'entity ID?: {err}')
+        if chkeids:
+            sys.exit(1)
 
 def rows_start_end(fromto):
-    """
+    """Returns start/end rows, or the first/last rows
     @param fromto: str "NUM0:NUM1"
     """
     row_start = 0

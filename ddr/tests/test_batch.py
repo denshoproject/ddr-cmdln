@@ -1,10 +1,70 @@
 # -*- coding: utf-8 -*-
 
+import os
+from pathlib import Path
+import urllib
+
 import git
 from nose.tools import assert_raises
+import pytest
 
 from DDR import batch
+from DDR import config
+from DDR import fileio
+from DDR import dvcs
 from DDR import identifier
+from DDR.models import Collection, Entity, File
+
+IMG_URL = 'https://web.archive.org/web/20011221151014im_/http://densho.org/images/logo.jpg'
+IMG_FILENAME = 'test-imaging.jpg'
+# checksums of test file test-imaging.jpg
+IMG_SIZE   = 12529
+IMG_MD5    = 'c034f564e3ae1b603270cd332c3e858d'
+IMG_SHA1   = 'f7ab5eada2e30f274b0b3166d658fe7f74f22b65'
+IMG_SHA256 = 'b27c8443d393392a743c57ee348a29139c61f0f5d5363d6cfb474f35fcba2174'
+IMG_XMP    = None
+
+COLLECTION_ID = 'ddr-testing-123'
+ENTITY_ID     = 'ddr-testing-123-4'
+FILE_ID       = 'ddr-testing-123-4-master-a1b2c3'
+LOGPATH_REL   = Path(f'addfile/{COLLECTION_ID}/{ENTITY_ID}.log')
+
+TMP_PATH_REL  = Path(f'tmp/file-add/{COLLECTION_ID}/{ENTITY_ID}/testfile.tif')
+
+
+@pytest.fixture(scope="session")
+def test_base_dir(tmpdir_factory):
+    return tmpdir_factory.mktemp('ingest')
+
+@pytest.fixture(scope="session")
+def test_image(tmpdir_factory):
+    base_dir = tmpdir_factory.mktemp('ingest')
+    img_path = base_dir / IMG_FILENAME
+    if not img_path.exists():
+        urllib.request.urlretrieve(
+            IMG_URL,
+            base_dir / IMG_FILENAME
+        )
+    return img_path
+
+@pytest.fixture(scope="session")
+def logpath(tmpdir_factory):
+    return tmpdir_factory.mktemp('addfile') / f'{COLLECTION_ID}/{ENTITY_ID}.log'
+
+@pytest.fixture(scope="session")
+def collection_identifier(tmpdir_factory):
+    tmp = tmpdir_factory.mktemp(COLLECTION_ID)
+    return identifier.Identifier(COLLECTION_ID, str(tmp))
+
+@pytest.fixture(scope="session")
+def entity_identifier(tmpdir_factory):
+    tmp = tmpdir_factory.mktemp(COLLECTION_ID)
+    return identifier.Identifier(ENTITY_ID, str(tmp))
+
+@pytest.fixture(scope="session")
+def file_identifier(tmpdir_factory):
+    tmp = tmpdir_factory.mktemp(COLLECTION_ID)
+    return identifier.Identifier(FILE_ID, str(tmp))
 
 
 class TestExporter():
@@ -15,92 +75,89 @@ class TestExporter():
 
 class TestChecker():
     
-    # TODO def test_check_repository(self):
-    # TODO def test_check_csv(self):
+    def test_check_repository(self, test_base_dir, collection_identifier):
+        repo_dir = Path(collection_identifier.path_abs())
+        # prep repo
+        repo = git.Repo.init(repo_dir)
+        print(f'{repo=}')
+        # prep text files
+        file0 = repo_dir / 'file0'
+        with file0.open('w') as f:
+            f.write('test_0')
+        print(f'{file0=}')
+        print(f'{file0.exists()=}')
+        # untracked
+        staged,modified = batch.Checker.check_repository(collection_identifier)
+        print(f'{staged=}')
+        print(f'{modified=}')
+        assert staged == []
+        assert modified == []
+        # staged
+        repo.git.add([file0])
+        staged,modified = batch.Checker.check_repository(collection_identifier)
+        print(f'{staged=}')
+        print(f'{modified=}')
+        assert staged == ['file0']
+        assert modified == []
+        # modified
+        with file0.open('w') as f:
+            f.write('test_0_modified')
+        staged,modified = batch.Checker.check_repository(collection_identifier)
+        print(f'{staged=}')
+        print(f'{modified=}')
+        assert staged == ['file0']
+        assert modified == ['file0']
+
+    #def test_check_csv(self, test_base_dir, collection_identifier):
+    #    csv_path = test_base_dir / 'test.csv'
+    #    vocabs_url = config.VOCABS_URL
+    #    print(f'{csv_path=}')
+    #    # prep csv
+    #    headers = ['id','title']
+    #    rowds = [
+    #        {'id':'ddr-densho-123-1', 'title':'just testing'},
+    #        {'id':'ddr--123-2', 'title':'moar testing'},
+    #    ]
+    #    fileio.write_csv(csv_path, headers, rowds)
+    #    #
+    #    results = batch.Checker.check_csv(csv_path, collection_identifier, vocabs_url)
+    #    print(f'{results=}')
+    #    assert 0
+
     # TODO def test_check_eids(self):
 
-    def test_guess_model(self):
-        # no rows
-        rowds0 = []
-        expected0 = []
-        #out0 = batch.Checker._guess_model(rowds0)
-        #assert out0 == expected0
-        assert_raises(Exception, batch.Checker._guess_model, rowds0)
-        # no identifiers
-        rowds1 = [
-            {'id':'ddr-testing-123-1'},
-            {'id':'ddr-testing-123-1'},
-        ]
-        expected1 = []
-        assert_raises(Exception, batch.Checker._guess_model, rowds1)
-        # too many models
-        rowds2 = [
-            {
-                'id':'ddr-testing-123-1',
-                'identifier': identifier.Identifier('ddr-testing-123-1'),
-            },
-            {
-                'id':'ddr-testing-123-2-master',
-                'identifier': identifier.Identifier('ddr-testing-123-2-master'),
-            },
-        ]
-        expected2 = ('entity', ['More than one model type in imput file!'])
-        out2 = batch.Checker._guess_model(rowds2)
-        assert out2 == expected2
-        # entities
-        rowds3 = [
-            {
-                'id':'ddr-testing-123-1',
-                'identifier': identifier.Identifier('ddr-testing-123-1'),
-            },
-        ]
-        expected3 = ('entity',[])
-        out3 = batch.Checker._guess_model(rowds3)
-        assert out3 == expected3
-        # segments
-        rowds3 = [
-            {
-                'id':'ddr-testing-123-4-5',
-                'identifier': identifier.Identifier('ddr-testing-123-4-5'),
-            },
-        ]
-        expected3 = ('segment',[])
-        out3 = batch.Checker._guess_model(rowds3)
-        assert out3 == expected3
-        # files
-        rowds4 = [
-            {
-                'id':'ddr-testing-123-2-master-a1b2c3',
-                'identifier': identifier.Identifier('ddr-testing-123-2-master-a1b2c3'),
-            },
-        ]
-        expected4 = ('file',[])
-        out4 = batch.Checker._guess_model(rowds4)
-        assert out4 == expected4
-        # file-roles are files
-        rowds5 = [
-            {
-                'id':'ddr-testing-123-2-master',
-                'identifier': identifier.Identifier('ddr-testing-123-2-master'),
-            },
-        ]
-        expected5 = ('file',[])
-        out5 = batch.Checker._guess_model(rowds5)
-        assert out5 == expected5
-        # external files
-        rowds6 = [
-            {
-                'id':'ddr-testing-123-1',
-                'identifier': identifier.Identifier('ddr-testing-123-1'),
-                'basename_orig': 'somefile.jpg',
-            },
-        ]
-        expected6 = ('file',[])
-        out6 = batch.Checker._guess_model(rowds6)
-        assert out6 == expected6
-
     # TODO def test_get_module(self):
-    # TODO def test_ids_in_local_repo(self):
+
+    def test_ids_in_local_repo(self, test_base_dir, collection_identifier, entity_identifier, file_identifier):
+        repo_dir = Path(collection_identifier.path_abs())
+        # prep repo
+        repo = git.Repo.init(repo_dir)
+        print(f'{repo=}')
+        ci = identifier.Identifier(COLLECTION_ID, repo_dir)
+        ei = identifier.Identifier(ENTITY_ID, repo_dir)
+        fi = identifier.Identifier(FILE_ID, repo_dir)
+        c = Collection(ci.path_abs(), ci.id, ci)
+        e = Entity(ei.path_abs(), ei.id, ei)
+        f = File(fi.path_abs(), fi.id, fi)
+        c.write_json()
+        e.write_json()
+        f.write_json()
+        cpath = Path(c.identifier.path_abs('json'))
+        epath = Path(e.identifier.path_abs('json'))
+        fpath = Path(f.identifier.path_abs('json'))
+        #
+        rowds = [
+            {'id': 'ddr-testing-123-3'}, {'id': 'ddr-testing-123-4'},
+        ]
+        results = batch.Checker._ids_in_local_repo(rowds, 'entity', repo_dir)
+        assert results == ['ddr-testing-123-4']
+        #
+        rowds = [
+            {'id': 'ddr-testing-123-4-master-a1b2c3'},
+            {'id': 'ddr-testing-123-4-mezzanine-a1b2c3'},
+        ]
+        results = batch.Checker._ids_in_local_repo(rowds, 'file', repo_dir)
+        assert results == ['ddr-testing-123-4-master-a1b2c3']
     
     def test_prep_valid_values(self):
         json_texts = {
@@ -134,10 +191,35 @@ class TestImporter():
         assert out0.id == ei.id
         assert out1.id == si.id
         
-    # TODO def test_write_entity_changelog(self):
-    # TODO def test_write_file_changelogs(self):
+    def test_write_entity_changelog(self, test_base_dir, entity_identifier):
+        entity = Entity(
+            entity_identifier.path_abs(), entity_identifier.id, entity_identifier
+        )
+        git_name = 'pytest' 
+        git_mail = 'pytest@densho.org' 
+        agent = 'pytest'
+        #
+        changelog_path = Path(entity.changelog_path)
+        os.makedirs(str(changelog_path.parent))
+        #
+        assert not changelog_path.exists()
+        batch.Importer._write_entity_changelog(entity, git_name, git_mail, agent)
+        assert changelog_path.exists()
+
+    # NOPE def test_write_file_changelogs(self):
     # TODO def test_import_entities(self):
-    # TODO def test_csv_load(self):
+
+    def test_csv_load(self):
+        # prep
+        rowds_csv = [
+            {'id': 'ddr-testing-123-4', 'title': 'yay testing!'},
+            {'id': 'ddr-testing-123-5', 'title': 'moar testing!'},
+        ]
+        #
+        module = batch.Checker._get_module('entity')
+        rowds_out = batch.Importer._csv_load(module, rowds_csv)
+        print(f'{rowds_out=}')
+        assert rowds_out == rowds_csv
 
     def test_fidentifiers(self):
         ci = identifier.Identifier('ddr-testing-123')
@@ -194,8 +276,7 @@ class TestImporter():
         ]
         for key in out1:
             assert key in expected1
-    
-    # TODO def test_eidentifiers(self):
+
     # TODO def test_existing_bad_entities(self):
     # TODO def test_file_objects(self):
     # TODO def test_rowds_new_existing(self):
