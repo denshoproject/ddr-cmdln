@@ -763,7 +763,7 @@ def _filter_rolepeople(data: List[Dict[str,str]]) -> List[Dict[str,str]]:
     """
     return [
         item for item in data
-        if item.get('namepart') and item.get('role')
+        if item.get('namepart')  # and item.get('role')
     ]
 
 # TODO add type hints
@@ -772,6 +772,7 @@ def _parse_rolepeople_text(texts):
     for text in texts:
         txt = text.strip()
         if txt:
+            # TODO no default value for 'role'
             item = {'namepart':None, 'role':'author',}
             
             if ('|' in txt) and (':' in txt):
