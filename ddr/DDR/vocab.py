@@ -616,8 +616,12 @@ def _get_vocabs_all_http(base_url, exclude=['index','narrators']):
     url = os.path.join(base_url, 'index.json')
     r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
     if r.status_code != 200:
+        try:
+            r_json = r.json()
+        except:
+            r_json = "Error: Can't JSON decode Response object"
         raise Exception(
-            'Cannot load vocabulary index: %s' % (url))
+            f"Can't load vocab index: {url} (HTTP {r.status_code})")
     vocabs = json.loads(r.text)
     
     # get each vocab
