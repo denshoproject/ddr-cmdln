@@ -106,11 +106,11 @@ def add_file(rowd, entity, git_name, git_mail, agent,
     
     log.info('------------------------------------------------------------------------')
     log.info('DDR.models.Entity.add_local_file: START')
-    log.info('rowd: %s' % rowd)
-    log.info('parent: %s' % entity.id)
+    log.info(f'rowd: {rowd}')
+    log.info(f'parent: {entity.id}')
     
     basename_orig = rowd.pop('basename_orig')
-    src_path = rowd.pop('path_abs')
+    src_path = Path(rowd.pop('path_abs'))
     log.info(f'{src_path=}')
     
     actions = import_actions(rowd, os.path.exists(src_path))
