@@ -767,13 +767,12 @@ def _filter_rolepeople(data: List[Dict[str,str]]) -> List[Dict[str,str]]:
     ]
 
 # TODO add type hints
-def _parse_rolepeople_text(texts):
+def _parse_rolepeople_text(texts, default):
     data = []
     for text in texts:
         txt = text.strip()
         if txt:
-            # TODO no default value for 'role'
-            item = {'namepart':None, 'role':'author',}
+            item = copy.deepcopy(default)
             
             if ('|' in txt) and (':' in txt):
                 # ex: "namepart:Sadako Kashiwagi|role:narrator|id:856"
@@ -806,7 +805,7 @@ def _parse_rolepeople_text(texts):
             data.append(item)
     return data
 
-def text_to_rolepeople(text: str) -> List[Dict[str,str]]:
+def text_to_rolepeople(text: str, default: dict) -> List[Dict[str,str]]:
     if not text:
         return []
     
@@ -815,7 +814,7 @@ def text_to_rolepeople(text: str) -> List[Dict[str,str]]:
         if _is_listofdicts(text):
             return _filter_rolepeople(text)
         elif _is_listofstrs(text):
-            data = _parse_rolepeople_text(text)
+            data = _parse_rolepeople_text(text, default)
             return _filter_rolepeople(data)
     
     text = normalize_string(text)
@@ -833,11 +832,8 @@ def text_to_rolepeople(text: str) -> List[Dict[str,str]]:
             return _filter_rolepeople(data)
     
     # looks like it's raw text
-    return _filter_rolepeople(
-        _parse_rolepeople_text(
-            text.split(';')
-        )
-    )
+    data = _parse_rolepeople_text(text.split(';'), default)
+    return _filter_rolepeople(data)
 
 def rolepeople_to_text(data: List[Dict[str,str]]) -> str:
     """Convert list of dicts to string "KEY:VAL|KEY:VAL|...; KEY:VAL|KEY:VAL|..."
