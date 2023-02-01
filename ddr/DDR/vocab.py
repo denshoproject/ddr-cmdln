@@ -573,7 +573,7 @@ def _get_vocab_fs(path: str) -> Dict[str,str]:
     
     @param path: str Absolute path to vocabulary file (.json)
     """
-    logging.info('getting vocab: %s' % path)
+    logging.debug('getting vocab: %s' % path)
     return json.loads(fileio.read_text(path))
 
 def _get_vocab_http(url: str) -> Dict[str,str]:
@@ -581,7 +581,7 @@ def _get_vocab_http(url: str) -> Dict[str,str]:
     
     @param path: str URL of vocabulary file (.json)
     """
-    logging.info('getting vocab: %s' % url)
+    logging.debug('getting vocab: %s' % url)
     r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
     if r.status_code != 200:
         raise Exception(
