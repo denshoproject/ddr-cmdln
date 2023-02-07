@@ -363,6 +363,9 @@ install-ddr-cmdln: install-setuptools
 	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) -r $(INSTALL_CMDLN)/requirements.txt
 	source $(VIRTUALENV)/bin/activate; \
 	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) internetarchive
+	git config --global --add safe.directory $(INSTALL_CMDLN)
+	git config --global --add safe.directory $(INSTALL_DEFS)
+	git config --global --add safe.directory $(INSTALL_VOCAB)
 
 mkdir-ddr-cmdln:
 	@echo ""
