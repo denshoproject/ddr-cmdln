@@ -435,7 +435,8 @@ def get(hosts, json, doctype, object_id):
     """Print a single document
     """
     ds = get_docstore(hosts)
-    document = ds.get(doctype, object_id)
+    es_class = identifier.ELASTICSEARCH_CLASSES_BY_MODEL[doctype]
+    document = ds.get(doctype, es_class, object_id)
     if json:
         click.echo(format_json(document.to_dict()))
     else:
