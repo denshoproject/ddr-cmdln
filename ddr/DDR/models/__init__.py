@@ -36,3 +36,98 @@ yet must be editable in the editor UI.
 from DDR.models.collection import Collection, COLLECTION_FILES_PREFIX
 from DDR.models.entity import Entity, ListEntity, ENTITY_FILES_PREFIX
 from DDR.models.files import File
+
+# whitelist of params recognized in URL query
+# TODO move to ddr-defs/repo_models/elastic.py?
+SEARCH_PARAM_WHITELIST = [
+    'fulltext',
+    'sort',
+    'topics',
+    'facility',
+    'model',
+    'models',
+    'parent',
+    'status',
+    'public',
+    'topics',
+    'facility',
+    'contributor',
+    'creators',
+    'format',
+    'genre',
+    'geography',
+    'language',
+    'location',
+    'mimetype',
+    'persons',
+    'rights',
+    'search_hidden',
+]
+
+# TODO move to ddr-defs/repo_models/elastic.py?
+SEARCH_MODELS = [
+    'ddrcollection',
+    'ddrentity',
+    'ddrsegment',
+]
+
+
+# fields searched by query e.g. query will find search terms in these fields
+# TODO move to ddr-defs/repo_models/elastic.py?
+SEARCH_INCLUDE_FIELDS = [
+    # ddr object fields
+    'id',
+    'model',
+    'links_html',
+    'links_json',
+    'links_img',
+    'links_thumb',
+    'links_children',
+    'status',
+    'public',
+    'title',
+    'description',
+    'contributor',
+    'creators',
+    'facility',
+    'format',
+    'genre',
+    'geography',
+    'label',
+    'language',
+    'location',
+    'persons',
+    'rights',
+    'topics',
+    # narrator fields
+    'image_url',
+    'display_name',
+    'bio',
+    'search_hidden',
+]
+
+# fields where the relevant value is nested e.g. topics.id
+# TODO move to ddr-defs/repo_models/elastic.py?
+SEARCH_NESTED_FIELDS = [
+    'facility',
+    'topics',
+]
+
+# TODO move to ddr-defs/repo_models/elastic.py?
+SEARCH_AGG_FIELDS = {
+    #'model': 'model',
+    #'status': 'status',
+    #'public': 'public',
+    #'contributor': 'contributor',
+    #'creators': 'creators.namepart',
+    'facility': 'facility.id',
+    'format': 'format',
+    'genre': 'genre',
+    #'geography': 'geography.term',
+    'language': 'language',
+    #'location': 'location',
+    #'mimetype': 'mimetype',
+    #'persons': 'persons.namepart',
+    'rights': 'rights',
+    'topics': 'topics.id',
+}
