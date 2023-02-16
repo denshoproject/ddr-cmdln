@@ -621,7 +621,7 @@ def search(hosts, parent, filters, limit, offset, aggregations, raw, fulltext):
         click.echo(out)
     
     if aggregations:
-        click.echo('Aggregations: (doc count, key, label)')
+        click.echo('Aggregations: (count key [label])')
         longest_agg = ''
         for key,val in list(results.aggregations.items()):
             if val:
@@ -630,10 +630,13 @@ def search(hosts, parent, filters, limit, offset, aggregations, raw, fulltext):
         TEMPLATE = '{key}  {value}'
         for key,val in list(results.aggregations.items()):
             if val:
-                values = [
-                    '(%s) %s "%s"' % (v['doc_count'], v['key'], v['label'])
-                    for v in val
-                ]
+                values = []
+                for v in val:
+                    try:
+                        x = f'({v["doc_count"]}) {v["key"]} "{v["label"]}"'
+                    except:
+                        x = f'({v["doc_count"]}) {v["key"]}'
+                    values.append(x)
                 for n,v in enumerate(values):
                     if n == 0:
                         k = key + ' ' * (len(longest_agg) - len(key))
