@@ -405,10 +405,22 @@ class DDRObject(object):
         if (self.identifier.model in ['collection', 'entity','segment']):
             # search_hidden
             # extra field for fulltext searches on e.g. creators.namepart
+            def format_persons(p):
+                namepart = p['namepart']
+                role = p.get('role','')
+                nr_id = p.get('nr_id','')
+                # densho-elastictools sanitizer removes forward-slashes
+                # so remove them here too
+                nr_id = nr_id.replace('/','')
+                return ' '.join([namepart, role, nr_id]).replace('  ',' ')
             d.search_hidden = ''
             d.search_hidden = d.search_hidden + '\n'.join([
-                f"{c['namepart']} ({c['role']})" for c in self.creators
+                format_persons(p) for p in self.creators
             ])
+            if hasattr(self, 'persons'):
+                d.search_hidden = d.search_hidden + '\n'.join([
+                    format_persons(p) for p in self.persons
+                ])
             # clean up
             d.search_hidden = d.search_hidden.strip()
         if (self.identifier.model in ['entity','segment']):
