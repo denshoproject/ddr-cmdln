@@ -11,6 +11,7 @@ Feed output of this command to `namesdb searchmulti` for match recommendations.
 
 import click
 
+from DDR import fileio
 from DDR.identifier import Identifier
 from DDR.models.common import load_json_lite
 from DDR import util
@@ -47,9 +48,11 @@ def export(fieldname, collection):
     assert fieldname in ['creators','persons']
     # all the .jsons in collection
     # for each one, extract id and field
-    click.echo('id,fieldname,name' )
+    headers = ['id', 'fieldname', 'name']
+    click.echo(fileio.write_csv_str(headers))
     for oid,name in _read_collection_files(collection, fieldname):
-        click.echo( f'{oid}, {fieldname}, "{name}"' )
+        row = [oid, fieldname, name]
+        click.echo(fileio.write_csv_str(row))
 
 def _read_collection_files(collection_path, fieldname):
     """Returns an OID and name for each creator or person in collection
