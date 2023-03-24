@@ -106,22 +106,37 @@ def file(collection, destination, blank, required, idfile, include, exclude, dry
 
 
 @ddrexport.command()
+@click.argument('collectionsdir')
+@click.argument('cidpattern')
 @click.argument('model')
 @click.argument('fieldname')
-@click.argument('collection')
-def fieldcsv(model, fieldname, collection):
+@click.argument('csvfile')
+def fieldcsv(collectionsdir, cidpattern, model, fieldname, csvfile):
     """Export value of specified field for all model objects in collections
     
+    @param collectionsdir str: 
+    @param cidpattern str: 
     @param model str: 
     @param fieldname str: 
-    @param collection str: 
+    @param csvfile str: 
     """
-    for item in batch.Exporter.export_field_csv(
-            json_paths=all_paths(collection, model),
-            model=model,
-            fieldname=fieldname,
-    ):
-        click.echo(item)
+    collection_paths = [
+        path for path in util.natural_sort(util.find_meta_files(
+            basedir=collectionsdir, model='collection', recursive=1, force_read=1
+        ))
+        if cidpattern in path
+    ]
+    for collection_path in collection_paths:
+        print(collection_path)
+        try:
+            batch.Exporter.export_field_csv(
+                collection=identifier.Identifier(collection_path).object(),
+                model=model,
+                fieldname=fieldname,
+                csv_path=csvfile,
+            )
+        except Exception as err:
+            print('ERROR: %s' % err)
 
 
 def export(model, collection, destination, blank, required, idfile, include, exclude, dryrun):

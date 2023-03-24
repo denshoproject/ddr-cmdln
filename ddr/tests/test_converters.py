@@ -5,7 +5,17 @@ from datetime import datetime
 
 from DDR import config
 from DDR import converters
-from repo_models import entity as entity_defs
+
+
+def assertion(func, arg, expected):
+    """Always print assertion components so visible in case of err
+    """
+    print('--------------------')
+    print('input:    %s' % arg)
+    print('  expect: %s' % expected)
+    output = func(arg)
+    print('  output: %s' % output)
+    assert output == expected
 
 
 def test_normalize_string():
@@ -368,16 +378,11 @@ def test_text_to_bracketids():
 
 
 TEXTROLEPEOPLE_NAME_TEXT = "Watanabe, Joe"
+# output has role even if input does not
 TEXTROLEPEOPLE_NAME_DATA = [
-    {'namepart': 'Watanabe, Joe',}
-]
-TEXTROLEPEOPLE_NAME_OUT = 'namepart: Watanabe, Joe'
-
-TEXTROLEPEOPLE_NAME_TEXT_ROLE = "Watanabe, Joe"
-TEXTROLEPEOPLE_NAME_DATA_ROLE = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'}
 ]
-TEXTROLEPEOPLE_NAME_OUT_ROLE = 'namepart: Watanabe, Joe | role: author'
+TEXTROLEPEOPLE_NAME_OUT = 'namepart: Watanabe, Joe | role: author'
 
 TEXTROLEPEOPLE_SINGLE_TEXT = 'namepart: Masuda, Kikuye | role: narrator | id: 42'
 TEXTROLEPEOPLE_SINGLE_DATA = [
@@ -416,7 +421,7 @@ TEXTROLEPEOPLE_LISTSTRSNAME_TEXT = [
     'Watanabe, Joe',
 ]
 TEXTROLEPEOPLE_LISTSTRSNAME_DATA = [
-    {'namepart': 'Watanabe, Joe',},
+    {'namepart': 'Watanabe, Joe', 'role': 'author'},
 ]
 
 TEXTROLEPEOPLE_LISTSTRS_TEXT = [
@@ -461,27 +466,21 @@ TEXTROLEPEOPLE_MULTIERR_TEXT = [
 TEXTROLEPEOPLE_MULTIERR_DATA = []
 
 def test_text_to_rolepeople():
-    defaults = entity_defs.PERSONS_DEFAULT_DICT
-    assert converters.text_to_rolepeople(None, defaults) == []
-    assert converters.text_to_rolepeople('',   defaults) == []
-    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_NAME_TEXT,          defaults) == TEXTROLEPEOPLE_NAME_DATA
-    # it'd be neat if the function could consume its own output as an input, but no
-    #assert converters.text_to_rolepeople(TEXTROLEPEOPLE_NAME_OUT,           defaults) == TEXTROLEPEOPLE_NAME_DATA
-    assert converters.text_to_rolepeople(
-        TEXTROLEPEOPLE_NAME_TEXT_ROLE, default={'namepart':'', 'role':'author'}
-    ) == TEXTROLEPEOPLE_NAME_DATA_ROLE
-    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_SINGLE_TEXT,        defaults) == TEXTROLEPEOPLE_SINGLE_DATA
-    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_SINGLE_ID_TEXT,     defaults) == TEXTROLEPEOPLE_SINGLE_ID_DATA
-    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_SINGLE_NRID_TEXT,   defaults) == TEXTROLEPEOPLE_SINGLE_NRID_DATA
-    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_SINGLE_NRIDID_TEXT, defaults) == TEXTROLEPEOPLE_SINGLE_NRIDID_DATA
-    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_MULTI_TEXT,         defaults) == TEXTROLEPEOPLE_MULTI_DATA
-    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_MULTI_NRID_TEXT,    defaults) == TEXTROLEPEOPLE_MULTI_NRID_DATA
-    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_LISTSTRSNAME_TEXT,  defaults) == TEXTROLEPEOPLE_LISTSTRSNAME_DATA
-    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_LISTSTRS_TEXT,      defaults) == TEXTROLEPEOPLE_LISTSTRS_DATA
-    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_MULTI_DATA,         defaults) == TEXTROLEPEOPLE_MULTI_DATA
-    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_PIPES_TEXT,         defaults) == TEXTROLEPEOPLE_PIPES_DATA
-    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_NOSPACES_TEXT,      defaults) == TEXTROLEPEOPLE_NOSPACES_DATA
-    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_MULTIERR_TEXT,      defaults) == TEXTROLEPEOPLE_MULTIERR_DATA
+    assertion(converters.text_to_rolepeople, None, [])
+    assertion(converters.text_to_rolepeople, '', [])
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_NAME_TEXT,         TEXTROLEPEOPLE_NAME_DATA)
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_SINGLE_TEXT,       TEXTROLEPEOPLE_SINGLE_DATA)
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_SINGLE_ID_TEXT,    TEXTROLEPEOPLE_SINGLE_ID_DATA)
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_SINGLE_NRID_TEXT,  TEXTROLEPEOPLE_SINGLE_NRID_DATA)
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_SINGLE_NRIDID_TEXT,TEXTROLEPEOPLE_SINGLE_NRIDID_DATA)
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_MULTI_TEXT,        TEXTROLEPEOPLE_MULTI_DATA)
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_MULTI_NRID_TEXT,   TEXTROLEPEOPLE_MULTI_NRID_DATA)
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_LISTSTRSNAME_TEXT, TEXTROLEPEOPLE_LISTSTRSNAME_DATA)
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_LISTSTRS_TEXT,     TEXTROLEPEOPLE_LISTSTRS_DATA)
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_MULTI_DATA,        TEXTROLEPEOPLE_MULTI_DATA)
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_PIPES_TEXT,        TEXTROLEPEOPLE_PIPES_DATA)
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_NOSPACES_TEXT,     TEXTROLEPEOPLE_NOSPACES_DATA)
+    assertion(converters.text_to_rolepeople, TEXTROLEPEOPLE_MULTIERR_TEXT,     TEXTROLEPEOPLE_MULTIERR_DATA)
 
 def test_rolepeople_to_text():
     assert converters.rolepeople_to_text([]) == ''

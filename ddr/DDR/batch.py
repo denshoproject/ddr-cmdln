@@ -111,27 +111,27 @@ class Exporter():
         return csv_path
     
     @staticmethod
-    def export_field_csv(json_paths, model, fieldname):
+    def export_field_csv(collection, model, fieldname, csv_path):
         """Export specified field values from all entities in a collection to CSV
         
-        @param json_paths: list of .json files
+        @param collection: models.Collection
         @param model: str
         @param fieldname: str
+        @param csv_path: str
         """
-        module = modules.Module(identifier.module_for_name(
-            identifier.MODEL_REPO_MODELS[model]['module']
-        ))
-        headers = ['object_id', 'fieldname', 'value',]
-        yield fileio.write_csv_str(headers)
-        for json_path in json_paths:
-            oi = identifier.Identifier(json_path)
-            fieldvalues = models.common.prep_csv(
-                oi.object(), module, fields=[fieldname]
-            )
-            row = [oi.id, fieldname, fieldvalues[0]]
-            yield fileio.write_csv_str(row)
+        # only write headers to first line of CSV
+        if os.path.exists(csv_path):
+            headers = []
+        else:
+            headers = ['object_id', 'fieldname', 'value',]
+        fileio.write_csv(
+            csv_path,
+            headers,
+            collection.child_field_values(model, fieldname),
+            append=True
+        )
 
-
+    
 def nicer_unicode_decode_error(headers, obj, csv):
     """Nicer Exception msg pointing out location of UnicodeDecodeError
     
