@@ -460,14 +460,6 @@ TEXTROLEPEOPLE_MULTIERR_TEXT = [
 ]
 TEXTROLEPEOPLE_MULTIERR_DATA = []
 
-# output of FORM.cleaned_data['persons']
-TEXTROLEPEOPLE_FORM_CLEANED = [
-    'namepart: Yasuda, Mitsu;\n', 'namepart: Tanaka, Cherry;\n'
-]
-TEXTROLEPEOPLE_FORM_DATA = [
-    {'namepart': 'Yasuda, Mitsu'}, {'namepart': 'Tanaka, Cherry'},
-]
-
 def test_text_to_rolepeople():
     defaults = entity_defs.PERSONS_DEFAULT_DICT
     assert converters.text_to_rolepeople(None, defaults) == []
@@ -490,7 +482,6 @@ def test_text_to_rolepeople():
     assert converters.text_to_rolepeople(TEXTROLEPEOPLE_PIPES_TEXT,         defaults) == TEXTROLEPEOPLE_PIPES_DATA
     assert converters.text_to_rolepeople(TEXTROLEPEOPLE_NOSPACES_TEXT,      defaults) == TEXTROLEPEOPLE_NOSPACES_DATA
     assert converters.text_to_rolepeople(TEXTROLEPEOPLE_MULTIERR_TEXT,      defaults) == TEXTROLEPEOPLE_MULTIERR_DATA
-    assert converters.text_to_rolepeople(TEXTROLEPEOPLE_FORM_CLEANED,       defaults) == TEXTROLEPEOPLE_FORM_DATA
 
 def test_rolepeople_to_text():
     assert converters.rolepeople_to_text([]) == ''

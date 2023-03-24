@@ -769,7 +769,7 @@ def _filter_rolepeople(data: List[Dict[str,str]]) -> List[Dict[str,str]]:
 # TODO add type hints
 def _parse_rolepeople_text(texts, default):
     data = []
-    for text in _unroll_gloppy_list(texts):
+    for text in texts:
         txt = text.strip()
         if txt:
             item = copy.deepcopy(default)
@@ -784,15 +784,9 @@ def _parse_rolepeople_text(texts, default):
             
             elif ':' in txt:
                 # ex: "Sadako Kashiwagi:narrator"
-                # ex: 'namepart: Yasuda, Mitsu;\n'
-                key,value = txt.split(':')
-                if key.strip() in default.keys():
-                    # ex: 'namepart: Yasuda, Mitsu;\n'
-                    item[key.strip()] = value.strip()
-                else:
-                    # ex: "Sadako Kashiwagi:narrator"
-                    item['namepart'] = key.strip()
-                    item['role'] = value.strip()
+                name,role = txt.split(':')
+                item['namepart'] = name.strip()
+                item['role'] = role.strip()
             
             else:
                 # ex: "Sadako Kashiwagi"
@@ -808,25 +802,6 @@ def _parse_rolepeople_text(texts, default):
             
             data.append(item)
     return data
-
-def _unroll_gloppy_list(text: list) -> List[str]:
-    """Lists of rolepeople from e.g. forms might have multiple items in a line
-    
-    e.g. ['Lastname1,Firstname1; Lastname2,Firstname2', 'Lastname3,Firstname3']
-    """
-    new_list = []
-    while(text):
-        # split if there are more than one items in a listitem
-        # append the first item to the new list
-        items = text.pop(0).split(';', 1) # split on the first semicolon
-        if len(items) == 1:
-            new_list.append(items[0].strip())  # the last one
-        elif len(items) > 1:
-            first,others = items
-            new_list.append(first.strip())
-            # stick remainders onto front of list to preserve order
-            new_list.insert(0, others.strip())
-    return new_list
 
 def text_to_rolepeople(text: str, default: dict) -> List[Dict[str,str]]:
     if not text:
