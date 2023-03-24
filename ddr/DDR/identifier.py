@@ -1102,7 +1102,12 @@ class Identifier(object):
     # from __eq__ and __lt__.  Might be a performance problem.
     # https://docs.python.org/2/library/functools.html#functools.total_ordering
     def __eq__(self, other: object) -> bool:
-        """Enable Pythonic sorting"""
+        """Enable Pythonic sorting. Compares the objects' .path_abs() values.
+        
+        NOTE that Identifier.basepath is not set on objects loaded from CSV.
+        DDR.models.common.load_csv compares rowd objects with existing ones
+        and has to set a temporary basepath to make this comparison work.
+        """
         if not isinstance(other, Identifier):
             return NotImplemented
         return self.path_abs() == other.path_abs()

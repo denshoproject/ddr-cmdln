@@ -76,7 +76,10 @@ from DDR import docstore
 from DDR import fileio
 from DDR import identifier
 from DDR import models
-from elastictools import search as search_
+from DDR.models import SEARCH_PARAM_WHITELIST, SEARCH_MODELS
+from DDR.models import SEARCH_INCLUDE_FIELDS, SEARCH_NESTED_FIELDS
+from DDR.models import SEARCH_AGG_FIELDS
+from elastictools.search import Searcher
 from DDR import storage
 
 
@@ -435,7 +438,8 @@ def get(hosts, json, doctype, object_id):
     """Print a single document
     """
     ds = get_docstore(hosts)
-    document = ds.get(doctype, object_id)
+    es_class = identifier.ELASTICSEARCH_CLASSES_BY_MODEL[doctype]
+    document = ds.get(doctype, es_class, object_id)
     if json:
         click.echo(format_json(document.to_dict()))
     else:
@@ -508,24 +512,22 @@ def status(hosts):
 @click.option('--hosts','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--models','-m',
-              default='collection,entity,segment,file',
-              help='One or more doctypes (comma-separated).')
+# DISABLED: elastictools.search.Searcher.prepare handles this poorly
+#@click.option('--models','-m',
+#              default='collection,entity,segment,file',
+#              help='One or more doctypes (comma-separated).')
 @click.option('--parent','-P',
               default='',
               help='ID of parent object.')
 @click.option('--filters','-f',
-              default=[], multiple=True,
+              default='', #multiple=True,
               help='Filter on certain fields (FIELD:VALUE,VALUE,...).')
 @click.option('--limit','-l',
               default=config.RESULTS_PER_PAGE,
-              help='Results page size.')
+              help='Number of results to display.')
 @click.option('--offset','-o',
               default=0,
-              help='Number of initial results to skip (use with limit).')
-@click.option('--page','-p',
-              default=0,
-              help='Which page of results to show.')
+              help='Starting point in results (use with limit).')
 @click.option('--aggregations','-a',
               is_flag=True, default=False,
               help='Show filter aggregations for result set.')
@@ -533,7 +535,7 @@ def status(hosts):
               is_flag=True, default=False,
               help='Raw Elasticsearch output.')
 @click.argument('fulltext')
-def search(hosts, models, parent, filters, limit, offset, page, aggregations, raw, fulltext):
+def search(hosts, parent, filters, limit, offset, aggregations, raw, fulltext):
     """Fulltext search using Elasticsearch query_string syntax.
     
     \b
@@ -548,9 +550,8 @@ def search(hosts, models, parent, filters, limit, offset, page, aggregations, ra
     command-line version.
     
     \b
-    Specify parent object and doctype/model:
+    Specify parent object:
         $ ddrindex search seattle --parent=ddr-densho-12
-        $ ddrindex search seattle --models=entity,segment
     
     \b
     Filter on certain fields (filters may repeat):
@@ -560,17 +561,29 @@ def search(hosts, models, parent, filters, limit, offset, page, aggregations, ra
     Use the --aggregations/-a flag to display filter aggregations,
     with document counts, filter keys, and labels.
     """
-    ds = get_docstore(hosts)
-    models = models.split(',')
-    results = search_.search(
-        hosts,
-        models=models,
-        parent=parent,
-        filters=filters,
-        fulltext=fulltext,
-        limit=limit, offset=offset, page=page,
-        aggregations=aggregations
+    # DISABLED: elastictools.search.Searcher.prepare handles this poorly
+    #Specify doctype/model:
+    #    $ ddrindex search seattle --models=entity,segment
+    if parent:
+        try:
+            oi = identifier.Identifier(parent)
+        except Exception as err:
+            click.echo(f'ERROR: Problem with --parent\n{err}')
+            sys.exit(1)
+    searcher = Searcher(get_docstore(hosts))
+    searcher.prepare(
+        params={
+            'fulltext': fulltext, 'parent': parent, 'filters': filters,
+        },
+        params_whitelist=SEARCH_PARAM_WHITELIST,
+        search_models=SEARCH_MODELS,
+        sort=[],
+        fields=SEARCH_INCLUDE_FIELDS,
+        fields_nested=SEARCH_NESTED_FIELDS,
+        fields_agg=SEARCH_AGG_FIELDS,
+        wildcards=False,
     )
+    results = searcher.execute(int(limit), int(offset))
     
     # print raw results
     if raw:
@@ -608,7 +621,7 @@ def search(hosts, models, parent, filters, limit, offset, page, aggregations, ra
         click.echo(out)
     
     if aggregations:
-        click.echo('Aggregations: (doc count, key, label)')
+        click.echo('Aggregations: (count key [label])')
         longest_agg = ''
         for key,val in list(results.aggregations.items()):
             if val:
@@ -617,10 +630,13 @@ def search(hosts, models, parent, filters, limit, offset, page, aggregations, ra
         TEMPLATE = '{key}  {value}'
         for key,val in list(results.aggregations.items()):
             if val:
-                values = [
-                    '(%s) %s "%s"' % (v['doc_count'], v['key'], v['label'])
-                    for v in val
-                ]
+                values = []
+                for v in val:
+                    try:
+                        x = f'({v["doc_count"]}) {v["key"]} "{v["label"]}"'
+                    except:
+                        x = f'({v["doc_count"]}) {v["key"]}'
+                    values.append(x)
                 for n,v in enumerate(values):
                     if n == 0:
                         k = key + ' ' * (len(longest_agg) - len(key))

@@ -920,8 +920,17 @@ def load_csv(obj, module, rowd):
         if ignored != True:
             oldvalue = getattr(obj, field, '')
             value = rowd[field]
+            # oids from a CSV don't have basepath but existing objects do.
+            # Identifier.__eq__ uses path_abs to compare oids and it needs
+            # basepath, so set the rowd's Identifier's basepath temporarily...
+            if field == 'identifier':
+                tmp_basepath = value.basepath; value.basepath = oldvalue.basepath
+            # compare existing obj value to value from rowd
             if value != oldvalue:
                 obj.modified_fields.append(field)
+            ## ...and then set it back to the previous value
+            #if field == 'identifier':
+            #    value.basepath = tmp_basepath
             setattr(obj, field, value)
     # Add timezone to fields if not present
     apply_timezone(obj, module.module)
