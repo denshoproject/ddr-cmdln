@@ -1,16 +1,28 @@
 HELP = """
 ddrnames - Export names from repositories to be matched with NamesDB records
 \b
-Export creators and persons names from entire DDR collections in CSV format.
+Dump creators and persons names from entire DDR collections to CSV format.
 Examples:
-    ddrnames export creators /var/www/media/ddr/ddr-csujad-30
-    ddrnames export persons /var/www/media/ddr/ddr-densho-10
+    ddrnames dump creators /var/www/media/ddr/ddr-csujad-30 > /tmp/ddr-csujad-30-creators.csv
+    ddrnames dump persons /var/www/media/ddr/ddr-densho-10 > /tmp/ddr-densho-10-persons.csv
 \b
 Feed output of this command to `namesdb searchmulti` for match recommendations.
+Examples:
+    namesdb searchmulti --elastic /tmp/ddr-densho-10-persons.csv > /tmp/ddr-densho-10-persons-searchmulti.csv
+\b
+When you have matched some names, load the output of `namesdb searchmulti` back
+into your collection.  `ddrnames load` only cares about these fields:
+"objectid", "namepart", "nr_id", "matching"
+Examples: 
+    ddrnames load persons /tmp/ddr-densho-10-persons-searchmulti.csv /var/www/media/ddr/ddr-densho-10
 """
+
+import logging
 
 import click
 
+from DDR import config
+from DDR import csvfile
 from DDR import fileio
 from DDR.identifier import Identifier
 from DDR.models.common import load_json_lite
@@ -38,14 +50,16 @@ def conf():
     pass
 
 
+PERSONS_FIELDNAMES = ['creators','persons']
+
 @ddrnames.command()
 #@click.option('--datasette','-d', default=config.DATASETTE, help='Datasette HOST:IP.')
 @click.argument('fieldname')
 @click.argument('collection')
-def export(fieldname, collection):
+def dump(fieldname, collection):
     """Returns creators/person/etc names from all records in a collection
     """
-    assert fieldname in ['creators','persons']
+    assert fieldname in PERSONS_FIELDNAMES
     # all the .jsons in collection
     # for each one, extract id and field
     headers = ['id', 'fieldname', 'name']
@@ -93,3 +107,65 @@ def _extract_field_values(path, fieldname):
                         values.append(item)
                 break
     return oi.id,values
+
+
+@ddrnames.command()
+@click.argument('fieldname')
+@click.argument('csv')
+@click.argument('collection')
+@click.option('--user','-u', help='(required for commit) Git user name.')
+@click.option('--mail','-m', help='(required for commit) Git user e-mail address.')
+@click.option('--save','-s', is_flag=True, help="Save changes.")
+@click.option('--commit','-c', is_flag=True, help="Commit changes.")
+def load(fieldname, csv, collection, user, mail, save, commit):
+    """Read CSV and update person/creators fields, matching nr_ids
+    
+    Reads output of the `ddrnames export` command
+    """
+    assert fieldname in PERSONS_FIELDNAMES
+    assert user and mail
+    AGENT = 'ddrnames load'
+    ci = Identifier(collection)
+    logging.debug(ci)
+    # load data from CSV
+    click.echo(f'Loading data from {csv}')
+    headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv))
+    num_rowds = len(rowds)
+    click.echo(f'{num_rowds} rows')
+    # group CSV data by objectid and namepart
+    click.echo(f'Grouping data...')
+    objects_by_id = {}
+    while(rowds):
+        rowd = rowds.pop()
+        # skip rows that don't have a match value
+        if not rowd['matching']:
+            continue
+        # remove sample field
+        if rowd.get('sample'):
+            rowd.pop('sample')
+        oid = rowd['objectid']
+        namepart = rowd['namepart']
+        if not objects_by_id.get(oid):
+            objects_by_id[oid] = {}
+        objects_by_id[oid][namepart] = rowd
+    # update existing persons/creators data
+    click.echo(f'Updating objects...')
+    for oid in sorted(objects_by_id.keys()):
+        o = Identifier(oid, config.MEDIA_BASE).object()
+        for n,person in enumerate(getattr(o, fieldname)):
+            n += 1
+            namepart = person['namepart']
+            if objects_by_id.get(oid) and objects_by_id[oid].get(namepart):
+                data = objects_by_id[oid][namepart]
+                # do not remove any data - only add nr_id and matching
+                person['nr_id'] = data['nr_id']
+                person['matching'] = data['matching']
+                click.echo(f"up {oid} {n} {person}")
+            else:
+                click.echo(f"   {oid} {n} {person}")
+        if save:
+            o.save(git_name=user, git_mail=mail, agent=AGENT, commit=commit)
+    # load object
+    # parse the specified field and update persons that are updated
+    # identifiy by oid:namepart
+    # Q: how to *remove* nr_id if we discover they're *not* a match?
