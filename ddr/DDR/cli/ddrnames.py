@@ -18,6 +18,7 @@ Examples:
 """
 
 import logging
+import sys
 
 import click
 
