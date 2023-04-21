@@ -122,8 +122,12 @@ def load(fieldname, csv, collection, user, mail, save, commit):
     
     Reads output of the `ddrnames export` command
     """
-    assert fieldname in PERSONS_FIELDNAMES
-    assert user and mail
+    if not (fieldname in PERSONS_FIELDNAMES):
+        click.echo(f'ERROR: "{fieldname}" is not a valid field name.')
+        sys.exit(1)
+    if commit and (not user and mail):
+        click.echo(f'ERROR: --user and --mail are required for commits.')
+        sys.exit(1)
     AGENT = 'ddrnames load'
     ci = Identifier(collection)
     logging.debug(ci)
