@@ -125,8 +125,8 @@ def load(fieldname, csv, collection, user, mail, save, commit):
     if not (fieldname in PERSONS_FIELDNAMES):
         click.echo(f'ERROR: "{fieldname}" is not a valid field name.')
         sys.exit(1)
-    if commit and (not user and mail):
-        click.echo(f'ERROR: --user and --mail are required for commits.')
+    if (save or commit) and not (user and mail):
+        click.echo(f'ERROR: --user and --mail required to save or commit changes.')
         sys.exit(1)
     AGENT = 'ddrnames load'
     ci = Identifier(collection)
