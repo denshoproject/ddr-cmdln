@@ -18,6 +18,7 @@ Examples:
 """
 
 import logging
+from pathlib import Path
 import sys
 
 import click
@@ -131,7 +132,7 @@ def load(fieldname, csv, collection, user, mail, save, commit):
         sys.exit(1)
     AGENT = 'ddrnames load'
     ci = Identifier(collection)
-    logging.debug(ci)
+    click.echo(f'Collection {ci.path_abs()}')
     # load data from CSV
     click.echo(f'Loading data from {csv}')
     headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv))
@@ -155,8 +156,9 @@ def load(fieldname, csv, collection, user, mail, save, commit):
         objects_by_id[oid][namepart] = rowd
     # update existing persons/creators data
     click.echo(f'Updating objects...')
+    collection_parent_dir = str(Path(collection).parent)
     for oid in sorted(objects_by_id.keys()):
-        o = Identifier(oid, config.MEDIA_BASE).object()
+        o = Identifier(oid, collection_parent_dir).object()
         for n,person in enumerate(getattr(o, fieldname)):
             n += 1
             namepart = person['namepart']
@@ -165,11 +167,12 @@ def load(fieldname, csv, collection, user, mail, save, commit):
                 # do not remove any data - only add nr_id and matching
                 person['nr_id'] = data['nr_id']
                 person['matching'] = data['matching']
-                click.echo(f"up {oid} {n} {person}")
+                click.echo(f"up {o.path_abs} {n} {person}")
             else:
-                click.echo(f"   {oid} {n} {person}")
+                click.echo(f"   {o.path_abs} {n} {person}")
         if save:
-            o.save(git_name=user, git_mail=mail, agent=AGENT, commit=commit)
+            result = o.save(git_name=user, git_mail=mail, agent=AGENT, commit=commit)
+            logging.debug(result)
     # load object
     # parse the specified field and update persons that are updated
     # identifiy by oid:namepart
