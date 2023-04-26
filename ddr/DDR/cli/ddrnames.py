@@ -30,8 +30,10 @@ from DDR.identifier import Identifier
 from DDR.models.common import load_json_lite
 from DDR import util
 
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-@click.group()
+
+@click.group(context_settings=CONTEXT_SETTINGS)
 def ddrnames():
     pass
 
