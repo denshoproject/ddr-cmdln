@@ -189,20 +189,17 @@ def load(fieldname, csv, collection, user, mail, save, commit):
 @click.argument('csvpath')
 @click.option('--verbose','-v', is_flag=True, help="Print more output.")
 def narrators(operation, jsonpath, csvpath, verbose):
-    """Transform densho-vocabs/narrators.json to CSV in ddrnames dump - or back
+    """Dump narrators.json to CSV, run namesdb on it, then import it back.
     
-    PATH is either the .json or the .csv file. Depending on which you choose
-    it converts to the other.
+    \b
+    OPERATION: dump or load.
+    JSONPATH: Path to the narrators.json file.
+    CSVPATH: Path to CSV data from `ddrnames dump` or output of `namesdb searchmulti`.
     Examples:
     ddrnames narrators dump /opt/densho-vocab/api/0.2/narrators.json /tmp/narrators.csv
     ddrnames narrators load /opt/densho-vocab/api/0.2/narrators.json /tmp/narrators-matched.csv
-
-    "id","fieldname","name"
-    "ddr-densho-10-1","persons","Yasuda, Mitsu"
-    "ddr-densho-10-1","persons","Tanaka, Cherry"
-    "ddr-densho-10-2","persons","Matsumoto, Takako"
-    "ddr-densho-10-2","persons","Sata, Elsie"
     
+    NOTE: `ddrnames load` requires you to modify file permissions.
     """
     jsonpath = Path(jsonpath)
     if operation not in ['dump','load']:
