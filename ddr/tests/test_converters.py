@@ -379,14 +379,14 @@ TEXTROLEPEOPLE_NAME_DATA_ROLE = [
 ]
 TEXTROLEPEOPLE_NAME_OUT_ROLE = 'namepart: Watanabe, Joe | role: author'
 
-TEXTROLEPEOPLE_SINGLE_TEXT = 'namepart: Masuda, Kikuye | role: narrator | id: 42'
+TEXTROLEPEOPLE_SINGLE_TEXT = 'namepart: Masuda, Kikuye | role: narrator | oh_id: 42'
 TEXTROLEPEOPLE_SINGLE_DATA = [
-    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'oh_id': 42},
 ]
 
-TEXTROLEPEOPLE_SINGLE_ID_TEXT = 'namepart: Masuda, Kikuye | role: narrator | id: 42'
+TEXTROLEPEOPLE_SINGLE_ID_TEXT = 'namepart: Masuda, Kikuye | role: narrator | oh_id: 42'
 TEXTROLEPEOPLE_SINGLE_ID_DATA = [
-    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'oh_id': 42},
 ]
 
 TEXTROLEPEOPLE_SINGLE_NRID_TEXT = 'namepart: Masuda, Kikuye | nr_id: 88922/nr014m435 | role: narrator'
@@ -394,22 +394,22 @@ TEXTROLEPEOPLE_SINGLE_NRID_DATA = [
     {'namepart': 'Masuda, Kikuye', 'nr_id': '88922/nr014m435', 'role': 'narrator'},
 ]
 
-TEXTROLEPEOPLE_SINGLE_NRIDID_TEXT = 'namepart: Masuda, Kikuye | nr_id: 88922/nr014m435 | role: narrator | id: 42'
+TEXTROLEPEOPLE_SINGLE_NRIDID_TEXT = 'namepart: Masuda, Kikuye | nr_id: 88922/nr014m435 | role: narrator | oh_id: 42'
 TEXTROLEPEOPLE_SINGLE_NRIDID_DATA = [
-    {'namepart': 'Masuda, Kikuye', 'nr_id': '88922/nr014m435', 'role': 'narrator', 'id': 42},
+    {'namepart': 'Masuda, Kikuye', 'nr_id': '88922/nr014m435', 'role': 'narrator', 'oh_id': 42},
 ]
 
-TEXTROLEPEOPLE_MULTI_TEXT = 'namepart: Watanabe, Joe | role: author; namepart: Masuda, Kikuye | role: narrator | id: 42'
+TEXTROLEPEOPLE_MULTI_TEXT = 'namepart: Watanabe, Joe | role: author; namepart: Masuda, Kikuye | role: narrator | oh_id: 42'
 TEXTROLEPEOPLE_MULTI_DATA = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'},
-    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'oh_id': 42},
 ]
 
-TEXTROLEPEOPLE_MULTI_NRID_TEXT = 'namepart: Ito, Jo | role: author; namepart: Ban, Shig | nr_id: 88922/nr014m437 | role: arch; namepart: Aso, San | role: narrator | id: 42'
+TEXTROLEPEOPLE_MULTI_NRID_TEXT = 'namepart: Ito, Jo | role: author; namepart: Ban, Shig | nr_id: 88922/nr014m437 | role: arch; namepart: Aso, San | role: narrator | oh_id: 42'
 TEXTROLEPEOPLE_MULTI_NRID_DATA = [
     {'namepart': 'Ito, Jo', 'role': 'author'},
     {'namepart': 'Ban, Shig', 'nr_id': '88922/nr014m437', 'role': 'arch'},
-    {'namepart': 'Aso, San', 'role': 'narrator', 'id': 42},
+    {'namepart': 'Aso, San', 'role': 'narrator', 'oh_id': 42},
 ]
 
 TEXTROLEPEOPLE_LISTSTRSNAME_TEXT = [
@@ -425,33 +425,33 @@ TEXTROLEPEOPLE_LISTSTRS_TEXT = [
 ]
 TEXTROLEPEOPLE_LISTSTRS_DATA = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'},
-    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'oh_id': 42},
 ]
 
-TEXTROLEPEOPLE_MULTI_TEXT = 'namepart: Watanabe, Joe | role: author; namepart: Masuda, Kikuye | role: narrator | id: 42'
+TEXTROLEPEOPLE_MULTI_TEXT = 'namepart: Watanabe, Joe | role: author; namepart: Masuda, Kikuye | role: narrator | oh_id: 42'
 TEXTROLEPEOPLE_MULTI_DATA = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'},
-    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'oh_id': 42},
 ]
 
-TEXTROLEPEOPLE_MULTI_NRID_TEXT = 'namepart: Ito, Jo | role: author; namepart: Ban, Shig | nr_id: 88922/nr014m437 | matching: match | role: arch; namepart: Aso, San | role: narrator | id: 42'
+TEXTROLEPEOPLE_MULTI_NRID_TEXT = 'namepart: Ito, Jo | role: author; namepart: Ban, Shig | nr_id: 88922/nr014m437 | matching: match | role: arch; namepart: Aso, San | role: narrator | oh_id: 42'
 TEXTROLEPEOPLE_MULTI_NRID_DATA = [
     {'namepart': 'Ito, Jo', 'role': 'author'},
     {'namepart': 'Ban, Shig', 'nr_id': '88922/nr014m437', 'matching': 'match', 'role': 'arch'},
-    {'namepart': 'Aso, San', 'role': 'narrator', 'id': 42},
+    {'namepart': 'Aso, San', 'role': 'narrator', 'oh_id': 42},
 ]
 
-TEXTROLEPEOPLE_PIPES_TEXT = 'namepart: Watanabe, Joe | role: author; namepart: Masuda, Kikuye [42] | role: narrator; namepart: Joi Ito | role: techie | id:123'
+TEXTROLEPEOPLE_PIPES_TEXT = 'namepart: Watanabe, Joe | role: author; namepart: Masuda, Kikuye [42] | role: narrator; namepart: Joi Ito | role: techie | oh_id:123'
 TEXTROLEPEOPLE_PIPES_DATA = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'},
-    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
-    {'namepart': 'Joi Ito', 'role': 'techie', 'id': 123},
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'oh_id': 42},
+    {'namepart': 'Joi Ito', 'role': 'techie', 'oh_id': 123},
 ]
 
 TEXTROLEPEOPLE_NOSPACES_TEXT = 'namepart:Watanabe, Joe|role:author; namepart:Masuda, Kikuye [42]|role:narrator;'
 TEXTROLEPEOPLE_NOSPACES_DATA = [
     {'namepart': 'Watanabe, Joe', 'role': 'author'},
-    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
+    {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'oh_id': 42},
 ]
 
 # many legacy files have this pattern
