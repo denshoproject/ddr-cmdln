@@ -17,6 +17,7 @@ Examples:
     ddrnames load persons /tmp/ddr-densho-10-persons-searchmulti.csv /var/www/media/ddr/ddr-densho-10
 """
 
+import json
 import logging
 from pathlib import Path
 import sys
@@ -179,3 +180,54 @@ def load(fieldname, csv, collection, user, mail, save, commit):
     # parse the specified field and update persons that are updated
     # identifiy by oid:namepart
     # Q: how to *remove* nr_id if we discover they're *not* a match?
+
+
+@ddrnames.command()
+@click.argument('operation')
+@click.argument('jsonpath')
+@click.argument('csvpath')
+@click.option('--verbose','-v', is_flag=True, help="Print more output.")
+def narrators(operation, jsonpath, csvpath, verbose):
+    """Transform densho-vocabs/narrators.json to CSV in ddrnames dump - or back
+    
+    PATH is either the .json or the .csv file. Depending on which you choose
+    it converts to the other.
+    Examples:
+    ddrnames narrators dump /opt/densho-vocab/api/0.2/narrators.json /tmp/narrators.csv
+    ddrnames narrators load /opt/densho-vocab/api/0.2/narrators.json /tmp/narrators-matched.csv
+
+    "id","fieldname","name"
+    "ddr-densho-10-1","persons","Yasuda, Mitsu"
+    "ddr-densho-10-1","persons","Tanaka, Cherry"
+    "ddr-densho-10-2","persons","Matsumoto, Takako"
+    "ddr-densho-10-2","persons","Sata, Elsie"
+    
+    """
+    jsonpath = Path(jsonpath)
+    if operation not in ['dump','load']:
+        click.echo('ERROR: OPERATION must be either "dump" or "load".')
+        sys.exit(1)
+    
+    elif operation == 'dump':
+        # dump narrators.json to csv
+        with jsonpath.open('r') as f1:
+            data = json.loads(f1.read())
+        # all the .jsons in collection
+        # for each one, extract id and field
+        headers = ['id', 'fieldname', 'name']
+        click.echo(fileio.write_csv_str(headers))
+        rows = []
+        for narrator in data['narrators']:
+            id = narrator['id']
+            name = ' '.join([
+                n for n in [
+                    narrator['last_name'],
+                    narrator['first_name'],
+                    narrator['middle_name'],
+                    narrator['nickname']
+                ] if n
+            ])
+            row = [id, 'person', name]
+            click.echo(fileio.write_csv_str(row))
+            rows.append(row)
+        fileio.write_csv(csvpath, headers, rows)
