@@ -27,6 +27,7 @@ import click
 from DDR import config
 from DDR import csvfile
 from DDR import fileio
+from DDR import format_json
 from DDR.identifier import Identifier
 from DDR.models.common import load_json_lite
 from DDR import util
@@ -231,3 +232,39 @@ def narrators(operation, jsonpath, csvpath, verbose):
             click.echo(fileio.write_csv_str(row))
             rows.append(row)
         fileio.write_csv(csvpath, headers, rows)
+    
+    elif operation == 'load':
+        # load data from CSV
+        with jsonpath.open('r') as f1:
+            data = json.loads(f1.read())
+        click.echo(f'Loading data from {csvpath}')
+        headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csvpath))
+        # group CSV data by objectid and namepart
+        click.echo(f'Grouping data...')
+        objects_by_id = {}
+        while(rowds):
+            rowd = rowds.pop()
+            # skip rows that don't have a match value
+            if (not rowd['matching']) and not (rowd['matching'] == 'match'):
+                continue
+            # remove sample field
+            if rowd.get('sample'):
+                rowd.pop('sample')
+            oid = rowd['objectid']
+            namepart = rowd['namepart']
+            if not objects_by_id.get(oid):
+                objects_by_id[oid] = {}
+            objects_by_id[oid] = rowd
+        #print(format_json(objects_by_id))
+        # update narrators data
+        click.echo(f'Updating narrators...')
+        matched_narrator_ids = objects_by_id.keys()
+        for narrator in data['narrators']:
+            if narrator['id'] in matched_narrator_ids:
+                nr_id = objects_by_id[narrator['id']]['nr_id']
+                narrator['nr_id'] = nr_id
+                print(narrator['nr_id'], narrator['id'], narrator['display_name'])
+            elif verbose:
+                print('               ', narrator['id'], narrator['display_name'])
+        with jsonpath.open('w') as f1:
+            f1.write(format_json(data, sort_keys=False))
