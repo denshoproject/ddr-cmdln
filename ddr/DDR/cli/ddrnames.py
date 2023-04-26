@@ -255,7 +255,6 @@ def narrators(operation, jsonpath, csvpath, verbose):
             if not objects_by_id.get(oid):
                 objects_by_id[oid] = {}
             objects_by_id[oid] = rowd
-        #print(format_json(objects_by_id))
         # update narrators data
         click.echo(f'Updating narrators...')
         matched_narrator_ids = objects_by_id.keys()
@@ -266,5 +265,19 @@ def narrators(operation, jsonpath, csvpath, verbose):
                 print(narrator['nr_id'], narrator['id'], narrator['display_name'])
             elif verbose:
                 print('               ', narrator['id'], narrator['display_name'])
-        with jsonpath.open('w') as f1:
-            f1.write(format_json(data, sort_keys=False))
+        # write file
+        try:
+            with jsonpath.open('w') as f:
+                f.write(format_json(data, sort_keys=False))
+            click.echo('')
+            click.echo('File updated.')
+            click.echo(f'Now log in as a sudo-capable user and restore permissions:')
+            owner = jsonpath.parent.owner()
+            group = jsonpath.parent.group()
+            click.echo(f'    sudo chown {owner}.{group} {jsonpath}')
+            click.echo('Check file differences using `git diff -w`.')
+        except PermissionError:
+            # complain if narrators.json not writable
+            click.echo(f'ERROR: {jsonpath} is not writable by the ddr user.')
+            click.echo(f'Log in as a sudo-capable user and fix it thusly:')
+            click.echo(f'    sudo chown ddr.ddr {jsonpath}')
