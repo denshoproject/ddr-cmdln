@@ -17,6 +17,7 @@ Examples:
     ddrnames load persons /tmp/ddr-densho-10-persons-searchmulti.csv /var/www/media/ddr/ddr-densho-10
 """
 
+import json
 import logging
 from pathlib import Path
 import sys
@@ -26,6 +27,7 @@ import click
 from DDR import config
 from DDR import csvfile
 from DDR import fileio
+from DDR import format_json
 from DDR.identifier import Identifier
 from DDR.models.common import load_json_lite
 from DDR import util
@@ -179,3 +181,100 @@ def load(fieldname, csv, collection, user, mail, save, commit):
     # parse the specified field and update persons that are updated
     # identifiy by oid:namepart
     # Q: how to *remove* nr_id if we discover they're *not* a match?
+
+
+@ddrnames.command()
+@click.argument('operation')
+@click.argument('jsonpath')
+@click.argument('csvpath')
+@click.option('--verbose','-v', is_flag=True, help="Print more output.")
+def narrators(operation, jsonpath, csvpath, verbose):
+    """Dump narrators.json to CSV, run namesdb on it, then import it back.
+    
+    \b
+    OPERATION: dump or load.
+    JSONPATH: Path to the narrators.json file.
+    CSVPATH: Path to CSV data from `ddrnames dump` or output of `namesdb searchmulti`.
+    Examples:
+    ddrnames narrators dump /opt/densho-vocab/api/0.2/narrators.json /tmp/narrators.csv
+    ddrnames narrators load /opt/densho-vocab/api/0.2/narrators.json /tmp/narrators-matched.csv
+    
+    NOTE: `ddrnames load` requires you to modify file permissions.
+    """
+    jsonpath = Path(jsonpath)
+    if operation not in ['dump','load']:
+        click.echo('ERROR: OPERATION must be either "dump" or "load".')
+        sys.exit(1)
+    
+    elif operation == 'dump':
+        # dump narrators.json to csv
+        with jsonpath.open('r') as f1:
+            data = json.loads(f1.read())
+        # all the .jsons in collection
+        # for each one, extract id and field
+        headers = ['id', 'fieldname', 'name']
+        click.echo(fileio.write_csv_str(headers))
+        rows = []
+        for narrator in data['narrators']:
+            id = narrator['id']
+            name = ' '.join([
+                n for n in [
+                    narrator['last_name'],
+                    narrator['first_name'],
+                    narrator['middle_name'],
+                    narrator['nickname']
+                ] if n
+            ])
+            row = [id, 'person', name]
+            click.echo(fileio.write_csv_str(row))
+            rows.append(row)
+        fileio.write_csv(csvpath, headers, rows)
+    
+    elif operation == 'load':
+        # load data from CSV
+        with jsonpath.open('r') as f1:
+            data = json.loads(f1.read())
+        click.echo(f'Loading data from {csvpath}')
+        headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csvpath))
+        # group CSV data by objectid and namepart
+        click.echo(f'Grouping data...')
+        objects_by_id = {}
+        while(rowds):
+            rowd = rowds.pop()
+            # skip rows that don't have a match value
+            if (not rowd['matching']) and not (rowd['matching'] == 'match'):
+                continue
+            # remove sample field
+            if rowd.get('sample'):
+                rowd.pop('sample')
+            oid = rowd['objectid']
+            namepart = rowd['namepart']
+            if not objects_by_id.get(oid):
+                objects_by_id[oid] = {}
+            objects_by_id[oid] = rowd
+        # update narrators data
+        click.echo(f'Updating narrators...')
+        matched_narrator_ids = objects_by_id.keys()
+        for narrator in data['narrators']:
+            if narrator['id'] in matched_narrator_ids:
+                nr_id = objects_by_id[narrator['id']]['nr_id']
+                narrator['nr_id'] = nr_id
+                print(narrator['nr_id'], narrator['id'], narrator['display_name'])
+            elif verbose:
+                print('               ', narrator['id'], narrator['display_name'])
+        # write file
+        try:
+            with jsonpath.open('w') as f:
+                f.write(format_json(data, sort_keys=False))
+            click.echo('')
+            click.echo('File updated.')
+            click.echo(f'Now log in as a sudo-capable user and restore permissions:')
+            owner = jsonpath.parent.owner()
+            group = jsonpath.parent.group()
+            click.echo(f'    sudo chown {owner}.{group} {jsonpath}')
+            click.echo('Check file differences using `git diff -w`.')
+        except PermissionError:
+            # complain if narrators.json not writable
+            click.echo(f'ERROR: {jsonpath} is not writable by the ddr user.')
+            click.echo(f'Log in as a sudo-capable user and fix it thusly:')
+            click.echo(f'    sudo chown ddr.ddr {jsonpath}')
