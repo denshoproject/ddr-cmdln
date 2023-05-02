@@ -763,16 +763,16 @@ def _filter_rolepeople(data: List[Dict[str,str]]) -> List[Dict[str,str]]:
     """
     return [
         item for item in data
-        if item.get('namepart') and item.get('role')
+        if item.get('namepart')  # and item.get('role')
     ]
 
 # TODO add type hints
-def _parse_rolepeople_text(texts):
+def _parse_rolepeople_text(texts, default):
     data = []
-    for text in texts:
+    for text in _unroll_gloppy_list(texts):
         txt = text.strip()
         if txt:
-            item = {'namepart':None, 'role':'author',}
+            item = copy.deepcopy(default)
             
             if ('|' in txt) and (':' in txt):
                 # ex: "namepart:Sadako Kashiwagi|role:narrator|id:856"
@@ -784,9 +784,15 @@ def _parse_rolepeople_text(texts):
             
             elif ':' in txt:
                 # ex: "Sadako Kashiwagi:narrator"
-                name,role = txt.split(':')
-                item['namepart'] = name.strip()
-                item['role'] = role.strip()
+                # ex: 'namepart: Yasuda, Mitsu;\n'
+                key,value = txt.split(':')
+                if key.strip() in default.keys():
+                    # ex: 'namepart: Yasuda, Mitsu;\n'
+                    item[key.strip()] = value.strip()
+                else:
+                    # ex: "Sadako Kashiwagi:narrator"
+                    item['namepart'] = key.strip()
+                    item['role'] = value.strip()
             
             else:
                 # ex: "Sadako Kashiwagi"
@@ -799,13 +805,30 @@ def _parse_rolepeople_text(texts):
                 item['id'] = match.groupdict()['id'].strip()
             if item.get('id') and item['id'].isdigit():
                 item['id'] = int(item['id'])
-            if item.get('nr_id') and item['nr_id'].isdigit():
-                item['nr_id'] = int(item['nr_id'])
             
             data.append(item)
     return data
 
-def text_to_rolepeople(text: str) -> List[Dict[str,str]]:
+def _unroll_gloppy_list(text: list) -> List[str]:
+    """Lists of rolepeople from e.g. forms might have multiple items in a line
+    
+    e.g. ['Lastname1,Firstname1; Lastname2,Firstname2', 'Lastname3,Firstname3']
+    """
+    new_list = []
+    while(text):
+        # split if there are more than one items in a listitem
+        # append the first item to the new list
+        items = text.pop(0).split(';', 1) # split on the first semicolon
+        if len(items) == 1:
+            new_list.append(items[0].strip())  # the last one
+        elif len(items) > 1:
+            first,others = items
+            new_list.append(first.strip())
+            # stick remainders onto front of list to preserve order
+            new_list.insert(0, others.strip())
+    return new_list
+
+def text_to_rolepeople(text: str, default: dict) -> List[Dict[str,str]]:
     if not text:
         return []
     
@@ -814,7 +837,7 @@ def text_to_rolepeople(text: str) -> List[Dict[str,str]]:
         if _is_listofdicts(text):
             return _filter_rolepeople(text)
         elif _is_listofstrs(text):
-            data = _parse_rolepeople_text(text)
+            data = _parse_rolepeople_text(text, default)
             return _filter_rolepeople(data)
     
     text = normalize_string(text)
@@ -832,11 +855,8 @@ def text_to_rolepeople(text: str) -> List[Dict[str,str]]:
             return _filter_rolepeople(data)
     
     # looks like it's raw text
-    return _filter_rolepeople(
-        _parse_rolepeople_text(
-            text.split(';')
-        )
-    )
+    data = _parse_rolepeople_text(text.split(';'), default)
+    return _filter_rolepeople(data)
 
 def rolepeople_to_text(data: List[Dict[str,str]], field_order: List[str]=[]) -> str:
     """Convert list of dicts to string "KEY:VAL|KEY:VAL|...; KEY:VAL|KEY:VAL|..."
