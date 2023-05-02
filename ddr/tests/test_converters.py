@@ -439,10 +439,10 @@ TEXTROLEPEOPLE_MULTI_DATA = [
     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42},
 ]
 
-TEXTROLEPEOPLE_MULTI_NRID_TEXT = 'namepart: Ito, Jo | role: author; namepart: Ban, Shig | nr_id: 88922/nr014m437 | role: arch; namepart: Aso, San | role: narrator | id: 42'
+TEXTROLEPEOPLE_MULTI_NRID_TEXT = 'namepart: Ito, Jo | role: author; namepart: Ban, Shig | nr_id: 88922/nr014m437 | matching: match | role: arch; namepart: Aso, San | role: narrator | id: 42'
 TEXTROLEPEOPLE_MULTI_NRID_DATA = [
     {'namepart': 'Ito, Jo', 'role': 'author'},
-    {'namepart': 'Ban, Shig', 'nr_id': '88922/nr014m437', 'role': 'arch'},
+    {'namepart': 'Ban, Shig', 'nr_id': '88922/nr014m437', 'matching': 'match', 'role': 'arch'},
     {'namepart': 'Aso, San', 'role': 'narrator', 'id': 42},
 ]
 

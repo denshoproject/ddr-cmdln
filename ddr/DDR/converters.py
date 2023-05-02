@@ -838,7 +838,7 @@ def text_to_rolepeople(text: str) -> List[Dict[str,str]]:
         )
     )
 
-def rolepeople_to_text(data: List[Dict[str,str]]) -> str:
+def rolepeople_to_text(data: List[Dict[str,str]], field_order: List[str]=[]) -> str:
     """Convert list of dicts to string "KEY:VAL|KEY:VAL|...; KEY:VAL|KEY:VAL|..."
     """
     if isinstance(data, str):
@@ -846,14 +846,25 @@ def rolepeople_to_text(data: List[Dict[str,str]]) -> str:
     else:
         items = []
         for d in data:
-            # strings probably formatted or close enough
             if isinstance(d, str):
+                # strings probably formatted or close enough
                 items.append(d)
             elif isinstance(d, dict):
+                if field_order:
+                    # coerce dict items into specified order
+                    fields_values = [
+                        f"{fieldname}: {d[fieldname]}"
+                        for fieldname in field_order
+                        if d.get(fieldname)
+                    ]
+                else:
+                    # or just in whatever order they came in
+                    fields_values = [
+                        f'{key}: {val}'
+                        for key,val in d.items()
+                    ]
                 items.append(
-                    ' | '.join(
-                        [f'{key}: {val}' for key,val in d.items()]
-                    )
+                    ' | '.join(fields_values)
                 )
         text = '; '.join(items).strip()
     return text
