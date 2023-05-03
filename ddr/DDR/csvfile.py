@@ -1,11 +1,10 @@
-from collections import OrderedDict
 import logging
 from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 from DDR import identifier
 
 
-def make_row_dict(headers: List[str], row: List[str]) -> OrderedDict:
+def make_row_dict(headers: List[str], row: List[str]) -> Dict:
     """Turns CSV row into a dict with the headers as keys
     
     >>> headers0 = ['id', 'created', 'lastmod', 'title', 'description']
@@ -14,9 +13,9 @@ def make_row_dict(headers: List[str], row: List[str]) -> OrderedDict:
 
     @param headers: List of header field names
     @param row: A single row (list of fields, not dict)
-    @returns: OrderedDict
+    @returns: dict
     """
-    d = OrderedDict()
+    d = {}
     for n in range(0, len(row)):
         d[headers[n]] = _strip_str(row[n])
     return d
@@ -25,11 +24,11 @@ def make_rowds(
         rows: List[List[str]],
         row_start: int=0,
         row_end: int=9999999
-):  # -> Tuple[List[str], List[OrderedDict[str,str]], List[str]]:
+):  # -> Tuple[List[str], List[Dict[str,str]], List[str]]:
     """Takes list of rows (from csv lib) and turns into list of rowds (dicts)
     
     @param rows: list
-    @returns: (headers, list of OrderedDicts, list of errors)
+    @returns: (headers, list of dicts, list of errors)
     """
     headers = [_strip_str(data) for data in rows.pop(0)]
     rowds = []
