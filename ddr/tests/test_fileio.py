@@ -55,10 +55,15 @@ CSV_ROWS = [
     ['ddr-test-123', 'thing 1', 'nothing here'],
     ['ddr-test-124', 'thing 2', 'still nothing'],
 ]
-CSV_FILE = '"id","title","description"\r\n"ddr-test-123","thing 1","nothing here"\r\n"ddr-test-124","thing 2","still nothing"\r\n'
+CSV_FILE = '\n'.join([
+    '"id","title","description"',
+    '"ddr-test-123","thing 1","nothing here"',
+    '"ddr-test-124","thing 2","still nothing"',
+])
 
 # TODO test_csv_writer
 # TODO test_csv_reader
+# TODO test_csv_str_reader
 
 def test_write_csv(tmpdir):
     CSV_PATH = str(tmpdir / 'write_csv.csv')
@@ -90,3 +95,11 @@ def test_read_csv(tmpdir):
     # cleanup
     if os.path.exists(CSV_PATH):
         os.remove(CSV_PATH)
+
+def test_write_csv_str(capsys):
+    for row in CSV_ROWS:
+        print(fileio.write_csv_str(row))
+    captured = capsys.readouterr()
+    #print(f"{CSV_FILE=}")
+    #print(f"{captured.out=}")
+    assert captured.out.strip() == CSV_FILE.strip()
