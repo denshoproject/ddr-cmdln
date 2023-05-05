@@ -375,6 +375,9 @@ class Checker():
         if model == 'file' and 'basename_orig' in headers:
             logging.info('Validating file imports')
             for rowd in rowds:
+                if rowd.get('external') and rowd['external']:
+                    # no need to check for existence of external files
+                    continue
                 path = os.path.join(os.path.dirname(csv_path), rowd['basename_orig'])
                 if not os.path.exists(path):
                     file_errs.append({'Missing file': path}); continue
