@@ -72,6 +72,8 @@ class TestExporter():
     # TODO def test_make_tmpdir(self):
     # TODO def test_export(self):
 
+    def test_export_field_csv(self):
+        pass
 
 class TestChecker():
     
