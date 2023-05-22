@@ -67,9 +67,12 @@ import logging
 logger = logging.getLogger(__name__)
 import os
 import sys
+import time
 
 import click
 import elasticsearch
+
+from elastictools.docstore import cluster as docstore_cluster
 
 from DDR import config
 from DDR import docstore
@@ -240,26 +243,33 @@ def restore(hosts, indices, snapshot):
 
 
 @ddrindex.command()
-@click.option('--hosts','-h',
+@click.option('--host','-h',
               default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
               help='Elasticsearch hosts.')
-@click.option('--confirm', is_flag=True,
-              help='Yes I really want to delete this index.')
-def destroy(hosts, confirm):
+def destroy(host):
     """Delete indices (requires --confirm).
     
     \b
     It's meant to sound serious. Also to not clash with 'delete', which
     is for individual documents.
     """
-    ds = get_docstore(hosts)
-    if confirm:
+    cluster = docstore_cluster(config.DOCSTORE_CLUSTERS, host)
+    click.echo(f"The following indices will be deleted from {host} ({cluster}):")
+    for index in identifier.ELASTICSEARCH_CLASSES['all']:
+        click.echo(f"- {index['doc_type']}")
+    response = click.prompt(
+        'Do you want to continue? [yes/no]',
+        default='no', show_default=False
+    )
+    if response == 'yes':
+        click.echo(f"Deleting indices from {host} ({cluster}).")
+        time.sleep(3)
         try:
-            ds.delete_indices()
+            get_docstore(host).delete_indices()
         except Exception as err:
             logprint('error', err)
     else:
-        click.echo("Add '--confirm' if you're sure you want to do this.")
+        click.echo("Cancelled.")
 
 
 @ddrindex.command()
