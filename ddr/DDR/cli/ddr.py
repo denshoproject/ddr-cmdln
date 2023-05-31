@@ -177,7 +177,11 @@ def list(path, partners, show_inprogress, show_private, testing):
         if (oi.parts['org'] == 'testing') \
         and not (testing or oi.parts['org'] in partners):
             continue
-        o = oi.object()
+        try:
+            o = oi.object()
+        except IOError:
+            # some repos have missing collection.json
+            continue
         if not (show_inprogress or o.status == 'completed'):
             continue
         if not (show_private or o.public in TRUTHY):
