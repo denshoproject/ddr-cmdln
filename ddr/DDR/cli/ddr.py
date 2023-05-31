@@ -157,7 +157,7 @@ def exists(objectid, username, password):
 def list(path, partners, show_inprogress, show_private, testing):
     """List collections with filters
     """
-    models = ['collections']
+    models = ['collection']
     if partners:
         partners = partners.strip().split(',')
     else:
