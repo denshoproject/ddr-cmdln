@@ -263,8 +263,9 @@ def destroy(host):
     It's meant to sound serious. Also to not clash with 'delete', which
     is for individual documents.
     """
-    cluster = docstore_cluster(config.DOCSTORE_CLUSTERS, host)
-    click.echo(f"The following indices will be deleted from {host} ({cluster}):")
+    ds = get_docstore(host)
+    cluster = docstore_cluster(config.DOCSTORE_CLUSTERS, ds.host)
+    click.echo(f"The following indices will be deleted from {ds.host} ({cluster}):")
     for index in identifier.ELASTICSEARCH_CLASSES['all']:
         click.echo(f"- {index['doc_type']}")
     response = click.prompt(
@@ -272,10 +273,10 @@ def destroy(host):
         default='no', show_default=False
     )
     if response == 'yes':
-        click.echo(f"Deleting indices from {host} ({cluster}).")
+        click.echo(f"Deleting indices from {ds.host} ({cluster}).")
         time.sleep(3)
         try:
-            get_docstore(host).delete_indices()
+            ds.delete_indices()
         except Exception as err:
             logprint('error', err)
     else:
