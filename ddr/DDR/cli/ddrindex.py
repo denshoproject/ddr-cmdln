@@ -118,8 +118,18 @@ def format_json(data, pretty=False):
         )
     return json.dumps(data, default=_json_handler)
 
-def get_docstore(hosts):
-    ds = docstore.DocstoreManager(docstore.INDEX_PREFIX, hosts, config)
+
+class FakeSettings():
+    def __init__(self, host):
+        self.DOCSTORE_HOST = host
+        self.DOCSTORE_SSL_CERTFILE = config.DOCSTORE_SSL_CERTFILE
+        self.DOCSTORE_USERNAME = config.DOCSTORE_USERNAME
+        self.DOCSTORE_PASSWORD = config.DOCSTORE_PASSWORD
+
+def get_docstore(host=config.DOCSTORE_HOST):
+    ds = docstore.DocstoreManager(
+        docstore.INDEX_PREFIX, host, FakeSettings(host)
+    )
     try:
         ds.es.info()
     except Exception as err:
