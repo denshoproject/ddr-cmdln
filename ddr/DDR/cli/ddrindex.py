@@ -362,10 +362,21 @@ def publish(hosts, recurse, force, b2, path):
         except Exception as err:
             click.echo(f'ERROR: {err}')
             sys.exit(1)
-    status = ds.post_multi(
-        path, recursive=recurse, force=force, backblaze=backblaze
-    )
-    click.echo(status)
+    if path == '-':  # path from STDIN
+        paths = click.get_text_stream('stdin').read().strip().split('\n')
+    else:
+        paths = [path]
+    statuses = {}
+    for path in paths:
+        status = ds.post_multi(
+            path, recursive=recurse, force=force, backblaze=backblaze
+        )
+        click.echo(status)
+        statuses[path] = status
+    if len(statuses.items()) > 1:
+        click.echo('----------')
+        for path,status in statuses.items():
+            click.echo(f"{path} {status}")
 
 
 @ddrindex.command()
@@ -390,8 +401,13 @@ def org(hosts, path):
     """Post the organization record to Elasticsearch
     """
     ds = get_docstore(hosts)
-    status = ds.org(path)
-    click.echo(status)
+    if path == '-':  # path from STDIN
+        paths = click.get_text_stream('stdin').read().strip().split('\n')
+    else:
+        paths = [path]
+    for path in paths:
+        status = ds.org(path)
+        click.echo(status)
 
 
 @ddrindex.command()
@@ -419,7 +435,12 @@ def delete(hosts, recurse, confirm, object_id):
     """
     ds = get_docstore(hosts)
     if confirm:
-        click.echo(ds.delete(object_id, recursive=recurse))
+        if object_id == '-':  # objectids from STDIN
+            object_ids = click.get_text_stream('stdin').read().strip().split('\n')
+        else:
+            object_ids = [object_id]
+        for object_id in object_ids:
+            click.echo(ds.delete(object_id, recursive=recurse))
     else:
         click.echo("Add '--confirm' if you're sure you want to do this.")
 
@@ -434,7 +455,12 @@ def exists(hosts, doctype, object_id):
     """Indicate whether the specified document exists
     """
     ds = get_docstore(hosts)
-    click.echo(ds.exists(doctype, object_id))
+    if object_id == '-':  # objectids from STDIN
+        object_ids = click.get_text_stream('stdin').read().strip().split('\n')
+    else:
+        object_ids = [object_id]
+    for object_id in object_ids:
+        click.echo(ds.exists(doctype, object_id))
 
 
 @ddrindex.command()
@@ -449,11 +475,16 @@ def get(hosts, json, doctype, object_id):
     """
     ds = get_docstore(hosts)
     es_class = identifier.ELASTICSEARCH_CLASSES_BY_MODEL[doctype]
-    document = ds.get(doctype, es_class, object_id)
-    if json:
-        click.echo(format_json(document.to_dict()))
+    if object_id == '-':  # objectids from STDIN
+        object_ids = click.get_text_stream('stdin').read().strip().split('\n')
     else:
-        click.echo(document)
+        object_ids = [object_id]
+    for object_id in object_ids:
+        document = ds.get(doctype, es_class, object_id)
+        if json:
+            click.echo(format_json(document.to_dict()))
+        else:
+            click.echo(document)
 
 
 @ddrindex.command()
@@ -466,7 +497,12 @@ def url(hosts, doctype, object_id):
     """Get Elasticsearch URL for document
     """
     ds = get_docstore(hosts)
-    click.echo(ds.url(doctype, object_id))
+    if object_id == '-':  # objectids from STDIN
+        object_ids = click.get_text_stream('stdin').read().strip().split('\n')
+    else:
+        object_ids = [object_id]
+    for object_id in object_ids:
+        click.echo(ds.url(doctype, object_id))
 
 
 @ddrindex.command()
