@@ -186,70 +186,70 @@ def create(hosts):
         logprint('error', err)
 
 
-@ddrindex.command()
-@click.option('--hosts','-h',
-              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
-              help='Elasticsearch hosts.')
-@click.argument('indices')
-@click.argument('snapshot')
-def backup(hosts, indices, snapshot):
-    """Make a snapshot backup of specified indices.
-    
-    """
-    ds = get_docstore(hosts)
-    indices = [i.strip() for i in indices.split(',')]
-    try:
-        r = ds.backup(snapshot, indices)
-    except Exception as err:
-        logprint('error', err)
-        r = {}
-        click.echo('Checklist:')
-        click.echo(
-            '- Check value of [public] docstore_path_repo in ddrlocal.cfg ({})'.format(
-                config.ELASTICSEARCH_PATH_REPO
-        ))
-        click.echo('- path.repo must be set in elasticsearch.yml on each node of cluster.')
-        click.echo('- path.repo must be writable on each node of cluster.')
-    if r:
-        click.echo('repository: {}'.format(r['repository']))
-        # snapshot feedback
-        if r['snapshot'].get('accepted') and r['snapshot']['accepted']:
-            # snapshot started
-            click.echo('Backup started. Reissue command for status updates.')
-        elif r['snapshot'].get('accepted') and not r['snapshot']['accepted']:
-            # problem
-            click.echo('Error: problem with backup!')
-        elif r['snapshot'].get('snapshots'):
-            # in progress or SUCCESS
-            for s in r['snapshot']['snapshots']:
-                click.echo('{}  {} {}'.format(
-                    s['start_time'],
-                    s['snapshot'],
-                    ','.join(s['indices']),
-                ))
-                click.echo('{}  {}'.format(
-                    s.get('end_time'),
-                    s['state'],
-                ))
-                if s['state'] != 'SUCCESS':
-                    click.echo(s)
-        else:
-            click.echo('snapshot:   {}'.format(r['snapshot']))
-
-
-@ddrindex.command()
-@click.option('--hosts','-h',
-              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
-              help='Elasticsearch hosts.')
-@click.argument('indices')
-@click.argument('snapshot')
-def restore(hosts, indices, snapshot):
-    """Restore a snapshot backup.
-    """
-    ds = get_docstore(hosts)
-    indices = [i.strip() for i in indices.split(',')]
-    r = ds.restore_snapshot(snapshot, indices)
-    click.echo(r)
+#@ddrindex.command()
+#@click.option('--hosts','-h',
+#              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+#              help='Elasticsearch hosts.')
+#@click.argument('indices')
+#@click.argument('snapshot')
+#def backup(hosts, indices, snapshot):
+#    """Make a snapshot backup of specified indices.
+#    
+#    """
+#    ds = get_docstore(hosts)
+#    indices = [i.strip() for i in indices.split(',')]
+#    try:
+#        r = ds.backup(snapshot, indices)
+#    except Exception as err:
+#        logprint('error', err)
+#        r = {}
+#        click.echo('Checklist:')
+#        click.echo(
+#            '- Check value of [public] docstore_path_repo in ddrlocal.cfg ({})'.format(
+#                config.ELASTICSEARCH_PATH_REPO
+#        ))
+#        click.echo('- path.repo must be set in elasticsearch.yml on each node of cluster.')
+#        click.echo('- path.repo must be writable on each node of cluster.')
+#    if r:
+#        click.echo('repository: {}'.format(r['repository']))
+#        # snapshot feedback
+#        if r['snapshot'].get('accepted') and r['snapshot']['accepted']:
+#            # snapshot started
+#            click.echo('Backup started. Reissue command for status updates.')
+#        elif r['snapshot'].get('accepted') and not r['snapshot']['accepted']:
+#            # problem
+#            click.echo('Error: problem with backup!')
+#        elif r['snapshot'].get('snapshots'):
+#            # in progress or SUCCESS
+#            for s in r['snapshot']['snapshots']:
+#                click.echo('{}  {} {}'.format(
+#                    s['start_time'],
+#                    s['snapshot'],
+#                    ','.join(s['indices']),
+#                ))
+#                click.echo('{}  {}'.format(
+#                    s.get('end_time'),
+#                    s['state'],
+#                ))
+#                if s['state'] != 'SUCCESS':
+#                    click.echo(s)
+#        else:
+#            click.echo('snapshot:   {}'.format(r['snapshot']))
+#
+#
+#@ddrindex.command()
+#@click.option('--hosts','-h',
+#              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+#              help='Elasticsearch hosts.')
+#@click.argument('indices')
+#@click.argument('snapshot')
+#def restore(hosts, indices, snapshot):
+#    """Restore a snapshot backup.
+#    """
+#    ds = get_docstore(hosts)
+#    indices = [i.strip() for i in indices.split(',')]
+#    r = ds.restore_snapshot(snapshot, indices)
+#    click.echo(r)
 
 
 @ddrindex.command()
