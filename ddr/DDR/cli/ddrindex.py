@@ -253,10 +253,9 @@ def restore(hosts, indices, snapshot):
 
 
 @ddrindex.command()
-@click.option('--host','-h',
-              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
-              help='Elasticsearch hosts.')
-def destroy(host):
+@click.option('--confirm', is_flag=True, help='Yes I really want to destroy this database.')
+@click.argument('host')
+def destroy(confirm, host):
     """Delete indices (requires --confirm).
     
     \b
@@ -265,9 +264,18 @@ def destroy(host):
     """
     ds = get_docstore(host)
     cluster = docstore_cluster(config.DOCSTORE_CLUSTERS, ds.host)
-    click.echo(f"The following indices will be deleted from {ds.host} ({cluster}):")
-    for index in identifier.ELASTICSEARCH_CLASSES['all']:
-        click.echo(f"- {index['doc_type']}")
+    if confirm:
+        click.echo(
+            f"The {cluster} cluster ({ds.host}) with the following indices "
+            + "will be DESTROYED!"
+        )
+        for index in identifier.ELASTICSEARCH_CLASSES['all']:
+            click.echo(f"- {index['doc_type']}")
+    else:
+        click.echo(
+            f"Add '--confirm' to destroy the {cluster} cluster ({ds.host})."
+        )
+        sys.exit(0)
     response = click.prompt(
         'Do you want to continue? [yes/no]',
         default='no', show_default=False
