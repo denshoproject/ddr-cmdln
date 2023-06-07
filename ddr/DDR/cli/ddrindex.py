@@ -498,13 +498,13 @@ def status(hosts):
     More detail since you asked.
     """
     logprint('debug', '------------------------------------------------------------------------',0)
-    logprint('debug', 'Elasticsearch',0)
     if hosts != config.DOCSTORE_HOST:
-        logprint('debug', f'DOCSTORE_HOST  {hosts} (default {config.DOCSTORE_HOST})', 0)
+        logprint('debug', f'Elasticsearch {hosts} (default {config.DOCSTORE_HOST})', 0)
     else:
-        logprint('debug', f'DOCSTORE_HOST  {hosts}', 0)
-    
+        logprint('debug', f'Elasticsearch {hosts}', 0)
     ds = get_docstore(hosts)
+    cluster = docstore_cluster(config.DOCSTORE_CLUSTERS, ds.host)
+    click.echo(f"{ds} ({cluster})")
     s = ds.status()
     try:
         pingable = ds.es.ping()
