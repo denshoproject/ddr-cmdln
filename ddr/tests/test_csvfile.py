@@ -110,6 +110,13 @@ def test_validate_headers():
     out4 = csvfile.validate_headers(headers4, field_names4, exceptions, additional)
     assert out4 == expected4
 
+# test_validate_rowds
+# wrapper around:
+# - test_find_duplicate_ids
+# - test_find_multiple_cids
+# - test_find_missing_required
+# - test_find_invalid_values
+
 def test_account_row():
     required_fields0 = ['id', 'title']
     rowd = {'id': 123, 'title': 'title'}
@@ -246,7 +253,7 @@ def test_find_missing_required():
         {'id':'ddr-test-124',},
     ]
     expected1 = [
-        "row 1: ddr-test-124 ['status']"
+        "row 1: status"
     ]
     out1 = csvfile.find_missing_required(required_fields, rowds1)
     assert out1 == expected1
@@ -272,9 +279,7 @@ def test_find_invalid_values():
         {'id':'ddr-test-124', 'status':'complete',},
     ]
     expected1 = [
-        "row 0: ddr-test-123 ['status']"
+        "row 0: status"
     ]
     out1 = csvfile.find_invalid_values(module, headers, valid_values, rowds1)
     assert out1 == expected1
-
-# validate_rowds

@@ -210,7 +210,12 @@ def find_multiple_cids(rowds):
     """
     cids = []
     for n,rowd in enumerate(rowds):
-        oid = identifier.Identifier(rowd['id'])
+        try:
+            oid = identifier.Identifier(rowd['id'])
+        except identifier.InvalidInputException:
+            continue
+        except identifier.InvalidIdentifierException:
+            continue
         cid = oid.collection().id
         if cid not in cids:
             cids.append(cid)
@@ -229,8 +234,7 @@ def find_missing_required(required_fields, rowds):
     for n,rowd in enumerate(rowds):
         bad_fields = account_row(required_fields, rowd)
         if bad_fields:
-            msg = 'row %s: %s %s' % (n, rowd['id'], bad_fields)
-            errs.append(msg)
+            errs.append(f"row {n}: {', '.join(bad_fields)}")
     return errs
 
 def find_invalid_values(module, headers, valid_values, rowds):
@@ -246,8 +250,7 @@ def find_invalid_values(module, headers, valid_values, rowds):
     for n,rowd in enumerate(rowds):
         bad_fields = check_row_values(module, headers, valid_values, rowd)
         if bad_fields:
-            msg = 'row %s: %s %s' % (n, rowd['id'], bad_fields)
-            errs.append(msg)
+            errs.append(f"row {n}: {', '.join(bad_fields)}")
     return errs
     
 def validate_rowds(module, headers, required_fields, valid_values, rowds, find_dupes=True):
