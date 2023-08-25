@@ -180,50 +180,6 @@ class Checker():
         repo = dvcs.repository(cidentifier.path_abs())
         logging.info(repo)
         return dvcs.list_staged(repo), dvcs.list_modified(repo)
-
-    @staticmethod
-    def check_csv(model, csv_path, rowds, headers, csv_errs, cidentifier, vocabs_url):
-        """Load CSV, validate headers and rows
-        
-        An import file must be a valid CSV file.
-        Each row must contain a valid DDR identifier.
-        All rows must represent the same kind of object.
-        All files must be children of the same kind of parent (entity,segment).
-        
-        Results dict includes:
-        - 'passed'
-        - 'headers'
-        - 'rowds'
-        - 'csv_errs'
-        - 'header_errs'
-        - 'rowds_errs'
-        
-        @param model: str
-        @param csv_path: Absolute path to CSV data file.
-        @param cidentifier: Identifier
-        @param vocabs_url: str URL or path to vocabs
-        @param session: requests.session object
-        @returns: list of validation errors
-        """
-        logging.info('Checking CSV file')
-        # Validate format of CSV and DDR IDs
-        logging.info('%s rows' % len(rowds))
-        id_errs = []
-        for rowd in rowds:
-            if rowd.get('id'):
-                try:
-                    rowd['identifier'] = identifier.Identifier(rowd['id'])
-                except identifier.InvalidIdentifierException:
-                    id_errs.append(f'Bad Identifier: {rowd["id"]}')
-            else:
-                rowd['identifier'] = None
-        # Validate file content
-        module = Checker._get_module(model)
-        vocabs = vocab.get_vocabs(config.VOCABS_URL)
-        validation_errs = Checker._validate_csv_file(
-            model, csv_path, rowds, headers, module, vocabs
-        )
-        return csv_errs,id_errs,validation_errs
     
     @staticmethod
     def check_eids(rowds, cidentifier, idservice_client):
@@ -336,56 +292,76 @@ class Checker():
         return valid_values
 
     @staticmethod
-    def _validate_csv_file(model, csv_path, rowds, headers, module, vocabs):
-        """Validate CSV headers and data against schema/field definitions
-        
-        @param model: str
-        @param rowds: list
-        @param csv_path: Absolute path to CSV data file.
-        @param module: modules.Module
-        @param vocabs: dict Output of _prep_valid_values()
-        @returns: list [header_errs, rowds_errs]
+    def validate_csv_identifiers(rowds):
+        """Return errors if object IDs are malformed
         """
-        # gather data
+        id_errs = []
+        for n,rowd in enumerate(rowds):
+            if rowd.get('id'):
+                try:
+                    rowd['identifier'] = identifier.Identifier(rowd['id'])
+                except identifier.InvalidInputException:
+                    id_errs.append(f'row {n}: Bad Identifier: {rowd["id"]}')
+                except identifier.InvalidIdentifierException:
+                    id_errs.append(f'row {n}: Bad Identifier: {rowd["id"]}')
+            else:
+                rowd['identifier'] = None
+        return id_errs
+
+    @staticmethod
+    def validate_csv_headers(model, headers, rowds):
+        module = Checker._get_module(model)
         field_names = module.field_names()
         # Files don't have an 'id' field but we have to have one in CSV
         if 'id' not in field_names:
             field_names.insert(0, 'id')
         nonrequired_fields = module.module.REQUIRED_FIELDS_EXCEPTIONS
-        required_fields = module.required_fields(nonrequired_fields)
-        valid_values = Checker._prep_valid_values(vocabs)
-        # check
-
-        logging.info('Validating headers')
         header_errs = csvfile.validate_headers(
             headers, field_names, exceptions=nonrequired_fields,
             additional=['access_path'],  # used for custom access files
         )
-        logging.info('Validating rows')
+        return header_errs
+
+    @staticmethod
+    def validate_csv_rowds(model, headers, rowds):
+        module = Checker._get_module(model)
+        required_fields = module.required_fields(
+            module.module.REQUIRED_FIELDS_EXCEPTIONS
+        )
+        valid_values = Checker._prep_valid_values(
+            vocab.get_vocabs(config.VOCABS_URL)
+        )
         find_dupes = True
         if model and (model == 'file'):
             find_dupes = False
-        try:
-            rowds_errs = csvfile.validate_rowds(
-                module, headers, required_fields, valid_values, rowds, find_dupes
-            )
-        except identifier.InvalidIdentifierException:
-            rowds_errs = []
+        rowds_errs = csvfile.validate_rowds(
+            module, headers, required_fields, valid_values, rowds, find_dupes
+        )
+        return rowds_errs
+
+    @staticmethod
+    def validate_csv_files(csv_path, rowds):
+        """Return errors if any files absent from filesystem or unreadble
+        """
         file_errs = []
-        if model == 'file' and 'basename_orig' in headers:
-            logging.info('Validating file imports')
-            for rowd in rowds:
-                if rowd.get('external') and rowd['external']:
-                    # no need to check for existence of external files
-                    continue
-                path = os.path.join(os.path.dirname(csv_path), rowd['basename_orig'])
-                if not os.path.exists(path):
-                    file_errs.append({'Missing file': path}); continue
-                if not os.path.isfile(path):
-                    file_errs.append({'Not a file': path}); continue
-                if not os.access(path, os.R_OK):
-                    file_errs.append({'Not readable': path}); continue
-        return header_errs,rowds_errs,file_errs
+        TRUTHS = [True, 'true', 'True', 'TRUE', 'yes', 'y']
+        for n,rowd in enumerate(rowds):
+            if rowd.get('external') and rowd['external'] and rowd['external'] in TRUTHS:
+                # no need to check for existence of external files
+                continue
+            if not rowd.get('basename_orig'):
+                file_errs.append(
+                    "No 'basename_orig' field. "
+                    "This field is required for importing files."
+                )
+                break
+            path = os.path.join(os.path.dirname(csv_path), rowd['basename_orig'])
+            if not os.path.exists(path):
+                file_errs.append(f"row {n}: Missing file: {path}"); continue
+            if not os.access(path, os.R_OK):
+                file_errs.append(f"row {n}: Unreadable file: {path}"); continue
+        return file_errs
+
 
 class ModifiedFilesError(Exception):
     pass
@@ -576,10 +552,12 @@ class Importer():
         """
         oids = {}
         for rowd in rowds:
-            fi = identifier.Identifier(
-                id=rowd['id'],
-                base_path=cidentifier.basepath
-            )
+            try:
+                fi = identifier.Identifier(rowd['id'], cidentifier.basepath)
+            except identifier.InvalidInputException:
+                continue
+            except identifier.InvalidIdentifierException:
+                continue
             if fi.model == 'file':
                 oids[fi.id] = fi
         return oids
@@ -604,10 +582,12 @@ class Importer():
         }
         # new files (these will be the Files' parent Entity identifiers)
         for rowd in rowds:
-            fi = identifier.Identifier(
-                id=rowd['id'],
-                base_path=cidentifier.basepath
-            )
+            try:
+                fi = identifier.Identifier(rowd['id'], cidentifier.basepath)
+            except identifier.InvalidInputException:
+                continue
+            except identifier.InvalidIdentifierException:
+                continue
             if fi.model != 'file':
                 oids[fi.id] = fi
         return oids
