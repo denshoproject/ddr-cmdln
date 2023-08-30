@@ -99,16 +99,13 @@ def check(model, csv, collection, username, password, idservice):
     """Validates CSV file, performs integrity checks.
     """
     start = datetime.now()
-    
     csv_path,collection_path = make_paths(csv, collection)
     ci = identifier.Identifier(collection_path)
     logging.debug(ci)
     headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
     run_checks(
-        model, csv_path, rowds, headers, csv_errs, ci,
-        config.VOCABS_URL, idservice_client=None
+        model, ci, csv_path, headers, rowds, csv_errs,
     )
-    
     finish = datetime.now()
     elapsed = finish - start
     logging.info('DONE - %s elapsed' % elapsed)
@@ -162,9 +159,8 @@ def entity(csv, collection, user, mail, username, password, idservice, nocheck, 
     headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
     if not nocheck:
         run_checks(
-            'entity', csv_path, rowds, headers, csv_errs, ci,
-            config.VOCABS_URL,
-            idservice_api_login(username, password, idservice)
+            'entity', ci, csv_path, headers, rowds, csv_errs,
+            idservice_api_login(username, password, idservice),
         )
     #row_start,row_end = rows_start_end(fromto)
     imported = batch.Importer.import_entities(
@@ -205,8 +201,7 @@ def file(csv, collection, user, mail, nocheck, dryrun, fromto, log):
     headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
     if not nocheck:
         run_checks(
-            'file', csv_path, rowds, headers, csv_errs, ci,
-            config.VOCABS_URL, idservice_client=None,
+            'file', ci, csv_path, headers, rowds, csv_errs,
             log_path=log,
         )
     row_start,row_end = rows_start_end(fromto)
@@ -281,7 +276,7 @@ def make_paths(csv, collection):
         sys.exit(1)
     return csv_path,collection_path
 
-def run_checks(model, csv_path, rowds, headers, csv_errs, ci, vocabs_url, log_path=None, idservice_client=None):
+def run_checks(model, ci, csv_path, headers, rowds, csv_errs, log_path=None, idservice_client=None):
     """run checks on the CSV doc,repo and quit if errors
     """
     logging.info('Validating headers')
