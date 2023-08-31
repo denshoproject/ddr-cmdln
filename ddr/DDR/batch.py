@@ -346,8 +346,11 @@ class Checker():
         file_errs = []
         TRUTHS = [True, 'true', 'True', 'TRUE', 'yes', 'y']
         for n,rowd in enumerate(rowds):
+            # no need to check files for metadata-only updates
+            if rowd.get('identifier') and rowd['identifier'].model == 'file':
+                continue
+            # no need to check for existence of external files
             if rowd.get('external') and rowd['external'] and rowd['external'] in TRUTHS:
-                # no need to check for existence of external files
                 continue
             if not rowd.get('basename_orig'):
                 file_errs.append(

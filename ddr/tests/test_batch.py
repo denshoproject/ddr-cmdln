@@ -184,6 +184,20 @@ class TestChecker():
         imports_dir.mkdir(parents=True)
         with csv_path.open('w') as f:
             f.write('csv file')
+        # metadata update (no import)
+        invalid_path = imports_dir / 'invalid_file'
+        rowds = [{
+            'identifier': identifier.Identifier('ddr-testing-123-456'),
+            'basename_orig': invalid_path, 'external': False,
+        }]  # first-time import so check file
+        out = batch.Checker.validate_csv_files(csv_path, rowds)
+        assert 'Missing file' in out[0]  # file missing -> error
+        rowds = [{
+            'identifier': identifier.Identifier('ddr-testing-123-456-master-abc123'),
+            'basename_orig': invalid_path, 'external': False
+        }]  # existing file so don't check file
+        out = batch.Checker.validate_csv_files(csv_path, rowds)
+        assert out == []  # no file but we don't care bc only update
         # external file
         valid_path = imports_dir / 'valid_file'
         rowds = [{'basename_orig': valid_path, 'external': True}]
