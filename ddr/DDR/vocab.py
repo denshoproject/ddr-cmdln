@@ -96,6 +96,7 @@ import logging
 logger = logging.getLogger(__name__)
 import multiprocessing
 import os
+from pathlib import Path
 import io
 import sys
 from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
@@ -594,18 +595,13 @@ def _get_vocabs_all_fs(base, exclude=['index','narrators']):
     @param exclude: list
     @returns: dict
     """
-    data = {}
-    for vocab in os.listdir(base):
-        is_json = '.json' in vocab
-        excluded = False
-        for e in exclude:
-            if e in vocab:
-                excluded = True
-        if is_json and not excluded:
-            key = vocab.replace('.json','')
-            val = _get_vocab_fs(os.path.join(base, vocab))
-            data[key] = val
-    return data
+    base = Path(base)
+    index = json.loads(fileio.read_text(base / 'index.json'))
+    return {
+        vocab: _get_vocab_fs(base / filename)
+        for vocab,filename in index.items()
+        if vocab not in exclude
+    }
 
 def _get_vocabs_all_http(base_url, exclude=['index','narrators']):
     """Get JSON vocab files, excluding index and narrators.
