@@ -646,7 +646,7 @@ class Importer():
             if obj and (obj.identifier.model in identifier.NODES):
                 obj_is_node = True
             if obj and obj_is_node:
-                json_exists = obj.exists()
+                json_exists = Path(obj.json_path).exists()
             else:
                 json_exists = False
             # decide
