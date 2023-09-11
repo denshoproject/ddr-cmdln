@@ -110,22 +110,6 @@ class TestChecker():
         assert staged == ['file0']
         assert modified == ['file0']
 
-    #def test_check_csv(self, test_base_dir, collection_identifier):
-    #    csv_path = test_base_dir / 'test.csv'
-    #    vocabs_url = config.VOCABS_URL
-    #    print(f'{csv_path=}')
-    #    # prep csv
-    #    headers = ['id','title']
-    #    rowds = [
-    #        {'id':'ddr-densho-123-1', 'title':'just testing'},
-    #        {'id':'ddr--123-2', 'title':'moar testing'},
-    #    ]
-    #    fileio.write_csv(csv_path, headers, rowds)
-    #    #
-    #    results = batch.Checker.check_csv(csv_path, collection_identifier, vocabs_url)
-    #    print(f'{results=}')
-    #    assert 0
-
     # TODO def test_check_eids(self):
 
     # TODO def test_get_module(self):
@@ -177,8 +161,64 @@ class TestChecker():
             'language': ['eng', 'jpn']
         }
         assert batch.Checker._prep_valid_values(json_texts) == expected
+
+    def test_validate_csv_identifiers(self):
+        # good
+        out = batch.Checker.validate_csv_identifiers([{'id':'ddr-densho-123-456'}])
+        assert out == []
+        # malformed
+        out = batch.Checker.validate_csv_identifiers([{'id':'ddr-densho-densho'}])
+        assert 'Bad Identifier' in out[0]
+        out = batch.Checker.validate_csv_identifiers([{'id':'ddr-densho--123'}])
+        assert 'Bad Identifier' in out[0]
+        out = batch.Checker.validate_csv_identifiers([{'id':'ddr.densho.123'}])
+        assert 'Bad Identifier' in out[0]
     
-    # TODO def test_validate_csv_file(self):
+    # def test_validate_csv_headers  SEE test_csvfile.test_validate_headers
+    # def test_validate_csv_rowds  SEE test_csvfile.test_validate_rowds
+
+    def test_validate_csv_files(self, test_base_dir):
+        # setup fake imports dir
+        imports_dir = Path(test_base_dir) / 'validate_files'
+        csv_path = imports_dir / 'import.csv'
+        imports_dir.mkdir(parents=True)
+        with csv_path.open('w') as f:
+            f.write('csv file')
+        # metadata update (no import)
+        invalid_path = imports_dir / 'invalid_file'
+        rowds = [{
+            'identifier': identifier.Identifier('ddr-testing-123-456'),
+            'basename_orig': invalid_path, 'external': False,
+        }]  # first-time import so check file
+        out = batch.Checker.validate_csv_files(csv_path, rowds)
+        assert 'Missing file' in out[0]  # file missing -> error
+        rowds = [{
+            'identifier': identifier.Identifier('ddr-testing-123-456-master-abc123'),
+            'basename_orig': invalid_path, 'external': False
+        }]  # existing file so don't check file
+        out = batch.Checker.validate_csv_files(csv_path, rowds)
+        assert out == []  # no file but we don't care bc only update
+        # external file
+        valid_path = imports_dir / 'valid_file'
+        rowds = [{'basename_orig': valid_path, 'external': True}]
+        assert batch.Checker.validate_csv_files(csv_path, rowds) == []
+        # valid, present file
+        valid_path = imports_dir / 'valid_file'
+        with valid_path.open('w') as f:
+            f.write('valid_path')
+        rowds = [{'basename_orig': valid_path, 'external': False}]
+        assert batch.Checker.validate_csv_files(csv_path, rowds) == []
+        rowds = [{'basename_orig': valid_path}]
+        assert batch.Checker.validate_csv_files(csv_path, rowds) == []
+        # not exists
+        missing_path = imports_dir / 'missing_file'
+        rowds = [{'basename_orig': missing_path}]
+        out = batch.Checker.validate_csv_files(csv_path, rowds)
+        assert out and out[0]
+        assert 'Missing file' in out[0]
+        assert str(missing_path) in out[0]
+        # not os.R_OK
+        # TODO how to make a file unreadable to test this?
 
 
 class TestImporter():

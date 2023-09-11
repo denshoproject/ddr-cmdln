@@ -99,16 +99,13 @@ def check(model, csv, collection, username, password, idservice):
     """Validates CSV file, performs integrity checks.
     """
     start = datetime.now()
-    
     csv_path,collection_path = make_paths(csv, collection)
     ci = identifier.Identifier(collection_path)
     logging.debug(ci)
     headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
     run_checks(
-        'file', csv_path, rowds, headers, csv_errs, ci,
-        config.VOCABS_URL, idservice_client=None
+        model, ci, csv_path, headers, rowds, csv_errs,
     )
-    
     finish = datetime.now()
     elapsed = finish - start
     logging.info('DONE - %s elapsed' % elapsed)
@@ -162,9 +159,8 @@ def entity(csv, collection, user, mail, username, password, idservice, nocheck, 
     headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
     if not nocheck:
         run_checks(
-            'entity', csv_path, rowds, headers, csv_errs, ci,
-            config.VOCABS_URL,
-            idservice_api_login(username, password, idservice)
+            'entity', ci, csv_path, headers, rowds, csv_errs,
+            idservice_api_login(username, password, idservice),
         )
     #row_start,row_end = rows_start_end(fromto)
     imported = batch.Importer.import_entities(
@@ -205,8 +201,7 @@ def file(csv, collection, user, mail, nocheck, dryrun, fromto, log):
     headers,rowds,csv_errs = csvfile.make_rowds(fileio.read_csv(csv_path))
     if not nocheck:
         run_checks(
-            'file', csv_path, rowds, headers, csv_errs, ci,
-            config.VOCABS_URL, idservice_client=None,
+            'file', ci, csv_path, headers, rowds, csv_errs,
             log_path=log,
         )
     row_start,row_end = rows_start_end(fromto)
@@ -281,25 +276,31 @@ def make_paths(csv, collection):
         sys.exit(1)
     return csv_path,collection_path
 
-def run_checks(model, csv_path, rowds, headers, csv_errs, ci, vocabs_url, log_path=None, idservice_client=None):
+def run_checks(model, ci, csv_path, headers, rowds, csv_errs, log_path=None, idservice_client=None):
     """run checks on the CSV doc,repo and quit if errors
     """
-    # csv
-    csv_errs,id_errs,validation_errs = batch.Checker.check_csv(
-        model, csv_path, rowds, headers, csv_errs, ci, vocabs_url
-    )
-    header_errs,rowds_errs,file_errs = validation_errs
-    for err in csv_errs: logging.error(f'CSV: {err}')
-    for err in id_errs: logging.error(f'Identifier: {err}')
+    logging.info('Validating headers')
+    header_errs = batch.Checker.validate_csv_headers(model, headers, rowds)
+    logging.info('Validating rows')
+    rowds_errs = batch.Checker.validate_csv_rowds(model, headers, rowds)
+    logging.info('Validating object IDs')
+    id_errs = batch.Checker.validate_csv_identifiers(rowds)
+    file_errs = []
+    if model == 'file':
+        logging.info('Validating files')
+        file_errs = batch.Checker.validate_csv_files(csv_path, rowds)
+    for err in csv_errs:
+        logging.error(f'CSV: {err}')
     for key,val in header_errs.items():
         logging.error(f"CSV header: {key}: {','.join(val)}")
+    for err in id_errs:
+        logging.error(f"- {err}")
     for err,items in rowds_errs.items():
         logging.error(err)
         for item in items:
-            logging.error(item)
+            logging.error(f"- {item}")
     for err in file_errs:
-        for key,val in err.items():
-            logging.error(f"{key}: {val}")
+        logging.error(f"- {err}")
     # repository
     staged,modified = batch.Checker.check_repository(ci)
     for f in staged: logging.error(f'staged: {f}')

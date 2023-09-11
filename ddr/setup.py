@@ -53,6 +53,8 @@ setup(
     packages = [
         'DDR',
         'DDR.cli',
+        'DDR.models',
+        'DDR.templates',
     ],
     include_package_data = True,
     package_dir = {
