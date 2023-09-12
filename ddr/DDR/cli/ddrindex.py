@@ -67,9 +67,12 @@ import logging
 logger = logging.getLogger(__name__)
 import os
 import sys
+import time
 
 import click
 import elasticsearch
+
+from elastictools.docstore import cluster as docstore_cluster
 
 from DDR import config
 from DDR import docstore
@@ -115,8 +118,18 @@ def format_json(data, pretty=False):
         )
     return json.dumps(data, default=_json_handler)
 
-def get_docstore(hosts):
-    ds = docstore.DocstoreManager(docstore.INDEX_PREFIX, hosts, config)
+
+class FakeSettings():
+    def __init__(self, host):
+        self.DOCSTORE_HOST = host
+        self.DOCSTORE_SSL_CERTFILE = config.DOCSTORE_SSL_CERTFILE
+        self.DOCSTORE_USERNAME = config.DOCSTORE_USERNAME
+        self.DOCSTORE_PASSWORD = config.DOCSTORE_PASSWORD
+
+def get_docstore(host=config.DOCSTORE_HOST):
+    ds = docstore.DocstoreManager(
+        docstore.INDEX_PREFIX, host, FakeSettings(host)
+    )
     try:
         ds.es.info()
     except Exception as err:
@@ -173,93 +186,109 @@ def create(hosts):
         logprint('error', err)
 
 
-@ddrindex.command()
-@click.option('--hosts','-h',
-              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
-              help='Elasticsearch hosts.')
-@click.argument('indices')
-@click.argument('snapshot')
-def backup(hosts, indices, snapshot):
-    """Make a snapshot backup of specified indices.
-    
-    """
-    ds = get_docstore(hosts)
-    indices = [i.strip() for i in indices.split(',')]
-    try:
-        r = ds.backup(snapshot, indices)
-    except Exception as err:
-        logprint('error', err)
-        r = {}
-        click.echo('Checklist:')
-        click.echo(
-            '- Check value of [public] docstore_path_repo in ddrlocal.cfg ({})'.format(
-                config.ELASTICSEARCH_PATH_REPO
-        ))
-        click.echo('- path.repo must be set in elasticsearch.yml on each node of cluster.')
-        click.echo('- path.repo must be writable on each node of cluster.')
-    if r:
-        click.echo('repository: {}'.format(r['repository']))
-        # snapshot feedback
-        if r['snapshot'].get('accepted') and r['snapshot']['accepted']:
-            # snapshot started
-            click.echo('Backup started. Reissue command for status updates.')
-        elif r['snapshot'].get('accepted') and not r['snapshot']['accepted']:
-            # problem
-            click.echo('Error: problem with backup!')
-        elif r['snapshot'].get('snapshots'):
-            # in progress or SUCCESS
-            for s in r['snapshot']['snapshots']:
-                click.echo('{}  {} {}'.format(
-                    s['start_time'],
-                    s['snapshot'],
-                    ','.join(s['indices']),
-                ))
-                click.echo('{}  {}'.format(
-                    s.get('end_time'),
-                    s['state'],
-                ))
-                if s['state'] != 'SUCCESS':
-                    click.echo(s)
-        else:
-            click.echo('snapshot:   {}'.format(r['snapshot']))
+#@ddrindex.command()
+#@click.option('--hosts','-h',
+#              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+#              help='Elasticsearch hosts.')
+#@click.argument('indices')
+#@click.argument('snapshot')
+#def backup(hosts, indices, snapshot):
+#    """Make a snapshot backup of specified indices.
+#    
+#    """
+#    ds = get_docstore(hosts)
+#    indices = [i.strip() for i in indices.split(',')]
+#    try:
+#        r = ds.backup(snapshot, indices)
+#    except Exception as err:
+#        logprint('error', err)
+#        r = {}
+#        click.echo('Checklist:')
+#        click.echo(
+#            '- Check value of [public] docstore_path_repo in ddrlocal.cfg ({})'.format(
+#                config.ELASTICSEARCH_PATH_REPO
+#        ))
+#        click.echo('- path.repo must be set in elasticsearch.yml on each node of cluster.')
+#        click.echo('- path.repo must be writable on each node of cluster.')
+#    if r:
+#        click.echo('repository: {}'.format(r['repository']))
+#        # snapshot feedback
+#        if r['snapshot'].get('accepted') and r['snapshot']['accepted']:
+#            # snapshot started
+#            click.echo('Backup started. Reissue command for status updates.')
+#        elif r['snapshot'].get('accepted') and not r['snapshot']['accepted']:
+#            # problem
+#            click.echo('Error: problem with backup!')
+#        elif r['snapshot'].get('snapshots'):
+#            # in progress or SUCCESS
+#            for s in r['snapshot']['snapshots']:
+#                click.echo('{}  {} {}'.format(
+#                    s['start_time'],
+#                    s['snapshot'],
+#                    ','.join(s['indices']),
+#                ))
+#                click.echo('{}  {}'.format(
+#                    s.get('end_time'),
+#                    s['state'],
+#                ))
+#                if s['state'] != 'SUCCESS':
+#                    click.echo(s)
+#        else:
+#            click.echo('snapshot:   {}'.format(r['snapshot']))
+#
+#
+#@ddrindex.command()
+#@click.option('--hosts','-h',
+#              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
+#              help='Elasticsearch hosts.')
+#@click.argument('indices')
+#@click.argument('snapshot')
+#def restore(hosts, indices, snapshot):
+#    """Restore a snapshot backup.
+#    """
+#    ds = get_docstore(hosts)
+#    indices = [i.strip() for i in indices.split(',')]
+#    r = ds.restore_snapshot(snapshot, indices)
+#    click.echo(r)
 
 
 @ddrindex.command()
-@click.option('--hosts','-h',
-              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
-              help='Elasticsearch hosts.')
-@click.argument('indices')
-@click.argument('snapshot')
-def restore(hosts, indices, snapshot):
-    """Restore a snapshot backup.
-    """
-    ds = get_docstore(hosts)
-    indices = [i.strip() for i in indices.split(',')]
-    r = ds.restore_snapshot(snapshot, indices)
-    click.echo(r)
-
-
-@ddrindex.command()
-@click.option('--hosts','-h',
-              default=config.DOCSTORE_HOST, envvar='DOCSTORE_HOST',
-              help='Elasticsearch hosts.')
-@click.option('--confirm', is_flag=True,
-              help='Yes I really want to delete this index.')
-def destroy(hosts, confirm):
+@click.option('--confirm', is_flag=True, help='Yes I really want to destroy this database.')
+@click.argument('host')
+def destroy(confirm, host):
     """Delete indices (requires --confirm).
     
     \b
     It's meant to sound serious. Also to not clash with 'delete', which
     is for individual documents.
     """
-    ds = get_docstore(hosts)
+    ds = get_docstore(host)
+    cluster = docstore_cluster(config.DOCSTORE_CLUSTERS, ds.host)
     if confirm:
+        click.echo(
+            f"The {cluster} cluster ({ds.host}) with the following indices "
+            + "will be DESTROYED!"
+        )
+        for index in identifier.ELASTICSEARCH_CLASSES['all']:
+            click.echo(f"- {index['doc_type']}")
+    else:
+        click.echo(
+            f"Add '--confirm' to destroy the {cluster} cluster ({ds.host})."
+        )
+        sys.exit(0)
+    response = click.prompt(
+        'Do you want to continue? [yes/no]',
+        default='no', show_default=False
+    )
+    if response == 'yes':
+        click.echo(f"Deleting indices from {ds.host} ({cluster}).")
+        time.sleep(3)
         try:
             ds.delete_indices()
         except Exception as err:
             logprint('error', err)
     else:
-        click.echo("Add '--confirm' if you're sure you want to do this.")
+        click.echo("Cancelled.")
 
 
 @ddrindex.command()
@@ -352,10 +381,21 @@ def publish(hosts, recurse, force, b2, path):
         except Exception as err:
             click.echo(f'ERROR: {err}')
             sys.exit(1)
-    status = ds.post_multi(
-        path, recursive=recurse, force=force, backblaze=backblaze
-    )
-    click.echo(status)
+    if path == '-':  # path from STDIN
+        paths = click.get_text_stream('stdin').read().strip().split('\n')
+    else:
+        paths = [path]
+    statuses = {}
+    for path in paths:
+        status = ds.post_multi(
+            path, recursive=recurse, force=force, backblaze=backblaze
+        )
+        click.echo(status)
+        statuses[path] = status
+    if len(statuses.items()) > 1:
+        click.echo('----------')
+        for path,status in statuses.items():
+            click.echo(f"{path} {status}")
 
 
 @ddrindex.command()
@@ -380,8 +420,13 @@ def org(hosts, path):
     """Post the organization record to Elasticsearch
     """
     ds = get_docstore(hosts)
-    status = ds.org(path)
-    click.echo(status)
+    if path == '-':  # path from STDIN
+        paths = click.get_text_stream('stdin').read().strip().split('\n')
+    else:
+        paths = [path]
+    for path in paths:
+        status = ds.org(path)
+        click.echo(status)
 
 
 @ddrindex.command()
@@ -409,7 +454,12 @@ def delete(hosts, recurse, confirm, object_id):
     """
     ds = get_docstore(hosts)
     if confirm:
-        click.echo(ds.delete(object_id, recursive=recurse))
+        if object_id == '-':  # objectids from STDIN
+            object_ids = click.get_text_stream('stdin').read().strip().split('\n')
+        else:
+            object_ids = [object_id]
+        for object_id in object_ids:
+            click.echo(ds.delete(object_id, recursive=recurse))
     else:
         click.echo("Add '--confirm' if you're sure you want to do this.")
 
@@ -424,7 +474,12 @@ def exists(hosts, doctype, object_id):
     """Indicate whether the specified document exists
     """
     ds = get_docstore(hosts)
-    click.echo(ds.exists(doctype, object_id))
+    if object_id == '-':  # objectids from STDIN
+        object_ids = click.get_text_stream('stdin').read().strip().split('\n')
+    else:
+        object_ids = [object_id]
+    for object_id in object_ids:
+        click.echo(ds.exists(doctype, object_id))
 
 
 @ddrindex.command()
@@ -439,11 +494,16 @@ def get(hosts, json, doctype, object_id):
     """
     ds = get_docstore(hosts)
     es_class = identifier.ELASTICSEARCH_CLASSES_BY_MODEL[doctype]
-    document = ds.get(doctype, es_class, object_id)
-    if json:
-        click.echo(format_json(document.to_dict()))
+    if object_id == '-':  # objectids from STDIN
+        object_ids = click.get_text_stream('stdin').read().strip().split('\n')
     else:
-        click.echo(document)
+        object_ids = [object_id]
+    for object_id in object_ids:
+        document = ds.get(doctype, es_class, object_id)
+        if json:
+            click.echo(format_json(document.to_dict()))
+        else:
+            click.echo(document)
 
 
 @ddrindex.command()
@@ -456,7 +516,12 @@ def url(hosts, doctype, object_id):
     """Get Elasticsearch URL for document
     """
     ds = get_docstore(hosts)
-    click.echo(ds.url(doctype, object_id))
+    if object_id == '-':  # objectids from STDIN
+        object_ids = click.get_text_stream('stdin').read().strip().split('\n')
+    else:
+        object_ids = [object_id]
+    for object_id in object_ids:
+        click.echo(ds.url(doctype, object_id))
 
 
 @ddrindex.command()
@@ -469,13 +534,13 @@ def status(hosts):
     More detail since you asked.
     """
     logprint('debug', '------------------------------------------------------------------------',0)
-    logprint('debug', 'Elasticsearch',0)
     if hosts != config.DOCSTORE_HOST:
-        logprint('debug', f'DOCSTORE_HOST  {hosts} (default {config.DOCSTORE_HOST})', 0)
+        logprint('debug', f'Elasticsearch {hosts} (default {config.DOCSTORE_HOST})', 0)
     else:
-        logprint('debug', f'DOCSTORE_HOST  {hosts}', 0)
-    
+        logprint('debug', f'Elasticsearch {hosts}', 0)
     ds = get_docstore(hosts)
+    cluster = docstore_cluster(config.DOCSTORE_CLUSTERS, ds.host)
+    click.echo(f"{ds} ({cluster})")
     s = ds.status()
     try:
         pingable = ds.es.ping()

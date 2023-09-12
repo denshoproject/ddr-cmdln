@@ -126,6 +126,7 @@ DOCSTORE_ENABLED = CONFIG.getboolean('local','docstore_enabled')
 DOCSTORE_TIMEOUT = int(CONFIG.get('local','docstore_timeout'))
 DOCSTORE_HOST_LOCAL = CONFIG.get('local','docstore_host')
 DOCSTORE_SSL_CERTFILE = CONFIG.get('public', 'docstore_ssl_certfile')
+DOCSTORE_CLUSTERS = CONFIG.get('public', 'docstore_clusters')
 DOCSTORE_HOST = CONFIG.get('public','docstore_host')
 DOCSTORE_USERNAME = 'elastic'
 DOCSTORE_PASSWORD = CONFIG.get('public', 'docstore_password')

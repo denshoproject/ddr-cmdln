@@ -2,6 +2,7 @@ import configparser
 import json
 import logging
 import os
+from pathlib import Path
 import sys
 logger = logging.getLogger(__name__)
 
@@ -13,6 +14,7 @@ from DDR import fileio
 from DDR import identifier
 from DDR import idservice
 from DDR import models
+from DDR import util
 
 config_parser = configparser.ConfigParser()
 configs_read = config_parser.read(config.CONFIG_FILES)
@@ -145,6 +147,46 @@ def exists(objectid, username, password):
     ic = _idservice_login(username, password)
     data = ic.check_object_id(objectid)
     click.echo('%s: %s' % (objectid, data['registered']))
+
+@ddr.command()
+@click.argument('path')
+@click.option('--partners', '-p', default='', help='One or more partners, comma separated.')
+@click.option('--show-inprogress', is_flag=True, help='Include in-progress collections/objects.')
+@click.option('--show-private', is_flag=True, help='Include private collections/objects.')
+@click.option('--testing', is_flag=True, help='Include ddr-testing collections.')
+def list(path, partners, show_inprogress, show_private, testing):
+    """List collections with filters
+    """
+    models = ['collection']
+    if partners:
+        partners = partners.strip().split(',')
+    else:
+        partners = []
+    TRUTHY = [
+        True, 'True', 'true', 't', 1, '1'
+    ]
+    for p in sorted([p for p in Path(path).iterdir()]):
+        try:
+            oi = identifier.Identifier(str(p))
+        except identifier.InvalidIdentifierException as err:
+            continue
+        if oi.model not in models:
+            continue
+        if partners and (oi.parts['org'] not in partners):
+            continue
+        if (oi.parts['org'] == 'testing') \
+        and not (testing or oi.parts['org'] in partners):
+            continue
+        try:
+            o = oi.object()
+        except IOError:
+            # some repos have missing collection.json
+            continue
+        if not (show_inprogress or o.status == 'completed'):
+            continue
+        if not (show_private or o.public in TRUTHY):
+            continue
+        click.echo(str(p))
 
 @ddr.command()
 @click.argument('objectid')
