@@ -739,7 +739,7 @@ def text_to_bracketids(text: str,
 # 
 # text = "Masuda, Kikuye [42]:narrator"
 # data = [
-#     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42}
+#     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'oh_id': 42}
 # ]
 # 
 # text = "Watanabe, Joe:author; Masuda, Kikuye:narrator"
@@ -749,11 +749,11 @@ def text_to_bracketids(text: str,
 # ]
 # text = [
 #     {'namepart': 'Watanabe, Joe', 'role': 'author'}
-#     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42}
+#     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'oh_id': 42}
 # ]
 # data = [
 #     {'namepart': 'Watanabe, Joe', 'role': 'author'}
-#     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'id': 42}
+#     {'namepart': 'Masuda, Kikuye', 'role': 'narrator', 'oh_id': 42}
 # ]
 #
 
@@ -775,12 +775,10 @@ def _parse_rolepeople_text(texts, default):
             item = copy.deepcopy(default)
             
             if ('|' in txt) and (':' in txt):
-                # ex: "namepart:Sadako Kashiwagi|role:narrator|id:856"
+                # ex: "namepart:Sadako Kashiwagi|role:narrator|oh_id:856"
                 for chunk in txt.split('|'):
                     key,val = chunk.split(':')
                     item[key.strip()] = val.strip()
-                if item.get('name') and not item.get('namepart'):
-                    item['namepart'] = item.pop('name')
             
             elif ':' in txt:
                 # ex: "Sadako Kashiwagi:narrator"
@@ -798,13 +796,32 @@ def _parse_rolepeople_text(texts, default):
                 # ex: "Sadako Kashiwagi"
                 item['namepart'] = txt
             
+            # obsolete/original narrator ID format: 'Masuda, Kikuye [42]'
+            if item.get('role') and item['role'] == 'narrator' and not item.get('oh_id'):
+                # "namepart: Masuda, Kikuye [42] | role: narrator"
+                m = re.search('([\w\s,-]+) \[(\d+)]', item['namepart'])
+                if m and m.groups() and len(m.groups()) == 2:
+                    item['namepart'] = m.groups()[0]
+                    item['oh_id'] = m.groups()[1]
+                # "Masuda, Kikuye [42]:narrator"
+                m1 = re.search('([\w\s,-]+) \[(\d+)]:narrator', txt)
+                if m1 and m1.groups() and len(m1.groups()) == 2:
+                    item['namepart'] = m1.groups()[0]
+                    item['oh_id'] = m1.groups()[1]
+            
+            # convert old 'id' to oral history id
+            if item.get('name') and not item.get('namepart'):
+                item['namepart'] = item.pop('name')
+            if item.get('id'):
+                item['oh_id'] = item.pop('id')
+            
             # extract person ID if present
             match = _is_text_bracketid(item.get('namepart',''))
             if match:
                 item['namepart'] = match.groupdict()['term'].strip()
-                item['id'] = match.groupdict()['id'].strip()
-            if item.get('id') and item['id'].isdigit():
-                item['id'] = int(item['id'])
+                #item['oh_id'] = match.groupdict()['oh_id'].strip()
+            if item.get('oh_id') and item['oh_id'].isdigit():
+                item['oh_id'] = int(item['oh_id'])
             
             data.append(item)
     return data
