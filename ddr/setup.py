@@ -72,7 +72,6 @@ setup(
         ddrconfig=DDR.cli.ddrconfig:ddrconfig
         ddrdesc=DDR.cli.ddrdesc:ddrdesc
         ddrexport=DDR.cli.ddrexport:ddrexport
-        ddrfar=DDR.cli.ddrfar:ddrfar
         ddrindex=DDR.cli.ddrindex:ddrindex
         ddrinfo=DDR.cli.ddrinfo:ddrinfo
         ddrimport=DDR.cli.ddrimport:ddrimport
