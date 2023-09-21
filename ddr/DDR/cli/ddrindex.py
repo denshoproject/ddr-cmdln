@@ -270,7 +270,7 @@ def destroy(confirm, host):
             + "will be DESTROYED!"
         )
         for index in identifier.ELASTICSEARCH_CLASSES['all']:
-            click.echo(f"- {index['doc_type']}")
+            click.echo(f"- {index}")
     else:
         click.echo(
             f"Add '--confirm' to destroy the {cluster} cluster ({ds.host})."
