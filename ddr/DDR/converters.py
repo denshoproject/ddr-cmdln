@@ -758,21 +758,33 @@ def text_to_bracketids(text: str,
 #
 
 def _filter_rolepeople(data: List[Dict[str,str]]) -> List[Dict[str,str]]:
-    """filters out items with empty nameparts
+    """Processes persons/creators data already in list-of-dicts format
+    filters out items with empty nameparts
     prevents this: [{'namepart': '', 'role': 'author'}]
     """
-    return [
+    data = [
         item for item in data
         if item.get('namepart')  # and item.get('role')
     ]
+    # convert old 'id' to oral history id
+    for item in data:
+        if item.get('id'):
+            item['oh_id'] = item.pop('id')
+        # make sure oh_id is int
+        if item.get('oh_id'):
+            item['oh_id'] = int(item['oh_id'])
+    return data
 
 # TODO add type hints
 def _parse_rolepeople_text(texts, default):
+    """Parses rolepeople format used to represent persons/creators in CSV
+    """
     data = []
     for text in _unroll_gloppy_list(texts):
         txt = text.strip()
         if txt:
             item = copy.deepcopy(default)
+            # TODO clean this up
             
             if ('|' in txt) and (':' in txt):
                 # ex: "namepart:Sadako Kashiwagi|role:narrator|oh_id:856"
@@ -809,18 +821,22 @@ def _parse_rolepeople_text(texts, default):
                     item['namepart'] = m1.groups()[0]
                     item['oh_id'] = m1.groups()[1]
             
-            # convert old 'id' to oral history id
+            # convert old 'name' to 'namepart'
             if item.get('name') and not item.get('namepart'):
                 item['namepart'] = item.pop('name')
+
+            # convert old 'id' to oral history id
             if item.get('id'):
                 item['oh_id'] = item.pop('id')
             
-            # extract person ID if present
+            # old bracketid format
             match = _is_text_bracketid(item.get('namepart',''))
             if match:
                 item['namepart'] = match.groupdict()['term'].strip()
                 #item['oh_id'] = match.groupdict()['oh_id'].strip()
-            if item.get('oh_id') and item['oh_id'].isdigit():
+
+            # make sure oh_id is int
+            if item.get('oh_id'):
                 item['oh_id'] = int(item['oh_id'])
             
             data.append(item)
@@ -851,9 +867,9 @@ def text_to_rolepeople(text: str, default: dict) -> List[Dict[str,str]]:
     
     # might already be listofdicts or listofstrs
     if isinstance(text, list):
-        if _is_listofdicts(text):
+        if _is_listofdicts(text):  # from JSON
             return _filter_rolepeople(text)
-        elif _is_listofstrs(text):
+        elif _is_listofstrs(text): # from CSV
             data = _parse_rolepeople_text(text, default)
             return _filter_rolepeople(data)
     
