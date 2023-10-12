@@ -167,6 +167,12 @@ def clone(user_name, user_mail, identifier, dest_path):
     @return: message ('ok' if successful)
     """
     git_url = '{}:{}.git'.format(config.GITOLITE, identifier.id)
+    # Raise exception if repository does not exist
+    gitolite = dvcs.Gitolite(config.GITOLITE)
+    gitolite.initialize()
+    if not identifier.id in gitolite.repos():
+        raise Exception(f'{git_url} must be created before it can be cloned.')
+    # clone from Gitolite
     repo = git.Repo.clone_from(git_url, dest_path)
     logging.debug('    git clone {}'.format(git_url))
     if repo:
@@ -220,11 +226,13 @@ def create(user_name, user_mail, identifier, agent=''):
     @param agent: (optional) Name of software making the change.
     @return: message ('ok' if successful)
     """
+    git_url = '{}:{}.git'.format(config.GITOLITE, identifier.id)
+    # Raise exception if repository already exists
     gitolite = dvcs.Gitolite(config.GITOLITE)
     gitolite.initialize()
     if identifier.id in gitolite.collections():
-        raise Exception("'%s' already exists -- clone instead." % identifier.id)
-    git_url = '{}:{}.git'.format(config.GITOLITE, identifier.id)
+        raise Exception(f'{git_url} cannot be created when it already exists.')
+    # clone from Gitolite (Gitolite creates the repository on the server)
     repo = git.Repo.clone_from(git_url, identifier.path_abs())
     logging.debug('    git clone {}'.format(git_url))
     if repo:
