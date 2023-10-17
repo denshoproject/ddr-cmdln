@@ -309,6 +309,7 @@ class DocstoreManager(docstore.DocstoreManager):
         d = ES_Class(id=oi.id)
         d.meta.id = oi.id
         d.model = oi.model
+        d.sort = data.get('sort')
         d.parent_id = oi.parent_id(stubs=1)
         # links
         d.links_html = oi.id
