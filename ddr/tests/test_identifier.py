@@ -172,7 +172,7 @@ def test_definitions_valid_components():
         'repo': 'ddr',
         'org': [
             'densho', 'ajah', 'chi', 'csujad', 'fom', 'hmwf', 'jamsj', 'janm',
-            'jcch', 'manz', 'njpa', 'one', 'pc', 'sbbt', 'sjacl', 'dev',
+            'jcch', 'manz', 'njpa', 'one', 'pc', 'phljacl', 'sbbt', 'sjacl', 'dev',
             'qumulo', 'test', 'testing'
         ],
         'role': [
