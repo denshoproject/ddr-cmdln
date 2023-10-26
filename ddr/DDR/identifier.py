@@ -226,7 +226,6 @@ class Definitions():
         """Components in VALID_COMPONENTS.keys() must appear in VALID_COMPONENTS[key]
         
         NOTE: repository ID and organization IDs from ddr/repository.json
-        override those in ddr-defs/repo_models/identifiers.py
         """
         # repo, org, role from ddr-defs/repo_models/identifiers.py
         components = {
