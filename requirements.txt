@@ -6,6 +6,7 @@
 
                           # LICENSE  PyPy
 
+beautifulsoup4>=4.12,<4.13 # MIT
 b2sdk>=1.14.1,<1.15.0     # MIT      y
 click>=8.1.0,<8.2         # BSD      y
 deepdiff>=3.3.0,<4.0      # MIT      y
