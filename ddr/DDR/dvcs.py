@@ -1345,7 +1345,7 @@ class Cgit():
             pages.append((pagenum,offset))
         return pages
 
-    def _page_repos(self, offset: int, timeout: int=config.REQUESTS_TIMEOUT):
+    def _page_repos(self, offset: int, testing=False, timeout: int=config.REQUESTS_TIMEOUT):
         """Scrape Cgit repositories page and extract basic repository data
         {
         'id': 'ddr-csujad-40', 'href': '/cgit/cgit.cgi/ddr-csujad-40/',
@@ -1368,15 +1368,17 @@ class Cgit():
             #print(f"{n} {cols[1]=}")
             #print(f"{n} {cols[3]=}")
             data = {
-                'id': cols[0].a['title'],
-                'href': cols[0].a['href'],
+                'id': cols[0].a['title'].strip(),
+                'href': cols[0].a['href'].strip(),
+                'timestamp': '',
                 'title': cols[1].a.contents[0].strip(),
             }
             try:
-                data['timestamp'] = cols[3].span['title']
-                data['datetime'] = parser.parse(data['timestamp'])
+                data['timestamp'] = cols[3].span['title'].strip()
             except TypeError:
                 pass
+            if 'testing' in data['id'] and not testing:
+                continue
             collections.append(data)
         return collections
 
