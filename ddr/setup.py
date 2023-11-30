@@ -76,6 +76,7 @@ setup(
         ddrexport=DDR.cli.ddrexport:ddrexport
         ddrindex=DDR.cli.ddrindex:ddrindex
         ddrinfo=DDR.cli.ddrinfo:ddrinfo
+        ddrinventory=DDR.cli.ddrinventory:ddrinventory
         ddrimport=DDR.cli.ddrimport:ddrimport
         ddrnames=DDR.cli.ddrnames:ddrnames
         ddrpubcopy=DDR.cli.ddrpubcopy:ddrpubcopy
