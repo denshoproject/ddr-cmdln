@@ -127,18 +127,18 @@ def _extract_field_values(path, fieldname):
 @click.argument('collection')
 @click.option('--user','-u', help='(required for commit) Git user name.')
 @click.option('--mail','-m', help='(required for commit) Git user e-mail address.')
-@click.option('--save','-s', is_flag=True, help="Save changes.")
+@click.option('--dryrun','-d', is_flag=True, default=False, help="Don't save, just give it a try.")
 @click.option('--commit','-c', is_flag=True, help="Commit changes.")
-def load(fieldname, csv, collection, user, mail, save, commit):
-    """Read CSV and update person/creators fields, matching nr_ids
+def load(fieldname, csv, collection, user, mail, dryrun, commit):
+    """Read CSV and update person/creators fields, matching persons to nr_ids
     
     See `ddrnames help` for more info.
     """
     if not (fieldname in PERSONS_FIELDNAMES):
         click.echo(f'ERROR: "{fieldname}" is not a valid field name.')
         sys.exit(1)
-    if (save or commit) and not (user and mail):
-        click.echo(f'ERROR: --user and --mail required to save or commit changes.')
+    if commit and not (user and mail):
+        click.echo(f'ERROR: --user and --mail required to commit changes.')
         sys.exit(1)
     AGENT = 'ddrnames load'
     ci = Identifier(collection)
@@ -182,7 +182,7 @@ def load(fieldname, csv, collection, user, mail, save, commit):
                 click.echo(f"up {o.path_abs} {n} {person}")
             else:
                 click.echo(f"   {o.path_abs} {n} {person}")
-        if save:
+        if not dryrun:
             result = o.save(git_name=user, git_mail=mail, agent=AGENT, commit=commit)
             logging.debug(result)
     # load object
