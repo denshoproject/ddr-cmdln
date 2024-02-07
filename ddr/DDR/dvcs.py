@@ -10,6 +10,7 @@ import shutil
 import socket
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
+from bs4 import BeautifulSoup
 from dateutil import parser
 import envoy
 import git
@@ -1260,11 +1261,15 @@ def annex_file_targets(repo: git.Repo,
     return paths
 
 
+CGIT_BROWSER_HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36 Edge/16.16299'}
+
 class Cgit():
     url = None
+    session = None
     
     def __init__(self, cgit_url: str=config.CGIT_URL):
         self.url = cgit_url
+        self.session = requests.Session()
     
     def collection_title(self,
                          repo: str,
@@ -1301,6 +1306,81 @@ class Cgit():
                     title = field['title']
         logging.debug('%s: "%s"' % (repo,title))
         return title
+
+    def repositories(self, timeout: int=config.REQUESTS_TIMEOUT):
+        """Scrape Cgit list pages and return basic data for all repositories
+
+        >>> from DDR import dvcs
+        >>> cgit = dvcs.Cgit()
+        >>> cgit.username = 'REDACTED'
+        >>> cgit.password = 'REDACTED'
+        >>> repositories = cgit.repositories()
+        >>> for n,repo in enumerate(repositories):
+        ...    n,repo
+        """
+        inventory = []
+        for pagenum,offset in self._pages():
+            for repo in self._page_repos(offset):
+                inventory.append(repo)
+        return inventory
+
+    def _pages(self, timeout: int=config.REQUESTS_TIMEOUT):
+        """Scrape Cgit index page and return list of (pagenum,offset) tuples
+        [(0, 0), (2, 50), (3, 100), ...]
+        """
+        url = f"{self.url}/cgit.cgi/?ofs=0"
+        r = self.session.get(
+            url, auth=(self.username,self.password),
+            headers=CGIT_BROWSER_HEADERS
+        )
+        soup = BeautifulSoup(r.content, 'html.parser')
+        pages = []
+        for a in soup.find('ul', class_='pager').find_all('a'):
+            if a.attrs.get('class') and a.attrs['class'][0] == 'current':
+                pagenum = 1
+                offset = 0
+            else:
+                pagenum = int(a.contents[0][1:-1])
+                offset = int(a.attrs['href'].split('=')[1])
+            pages.append((pagenum,offset))
+        return pages
+
+    def _page_repos(self, offset: int, testing=False, timeout: int=config.REQUESTS_TIMEOUT):
+        """Scrape Cgit repositories page and extract basic repository data
+        {
+        'id': 'ddr-csujad-40', 'href': '/cgit/cgit.cgi/ddr-csujad-40/',
+        'title': 'CSU Dominguez Hills Tsuyoshi Roy Nakai Collection',
+        'timestamp': '2021-03-19 13:42:24 -0700',
+        'datetime': datetime.datetime(2021, 3, 19, 13, 42, 24, tzinfo=tzoffset(None, -25200))
+        }
+        """
+        url = f"{self.url}/cgit.cgi/?ofs={offset}"
+        r = self.session.get(
+            url, auth=(self.username,self.password),
+            headers=CGIT_BROWSER_HEADERS
+        )
+        soup = BeautifulSoup(r.content, 'html.parser')
+        collections = []
+        for n,row in enumerate(soup.find('table', class_='list nowrap').find_all('tr')):
+            cols = row.find_all('td')
+            if not cols:
+                continue
+            #print(f"{n} {cols[1]=}")
+            #print(f"{n} {cols[3]=}")
+            data = {
+                'id': cols[0].a['title'].strip(),
+                'href': cols[0].a['href'].strip(),
+                'timestamp': '',
+                'title': cols[1].a.contents[0].strip(),
+            }
+            try:
+                data['timestamp'] = cols[3].span['title'].strip()
+            except TypeError:
+                pass
+            if 'testing' in data['id'] and not testing:
+                continue
+            collections.append(data)
+        return collections
 
 
 class Gitolite(object):
