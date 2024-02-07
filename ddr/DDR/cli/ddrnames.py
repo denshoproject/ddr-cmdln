@@ -10,6 +10,12 @@ Feed output of this command to `namesdb searchmulti` for match recommendations.
 Examples:
     namesdb searchmulti --elastic /tmp/ddr-densho-10-persons.csv > /tmp/ddr-densho-10-persons-searchmulti.csv
 \b
+This output contains the original object ID and namepart, plus one or more rows
+that seem to match.  The "score" field indicates the search engine's guess as to
+how likely the match is.
+\b
+Mark each matching rowin the CSV with a truthy value in the "matching" column.
+\b
 When you have matched some names, load the output of `namesdb searchmulti` back
 into your collection.  `ddrnames load` only cares about these fields:
 "objectid", "namepart", "nr_id", "matching"
@@ -126,7 +132,7 @@ def _extract_field_values(path, fieldname):
 def load(fieldname, csv, collection, user, mail, save, commit):
     """Read CSV and update person/creators fields, matching nr_ids
     
-    Reads output of the `ddrnames export` command
+    See `ddrnames help` for more info.
     """
     if not (fieldname in PERSONS_FIELDNAMES):
         click.echo(f'ERROR: "{fieldname}" is not a valid field name.')
@@ -144,6 +150,8 @@ def load(fieldname, csv, collection, user, mail, save, commit):
     click.echo(f'{num_rowds} rows')
     # group CSV data by objectid and namepart
     click.echo(f'Grouping data...')
+    # build a dict of rows that are marked as matches
+    # (they have a non-null value in rowd['matching'])
     objects_by_id = {}
     while(rowds):
         rowd = rowds.pop()
