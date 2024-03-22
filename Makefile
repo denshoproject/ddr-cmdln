@@ -266,16 +266,16 @@ install-virtualenv:
 	@echo ""
 	@echo "install-virtualenv -----------------------------------------------------"
 	apt-get --assume-yes install python3-pip python3-venv
-	python3 -m venv $(VIRTUALENV)
 	source $(VIRTUALENV)/bin/activate; \
-	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) pip
+	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) pip uv
+	uv venv $(VIRTUALENV)
 
 install-setuptools: install-virtualenv
 	@echo ""
 	@echo "install-setuptools -----------------------------------------------------"
 	apt-get --assume-yes install python3-dev
 	source $(VIRTUALENV)/bin/activate; \
-	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) setuptools
+	uv pip install -U --cache-dir=$(PIP_CACHE_DIR) setuptools
 
 
 install-dependencies: apt-backports
@@ -329,7 +329,7 @@ setup-ddr-cmdln:
 
 pip-download-cmdln:
 	source $(VIRTUALENV)/bin/activate; \
-	pip download --no-binary=:all: --destination-directory=$(INSTALL_CMDLN)/vendor -r $(INSTALL_CMDLN)/requirements.txt
+	uv pip download --no-binary=:all: --destination-directory=$(INSTALL_CMDLN)/vendor -r $(INSTALL_CMDLN)/requirements.txt
 
 install-ddr-cmdln: install-setuptools
 	@echo ""
@@ -338,9 +338,9 @@ install-ddr-cmdln: install-setuptools
 	source $(VIRTUALENV)/bin/activate; \
 	cd $(INSTALL_CMDLN)/ddr; python setup.py install
 	source $(VIRTUALENV)/bin/activate; \
-	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) -r $(INSTALL_CMDLN)/requirements.txt
+	uv pip install -U --cache-dir=$(PIP_CACHE_DIR) -r $(INSTALL_CMDLN)/requirements.txt
 	source $(VIRTUALENV)/bin/activate; \
-	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) internetarchive
+	uv pip install -U --cache-dir=$(PIP_CACHE_DIR) internetarchive
 	sudo -u ddr git config --global --add safe.directory $(INSTALL_CMDLN)
 	sudo -u ddr git config --global --add safe.directory $(INSTALL_DEFS)
 	sudo -u ddr git config --global --add safe.directory $(INSTALL_VOCAB)
@@ -377,7 +377,7 @@ uninstall-ddr-cmdln: install-setuptools
 	@echo ""
 	@echo "uninstall-ddr-cmdln ----------------------------------------------------"
 	source $(VIRTUALENV)/bin/activate; \
-	cd $(INSTALL_CMDLN)/ddr && pip3 uninstall -y -r requirements.txt
+	cd $(INSTALL_CMDLN)/ddr && uv pip uninstall -y -r requirements.txt
 
 clean-ddr-cmdln:
 	-rm -Rf $(INSTALL_CMDLN)/ddr/build
@@ -436,14 +436,14 @@ install-ddr-manual: install-setuptools
 	@echo ""
 	@echo "install-ddr-manual -----------------------------------------------------"
 	source $(VIRTUALENV)/bin/activate; \
-	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) sphinx
+	uv pip install -U --cache-dir=$(PIP_CACHE_DIR) sphinx
 	source $(VIRTUALENV)/bin/activate; \
 	cd $(INSTALL_MANUAL) && make html
 	rm -Rf $(MEDIA_ROOT)/manual
 	mv $(INSTALL_MANUAL)/build/html $(MEDIA_ROOT)/manual
 
 uninstall-ddr-manual:
-	pip3 uninstall -y sphinx
+	uv pip uninstall -y sphinx
 
 clean-ddr-manual:
 	-rm -Rf $(INSTALL_MANUAL)/build
