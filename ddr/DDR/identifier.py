@@ -261,6 +261,8 @@ class Definitions():
         """List of regexes for matching metadata filenames
         
         META_FILENAME_REGEX = {
+            'repository': re.compile('repository.json'),
+            'organization': re.compile('organization.json'),
             'collection': re.compile('collection.json'),
             'entity': re.compile('entity.json'),
             'segment': re.compile('entity.json'),
