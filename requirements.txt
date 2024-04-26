@@ -19,7 +19,7 @@ python-dateutil==2.8.1    # BSD
 python-xmp-toolkit==2.0.1 # New BSD
 requests>=2.31.0,<2.32    # Apache   y
 
-git+https://github.com/denshoproject/densho-elastictools.git@v1.0.2
+elastictools @ git+https://github.com/denshoproject/densho-elastictools.git@v1.0.2
 
 # development
 

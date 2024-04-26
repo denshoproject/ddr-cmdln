@@ -33,6 +33,7 @@ yet must be editable in the editor UI.
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 """
 
+from DDR.models.organization import Organization
 from DDR.models.collection import Collection, COLLECTION_FILES_PREFIX
 from DDR.models.entity import Entity, ListEntity, ENTITY_FILES_PREFIX
 from DDR.models.files import File
