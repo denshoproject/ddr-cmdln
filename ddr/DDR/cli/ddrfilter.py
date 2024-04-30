@@ -1,13 +1,4 @@
-#!/usr/bin/env python
-#
-# This file is part of ddr-cmdln/ddr
-#
-#  
-
-description = """
-Filters a repository, completely removing items marked non-public or incomplete."""
-
-epilog = """
+HELP = """
 ddr-filter is a wrapper around the git filter-branch command, which steps through
 all the commits in a repository's history, running a filter at each step.  This
 is a destructive operation!  It results in a new repository that contains only
@@ -57,15 +48,15 @@ At the end the following files will be present in the destination directory:
 # http://www.bioperl.org/wiki/Using_Git/Advanced#Prepare_list_of_files_to_be_removed
 
 
-import argparse
 from datetime import datetime
 import json
 import logging
 import os
 import re
+import subprocess
 import sys
 
-import envoy
+import click
 import git
 
 from DDR import config
@@ -73,6 +64,27 @@ from DDR import fileio
 from DDR import identifier
 from DDR import models
 from DDR import util
+
+
+@click.group()
+@click.option('-l', '--mklist',   is_flag=True, help='Generate exclusion list from source repository.')
+@click.option('-k', '--keeptmp',  is_flag=True, help='Keep temporary files.')
+@click.option('-M', '--master',   is_flag=True, help='git-annex copy master files.')
+@click.option('-m', '--mezzanine',is_flag=True, help='git-annex copy mezzanine files.')
+@click.option('-a', '--access',   is_flag=True, help='git-annex copy access files.')
+@click.option('-d', '--destdir',  default='',   help='Absolute path to directory in which new repository will be placed.')
+@click.argument('source')
+def ddrfilter(mklist, keeptmp, master, mezzanine, access, destdir, source):
+    """Destructively filter a repository, completely removing items marked non-public or incomplete.
+    """
+    main(mklist, keeptmp, master, mezzanine, access, destdir, source)
+
+
+@ddrfilter.command()
+def help():
+    """Detailed help and usage examples
+    """
+    click.echo(HELP)
 
 
 def dtfmt(dt):
@@ -85,14 +97,14 @@ def logprint(filename, msg):
     """
     msg = '%s - %s\n' % (dtfmt(datetime.now()), msg)
     fileio.append_text(msg, filename)
-    print(msg.strip('\n'))
+    click.echo(msg.strip('\n'))
 
 def logprint_nots(filename, msg):
     """Print to log file and console, no timestamp.
     """
     msg = '%s\n' % msg
     fileio.append_text(msg, filename)
-    print(msg.strip('\n'))
+    click.echo(msg.strip('\n'))
 
 
 # ----------------------------------------------------------------------
@@ -139,10 +151,12 @@ def annex_list( repo_path, level ):
     @returns: list of files, relative to repository directory.
     """
     os.chdir(repo_path)
-    cmd = 'git annex whereis %s' % identifier.FILETYPE_MATCH_ANNEX[level]
-    r = envoy.run(cmd, timeout=30)
+    r = subprocess.run(
+        f'git annex whereis {identifier.FILETYPE_MATCH_ANNEX[level]}',
+        check=True, shell=True, capture_output=True, timeout=30
+    )
     files = []
-    for line in r.std_out.split('\n'):
+    for line in r.stdout.decode("utf-8").strip().split('\n'):
         if 'whereis' in line:
             files.append(line.split(' ')[1])
     return files
@@ -260,7 +274,7 @@ def nonpublic_json_files( json_files ):
             if not is_publishable(path):
                 paths.append(path)
         else:
-            print('UNKNOWN FILE TYPE: %s' % path)
+            click.echo('UNKNOWN FILE TYPE: %s' % path)
             assert False
     return paths
 
@@ -417,15 +431,15 @@ def _run_filterbranch( repo_path, exclusion_list_path ):
     @param repo_path: Absolute path to repository.
     @param exclusion_list_path: Absolute path to exclusion list file.
     """
-    print(repo_path)
+    click.echo(repo_path)
     os.chdir(repo_path)
     cmd = 'cd %s/ ; git filter-branch -d /dev/shm/git --prune-empty --index-filter "sh %s" HEAD' % (repo_path, exclusion_list_path)
-    print(cmd)
+    click.echo(cmd)
     r = envoy.run(cmd, timeout=60)
     envoy.run(cmd, timeout=60)
-    #print('r.status_code: %s' % r.status_code)
-    #print('r.std_out: %s' % r.std_out)
-    #print('r.std_err: %s' % r.std_err)
+    #click.echo('r.status_code: %s' % r.status_code)
+    #click.echo('r.std_out: %s' % r.std_out)
+    #click.echo('r.std_err: %s' % r.std_err)
     assert False
 
 def _clone_public( tmp_repo_path, public_repo_path ):
@@ -445,51 +459,39 @@ def _clone_public( tmp_repo_path, public_repo_path ):
     return public_repo
 
 
-
-def main():
-
-    parser = argparse.ArgumentParser(description=description, epilog=epilog,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('-l', '--list', action='store_const', const=1, help='Generate exclusion list from source repository.')
-    parser.add_argument('-k', '--keeptmp', action='store_const', const=1, help='Keep temporary files.')
-    parser.add_argument('-M', '--master', action='store_const', const=1, help='git-annex copy master files.')
-    parser.add_argument('-m', '--mezzanine', action='store_const', const=1, help='git-annex copy mezzanine files.')
-    parser.add_argument('-a', '--access', action='store_const', const=1, help='git-annex copy access files.')
-    parser.add_argument('-d', '--destdir', help='Absolute path to directory in which new repository will be placed.')
-    parser.add_argument('source', help='Absolute path to source repository.')
-    args = parser.parse_args()
+def main(mklist, keeptmp, master, mezzanine, access, destdir, source):
     
     # check args
-    if (not args.destdir) and (not args.list):
-        print('ddr-filter: error: -d/--destdir is required except when using -l/--list.')
+    if (not destdir) and (not mklist):
+        click.echo('ddr-filter: error: -d/--destdir is required except when using -l/--mklist.')
         sys.exit(1)
-    if args.destdir == args.source:
-        print('ddr-filter: error: Source and destdir are the same!')
+    if destdir == source:
+        click.echo('ddr-filter: error: Source and destdir are the same!')
         sys.exit(1)
     
     # make list of files to exclude
-    exclusion_list = make_exclusion_list(args.source)
+    exclusion_list = make_exclusion_list(source)
     
-    if args.list:
+    if mklist:
         # print list info to console and exit
         if 'COLLECTION' in exclusion_list:
-            print('Collection is private or incomplete.')
+            click.echo('Collection is private or incomplete.')
             sys.exit(1)
-        print('The following files will be excluded from the public repository:')
+        click.echo('The following files will be excluded from the public repository:')
         for p in exclusion_list:
-            print('    %s' % p)
+            click.echo('    %s' % p)
         sys.exit(1)
         
     else:
-        FILTER_REPO_PATH = mk_filter_repo_path(args.source, args.destdir, 'FILTER')
+        FILTER_REPO_PATH = mk_filter_repo_path(source, destdir, 'FILTER')
         PUBLIC_REPO_PATH = FILTER_REPO_PATH.replace('FILTER', 'PUBLIC')
         LOG = '%s.log' % FILTER_REPO_PATH
         
         if os.path.exists(FILTER_REPO_PATH):
-            print('ddr-filter: error: Destination path already exists! (%s)' % FILTER_REPO_PATH)
+            click.echo('ddr-filter: error: Destination path already exists! (%s)' % FILTER_REPO_PATH)
             sys.exit(1)
         if os.path.exists(PUBLIC_REPO_PATH):
-            print('ddr-filter: error: Destination path already exists! (%s)' % PUBLIC_REPO_PATH)
+            click.echo('ddr-filter: error: Destination path already exists! (%s)' % PUBLIC_REPO_PATH)
             sys.exit(1)
         
         # print exclusion list and write to file
@@ -500,7 +502,7 @@ def main():
         for p in exclusion_list:
             logprint_nots(LOG, '    %s' % p)
         exclusion_list_path = write_exclusion_list(
-            FILTER_REPO_PATH, exclusion_list, 'FILTER_%s_exclusions' % os.path.basename(args.source))
+            FILTER_REPO_PATH, exclusion_list, 'FILTER_%s_exclusions' % os.path.basename(source))
         if os.path.exists(exclusion_list_path):
             logprint(LOG, 'Wrote exclusion list %s' % exclusion_list_path)
         else:
@@ -511,17 +513,17 @@ def main():
         logprint(LOG, 'Starting filter')
         
         # clone the temporary filter repo
-        logprint(LOG, 'Cloning %s to %s' % (args.source, FILTER_REPO_PATH))
-        repo = clone(args.source, FILTER_REPO_PATH)
+        logprint(LOG, 'Cloning %s to %s' % (source, FILTER_REPO_PATH))
+        repo = clone(source, FILTER_REPO_PATH)
         if not repo:
             logprint(LOG, 'ddr-filter: error: Could not clone repository!')
             sys.exit(1)
         
         # git annex get the files
         file_levels = []
-        if args.access: file_levels.append('access')
-        if args.mezzanine: file_levels.append('mezzanine')
-        if args.master: file_levels.append('master')
+        if access: file_levels.append('access')
+        if mezzanine: file_levels.append('mezzanine')
+        if master: file_levels.append('master')
         for level in file_levels:
             logprint(LOG, 'Getting %s files...' % (level))
             files = annex_list(FILTER_REPO_PATH, level)
@@ -542,9 +544,9 @@ def main():
         
         # print git-filter-branch to shell script
         FILTERBRANCH_SH_PATH = os.path.join(os.path.dirname(FILTER_REPO_PATH), '%s.sh' % os.path.basename(FILTER_REPO_PATH))
-        sh = mk_filterbranch_script(FILTER_REPO_PATH, exclusion_list_path, PUBLIC_REPO_PATH, keep_temp_repo=args.keeptmp)
+        sh = mk_filterbranch_script(FILTER_REPO_PATH, exclusion_list_path, PUBLIC_REPO_PATH, keep_temp_repo=keeptmp)
         fileio.write_text(sh, FILTERBRANCH_SH_PATH)
-        print('Run this command:\n\n    sh %s | tee -a %s\n' % (FILTERBRANCH_SH_PATH, LOG))
+        click.echo('Run this command:\n\n    sh %s | tee -a %s\n' % (FILTERBRANCH_SH_PATH, LOG))
         
         ## run filter-branch in a subprocess
         #run_filterbranch(FILTER_REPO_PATH, exclusion_list_path)
@@ -556,7 +558,4 @@ def main():
         elapsed = finished - started
         logprint(LOG, 'Done with preparations')
         logprint_nots(LOG, '%s elapsed' % elapsed)
-        print('')
-
-if __name__ == '__main__':
-    main()
+        click.echo('')
