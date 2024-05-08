@@ -8,11 +8,11 @@ import os
 import re
 import shutil
 import socket
+import subprocess
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from bs4 import BeautifulSoup
 from dateutil import parser
-import envoy
 import git
 from git.exc import GitCommandError
 import requests
@@ -82,7 +82,8 @@ def git_version(repo: git.Repo) -> str:
     @param repo: A GitPython Repo object.
     @returns string
     """
-    return envoy.run('git --version').std_out.strip()
+    return subprocess.check_output(
+        'git --version', shell=True).decode("utf-8").strip()
 
 def repo_status(repo: git.Repo, short: bool=False) -> str:
     """Retrieve git status on repository.
@@ -1432,13 +1433,16 @@ class Gitolite(object):
     def initialize(self):
         """Connect to Gitolite server.
         """
-        cmd = 'ssh {} info'.format(self.server)
-        logging.debug('        {}'.format(cmd))
-        r = envoy.run(cmd, timeout=int(self.timeout))
-        logging.debug('        {}'.format(r.status_code))
-        self.status = r.status_code
+        cmd = f'ssh {self.server} info'
+        logging.debug(f'        {cmd}')
+        r = subprocess.run(
+            cmd, check=True, shell=True, capture_output=True,
+            timeout=int(self.timeout)
+        )
+        logging.debug(f'        {r.returncode}')
+        self.status = r.returncode
         if self.status == 0:
-            self.info = r.std_out
+            self.info = r.stdout.decode("utf-8").strip()
             self.connected = True
             self.authorized = self._authorized()
         else:

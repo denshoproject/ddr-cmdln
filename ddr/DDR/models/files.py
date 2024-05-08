@@ -5,7 +5,6 @@ import mimetypes
 mimetypes.init()
 import os
 
-import envoy
 from jinja2 import Template
 
 from DDR import commands
@@ -571,12 +570,7 @@ class File(common.DDRObject):
         """List of path_rels of files that link to this file.
         """
         incoming = []
-        cmd = 'find {} -name "*.json" -print'.format(self.entity_files_path)
-        r = envoy.run(cmd)
-        jsons = []
-        if r.std_out:
-            jsons = r.std_out.strip().split('\n')
-        for filename in jsons:
+        for filename in util.find_meta_files(o.entity_files_path):
             data = json.loads(fileio.read_text(filename))
             path_rel = None
             for field in data:

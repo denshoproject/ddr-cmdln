@@ -25,7 +25,6 @@ from datetime import datetime
 import os
 import subprocess
 
-import envoy
 import libxmp
 
 IDENTIFY_CMD = 'identify "{path}"'
@@ -94,11 +93,16 @@ def analyze(path):
         raise Exception('path does not exist %s' % path)
     # test for multiple frames/layers/pages
     # if there are multiple frames, we only want the first one
-    cmd = IDENTIFY_CMD.format(path=path)
-    r = envoy.run(cmd)
-    if r.status_code != 0:
+    cmd = f"identify {path}"
+    r = subprocess.run(
+        cmd, check=True, shell=True, capture_output=True
+    )
+    if r.returncode != 0:
         raise Exception(r.std_err)
-    return analyze_magick(r.std_out, r.std_err)
+    return analyze_magick(
+        r.stdout.decode("utf-8").strip(),
+        r.stderr.decode("utf-8").strip(),
+    )
 
 def geometry_is_ok(geometry):
     if ('x' in geometry) and (len(geometry.split('x')) == 2):
@@ -156,12 +160,14 @@ def thumbnail(src, dest, geometry, options=''):
     cmd = _convert_cmd(src, dest, geometry, options)
     data['convert'] = cmd
     start = datetime.now()
-    r = envoy.run(cmd)
+    r = subprocess.run(
+        cmd, check=True, shell=True, capture_output=True
+    )
     data['elapsed'] = str(datetime.now() - start)
     data['attempted'] = True
-    data['status_code'] = r.status_code
-    data['std_out'] = r.std_out
-    data['std_err'] = r.std_err
+    data['status_code'] = r.returncode
+    data['std_out'] = r.stdout.decode("utf-8").strip()
+    data['std_err'] = r.stderr.decode("utf-8").strip()
     data['exists'] = os.path.exists(dest)
     if os.path.exists(dest):
         data['size'] = os.path.getsize(dest)

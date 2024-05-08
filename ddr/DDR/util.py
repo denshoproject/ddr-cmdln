@@ -10,6 +10,12 @@ from DDR import fileio
 from DDR import identifier
 
 
+def find_access_files(basedir):
+    """Return list of access file paths under directory"""
+    return [
+        str(path.relative_to(c)) for path in Path(basedir).rglob('*-a.jpg')
+    ]
+
 # TODO type hints
 def find_meta_files(basedir, recursive=False, model=None, files_first=False, force_read=False):
     """Lists absolute paths to .json files in basedir; saves copy if requested.

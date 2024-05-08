@@ -10,10 +10,10 @@ logger = logging.getLogger(__name__)
 import os
 import re
 
-import envoy
 import git
 
 from DDR import fileio
+from DDR import util
 
 
 DRIVE_FILE_FIELDS = 'id,level'
@@ -183,13 +183,11 @@ def repo_annex_get(repo_path, level):
     all: git annex get .
     """
     logger.debug('repo_annex_get(%s)' % repo_path)
-    ACCESS_SUFFIX = '-a.jpg'
     #level = repo_level(repo_path)
     logger.debug('level: %s' % level)
     repo = git.Repo(repo_path, search_parent_directories=True)
     if level == 'access':
-        r = envoy.run('find . -name "*%s" -print' % ACCESS_SUFFIX)
-        for accessfile in r.std_out.strip().split('\n'):
+        for accessfile in util.find_access_files(repo_path):
             logger.debug('git annex get %s' % accessfile)
             repo.git.annex('get', accessfile)
     elif level == 'all':

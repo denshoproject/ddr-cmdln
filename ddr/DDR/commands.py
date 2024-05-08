@@ -11,7 +11,7 @@ from DDR import config
 from DDR import storage
 from DDR import dvcs
 from DDR.changelog import write_changelog_entry
-from DDR.organization import group_repo_level, repo_level, repo_annex_get, read_group_file
+from DDR.organization import group_repo_level, repo_level, read_group_file
 
 MODULE_PATH = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_PATH = os.path.join(MODULE_PATH, 'templates')
