@@ -124,14 +124,18 @@ IDSERVICE_REGISTERIDS_URL = IDSERVICE_API_BASE + '/objectids/{objectid}/create/'
 IDSERVICE_USERNAME = CONFIG.get('cmdln', 'idservice_username', fallback='')
 IDSERVICE_PASSWORD = CONFIG.get('cmdln', 'idservice_password', fallback='')
 
-DOCSTORE_ENABLED = CONFIG.getboolean('local','docstore_enabled')
-DOCSTORE_TIMEOUT = int(CONFIG.get('local','docstore_timeout'))
-DOCSTORE_HOST_LOCAL = CONFIG.get('local','docstore_host')
-DOCSTORE_SSL_CERTFILE = CONFIG.get('public', 'docstore_ssl_certfile')
 DOCSTORE_CLUSTERS = CONFIG.get('public', 'docstore_clusters')
-DOCSTORE_HOST = CONFIG.get('public','docstore_host')
-DOCSTORE_USERNAME = 'elastic'
-DOCSTORE_PASSWORD = CONFIG.get('public', 'docstore_password')
+DOCSTORE_ENABLED = CONFIG.getboolean('local','docstore_enabled')
+if DOCSTORE_ENABLED:
+    DOCSTORE_HOST_LOCAL = CONFIG.get('local','docstore_host')
+    DOCSTORE_HOST = CONFIG.get('public','docstore_host')
+    DOCSTORE_SSL_CERTFILE = CONFIG.get('public', 'docstore_ssl_certfile')
+    DOCSTORE_USERNAME = 'elastic'
+    DOCSTORE_PASSWORD = CONFIG.get('public', 'docstore_password')
+    DOCSTORE_TIMEOUT = int(CONFIG.get('local','docstore_timeout'))
+else:
+    DOCSTORE_HOST_LOCAL = DOCSTORE_HOST = DOCSTORE_SSL_CERTFILE = None
+    DOCSTORE_USERNAME = DOCSTORE_PASSWORD = DOCSTORE_TIMEOUT = None
 RESULTS_PER_PAGE = 25
 ELASTICSEARCH_MAX_SIZE = 10000
 ELASTICSEARCH_DEFAULT_LIMIT = RESULTS_PER_PAGE
