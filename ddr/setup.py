@@ -93,5 +93,7 @@ setup(
         'bin/ddr-missing',
         'bin/ddr-update',
         'bin/ddrdensho255fix',
+        'DDR/cli/ddriaconvert.py',
+        'DDR/cli/ddrvhfileprep.py',
     ],
 )
