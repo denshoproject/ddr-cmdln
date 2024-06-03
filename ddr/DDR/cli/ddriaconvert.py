@@ -1,4 +1,4 @@
-import csv 
+import csv
 import datetime
 import os
 import shutil
@@ -8,16 +8,17 @@ import click
 
 from DDR import converters
 
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-@click.command()
+
+@click.command(context_settings=CONTEXT_SETTINGS)
 @click.option('-b', '--prepbinaries', help='Prep binaries for upload. Uses binariespath argument.')
-@click.argument('indices')
 @click.argument('entitycsv')  # Path to DDR entities csv file.
 @click.argument('filecsv')  # Path to DDR files csv file.
 @click.argument('outputpath')  # Path to save output.
 @click.argument('binariespath')  # Path to original binaries for prep.
 def ddriaconvert(
-        prepbinaries, indices, encitycsv, filecsv,
+        prepbinaries, encitycsv, filecsv,
         outputpath=os.getcwd(), binariespath=os.getcwd()
 ):
     """Converts DDR csv metadata into IA's cli upload csv format.
@@ -28,10 +29,10 @@ def ddriaconvert(
     CSV file that has been exported from the DDR system.
     
     \b
-    ENTITYCSV - Path to DDR entities csv file.
-    FILECSV - Path to DDR files csv file.
-    OUTPUTPATH - Path to save output.
-    BINARIESPATH - Path to original binaries for prep.
+    ENTITYCSV: Path to DDR entities csv file.
+    FILECSV: Path to DDR files csv file.
+    OUTPUTPATH: Path to save output.
+    BINARIESPATH: Path to original binaries for prep.
     
     \b
     EXAMPLE

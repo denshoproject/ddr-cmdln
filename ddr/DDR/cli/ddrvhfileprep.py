@@ -9,8 +9,10 @@ import sys
 
 import click
 
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-@click.command()
+
+@click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('inputpath')  # Path to VH binaries to process
 @click.argument('ouputpath')  # Path to save output
 def ddrvhfileprep(inputpath, ouputpath=os.getcwd()):
@@ -22,10 +24,10 @@ def ddrvhfileprep(inputpath, ouputpath=os.getcwd()):
     import.
     
     \b
-    Input data:
+    INPUTPATH:
     - Dir(s) of mpeg segs named in denshovh format
     - CSV file with raw segment metadata
-    Output:
+    OUPUTPATH:
     - Dir(s) of segs named in ddr format
     - fmetadata.csv in input denshovh dir
     
