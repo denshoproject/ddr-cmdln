@@ -14,8 +14,8 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument('inputpath')  # Path to VH binaries to process
-@click.argument('ouputpath')  # Path to save output
-def ddrvhfileprep(inputpath, ouputpath=os.getcwd()):
+@click.argument('outputpath')  # Path to save output
+def ddrvhfileprep(inputpath, outputpath=os.getcwd()):
     """Preps csv for DDR file import for VH binaries.
     
     This command preps a CSV for DDR file import from a directory of VH binaries. It 
@@ -27,7 +27,7 @@ def ddrvhfileprep(inputpath, ouputpath=os.getcwd()):
     INPUTPATH:
     - Dir(s) of mpeg segs named in denshovh format
     - CSV file with raw segment metadata
-    OUPUTPATH:
+    OUTPUTPATH:
     - Dir(s) of segs named in ddr format
     - fmetadata.csv in input denshovh dir
     
