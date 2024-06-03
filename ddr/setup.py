@@ -74,6 +74,7 @@ setup(
         ddrconfig=DDR.cli.ddrconfig:ddrconfig
         ddrdesc=DDR.cli.ddrdesc:ddrdesc
         ddrexport=DDR.cli.ddrexport:ddrexport
+        ddriaconvert=DDR.cli.ddriaconvert:ddriaconvert
         ddrindex=DDR.cli.ddrindex:ddrindex
         ddrinfo=DDR.cli.ddrinfo:ddrinfo
         ddrinventory=DDR.cli.ddrinventory:ddrinventory
@@ -82,6 +83,7 @@ setup(
         ddrpubcopy=DDR.cli.ddrpubcopy:ddrpubcopy
         ddrsignatures=DDR.cli.ddrsignatures:ddrsignatures
         ddrtransform=DDR.cli.ddrtransform:ddrtransform
+        ddrvhfileprep=DDR.cli.ddrvhfileprep:ddrvhfileprep
         ddrvocab=DDR.cli.ddrvocab:ddrvocab
     ''',
     scripts = [
