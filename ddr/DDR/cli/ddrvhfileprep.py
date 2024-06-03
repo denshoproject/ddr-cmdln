@@ -1,27 +1,57 @@
-# ddr-vhprep.py
-# Checksums, renames and creates base metadata for vh segments 
-# Input data:
-# - Dir(s) of mpeg segs named in denshovh format
-# - CSV file with raw segment metadata
-# Output:
-# - Dir(s) of segs named in ddr format
-# - fmetadata.csv in input denshovh dir
+import csv
+import datetime
+import hashlib
+import mimetypes
+import os
+import re
+import shutil
+import sys
 
-import sys, datetime, csv, shutil, os, hashlib, re, mimetypes
-import argparse
+import click
 
-description = """Preps csv for DDR file import for VH binaries."""
 
-epilog = """
-This command preps a CSV for DDR file import from a directory of VH binaries. It 
-assumes that the binary files are named with their associated DDR ID. The 
-output CSV is not entirely complete; it will need some manual editing before 
-import.
+@click.command()
+@click.argument('inputpath')  # Path to VH binaries to process
+@click.argument('ouputpath')  # Path to save output
+def ddrvhfileprep(inputpath, ouputpath=os.getcwd()):
+    """Preps csv for DDR file import for VH binaries.
+    
+    This command preps a CSV for DDR file import from a directory of VH binaries. It 
+    assumes that the binary files are named with their associated DDR ID. The 
+    output CSV is not entirely complete; it will need some manual editing before 
+    import.
+    
+    \b
+    Input data:
+    - Dir(s) of mpeg segs named in denshovh format
+    - CSV file with raw segment metadata
+    Output:
+    - Dir(s) of segs named in ddr format
+    - fmetadata.csv in input denshovh dir
+    
+    \b
+    EXAMPLE
+    $ ddrvhfileprep ./vh_binaries ./output
+    """
+    started = datetime.datetime.now()
+    inputerrs = ''
+    if not os.path.isdir(inputpath):
+        inputerrs + f"Input path does not exist: {inputpath}\n"
+    if not os.path.exists(outputpath):
+        inputerrs + f"Output path does not exist: {outputpath}"
+    if inputerrs != '':
+        click.echo(f"Error -- script exiting...\n{inputerrs}")
+    else:
+        process_seg_dir(inputpath, outputpath)
+    
+    finished = datetime.datetime.now()
+    elapsed = finished - started
+    
+    click.echo('Started: {}'.format(started))
+    click.echo('Finished: {}'.format(finished))
+    click.echo('Elapsed: {}'.format(elapsed))
 
-EXAMPLE
-  $ ddr-vhprep.py ./vh_binaries ./output
-"""
-
+    
 """
 files_cols:
 id,external,role,basename_orig,mimetype,public,rights,sort,thumb,label,
@@ -121,35 +151,3 @@ def process_seg_dir(dpath,outpath):
         writer = csv.DictWriter(csvfile, fieldnames=CSVCOLS)
         writer.writeheader()
         writer.writerows(odata)
-
-def main():
-
-    parser = argparse.ArgumentParser(description=description, epilog=epilog,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('inputpath', help='Path to VH binaries to process')
-    parser.add_argument('outputpath', nargs='?', default=os.getcwd(), help='Path to save output')
-
-    args = parser.parse_args()
-
-    started = datetime.datetime.now()
-    inputerrs = ''
-    if not os.path.isdir(args.inputpath):
-        inputerrs + 'Input path does not exist: {}\n'.format(args.inputpath)
-    if not os.path.exists(args.outputpath):
-        inputerrs + 'Output path does not exist: {}'.format(args.outputpath)
-    if inputerrs != '':
-        print('Error -- script exiting...\n{}'.format(inputerrs))
-    else:
-        process_seg_dir(args.inputpath,args.outputpath)
-    
-    finished = datetime.datetime.now()
-    elapsed = finished - started
-    
-    print('Started: {}'.format(started))
-    print('Finished: {}'.format(finished))
-    print('Elapsed: {}'.format(elapsed))
-    
-    return
-
-if __name__ == '__main__':
-    main()
