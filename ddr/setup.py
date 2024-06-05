@@ -89,7 +89,7 @@ setup(
         'bin/ddr-backup',
         'bin/ddr-batch',
         'bin/ddr-filter',
-        'bin/ddr-iaconvert',
+        'DDR/cli/ddriaconvert.py',
         'bin/ddr-massupdate',
         'bin/ddr-missing',
         'bin/ddr-update',
