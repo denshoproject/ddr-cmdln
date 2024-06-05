@@ -74,6 +74,7 @@ setup(
         ddrconfig=DDR.cli.ddrconfig:ddrconfig
         ddrdesc=DDR.cli.ddrdesc:ddrdesc
         ddrexport=DDR.cli.ddrexport:ddrexport
+        ddriaconvert=DDR.cli.ddriaconvert:ddriaconvert
         ddrindex=DDR.cli.ddrindex:ddrindex
         ddrinfo=DDR.cli.ddrinfo:ddrinfo
         ddrinventory=DDR.cli.ddrinventory:ddrinventory
@@ -89,7 +90,6 @@ setup(
         'bin/ddr-backup',
         'bin/ddr-batch',
         'bin/ddr-filter',
-        'bin/ddr-iaconvert',
         'bin/ddr-massupdate',
         'bin/ddr-missing',
         'bin/ddr-update',

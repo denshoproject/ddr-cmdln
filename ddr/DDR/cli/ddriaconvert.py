@@ -4,18 +4,6 @@
 # Creates CSV for batch upload to ia using cli tool
 #  
 
-description = """Converts DDR csv metadata into IA's cli upload csv format."""
-
-epilog = """
-This command converts DDR metadata into a CSV file formatted for use with Internet 
-Archive's (IA) command-line upload tool (https://github.com/jjjake/internetarchive). 
-The command examines a given directory of DDR binary files and associated metadata 
-CSV file that has been exported from the DDR system.
-EXAMPLE
-  $ ddr-iaconvert.py ./ddr-densho-1-entities.csv ./ddr-densho-1-files.csv
-  $ ddr-iaconvert.py -b ./ddr-entities.csv ./ddr-files.csv ./output/ ./binaries-in/
-"""
-
 """
 entities_cols:
 id,status,public,title,description,creation,location,creators,language,genre,
@@ -33,7 +21,11 @@ import sys, shutil, os
 import datetime
 import csv 
 
+import click
+
 from DDR import converters
+
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
 def load_data(csvpath,data):
@@ -83,7 +75,7 @@ def generate_link_text(parentid,segnumber,totalsegs):
 
 # Main
 def parseCreators(rawcreators):
-    creators = converters.text_to_rolepeople(rawcreators)
+    creators = converters.text_to_rolepeople(rawcreators, default={})
     return creators
 
 def getMediaType(mimetype):
@@ -142,7 +134,7 @@ def isExternal(external):
     else:
         return False
 
-def doConvert(entcsv,filecsv,outputpath,prep_binaries,binariespath):
+def doConvert(entcsv, filecsv, outputpath, binariespath):
     entdata = []
     load_data(entcsv,entdata)
     filedata = []
@@ -206,7 +198,7 @@ def doConvert(entcsv,filecsv,outputpath,prep_binaries,binariespath):
 
                 filename = '{}-{}-{}{}'.format(identifier,f['role'],f['sha1'][:10],f['basename_orig'][f['basename_orig'].rfind('.'):])
 
-                if prep_binaries:
+                if binariespath:
                     origfile = os.path.join(binariespath,f['basename_orig'])
                     if os.path.exists(origfile):
                         shutil.copy2(origfile,os.path.join(outputpath,filename))
@@ -251,47 +243,56 @@ def doConvert(entcsv,filecsv,outputpath,prep_binaries,binariespath):
 
     return
 
-def main():
 
-    parser = argparse.ArgumentParser(description=description, epilog=epilog,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('entitycsv', help='Path to DDR entities csv file.')
-    parser.add_argument('filecsv', help='Path to DDR files csv file.')
-    parser.add_argument('outputpath', nargs='?', default=os.getcwd(), help='Path to save output.')
-    parser.add_argument('binariespath', nargs='?', default=os.getcwd(), help='Path to original binaries for prep.')
-    parser.add_argument('-b', '--prep-binaries', action='store_true', dest='prep_binaries', help='Prep binaries for upload. Uses binariespath argument.')
-
-    args = parser.parse_args()
-    print('Entity csv path: {}'.format(args.entitycsv))
-    print('File csv path: {}'.format(args.filecsv))
-    print('Output path: {}'.format(args.outputpath))
-    print('Binaries path: {}'.format(args.binariespath))
-    if args.prep_binaries:
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.option('--binaries', '-b', default='', help='Path to original binaries for prep.')
+@click.argument('entitycsv')
+@click.argument('filecsv')
+@click.argument('outputpath')
+def ddriaconvert(binaries, entitycsv, filecsv, outputpath):
+    """Converts DDR csv metadata into IA's cli upload csv format.
+    
+    \b
+    This command converts DDR metadata into a CSV file formatted for use with Internet
+    Archive's (IA) command-line upload tool (https://github.com/jjjake/internetarchive).
+    The command examines a given directory of DDR binary files and associated metadata
+    CSV file that has been exported from the DDR system.
+    
+    \b
+    EXAMPLE
+    $ ddriaconvert ./ddr-densho-1-entities.csv ./ddr-densho-1-files.csv ./output/
+    $ ddriaconvert ./ddr-entities.csv ./ddr-files.csv ./output/ --binaries ./binaries-in/
+    """
+    print('Entity csv path: {}'.format(entitycsv))
+    print('File csv path: {}'.format(filecsv))
+    print('Output path: {}'.format(outputpath))
+    binariespath = binaries
+    if binariespath:
+        print('Binaries path: {}'.format(binariespath))
         print('Prep binaries mode activated.')
 
     started = datetime.datetime.now()
     inputerrs = ''
-    if not os.path.isfile(args.entitycsv):
-        inputerrs + 'Entities csv does not exist: {}\n'.format(args.entitycsv)
-    if not os.path.isfile(args.filecsv):
-        inputerrs + 'Files csv does not exist: {}'.format(args.filecsv)
-    if not os.path.exists(args.outputpath):
-        inputerrs + 'Output path does not exist: {}'.format(args.outputpath)
-    if not os.path.exists(args.binariespath):
-        inputerrs + 'Binaries path does not exist: {}'.format(args.binariespath)       
+    if not os.path.isfile(entitycsv):
+        inputerrs + 'Entities csv does not exist: {}\n'.format(entitycsv)
+    if not os.path.isfile(filecsv):
+        inputerrs + 'Files csv does not exist: {}'.format(filecsv)
+    if not os.path.exists(outputpath):
+        inputerrs + 'Output path does not exist: {}'.format(outputpath)
+    if binariespath and not os.path.exists(binariespath):
+        inputerrs + 'Binaries path does not exist: {}'.format(binariespath)
     if inputerrs != '':
         print('Error -- script exiting...\n{}'.format(inputerrs))
     else:
-        doConvert(args.entitycsv,args.filecsv,args.outputpath,args.prep_binaries,args.binariespath)
-    
+        doConvert(entitycsv, filecsv, outputpath, binariespath)
+
     finished = datetime.datetime.now()
     elapsed = finished - started
     
     print('Started: {}'.format(started))
     print('Finished: {}'.format(finished))
     print('Elapsed: {}'.format(elapsed))
-    
-    return
+
 
 if __name__ == '__main__':
-    main()
+    ddriaconvert()
