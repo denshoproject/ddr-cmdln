@@ -83,7 +83,7 @@ def generate_link_text(parentid,segnumber,totalsegs):
 
 # Main
 def parseCreators(rawcreators):
-    creators = converters.text_to_rolepeople(rawcreators)
+    creators = converters.text_to_rolepeople(rawcreators, default={})
     return creators
 
 def getMediaType(mimetype):
