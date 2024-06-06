@@ -16,10 +16,11 @@ id,external,role,basename_orig,mimetype,public,rights,sort,thumb,label,
 digitize_person,tech_notes,external_urls,links,sha1,sha256,md5,size
 """
 
-import argparse
-import sys, shutil, os
-import datetime
 import csv 
+import datetime
+import os
+import shutil
+import sys
 
 import click
 
@@ -55,41 +56,46 @@ def ddriaconvert(binaries, entitycsv, filecsv, outputpath):
         print('Binaries path: {}'.format(binariespath))
         print('Prep binaries mode activated.')
 
-    started = datetime.datetime.now()
-    inputerrs = ''
+    inputerrs = 0
     if not os.path.isfile(entitycsv):
-        inputerrs + 'Entities csv does not exist: {}\n'.format(entitycsv)
+        click.echo(f"ERROR: Entities csv does not exist: {entitycsv}")
+        inputerrs += 1
     if not os.path.isfile(filecsv):
-        inputerrs + 'Files csv does not exist: {}'.format(filecsv)
+        click.echo(f"Files csv does not exist: {filecsv}")
+        inputerrs += 1
     if not os.path.exists(outputpath):
-        inputerrs + 'Output path does not exist: {}'.format(outputpath)
+        click.echo(f"Output path does not exist: {outputpath}")
+        inputerrs += 1
     if binariespath and not os.path.exists(binariespath):
-        inputerrs + 'Binaries path does not exist: {}'.format(binariespath)
-    if inputerrs != '':
-        print('Error -- script exiting...\n{}'.format(inputerrs))
-    else:
-        doConvert(entitycsv, filecsv, outputpath, binariespath)
+        click.echo(f"Binaries path does not exist: {binariespath}")
+    if inputerrs:
+        sys.exit(1)
 
+    started = datetime.datetime.now()
+    
+    outputfile = do_conversion(entitycsv, filecsv, outputpath, binariespath)
+    
     finished = datetime.datetime.now()
     elapsed = finished - started
-
     print('Started: {}'.format(started))
     print('Finished: {}'.format(finished))
     print('Elapsed: {}'.format(elapsed))
 
+    return outputfile
 
-def load_data(csvpath,data):
-    csvfile = open(csvpath, 'r')
-    csvreader = csv.DictReader(csvfile)
-    for row in csvreader:
-        data.append(row)
-    return data
 
-def build_dict(seq, key):
-    return dict((d[key], dict(d, index=index)) for (index, d) in enumerate(seq))
+def load_data(csvpath):
+    with open(csvpath, 'r') as f:
+        return [row for row in csv.DictReader(f)]
+
+def build_dict(entity_data):
+    return {
+        entity['id']: entity
+        for entity in entity_data
+    }
 
 #Caution! segnumber and totalsegs should be strings!
-def generate_link_text(parentid,segnumber,totalsegs):
+def generate_link_text(parentid, segnumber, totalsegs):
     prefix = parentid + '-'
     if totalsegs == '1':
         nextid = None
@@ -114,112 +120,122 @@ def generate_link_text(parentid,segnumber,totalsegs):
     else:
         prevlink = ''
 
-    if prevlink != '' and nextlink != '':
+    if prevlink and nextlink:
         nextlink = "  --  " + nextlink
         
-    if prevlink != '' or nextlink != '':
+    if prevlink or nextlink:
         nextlink = nextlink + "<p>"
 
     return prevlink + nextlink
 
+def parse_creators(rawcreators):
+    return converters.text_to_rolepeople(rawcreators, default={})
 
-# Main
-def parseCreators(rawcreators):
-    creators = converters.text_to_rolepeople(rawcreators, default={})
-    return creators
-
-def getMediaType(mimetype):
+def get_media_type(mimetype):
     mediatypemap = {
         'video': 'movies',
         'audio': 'audio',
         'image': 'image', 
-        'application': 'texts', #get pdfs
+        'application': 'texts',  # get pdfs
         'text': 'texts'
     }
     return mediatypemap.get(mimetype.split('/')[0])
 
-def getDescription(isSegment,identifier,descrip,location,segnum,totalsegs):
-    description = ''
-    sequenceinfo = ''
-    if isSegment:
-        sequenceinfo = 'Segment {} of {}<p>{}'.format(segnum,totalsegs,generate_link_text(identifier[:identifier.rfind('-')],segnum,totalsegs))
-    locationinfo = 'Interview location: {}'.format(location) if isSegment else 'Location: {}'.format(location)
-    denshoboilerplate = 'See this item in the <a href=\"https://ddr.densho.org/\" target=\"blank\" rel=\"nofollow\">Densho Digital Repository</a> at: <a href=\"https://ddr.densho.org/{}/\" target=\"_blank\" rel=\"nofollow\">https://ddr.densho.org/{}/</a>.'.format(identifier,identifier)
-    description = locationinfo + '<p>' + descrip + '<p>' + sequenceinfo + denshoboilerplate
- 
-    return description
-
-def getCreators(creatorsdata):
-    creators = ''
-    for i, c in enumerate(creatorsdata):
-        creators += '{}: {}{}'.format(c['role'].capitalize(),c['namepart'],'' if i == (len(creatorsdata) - 1) else ', ')
-    return creators
-
-def getCredits(personnel):
-    credits = ''
-    for i, c in enumerate(personnel):
-        credits += '{}: {}{}'.format(c['role'].capitalize(),c['namepart'],'' if i == (len(personnel) - 1) else ', ')
-    return credits
-
-def getLicense(code):
-    if code == 'cc':
-        licenseurl = 'https://creativecommons.org/licenses/by-nc-sa/4.0/'
-    elif code == 'pdm':
-        licenseurl = 'http://creativecommons.org/publicdomain/mark/1.0/'
+def get_description(
+        is_segment, identifier, description, location, segnum, totalsegs
+):
+    if is_segment:
+        link_text = generate_link_text(
+            identifier[:identifier.rfind('-')], segnum, totalsegs
+        )
+        sequenceinfo = f"Segment {segnum} of {totalsegs}<p>{link_text}"
     else:
-        licenseurl =''
+        sequenceinfo = ''
+    if is_segment:
+        locationinfo = f"Interview location: {location}"
+    else:
+        locationinfo = f"Location: {location}"
+    denshoboilerplate = 'See this item in the ' \
+        '<a href="https://ddr.densho.org/" target="blank" rel="nofollow">' \
+        'Densho Digital Repository' \
+        '</a> at: ' \
+        f'<a href="https://ddr.densho.org/{identifier}/" target="_blank" rel="nofollow">' \
+        f'https://ddr.densho.org/{identifier}/' \
+        '</a>.'
+    return locationinfo + '<p>' + description + '<p>' + sequenceinfo + denshoboilerplate
 
-    return licenseurl
+def get_creators(creatorsdata):
+    creators = [
+        c['role'].capitalize() + ': ' + c['namepart']
+        for c in creatorsdata
+    ]
+    return ', '.join(creators)
 
-def getFirstFacility(rawfacilities):
-    facility = ''
+def get_credits(personnel):
+    credits = [
+        c['role'].capitalize() + ': ' + c['namepart']
+        for c in personnel
+    ]
+    return ', '.join(credits)
+
+def get_license(code):
+    if code == 'cc':
+        return 'https://creativecommons.org/licenses/by-nc-sa/4.0/'
+    elif code == 'pdm':
+        return 'http://creativecommons.org/publicdomain/mark/1.0/'
+    return ''
+
+def get_first_facility(rawfacilities):
     facilitydata = converters.text_to_listofdicts(rawfacilities)
     if facilitydata:
-        facility = facilitydata[0]['term']
-    return facility
+        return facilitydata[0]['term']
+    else:
+        return ''
 
-def isExternal(external):
+def is_external(external):
     if (external == '1') or (external.lower() == 'true'):
         return True
     else:
         return False
 
-def doConvert(entcsv, filecsv, outputpath, binariespath):
-    entdata = []
-    load_data(entcsv,entdata)
-    filedata = []
-    load_data(filecsv,filedata)
+def do_conversion(entity_csv, file_csv, outputdir, binariespath):
+    entity_data = load_data(entity_csv)
+    file_data = load_data(file_csv)
     
-    print('entdata length: {}'.format(str(len(entdata))))
-    print('filedata length: {}'.format(str(len(filedata))))
-    
-    entities_by_ddrid = build_dict(entdata,key="id")
-    
-    #set up output csv; write headers
-    outputfile = os.path.join(os.path.abspath(outputpath),'{:%Y%m%d-%H%M%S}-iaconvert.csv'.format(datetime.datetime.now()))
-    odatafile = open(outputfile,'w')
-    outputwriter = csv.writer(odatafile)
-    outputwriter.writerow(['identifier',
-                            'file',
-                            'collection',
-                            'mediatype',
-                            'description',
-                            'title',
-                            'contributor',
-                            'creator',
-                            'date',
-                            'subject[0]',
-                            'subject[1]',
-                            'subject[2]',
-                            'licenseurl',
-                            'credits',
-                            'runtime'])
-    odatafile.close()
+    print('entity_data length: {}'.format(str(len(entity_data))))
+    print('file_data length: {}'.format(str(len(file_data))))
 
-    #iterate through files
-    for f in filedata:
-        #TODO make logic understand multiple boolean forms
-         if isExternal(f['external']):
+    entities_by_ddrid = build_dict(entity_data)
+
+    # set up output csv; write headers
+    outputfile = os.path.join(
+        os.path.abspath(outputdir),
+        '{:%Y%m%d-%H%M%S}-iaconvert.csv'.format(datetime.datetime.now())
+    )
+    with open(outputfile,'w') as csvfile:
+        outputwriter = csv.writer(csvfile)
+        outputwriter.writerow([
+            'identifier',
+            'file',
+            'collection',
+            'mediatype',
+            'description',
+            'title',
+            'contributor',
+            'creator',
+            'date',
+            'subject[0]',
+            'subject[1]',
+            'subject[2]',
+            'licenseurl',
+            'credits',
+            'runtime',
+        ])
+
+    # iterate through files
+    for f in file_data:
+        # TODO make logic understand multiple boolean forms
+        if is_external(f['external']):
             if 'mezzanine' in f['id'] or 'master' in f['id'] or 'transcript' in f['id']:
                 ddrid = f['id'][:f['id'].rindex('-',0,f['id'].rindex('-'))]
             else:
@@ -227,69 +243,90 @@ def doConvert(entcsv, filecsv, outputpath, binariespath):
             print('file {}. processing...'.format(ddrid))
 
             if ddrid in entities_by_ddrid:
-                ent = entities_by_ddrid[ddrid]
-                identifier = ent['id']
+                entity = entities_by_ddrid[ddrid]
+                identifier = entity['id']
                 interviewid = ''
-                creators_parsed = parseCreators(ent['creators'])
+                creators_parsed = parse_creators(entity['creators'])
                 totalsegs = 0
-                isSegment = True if ent['format'] == 'vh' else False
+                if entity['format'] == 'vh':
+                    isSegment = True
+                else:
+                    isSegment = False
                 if isSegment:
-                    #get the interview id
+                    # get the interview id
                     interviewid = entities_by_ddrid[ddrid[:ddrid.rfind('-')]]['id']
                     print('interviewid: {}'.format(interviewid))
-                    #get segment info
-                    for s in entities_by_ddrid:
-                        check = s[0:100]
+                    # get segment info
+                    for segment in entities_by_ddrid:
+                        check = segment[0:100]
                         if check.startswith(interviewid):
                            totalsegs +=1
-                           print('found a segment for {}. check={}. totalsegs={}'.format(interviewid,check,totalsegs))
-                    #must account for interview entity in entities_by_ddrid
+                           print(
+                               f"found a segment for {interviewid}. " \
+                               f"check={check}. totalsegs={totalsegs}"
+                           )
+                    # must account for interview entity in entities_by_ddrid
                     totalsegs -=1
 
-                filename = '{}-{}-{}{}'.format(identifier,f['role'],f['sha1'][:10],f['basename_orig'][f['basename_orig'].rfind('.'):])
+                filename = '{}-{}-{}{}'.format(
+                    identifier,
+                    f['role'],
+                    f['sha1'][:10],
+                    f['basename_orig'][f['basename_orig'].rfind('.'):]
+                )
 
                 if binariespath:
-                    origfile = os.path.join(binariespath,f['basename_orig'])
+                    origfile = os.path.join(binariespath, f['basename_orig'])
                     if os.path.exists(origfile):
-                        shutil.copy2(origfile,os.path.join(outputpath,filename))
+                        destfile = os.path.join(outputdir, filename)
+                        shutil.copy2(origfile, destfile)
                     else:
-                        print('{:%Y%m%d %H:%M:%S.%s}: Error - {} does not exist. Could not prep binary for {}.'.format(datetime.datetime.now(),origfile,identifier))
+                        print(f"Error: {origfile} missing.")
+                        print(f"Could not prep binary for {identifier}.")
  
-                #note this is the IA collection bucket; not the DDR collection
-                collection = interviewid if isSegment else 'densho'
-                mediatype = getMediaType(f['mimetype'])
-                description = getDescription(isSegment,identifier,ent['description'],ent['location'],ent['sort'],str(totalsegs))
-                title = ent['title']
-                contributor = ent['contributor']
-                creator = getCreators(creators_parsed)
-                date = ent['creation']
+                # note this is the IA collection bucket; not the DDR collection
+                if isSegment:
+                    collection = interviewid
+                else:
+                    collection = 'densho'
+                mediatype = get_media_type(f['mimetype'])
+                description = get_description(
+                    isSegment, identifier,
+                    entity['description'], entity['location'], entity['sort'],
+                    str(totalsegs)
+                )
+                title = entity['title']
+                contributor = entity['contributor']
+                creator = get_creators(creators_parsed)
+                date = entity['creation']
                 subject0 = 'Japanese Americans'
                 subject1 = 'Oral history'
-                #if entity has facility, get the first one
-                subject2 = getFirstFacility(ent['facility'])
-                licenseurl = getLicense(ent['rights'])
-                credits = getCredits(creators_parsed)
-                runtime = ent['extent']
+                # if entity has facility, get the first one
+                subject2 = get_first_facility(entity['facility'])
+                licenseurl = get_license(entity['rights'])
+                credits = get_credits(creators_parsed)
+                runtime = entity['extent']
                 
-                #write the row to csv
-                odatafile = open(outputfile,'a')
-                outputwriter = csv.writer(odatafile)
-                outputwriter.writerow([identifier,
-                                        filename,
-                                        collection,
-                                        mediatype,
-                                        description,
-                                        title,
-                                        contributor,
-                                        creator,
-                                        date,
-                                        subject0,
-                                        subject1,
-                                        subject2,
-                                        licenseurl,
-                                        credits,
-                                        runtime])
-                odatafile.close()
+                # write the row to csv
+                with open(outputfile,'a') as csvout:
+                    outputwriter = csv.writer(csvout)
+                    outputwriter.writerow([
+                        identifier,
+                        filename,
+                        collection,
+                        mediatype,
+                        description,
+                        title,
+                        contributor,
+                        creator,
+                        date,
+                        subject0,
+                        subject1,
+                        subject2,
+                        licenseurl,
+                        credits,
+                        runtime,
+                    ])
 
     return outputfile
 

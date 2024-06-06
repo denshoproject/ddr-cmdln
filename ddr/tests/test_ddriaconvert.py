@@ -17,7 +17,7 @@ TEST_FILES_TMP = 'iaconvert'
 def test_files_dir(tmpdir_factory):
     return tmpdir_factory.mktemp(TEST_FILES_TMP)
 
-def test_doConvert_vh_no_binaries(test_files_dir):
+def test_do_conversion_vh_no_binaries(test_files_dir):
     # prep test data
     entity_csv = test_files_dir / 'vh-entities.csv'
     file_csv = test_files_dir / 'vh-files.csv'
@@ -41,7 +41,7 @@ def test_doConvert_vh_no_binaries(test_files_dir):
     )
     
     # run the command
-    output_file = ddriaconvert.doConvert(
+    output_file = ddriaconvert.do_conversion(
         entity_csv, file_csv, output_dir, binaries_path
     )
     
