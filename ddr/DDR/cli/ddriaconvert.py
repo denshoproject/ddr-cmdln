@@ -241,7 +241,7 @@ def doConvert(entcsv, filecsv, outputpath, binariespath):
                                         runtime])
                 odatafile.close()
 
-    return
+    return outputfile
 
 
 @click.command(context_settings=CONTEXT_SETTINGS)
