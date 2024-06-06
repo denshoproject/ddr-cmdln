@@ -28,6 +28,56 @@ from DDR import converters
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.option('--binaries', '-b', default='', help='Path to original binaries for prep.')
+@click.argument('entitycsv')
+@click.argument('filecsv')
+@click.argument('outputpath')
+def ddriaconvert(binaries, entitycsv, filecsv, outputpath):
+    """Converts DDR csv metadata into IA's cli upload csv format.
+    
+    \b
+    This command converts DDR metadata into a CSV file formatted for use with Internet
+    Archive's (IA) command-line upload tool (https://github.com/jjjake/internetarchive).
+    The command examines a given directory of DDR binary files and associated metadata
+    CSV file that has been exported from the DDR system.
+    
+    \b
+    EXAMPLE
+    $ ddriaconvert ./ddr-densho-1-entities.csv ./ddr-densho-1-files.csv ./output/
+    $ ddriaconvert ./ddr-entities.csv ./ddr-files.csv ./output/ --binaries ./binaries-in/
+    """
+    print('Entity csv path: {}'.format(entitycsv))
+    print('File csv path: {}'.format(filecsv))
+    print('Output path: {}'.format(outputpath))
+    binariespath = binaries
+    if binariespath:
+        print('Binaries path: {}'.format(binariespath))
+        print('Prep binaries mode activated.')
+
+    started = datetime.datetime.now()
+    inputerrs = ''
+    if not os.path.isfile(entitycsv):
+        inputerrs + 'Entities csv does not exist: {}\n'.format(entitycsv)
+    if not os.path.isfile(filecsv):
+        inputerrs + 'Files csv does not exist: {}'.format(filecsv)
+    if not os.path.exists(outputpath):
+        inputerrs + 'Output path does not exist: {}'.format(outputpath)
+    if binariespath and not os.path.exists(binariespath):
+        inputerrs + 'Binaries path does not exist: {}'.format(binariespath)
+    if inputerrs != '':
+        print('Error -- script exiting...\n{}'.format(inputerrs))
+    else:
+        doConvert(entitycsv, filecsv, outputpath, binariespath)
+
+    finished = datetime.datetime.now()
+    elapsed = finished - started
+
+    print('Started: {}'.format(started))
+    print('Finished: {}'.format(finished))
+    print('Elapsed: {}'.format(elapsed))
+
+
 def load_data(csvpath,data):
     csvfile = open(csvpath, 'r')
     csvreader = csv.DictReader(csvfile)
@@ -242,56 +292,6 @@ def doConvert(entcsv, filecsv, outputpath, binariespath):
                 odatafile.close()
 
     return outputfile
-
-
-@click.command(context_settings=CONTEXT_SETTINGS)
-@click.option('--binaries', '-b', default='', help='Path to original binaries for prep.')
-@click.argument('entitycsv')
-@click.argument('filecsv')
-@click.argument('outputpath')
-def ddriaconvert(binaries, entitycsv, filecsv, outputpath):
-    """Converts DDR csv metadata into IA's cli upload csv format.
-    
-    \b
-    This command converts DDR metadata into a CSV file formatted for use with Internet
-    Archive's (IA) command-line upload tool (https://github.com/jjjake/internetarchive).
-    The command examines a given directory of DDR binary files and associated metadata
-    CSV file that has been exported from the DDR system.
-    
-    \b
-    EXAMPLE
-    $ ddriaconvert ./ddr-densho-1-entities.csv ./ddr-densho-1-files.csv ./output/
-    $ ddriaconvert ./ddr-entities.csv ./ddr-files.csv ./output/ --binaries ./binaries-in/
-    """
-    print('Entity csv path: {}'.format(entitycsv))
-    print('File csv path: {}'.format(filecsv))
-    print('Output path: {}'.format(outputpath))
-    binariespath = binaries
-    if binariespath:
-        print('Binaries path: {}'.format(binariespath))
-        print('Prep binaries mode activated.')
-
-    started = datetime.datetime.now()
-    inputerrs = ''
-    if not os.path.isfile(entitycsv):
-        inputerrs + 'Entities csv does not exist: {}\n'.format(entitycsv)
-    if not os.path.isfile(filecsv):
-        inputerrs + 'Files csv does not exist: {}'.format(filecsv)
-    if not os.path.exists(outputpath):
-        inputerrs + 'Output path does not exist: {}'.format(outputpath)
-    if binariespath and not os.path.exists(binariespath):
-        inputerrs + 'Binaries path does not exist: {}'.format(binariespath)
-    if inputerrs != '':
-        print('Error -- script exiting...\n{}'.format(inputerrs))
-    else:
-        doConvert(entitycsv, filecsv, outputpath, binariespath)
-
-    finished = datetime.datetime.now()
-    elapsed = finished - started
-    
-    print('Started: {}'.format(started))
-    print('Finished: {}'.format(finished))
-    print('Elapsed: {}'.format(elapsed))
 
 
 if __name__ == '__main__':
