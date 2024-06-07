@@ -93,7 +93,7 @@ setup(
         'bin/ddr-massupdate',
         'bin/ddr-missing',
         'bin/ddr-update',
-        'bin/ddr-vhfileprep',
+        'DDR/cli/ddr-vhfileprep',
         'bin/ddrdensho255fix',
     ],
 )
