@@ -123,6 +123,8 @@ def process_seg_dir(dpath,outpath):
         writer.writeheader()
         writer.writerows(odata)
 
+    return csvout
+
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -139,7 +141,7 @@ def ddrvhfileprep(inputpath, outputpath):
     if inputerrs != '':
         print('Error -- script exiting...\n{}'.format(inputerrs))
     else:
-        process_seg_dir(inputpath,outputpath)
+        csvout = process_seg_dir(inputpath,outputpath)
     
     finished = datetime.datetime.now()
     elapsed = finished - started
@@ -147,8 +149,9 @@ def ddrvhfileprep(inputpath, outputpath):
     print('Started: {}'.format(started))
     print('Finished: {}'.format(finished))
     print('Elapsed: {}'.format(elapsed))
-    
-    return
+
+    return csvout
+
 
 if __name__ == '__main__':
     ddrvhfileprep()
