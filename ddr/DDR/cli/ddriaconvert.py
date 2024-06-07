@@ -128,16 +128,14 @@ def get_description(
         is_segment, identifier, description, location, segnum, totalsegs
 ):
     if is_segment:
+        locationinfo = f"Interview location: {location}"
         link_text = generate_link_text(
             identifier[:identifier.rfind('-')], segnum, totalsegs
         )
         sequenceinfo = f"Segment {segnum} of {totalsegs}<p>{link_text}"
     else:
-        sequenceinfo = ''
-    if is_segment:
-        locationinfo = f"Interview location: {location}"
-    else:
         locationinfo = f"Location: {location}"
+        sequenceinfo = ''
     denshoboilerplate = 'See this item in the ' \
         '<a href="https://ddr.densho.org/" target="blank" rel="nofollow">' \
         'Densho Digital Repository' \
@@ -243,14 +241,13 @@ def do_conversion(entity_csv, file_csv, outputdir, binariespath):
             if ddrid in entities_by_ddrid:
                 entity = entities_by_ddrid[ddrid]
                 entity_id = entity['id']
-                interviewid = ''
-                creators_parsed = parse_creators(entity['creators'])
+
+                filename = f['id'] + os.path.splitext(f['basename_orig'])[1]
+
                 totalsegs = 0
                 if entity['format'] == 'vh':
-                    isSegment = True
-                else:
-                    isSegment = False
-                if isSegment:
+                    # this is an interview segment
+                    is_segment = True
                     # get the interview id
                     #interviewid = entities_by_ddrid[ddrid[:ddrid.rfind('-')]]['id']
                     interviewid = identifier.Identifier(entity_id).parent().id
@@ -266,31 +263,21 @@ def do_conversion(entity_csv, file_csv, outputdir, binariespath):
                            )
                     # must account for interview entity in entities_by_ddrid
                     totalsegs -=1
-
-                filename = f['id'] + os.path.splitext(f['basename_orig'])[1]
-
-                if binariespath:
-                    origfile = os.path.join(binariespath, f['basename_orig'])
-                    if os.path.exists(origfile):
-                        destfile = os.path.join(outputdir, filename)
-                        shutil.copy2(origfile, destfile)
-                    else:
-                        print(f"Error: {origfile} missing.")
-                        print(f"Could not prep binary for {entity_id}.")
- 
-                # note this is the IA collection bucket; not the DDR collection
-                if isSegment:
+                    # note this is the IA collection bucket; not the DDR collection
                     collection = interviewid
                 else:
+                    is_segment = False
                     collection = 'densho'
+
                 mediatype = get_media_type(f['mimetype'])
                 description = get_description(
-                    isSegment, entity_id,
+                    is_segment, entity_id,
                     entity['description'], entity['location'], entity['sort'],
                     str(totalsegs)
                 )
                 title = entity['title']
                 contributor = entity['contributor']
+                creators_parsed = parse_creators(entity['creators'])
                 creator = get_creators(creators_parsed)
                 date = entity['creation']
                 subject0 = 'Japanese Americans'
@@ -321,6 +308,15 @@ def do_conversion(entity_csv, file_csv, outputdir, binariespath):
                         credits,
                         runtime,
                     ])
+
+                if binariespath:
+                    origfile = os.path.join(binariespath, f['basename_orig'])
+                    if os.path.exists(origfile):
+                        destfile = os.path.join(outputdir, filename)
+                        shutil.copy2(origfile, destfile)
+                    else:
+                        print(f"Error: {origfile} missing.")
+                        print(f"Could not prep binary for {entity_id}.")
 
     return outputfile
 
