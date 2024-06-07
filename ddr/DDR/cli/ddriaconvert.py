@@ -244,7 +244,7 @@ def do_conversion(entity_csv, file_csv, outputdir, binariespath):
 
             if ddrid in entities_by_ddrid:
                 entity = entities_by_ddrid[ddrid]
-                identifier = entity['id']
+                entity_id = entity['id']
                 interviewid = ''
                 creators_parsed = parse_creators(entity['creators'])
                 totalsegs = 0
@@ -269,7 +269,7 @@ def do_conversion(entity_csv, file_csv, outputdir, binariespath):
                     totalsegs -=1
 
                 filename = '{}-{}-{}{}'.format(
-                    identifier,
+                    entity_id,
                     f['role'],
                     f['sha1'][:10],
                     f['basename_orig'][f['basename_orig'].rfind('.'):]
@@ -282,7 +282,7 @@ def do_conversion(entity_csv, file_csv, outputdir, binariespath):
                         shutil.copy2(origfile, destfile)
                     else:
                         print(f"Error: {origfile} missing.")
-                        print(f"Could not prep binary for {identifier}.")
+                        print(f"Could not prep binary for {entity_id}.")
  
                 # note this is the IA collection bucket; not the DDR collection
                 if isSegment:
@@ -291,7 +291,7 @@ def do_conversion(entity_csv, file_csv, outputdir, binariespath):
                     collection = 'densho'
                 mediatype = get_media_type(f['mimetype'])
                 description = get_description(
-                    isSegment, identifier,
+                    isSegment, entity_id,
                     entity['description'], entity['location'], entity['sort'],
                     str(totalsegs)
                 )
@@ -311,7 +311,7 @@ def do_conversion(entity_csv, file_csv, outputdir, binariespath):
                 with open(outputfile,'a') as csvout:
                     outputwriter = csv.writer(csvout)
                     outputwriter.writerow([
-                        identifier,
+                        entity_id,
                         filename,
                         collection,
                         mediatype,
