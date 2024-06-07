@@ -8,7 +8,8 @@
 # - fmetadata.csv in input denshovh dir
 
 import sys, datetime, csv, shutil, os, hashlib, re, mimetypes
-import argparse
+
+import click
 
 description = """Preps csv for DDR file import for VH binaries."""
 
@@ -122,25 +123,23 @@ def process_seg_dir(dpath,outpath):
         writer.writeheader()
         writer.writerows(odata)
 
-def main():
 
-    parser = argparse.ArgumentParser(description=description, epilog=epilog,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('inputpath', help='Path to VH binaries to process')
-    parser.add_argument('outputpath', nargs='?', default=os.getcwd(), help='Path to save output')
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-    args = parser.parse_args()
-
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument('inputpath')
+@click.argument('outputpath')
+def ddrvhfileprep(inputpath, outputpath):
     started = datetime.datetime.now()
     inputerrs = ''
-    if not os.path.isdir(args.inputpath):
-        inputerrs + 'Input path does not exist: {}\n'.format(args.inputpath)
-    if not os.path.exists(args.outputpath):
-        inputerrs + 'Output path does not exist: {}'.format(args.outputpath)
+    if not os.path.isdir(inputpath):
+        inputerrs + 'Input path does not exist: {}\n'.format(inputpath)
+    if not os.path.exists(outputpath):
+        inputerrs + 'Output path does not exist: {}'.format(outputpath)
     if inputerrs != '':
         print('Error -- script exiting...\n{}'.format(inputerrs))
     else:
-        process_seg_dir(args.inputpath,args.outputpath)
+        process_seg_dir(inputpath,outputpath)
     
     finished = datetime.datetime.now()
     elapsed = finished - started
@@ -152,4 +151,4 @@ def main():
     return
 
 if __name__ == '__main__':
-    main()
+    ddrvhfileprep()

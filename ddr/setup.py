@@ -83,6 +83,7 @@ setup(
         ddrpubcopy=DDR.cli.ddrpubcopy:ddrpubcopy
         ddrsignatures=DDR.cli.ddrsignatures:ddrsignatures
         ddrtransform=DDR.cli.ddrtransform:ddrtransform
+        ddrvhfileprep=DDR.cli.ddrvhfileprep:ddrvhfileprep
         ddrvocab=DDR.cli.ddrvocab:ddrvocab
     ''',
     scripts = [
@@ -93,7 +94,6 @@ setup(
         'bin/ddr-massupdate',
         'bin/ddr-missing',
         'bin/ddr-update',
-        'DDR/cli/ddr-vhfileprep',
         'bin/ddrdensho255fix',
     ],
 )
