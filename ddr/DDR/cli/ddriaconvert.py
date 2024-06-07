@@ -25,6 +25,7 @@ import sys
 import click
 
 from DDR import converters
+from DDR import identifier
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -236,8 +237,11 @@ def do_conversion(entity_csv, file_csv, outputdir, binariespath):
     for f in file_data:
         # TODO make logic understand multiple boolean forms
         if is_external(f['external']):
-            if 'mezzanine' in f['id'] or 'master' in f['id'] or 'transcript' in f['id']:
-                ddrid = f['id'][:f['id'].rindex('-',0,f['id'].rindex('-'))]
+            #if 'mezzanine' in f['id'] or 'master' in f['id'] or 'transcript' in f['id']:
+            #    ddrid = f['id'][:f['id'].rindex('-',0,f['id'].rindex('-'))]
+            fi = identifier.Identifier(f['id'])
+            if fi.idparts['role'] in ['master', 'mezzanine', 'transcript']:
+                ddrid = fi.parent().id
             else:
                 ddrid = f['id']
             print('file {}. processing...'.format(ddrid))
@@ -254,7 +258,8 @@ def do_conversion(entity_csv, file_csv, outputdir, binariespath):
                     isSegment = False
                 if isSegment:
                     # get the interview id
-                    interviewid = entities_by_ddrid[ddrid[:ddrid.rfind('-')]]['id']
+                    #interviewid = entities_by_ddrid[ddrid[:ddrid.rfind('-')]]['id']
+                    interviewid = identifier.Identifier(entity_id).parent().id
                     print('interviewid: {}'.format(interviewid))
                     # get segment info
                     for segment in entities_by_ddrid:
@@ -268,12 +273,7 @@ def do_conversion(entity_csv, file_csv, outputdir, binariespath):
                     # must account for interview entity in entities_by_ddrid
                     totalsegs -=1
 
-                filename = '{}-{}-{}{}'.format(
-                    entity_id,
-                    f['role'],
-                    f['sha1'][:10],
-                    f['basename_orig'][f['basename_orig'].rfind('.'):]
-                )
+                filename = f['id'] + os.path.splitext(f['basename_orig'])[1]
 
                 if binariespath:
                     origfile = os.path.join(binariespath, f['basename_orig'])
