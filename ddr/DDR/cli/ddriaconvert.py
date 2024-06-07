@@ -1,21 +1,3 @@
-#! /usr/bin/env python
-#
-# ddr-iaconvert.py
-# Creates CSV for batch upload to ia using cli tool
-#  
-
-"""
-entities_cols:
-id,status,public,title,description,creation,location,creators,language,genre,
-format,extent,contributor,alternate_id,digitize_person, digitize_organization,
-digitize_date,credit,topics,persons,facility,chronology,geography,parent,
-rights,rights_statement,notes,sort,signature_id
-
-files_cols:
-id,external,role,basename_orig,mimetype,public,rights,sort,thumb,label,
-digitize_person,tech_notes,external_urls,links,sha1,sha256,md5,size
-"""
-
 import csv 
 import datetime
 import os
@@ -198,6 +180,18 @@ def is_external(external):
         return True
     else:
         return False
+
+"""
+entities_cols:
+id,status,public,title,description,creation,location,creators,language,genre,
+format,extent,contributor,alternate_id,digitize_person, digitize_organization,
+digitize_date,credit,topics,persons,facility,chronology,geography,parent,
+rights,rights_statement,notes,sort,signature_id
+
+files_cols:
+id,external,role,basename_orig,mimetype,public,rights,sort,thumb,label,
+digitize_person,tech_notes,external_urls,links,sha1,sha256,md5,size
+"""
 
 def do_conversion(entity_csv, file_csv, outputdir, binariespath):
     entity_data = load_data(entity_csv)
