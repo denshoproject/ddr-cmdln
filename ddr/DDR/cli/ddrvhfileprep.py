@@ -11,17 +11,44 @@ import sys, datetime, csv, shutil, os, hashlib, re, mimetypes
 
 import click
 
-description = """Preps csv for DDR file import for VH binaries."""
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-epilog = """
-This command preps a CSV for DDR file import from a directory of VH binaries. It 
-assumes that the binary files are named with their associated DDR ID. The 
-output CSV is not entirely complete; it will need some manual editing before 
-import.
 
-EXAMPLE
-  $ ddr-vhprep.py ./vh_binaries ./output
-"""
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument('inputpath')
+@click.argument('outputpath')
+def ddrvhfileprep(inputpath, outputpath):
+    """Preps csv for DDR file import for VH binaries.
+    
+    This command preps a CSV for DDR file import from a directory of VH binaries.
+    It assumes that the binary files are named with their associated DDR ID.
+    The output CSV is not entirely complete; it will need some manual editing
+    before import.
+    
+    \b
+    EXAMPLE
+    $ ddrvhfileprep.py ./vh_binaries ./output
+    """
+    started = datetime.datetime.now()
+    inputerrs = ''
+    if not os.path.isdir(inputpath):
+        inputerrs + 'Input path does not exist: {}\n'.format(inputpath)
+    if not os.path.exists(outputpath):
+        inputerrs + 'Output path does not exist: {}'.format(outputpath)
+    if inputerrs != '':
+        print('Error -- script exiting...\n{}'.format(inputerrs))
+    else:
+        csvout = process_seg_dir(inputpath,outputpath)
+    
+    finished = datetime.datetime.now()
+    elapsed = finished - started
+    
+    print('Started: {}'.format(started))
+    print('Finished: {}'.format(finished))
+    print('Elapsed: {}'.format(elapsed))
+
+    return csvout
+
 
 """
 files_cols:
@@ -122,33 +149,6 @@ def process_seg_dir(dpath,outpath):
         writer = csv.DictWriter(csvfile, fieldnames=CSVCOLS)
         writer.writeheader()
         writer.writerows(odata)
-
-    return csvout
-
-
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-
-@click.command(context_settings=CONTEXT_SETTINGS)
-@click.argument('inputpath')
-@click.argument('outputpath')
-def ddrvhfileprep(inputpath, outputpath):
-    started = datetime.datetime.now()
-    inputerrs = ''
-    if not os.path.isdir(inputpath):
-        inputerrs + 'Input path does not exist: {}\n'.format(inputpath)
-    if not os.path.exists(outputpath):
-        inputerrs + 'Output path does not exist: {}'.format(outputpath)
-    if inputerrs != '':
-        print('Error -- script exiting...\n{}'.format(inputerrs))
-    else:
-        csvout = process_seg_dir(inputpath,outputpath)
-    
-    finished = datetime.datetime.now()
-    elapsed = finished - started
-    
-    print('Started: {}'.format(started))
-    print('Finished: {}'.format(finished))
-    print('Elapsed: {}'.format(elapsed))
 
     return csvout
 
