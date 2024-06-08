@@ -12,11 +12,13 @@ import datetime
 import hashlib
 import mimetypes
 import os
-import re
+from pathlib import Path
 import shutil
 import sys
 
 import click
+
+from DDR import identifier
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -112,11 +114,12 @@ def process_seg_dir(dpath,outpath):
             thisfile = os.path.join(dpath,fname)
             print("Processing file: {}".format(thisfile))
             # get ddrid from filename
-            p = re.compile('ddr\-[a-z_0-9]+\-[0-9]{1,}\-[0-9]{1,}\-[0-9]{1,}')
-            m = p.match(fname)
-            segid = m.group()
-            intid = segid[:segid.rfind('-')]
-            segno = segid[segid.rfind('-')+1:]
+            fidentifier = identifier.Identifier(Path(fname).stem)
+            segment = fidentifier.parent()
+            segid = segment.id
+            segno = str(segment.idparts['sid'])
+            interview = segment.parent()
+            intid = interview.id
             # Init row dict
             orow = {}
             orow['id'] = segid
@@ -140,10 +143,15 @@ def process_seg_dir(dpath,outpath):
             orow['mimetype'] = mimetypes.guess_type(thisfile)[0]
             print("mimetype: {}".format(orow['mimetype']))
 
-            newfname = segid + '-mezzanine-' + orow['sha1'][:10] + fname[fname.rfind('.'):]
-            orow['external_urls'] = "label:Internet Archive download|url:https://archive.org/download/{}/{};".format(segid,newfname)
+            file_sha = orow['sha1'][:10]
+            file_ext = Path(fname).suffix
+            newfname = segid + '-mezzanine-' + file_sha + file_ext
+            orow['external_urls'] = "label:Internet Archive download|" \
+                f"url:https://archive.org/download/{segid}/{newfname};"
             # Assumes that the stream file will be an MP4
-            orow['external_urls'] += "label:Internet Archive stream|url:https://archive.org/download/{}/{}.{}".format(segid,segid,IASTREAMEXT)
+            orow['external_urls'] += "label:Internet Archive stream|" \
+                "url:https://archive.org/download/" \
+                f"{segid}/{segid}.{IASTREAMEXT}"
             odata.append(orow)
 
             # Copy file with new name to output path
