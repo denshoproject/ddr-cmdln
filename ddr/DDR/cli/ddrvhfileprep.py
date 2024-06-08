@@ -7,7 +7,14 @@
 # - Dir(s) of segs named in ddr format
 # - fmetadata.csv in input denshovh dir
 
-import sys, datetime, csv, shutil, os, hashlib, re, mimetypes
+import csv
+import datetime
+import hashlib
+import mimetypes
+import os
+import re
+import shutil
+import sys
 
 import click
 
@@ -15,9 +22,9 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
 @click.command(context_settings=CONTEXT_SETTINGS)
-@click.argument('inputpath')
-@click.argument('outputpath')
-def ddrvhfileprep(inputpath, outputpath):
+@click.argument('inputdir')
+@click.argument('outputdir')
+def ddrvhfileprep(inputdir, outputdir):
     """Preps csv for DDR file import for VH binaries.
     
     This command preps a CSV for DDR file import from a directory of VH binaries.
@@ -29,16 +36,17 @@ def ddrvhfileprep(inputpath, outputpath):
     EXAMPLE
     $ ddrvhfileprep.py ./vh_binaries ./output
     """
+    inputerrs = 0
+    if not os.path.isdir(inputdir):
+        click.echo(f"ERROR: Input path does not exist: {inputdir}")
+    if not os.path.exists(outputdir):
+        click.echo(f"ERROR: Output path does not exist: {outputdir}")
+    if inputerrs:
+        sys.exit(1)
+
     started = datetime.datetime.now()
-    inputerrs = ''
-    if not os.path.isdir(inputpath):
-        inputerrs + 'Input path does not exist: {}\n'.format(inputpath)
-    if not os.path.exists(outputpath):
-        inputerrs + 'Output path does not exist: {}'.format(outputpath)
-    if inputerrs != '':
-        print('Error -- script exiting...\n{}'.format(inputerrs))
-    else:
-        csvout = process_seg_dir(inputpath,outputpath)
+
+    csvout = process_seg_dir(inputdir,outputdir)
     
     finished = datetime.datetime.now()
     elapsed = finished - started
