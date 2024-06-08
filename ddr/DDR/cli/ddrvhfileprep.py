@@ -7,20 +7,58 @@
 # - Dir(s) of segs named in ddr format
 # - fmetadata.csv in input denshovh dir
 
-import sys, datetime, csv, shutil, os, hashlib, re, mimetypes
-import argparse
+import csv
+import datetime
+import hashlib
+import mimetypes
+import os
+from pathlib import Path
+import shutil
+import sys
 
-description = """Preps csv for DDR file import for VH binaries."""
+import click
 
-epilog = """
-This command preps a CSV for DDR file import from a directory of VH binaries. It 
-assumes that the binary files are named with their associated DDR ID. The 
-output CSV is not entirely complete; it will need some manual editing before 
-import.
+from DDR import identifier
 
-EXAMPLE
-  $ ddr-vhprep.py ./vh_binaries ./output
-"""
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument('inputdir')
+@click.argument('outputdir')
+def ddrvhfileprep(inputdir, outputdir):
+    """Preps csv for DDR file import for VH binaries.
+    
+    This command preps a CSV for DDR file import from a directory of VH binaries.
+    It assumes that the binary files are named with their associated DDR ID.
+    The output CSV is not entirely complete; it will need some manual editing
+    before import.
+    
+    \b
+    EXAMPLE
+    $ ddrvhfileprep.py ./vh_binaries ./output
+    """
+    inputerrs = 0
+    if not os.path.isdir(inputdir):
+        click.echo(f"ERROR: Input path does not exist: {inputdir}")
+    if not os.path.exists(outputdir):
+        click.echo(f"ERROR: Output path does not exist: {outputdir}")
+    if inputerrs:
+        sys.exit(1)
+
+    started = datetime.datetime.now()
+
+    csvout = process_seg_dir(inputdir,outputdir)
+    
+    finished = datetime.datetime.now()
+    elapsed = finished - started
+    
+    print('Started: {}'.format(started))
+    print('Finished: {}'.format(finished))
+    print('Elapsed: {}'.format(elapsed))
+
+    return csvout
+
 
 """
 files_cols:
@@ -76,11 +114,12 @@ def process_seg_dir(dpath,outpath):
             thisfile = os.path.join(dpath,fname)
             print("Processing file: {}".format(thisfile))
             # get ddrid from filename
-            p = re.compile('ddr\-[a-z_0-9]+\-[0-9]{1,}\-[0-9]{1,}\-[0-9]{1,}')
-            m = p.match(fname)
-            segid = m.group()
-            intid = segid[:segid.rfind('-')]
-            segno = segid[segid.rfind('-')+1:]
+            fidentifier = identifier.Identifier(Path(fname).stem)
+            segment = fidentifier.parent()
+            segid = segment.id
+            segno = str(segment.idparts['sid'])
+            interview = segment.parent()
+            intid = interview.id
             # Init row dict
             orow = {}
             orow['id'] = segid
@@ -104,10 +143,15 @@ def process_seg_dir(dpath,outpath):
             orow['mimetype'] = mimetypes.guess_type(thisfile)[0]
             print("mimetype: {}".format(orow['mimetype']))
 
-            newfname = segid + '-mezzanine-' + orow['sha1'][:10] + fname[fname.rfind('.'):]
-            orow['external_urls'] = "label:Internet Archive download|url:https://archive.org/download/{}/{};".format(segid,newfname)
+            file_sha = orow['sha1'][:10]
+            file_ext = Path(fname).suffix
+            newfname = segid + '-mezzanine-' + file_sha + file_ext
+            orow['external_urls'] = "label:Internet Archive download|" \
+                f"url:https://archive.org/download/{segid}/{newfname};"
             # Assumes that the stream file will be an MP4
-            orow['external_urls'] += "label:Internet Archive stream|url:https://archive.org/download/{}/{}.{}".format(segid,segid,IASTREAMEXT)
+            orow['external_urls'] += "label:Internet Archive stream|" \
+                "url:https://archive.org/download/" \
+                f"{segid}/{segid}.{IASTREAMEXT}"
             odata.append(orow)
 
             # Copy file with new name to output path
@@ -122,34 +166,8 @@ def process_seg_dir(dpath,outpath):
         writer.writeheader()
         writer.writerows(odata)
 
-def main():
+    return csvout
 
-    parser = argparse.ArgumentParser(description=description, epilog=epilog,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('inputpath', help='Path to VH binaries to process')
-    parser.add_argument('outputpath', nargs='?', default=os.getcwd(), help='Path to save output')
-
-    args = parser.parse_args()
-
-    started = datetime.datetime.now()
-    inputerrs = ''
-    if not os.path.isdir(args.inputpath):
-        inputerrs + 'Input path does not exist: {}\n'.format(args.inputpath)
-    if not os.path.exists(args.outputpath):
-        inputerrs + 'Output path does not exist: {}'.format(args.outputpath)
-    if inputerrs != '':
-        print('Error -- script exiting...\n{}'.format(inputerrs))
-    else:
-        process_seg_dir(args.inputpath,args.outputpath)
-    
-    finished = datetime.datetime.now()
-    elapsed = finished - started
-    
-    print('Started: {}'.format(started))
-    print('Finished: {}'.format(finished))
-    print('Elapsed: {}'.format(elapsed))
-    
-    return
 
 if __name__ == '__main__':
-    main()
+    ddrvhfileprep()
