@@ -81,6 +81,7 @@ setup(
         ddrimport=DDR.cli.ddrimport:ddrimport
         ddrnames=DDR.cli.ddrnames:ddrnames
         ddrpubcopy=DDR.cli.ddrpubcopy:ddrpubcopy
+        ddrremote=DDR.cli.ddrremote:ddrremote
         ddrsignatures=DDR.cli.ddrsignatures:ddrsignatures
         ddrtransform=DDR.cli.ddrtransform:ddrtransform
         ddrvhfileprep=DDR.cli.ddrvhfileprep:ddrvhfileprep
