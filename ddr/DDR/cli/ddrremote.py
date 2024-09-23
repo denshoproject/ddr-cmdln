@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from time import sleep
 
 import click
 from dateutil import parser
@@ -64,9 +65,10 @@ def help():
 @ddrremote.command()
 @click.option('-l','--logfile', default=None, help='Write output to log file.')
 @click.option('-v','--verbose', is_flag=True, default=False, help='Show all files not just missing ones.')
+@click.option('-w','--wait', default=0, help='Wait N seconds after checking a collection.')
 @click.argument('remote')
 @click.argument('collection')
-def check(logfile, verbose, remote, collection):
+def check(logfile, verbose, wait, remote, collection):
     """Check that annex files in the collection are present in the special remote
     
     Under the hood, uses the git annex checkpresentkey plumbing command,
@@ -92,6 +94,8 @@ def check(logfile, verbose, remote, collection):
             log(logfile, f"{prefix} {output}")
     endtime = datetime.now(); elapsed = endtime - starttime
     log(logfile, f"{prefix} DONE {len(annex_files)} files checked in {str(elapsed)}")
+    if wait:
+        sleep(int(wait))
 
 def annex_find(collection_path):
     """Gets list of relative file paths using git annex find
