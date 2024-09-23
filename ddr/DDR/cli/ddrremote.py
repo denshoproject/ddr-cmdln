@@ -6,21 +6,28 @@ check - Verifies that all the annex files in the collection are present in
         the specified special remote. Optionally writes to --log.
 copy  - Runs git annex copy to the specified special remote, and
         optionally writes to --log.
+recap - Reports info about recent collection modifications.
 
 - Works best if the ddr user has passwordless SSH keys for each remote.
 """
 
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import os
 from pathlib import Path
 import subprocess
 import sys
 
 import click
+from dateutil import parser
+
+from DDR import config
+from DDR import dvcs
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S'
+TIMESTAMP_RECAP = '%Y-%m-%d %H:%M:%S'
 
 
 def dtfmt(dt=None):
@@ -154,6 +161,125 @@ def _annex_copy(collection_path, remote):
         return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True,encoding='utf-8')
     except subprocess.CalledProcessError as err:
         return f"ERROR {str(err)}"
+
+
+@ddrremote.command()
+@click.option('-d','--days', default=7, help='Data for the past N days (default: 7).')
+@click.option('-b','--base', default=config.MEDIA_BASE, help=f"Base path containing collection repositories (default: {config.MEDIA_BASE}).")
+def recap(days, base):
+    """Report recent activity in synced repositories.
+    
+    Returns notices of recent repository initializations and merges
+    and counts of recently modified metadata and annex files.
+    
+    Note: The last-modification dates come from *Cgit* on mits3.
+    Collections will NOT be listed unless they have been synced!
+    """
+    basepath = Path(base)
+    days = int(days)
+    username = config.CGIT_USERNAME
+    password = config.CGIT_PASSWORD
+    if os.environ.get('CGIT_USERNAME'): username = os.environ['CGIT_USERNAME']
+    if os.environ.get('CGIT_PASSWORD'): password = os.environ['CGIT_PASSWORD']
+    # Cgit data from last N days
+    cgit_repositories = _cgit_recently_modified(days, username, password)
+    # add GitPython objects if repo is present in local filesystem
+    repos_repositories = _gitpython_repositories(cgit_repositories, basepath)
+    # sort chronologically
+    repos_repositories = sorted(
+        repos_repositories, key=lambda rr: rr[0]['timestamp']
+    )
+    for repo,repository in repos_repositories:
+        lastmod = repo['timestamp'].strftime(TIMESTAMP_RECAP)
+        # skip repository if not in local filesystem
+        if not repository:
+            click.echo(f"{lastmod} ({repo['id']})")
+            continue
+        # look at local repository's recent commits and count significant events
+        totals = {'init': [], 'merge': [], 'metadata': [], 'annex': []}
+        for commit in _recent_commits(repository, days):
+            totals = _commit_modified_files(repo, repository, commit, totals)
+        # print out
+        events = []
+        if totals['init']:     events.append('INITIALIZED')
+        if totals['merge']:    events.append(f"{len(totals['merge'])} merge")
+        if totals['metadata']: events.append(f"{len(totals['metadata'])} metadata")
+        if totals['annex']:    events.append(f"{len(totals['annex'])} annex")
+        events = ', '.join(events)
+        click.echo(f"{lastmod}  {repo['id']}  {events}")
+
+def _cgit_recently_modified(days, username, password):
+    """Scrape Cgit and return info for repositories modified in last N days
+    """
+    cgit = dvcs.Cgit()
+    if username: cgit.username = username
+    if password: cgit.password = password
+    # TODO get timezone from OS
+    now = datetime.now(tz=ZoneInfo('America/Los_Angeles'))
+    recent = []
+    for repo in cgit.repositories():
+        ts = repo.get('timestamp')
+        if ts:
+            # TODO parse the time zones correctly this is dumb
+            ts = ts.replace('-0800','PST').replace('-0700','PDT')
+            repo['timestamp'] = parser.parse(ts)
+            delta = now - repo['timestamp']
+            if delta.days <= days:
+                recent.append(repo)
+    return recent
+
+def _gitpython_repositories(repos, basepath):
+    """Load GitPython repository objects if collection is reachable
+    
+    Collections may be known to Cgit but be missing from local filesystem
+    i.e. in development environment.
+    """
+    repositories = []
+    for repo in repos:
+        path = basepath / repo['id']
+        if path.exists():
+            repositories.append((repo,dvcs.repository(path)))
+        else:
+            repositories.append((repo,None))
+    return repositories
+
+def _recent_commits(repo, days, now=None):
+    """Return commits that occured within N days of timestamp
+    """
+    if now:
+        now = parser.parse(f"{now} PST")
+    else:
+        # TODO get timezone from OS
+        now = datetime.now(tz=ZoneInfo('America/Los_Angeles'))
+    commits = []
+    for commit in repo.iter_commits('master'):
+        delta = now - commit.committed_datetime
+        if delta.days <= days:
+            commits.append(commit)
+    return commits
+
+def _commit_modified_files(repo, repository, commit, totals):
+    """Update totals with any significant events that occurred in th commit
+    """
+    modified = [
+        line
+        for line in repository.git.show(commit.hexsha, name_only=True).split('\n')
+        if (line.find('files/') == 0)
+        or ('Merge branch' in line)
+        or ('Initialized' in line)
+    ]
+    totals['init']     += [line for line in modified if 'Initialized' in line]
+    totals['merge']    += [line for line in modified if 'Merge' in line]
+    totals['metadata'] += [line for line in modified if '.json' in line]
+    totals['annex']    += []
+    for relpath in modified:
+        abspath = Path(repository.working_dir) / relpath
+        rpath = str(abspath.resolve())
+        if abspath.is_symlink() \
+        and '.git/annex/objects' in rpath \
+        and 'SHA' in rpath:
+            totals['annex'].append(relpath)
+    return totals
 
 
 if __name__ == '__main__':

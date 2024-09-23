@@ -1,6 +1,7 @@
 # git and git-annex code
 
 from datetime import datetime
+from http import HTTPStatus
 import json
 import logging
 logger = logging.getLogger(__name__)
@@ -1329,10 +1330,19 @@ class Cgit():
         [(0, 0), (2, 50), (3, 100), ...]
         """
         url = f"{self.url}/cgit.cgi/?ofs=0"
-        r = self.session.get(
-            url, auth=(self.username,self.password),
-            headers=CGIT_BROWSER_HEADERS
-        )
+        if hasattr(self, 'username') and hasattr(self, 'password'):
+            r = self.session.get(
+                url, auth=(self.username,self.password),
+                headers=CGIT_BROWSER_HEADERS
+            )
+        else:
+            r = self.session.get(url, headers=CGIT_BROWSER_HEADERS)
+        #if not HTTPStatus(r.status_code).is_success:
+        if not (r.status_code <= 200 <= 299):
+            msg = f"Cgit returned HTTP {r.status_code} {r.reason}.\n" \
+                "Set username/password in DDR config ([workbench] cgit_username and cgit_password)\n" \
+                "or set environment variables CGIT_USERNAME and CGIT_PASSWORD."
+            raise Exception(msg)
         soup = BeautifulSoup(r.content, 'html.parser')
         pages = []
         for a in soup.find('ul', class_='pager').find_all('a'):
