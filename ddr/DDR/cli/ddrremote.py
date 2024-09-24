@@ -79,21 +79,27 @@ def check(logfile, verbose, wait, remote, collection):
     """
     if logfile:
         logfile = Path(logfile)
-    prefix = f"{dtfmt()} ddrremote check"
+    collection_path = Path(collection).absolute()
+    cid = collection_path.name
+    prefix = f"{dtfmt()} ddrremote check {cid}"
     starttime = datetime.now()
     log(logfile, f"{prefix} START")
     startdir = os.getcwd()
-    collection_path = Path(collection)
     annex_files = annex_find(collection_path)
+    errors = 0
+    missing = 0
     for rel_path in annex_files:
         output = checkpresentkey(collection_path, rel_path, remote)
         if output.split()[0] == 'ok':
             if (verbose):
                 log(logfile, f"{prefix} {output}")
         else:
+            errors += 1
+            if 'missing' in output:
+                missing += 1
             log(logfile, f"{prefix} {output}")
     endtime = datetime.now(); elapsed = endtime - starttime
-    log(logfile, f"{prefix} DONE {len(annex_files)} files checked in {str(elapsed)}")
+    log(logfile, f"{prefix} DONE {str(elapsed)} {len(annex_files)} files {errors} errs {missing} missing")
     if wait:
         sleep(int(wait))
 
@@ -147,16 +153,18 @@ def copy(logfile, wait, remote, collection):
     """
     if logfile:
         logfile = Path(logfile)
-    prefix = f"{dtfmt()} ddrremote"
+    collection_path = Path(collection).absolute()
+    cid = collection_path.name
+    prefix = f"{dtfmt()} ddrremote copy {cid}"
     starttime = datetime.now()
-    log(logfile, f"{prefix} copy START")
+    log(logfile, f"{prefix} START")
     for line in _annex_copy(collection, remote).splitlines():
         if line.find('copy') == 0:
             log(logfile, f"{prefix} {line}")
         else:
             log(logfile, line)
     endtime = datetime.now(); elapsed = endtime - starttime
-    log(logfile, f"{prefix} copy DONE in {str(elapsed)}")
+    log(logfile, f"{prefix} DONE {str(elapsed)}")
     if wait:
         sleep(int(wait))
 
