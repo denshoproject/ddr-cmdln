@@ -139,9 +139,10 @@ def checkpresentkey(collection_path, rel_path, remote):
 
 @ddrremote.command()
 @click.option('-l','--logfile', default=None, help='Write output to log file.')
+@click.option('-w','--wait', default=0, help='Wait N seconds after checking a collection.')
 @click.argument('remote')
 @click.argument('collection')
-def copy(logfile, remote, collection):
+def copy(logfile, wait, remote, collection):
     """git annex copy collection files to the remote and log
     """
     if logfile:
@@ -156,6 +157,8 @@ def copy(logfile, remote, collection):
             log(logfile, line)
     endtime = datetime.now(); elapsed = endtime - starttime
     log(logfile, f"{prefix} copy DONE in {str(elapsed)}")
+    if wait:
+        sleep(int(wait))
 
 def _annex_copy(collection_path, remote):
     # TODO yield lines instead of returning one big str
