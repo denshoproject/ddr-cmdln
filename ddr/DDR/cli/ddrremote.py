@@ -81,9 +81,9 @@ def check(logfile, verbose, wait, remote, collection):
         logfile = Path(logfile)
     collection_path = Path(collection).absolute()
     cid = collection_path.name
-    prefix = f"{dtfmt()} ddrremote check {cid}"
+    prefix = f"{dtfmt()} ddrremote check"
     starttime = datetime.now()
-    log(logfile, f"{prefix} START")
+    log(logfile, f"{dtfmt()} ddrremote check {remote} {collection_path} START")
     startdir = os.getcwd()
     annex_files = annex_find(collection_path)
     errors = 0
@@ -99,7 +99,7 @@ def check(logfile, verbose, wait, remote, collection):
                 missing += 1
             log(logfile, f"{prefix} {output}")
     endtime = datetime.now(); elapsed = endtime - starttime
-    log(logfile, f"{prefix} DONE {str(elapsed)} {len(annex_files)} files {errors} errs {missing} missing")
+    log(logfile, f"{dtfmt()} ddrremote check {remote} {collection_path} DONE {str(elapsed)} {len(annex_files)} files {errors} errs {missing} missing")
     if wait:
         sleep(int(wait))
 
@@ -133,7 +133,7 @@ def checkpresentkey(collection_path, rel_path, remote):
             encoding='utf-8'
         )
         if output == '':
-            return f"ok {remote} {str(rel_path)}"
+            return f"ok {str(rel_path)}"
     except subprocess.CalledProcessError as err:
         # checkpresentkey returns 1 if file is *absent*
         if err.returncode == 1:
@@ -155,16 +155,21 @@ def copy(logfile, wait, remote, collection):
         logfile = Path(logfile)
     collection_path = Path(collection).absolute()
     cid = collection_path.name
-    prefix = f"{dtfmt()} ddrremote copy {cid}"
+    prefix = f"{dtfmt()} ddrremote"
     starttime = datetime.now()
-    log(logfile, f"{prefix} START")
+    log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} START")
+    files = 0
+    copied = 0
     for line in _annex_copy(collection, remote).splitlines():
-        if line.find('copy') == 0:
+        if f"(checking {remote}...)" in line:
             log(logfile, f"{prefix} {line}")
+            files += 1
         else:
+            if 'sending incremental file list' in line:
+                copied += 1
             log(logfile, line)
     endtime = datetime.now(); elapsed = endtime - starttime
-    log(logfile, f"{prefix} DONE {str(elapsed)}")
+    log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} DONE {str(elapsed)} {files} files {copied} copied")
     if wait:
         sleep(int(wait))
 
