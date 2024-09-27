@@ -150,6 +150,9 @@ def checkpresentkey(collection_path, rel_path, remote):
 @click.argument('collection')
 def copy(logfile, wait, remote, collection):
     """git annex copy collection files to the remote and log
+    
+    Runs `git annex copy -c annex.sshcaching=true . --to=REMOTE`
+    and adds info to the output.
     """
     if logfile:
         logfile = Path(logfile)
@@ -176,7 +179,7 @@ def copy(logfile, wait, remote, collection):
 def _annex_copy(collection_path, remote):
     # TODO yield lines instead of returning one big str
     os.chdir(collection_path)
-    cmd = f"git annex copy . --to {remote}"
+    cmd = f"git annex copy -c annex.sshcaching=true . --to {remote}"
     try:
         return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True,encoding='utf-8')
     except subprocess.CalledProcessError as err:
