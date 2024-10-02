@@ -201,7 +201,7 @@ def copy(logfile, wait, remote, collection):
     starttime = datetime.now()
     log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} START")
     files,copied = _analyze_annex_copy_output(
-        prefix, _annex_copy(collection, remote)
+        _annex_copy(collection, remote), remote, prefix, logfile
     )
     elapsed = str(datetime.now() - starttime)
     log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} DONE {elapsed} {files} files {copied} copied")
