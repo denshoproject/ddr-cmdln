@@ -200,22 +200,17 @@ def copy(logfile, wait, remote, collection):
     prefix = f"{dtfmt()} ddrremote"
     starttime = datetime.now()
     log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} START")
-    files = 0
-    copied = 0
-    for line in _annex_copy(collection, remote).splitlines():
-        if f"(checking {remote}...)" in line:
-            log(logfile, f"{prefix} {line}")
-            files += 1
-        else:
-            if 'sending incremental file list' in line:
-                copied += 1
-            log(logfile, line)
-    endtime = datetime.now(); elapsed = endtime - starttime
-    log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} DONE {str(elapsed)} {files} files {copied} copied")
+    files,copied = _analyze_annex_copy_output(
+        prefix, _annex_copy(collection, remote)
+    )
+    elapsed = str(datetime.now() - starttime)
+    log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} DONE {elapsed} {files} files {copied} copied")
     if wait:
         sleep(int(wait))
 
 def _annex_copy(collection_path, remote):
+    """Run git annex copy command and return output or error
+    """
     # TODO yield lines instead of returning one big str
     os.chdir(collection_path)
     cmd = f"git annex copy -c annex.sshcaching=true . --to {remote}"
@@ -223,6 +218,61 @@ def _annex_copy(collection_path, remote):
         return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True,encoding='utf-8')
     except subprocess.CalledProcessError as err:
         return f"ERROR {str(err)}"
+
+def _analyze_annex_copy_output(copy_output, remote, prefix, logfile):
+    """Process git annex copy output, count number of files total and copied
+    
+    Sample logfiles for regular and Backblaze operations
+    ANNEX_COPY_REGULAR_SKIPPED, ANNEX_COPY_REGULAR_COPIED
+    ANNEX_COPY_BACKBLAZE_SKIPPED, ANNEX_COPY_BACKBLAZE_COPIED
+    """
+    files = 0
+    copied = 0
+    if 'b2' in remote:
+        for line in copy_output.splitlines():
+            if 'copy' in line:
+                files += 1
+                if f"(to {remote}...)" in line:
+                    copied += 1
+            log(logfile, f"{prefix} {line}")
+    else:
+        for line in copy_output.splitlines():
+            if f"(checking {remote}...)" in line:
+                log(logfile, f"{prefix} {line}")
+                files += 1
+            else:
+                if 'sending incremental file list' in line:
+                    copied += 1
+                log(logfile, line)
+    return files,copied
+
+# samples of `git annex copy` output
+
+ANNEX_COPY_REGULAR_SKIPPED = """
+2024-10-02T08:11:09 ddrremote copy files/ddr-densho-513-3/files/ddr-densho-513-3-mezzanine-a4d6b2b0c1.jpg (checking hq-backup-montblanc...) ok
+"""
+
+ANNEX_COPY_REGULAR_COPIED = """
+2024-10-02T08:11:09 ddrremote copy files/ddr-densho-513-4/files/ddr-densho-513-4-master-1c7108900b-a.jpg (checking hq-backup-montblanc...) (to hq-backup-montblanc...)
+sending incremental file list
+689/
+689/888/
+689/888/SHA256E-s181216--c196542d3f64713c70662bf5a8a7e30a78d02b7273b0d0a1f2cafb1cccbcb193.jpg/
+689/888/SHA256E-s181216--c196542d3f64713c70662bf5a8a7e30a78d02b7273b0d0a1f2cafb1cccbcb193.jpg/SHA256E-s181216--c196542d3f64713c70662bf5a8a7e30a78d02b7273b0d0a1f2cafb1cccbcb1
+93.jpg
+         32,768  18%    0.00kB/s    0:00:00
+        181,216 100%  141.57MB/s    0:00:00 (xfr#1, to-chk=0/5)
+ok
+"""
+
+ANNEX_COPY_BACKBLAZE_SKIPPED = """
+copy files/ddr-csujad-31-4/files/ddr-csujad-31-4-transcript-c057f5a2e1.pdf ok
+"""
+
+ANNEX_COPY_BACKBLAZE_COPIED = """
+copy files/ddr-csujad-31-6/files/ddr-csujad-31-6-mezzanine-83a48fe38e-a.jpg (to b2...)
+ok
+"""
 
 
 if __name__ == '__main__':
