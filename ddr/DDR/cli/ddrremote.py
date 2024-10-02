@@ -184,10 +184,11 @@ def annex_info_remote(collection_path, remote):
 
 @ddrremote.command()
 @click.option('-l','--logfile', default=None, help='Write output to log file.')
+@click.option('-b','--backoff', default=0.0, help='Wait N seconds between files.')
 @click.option('-w','--wait', default=0, help='Wait N seconds after checking a collection.')
 @click.argument('remote')
 @click.argument('collection')
-def copy(logfile, wait, remote, collection):
+def copy(logfile, backoff, wait, remote, collection):
     """git annex copy collection files to the remote and log
     
     Runs `git annex copy -c annex.sshcaching=true . --to=REMOTE`
@@ -199,35 +200,57 @@ def copy(logfile, wait, remote, collection):
     cid = collection_path.name
     prefix = f"{dtfmt()} ddrremote"
     starttime = datetime.now()
+    os.chdir(collection_path)
     log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} START")
-    files,copied = _analyze_annex_copy_output(
-        _annex_copy(collection, remote), remote, prefix, logfile
-    )
+    files = 0; copied = 0
+    if backoff:
+        for relpath in annex_find(collection):
+            files,copied = _analyze_annex_copy_output(
+                _annex_copy_file(relpath, remote),
+                remote, files, copied, prefix, logfile
+            )
+            if backoff:
+                sleep(float(backoff))
+    else:
+        files,copied = _analyze_annex_copy_output(
+            _annex_copy_all(collection, remote),
+            remote, files, copied, prefix, logfile
+        )
     elapsed = str(datetime.now() - starttime)
     log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} DONE {elapsed} {files} files {copied} copied")
     if wait:
-        sleep(int(wait))
+        sleep(float(wait))
 
-def _annex_copy(collection_path, remote):
-    """Run git annex copy command and return output or error
+def _annex_copy_all(collection_path, remote):
+    """git annex copy . and return output or error
     """
     # TODO yield lines instead of returning one big str
-    os.chdir(collection_path)
-    cmd = f"git annex copy -c annex.sshcaching=true . --to {remote}"
     try:
-        return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True,encoding='utf-8')
+        return subprocess.check_output(
+            f"git annex copy -c annex.sshcaching=true . --to {remote}",
+            stderr=subprocess.STDOUT, shell=True, encoding='utf-8'
+        )
     except subprocess.CalledProcessError as err:
         return f"ERROR {str(err)}"
 
-def _analyze_annex_copy_output(copy_output, remote, prefix, logfile):
+def _annex_copy_file(relpath, remote):
+    """git annex copy FILE and return output or error
+    """
+    try:
+        return subprocess.check_output(
+            f"git annex copy -c annex.sshcaching=true {relpath} --to {remote}",
+            stderr=subprocess.STDOUT, shell=True, encoding='utf-8'
+        )
+    except subprocess.CalledProcessError as err:
+        return f"ERROR {str(err)}"
+
+def _analyze_annex_copy_output(copy_output, remote, files, copied, prefix, logfile):
     """Process git annex copy output, count number of files total and copied
     
     Sample logfiles for regular and Backblaze operations
     ANNEX_COPY_REGULAR_SKIPPED, ANNEX_COPY_REGULAR_COPIED
     ANNEX_COPY_BACKBLAZE_SKIPPED, ANNEX_COPY_BACKBLAZE_COPIED
     """
-    files = 0
-    copied = 0
     if 'b2' in remote:
         for line in copy_output.splitlines():
             if 'copy' in line:
