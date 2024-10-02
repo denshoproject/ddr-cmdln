@@ -184,16 +184,21 @@ def annex_info_remote(collection_path, remote):
 
 @ddrremote.command()
 @click.option('-l','--logfile', default=None, help='Write output to log file.')
+@click.option('-j','--jobs', default='', help='Run N transfer jobs in parallel.')
 @click.option('-b','--backoff', default=0.0, help='Wait N seconds between files.')
 @click.option('-w','--wait', default=0, help='Wait N seconds after checking a collection.')
 @click.argument('remote')
 @click.argument('collection')
-def copy(logfile, backoff, wait, remote, collection):
+def copy(logfile, jobs, backoff, wait, remote, collection):
     """git annex copy collection files to the remote and log
     
     Runs `git annex copy -c annex.sshcaching=true . --to=REMOTE`
     and adds info to the output.
+    
+    See `git annex help copy` for more information about --jobs.
     """
+    if jobs and not (jobs.isnumeric() or jobs == 'cpus'):
+        click.echo('--jobs must be an int or "cpus". See git annex help copy.')
     if logfile:
         logfile = Path(logfile)
     collection_path = Path(collection).absolute()
@@ -213,7 +218,7 @@ def copy(logfile, backoff, wait, remote, collection):
                 sleep(float(backoff))
     else:
         files,copied = _analyze_annex_copy_output(
-            _annex_copy_all(collection, remote),
+            _annex_copy_all(collection, remote, jobs),
             remote, files, copied, prefix, logfile
         )
     elapsed = str(datetime.now() - starttime)
@@ -221,13 +226,15 @@ def copy(logfile, backoff, wait, remote, collection):
     if wait:
         sleep(float(wait))
 
-def _annex_copy_all(collection_path, remote):
+def _annex_copy_all(collection_path, remote, jobs=''):
     """git annex copy . and return output or error
     """
     # TODO yield lines instead of returning one big str
+    if jobs:
+        jobs = f"--jobs={jobs}"
     try:
         return subprocess.check_output(
-            f"git annex copy -c annex.sshcaching=true . --to {remote}",
+            f"git annex copy -c annex.sshcaching=true {jobs} . --to {remote}",
             stderr=subprocess.STDOUT, shell=True, encoding='utf-8'
         )
     except subprocess.CalledProcessError as err:
