@@ -63,12 +63,12 @@ def help():
 
 @ddrremote.command()
 @click.option('-f','--fast', is_flag=True, default=False, help='Faster check using git annex info.')
-@click.option('-l','--logfile', default=None, help='Write output to log file.')
+@click.option('-l','--logdir', default=None, help='Write output to log file in directory.')
 @click.option('-v','--verbose', is_flag=True, default=False, help='Show all files not just missing ones.')
 @click.option('-w','--wait', default=0, help='Wait N seconds after checking a collection.')
 @click.argument('remote')
 @click.argument('collection')
-def check(fast, logfile, verbose, wait, remote, collection):
+def check(fast, logdir, verbose, wait, remote, collection):
     """Check that annex files in the collection are present in the special remote
     
     Under the hood, uses the git annex checkpresentkey plumbing command,
@@ -77,11 +77,10 @@ def check(fast, logfile, verbose, wait, remote, collection):
     Write output to files for use by compare command:
     ddrremote check REMOTE COLLECTIONPATH | tee /PATH/REMOTE/COLLECTION
     """
-    if logfile:
-        logfile = Path(logfile)
     collection_path = Path(collection).absolute()
     cid = collection_path.name
     prefix = f"{dtfmt()} ddrremote check"
+    logfile = Path(logdir) / f"{cid}.log" if logdir else None
     starttime = datetime.now()
     log(logfile, f"{dtfmt()} ddrremote check {remote} {collection_path} START")
     if fast:
@@ -183,13 +182,13 @@ def annex_info_remote(collection_path, remote):
 
 
 @ddrremote.command()
-@click.option('-l','--logfile', default=None, help='Write output to log file.')
+@click.option('-l','--logdir', default=None, help='Write output to log file in directory.')
 @click.option('-j','--jobs', default='', help='Run N transfer jobs in parallel.')
 @click.option('-b','--backoff', default=0.0, help='Wait N seconds between files.')
 @click.option('-w','--wait', default=0, help='Wait N seconds after checking a collection.')
 @click.argument('remote')
 @click.argument('collection')
-def copy(logfile, jobs, backoff, wait, remote, collection):
+def copy(logdir, jobs, backoff, wait, remote, collection):
     """git annex copy collection files to the remote and log
     
     Runs `git annex copy -c annex.sshcaching=true . --to=REMOTE`
@@ -199,10 +198,9 @@ def copy(logfile, jobs, backoff, wait, remote, collection):
     """
     if jobs and not (jobs.isnumeric() or jobs == 'cpus'):
         click.echo('--jobs must be an int or "cpus". See git annex help copy.')
-    if logfile:
-        logfile = Path(logfile)
     collection_path = Path(collection).absolute()
     cid = collection_path.name
+    logfile = Path(logdir) / f"{cid}.log" if logdir else None
     prefix = f"{dtfmt()} ddrremote"
     starttime = datetime.now()
     os.chdir(collection_path)
