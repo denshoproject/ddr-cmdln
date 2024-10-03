@@ -19,6 +19,7 @@ from pathlib import Path
 import subprocess
 import sys
 from time import sleep
+import traceback
 
 import click
 import humanize
@@ -194,33 +195,46 @@ def copy(logdir, jobs, backoff, wait, remote, collection):
     Runs `git annex copy -c annex.sshcaching=true . --to=REMOTE`
     and adds info to the output.
     
+    Remember to set B2_ACCOUNT_ID and B2_APP_KEY before attempting to copy
+    to Backblaze remotes.
+    
     See `git annex help copy` for more information about --jobs.
     """
+    try:
+        repo = dvcs.repository(collection)
+    except dvcs.git.exc.InvalidGitRepositoryError:
+        click.echo(f"ERROR: {collection} does not appear to be a Git repository.")
+        sys.exit(1)
+    if remote not in [r['name'] for r in dvcs.remotes(repo)]:
+        click.echo(f"ERROR: '{remote}' is not a remote of {collection}")
+        sys.exit(1)
     if jobs and not (jobs.isnumeric() or jobs == 'cpus'):
         click.echo('--jobs must be an int or "cpus". See git annex help copy.')
     collection_path = Path(collection).absolute()
     cid = collection_path.name
     logfile = Path(logdir) / f"{cid}.log" if logdir else None
     prefix = f"{dtfmt()} ddrremote"
+    # ok go
     starttime = datetime.now()
     os.chdir(collection_path)
     log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} START")
-    files = 0; copied = 0
+    files = 0; copied = 0; errors = 0
     if backoff:
         for relpath in annex_find(collection):
-            files,copied = _analyze_annex_copy_output(
+            files,copied,errors = _analyze_annex_copy_output(
                 _annex_copy_file(relpath, remote),
-                remote, files, copied, prefix, logfile
+                remote, files, copied, errors, prefix, logfile
             )
             if backoff:
                 sleep(float(backoff))
     else:
-        files,copied = _analyze_annex_copy_output(
+        files,copied,errors = _analyze_annex_copy_output(
             _annex_copy_all(collection, remote, jobs),
-            remote, files, copied, prefix, logfile
+            remote, files, copied, errors, prefix, logfile
         )
     elapsed = str(datetime.now() - starttime)
-    log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} DONE {elapsed} {files} files {copied} copied")
+    errors = f" {errors} errors" if errors else ''
+    log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} DONE {elapsed} {files} files {copied} copied{errors}")
     if wait:
         sleep(float(wait))
 
@@ -249,22 +263,25 @@ def _annex_copy_file(relpath, remote):
     except subprocess.CalledProcessError as err:
         return f"ERROR {str(err)}"
 
-def _analyze_annex_copy_output(copy_output, remote, files, copied, prefix, logfile):
+def _analyze_annex_copy_output(copy_output, remote, files, copied, errors, prefix, logfile):
     """Process git annex copy output, count number of files total and copied
     
     Sample logfiles for regular and Backblaze operations
     ANNEX_COPY_REGULAR_SKIPPED, ANNEX_COPY_REGULAR_COPIED
     ANNEX_COPY_BACKBLAZE_SKIPPED, ANNEX_COPY_BACKBLAZE_COPIED
     """
-    if 'b2' in remote:
-        for line in copy_output.splitlines():
+    for line in copy_output.splitlines():
+        if ('error' in line.lower()) or ('non-zero exit status' in line):
+            errors += 1
+            log(logfile, f"ERROR {line}")
+            log(logfile, traceback.format_exc().strip())
+        elif 'b2' in remote:
             if 'copy' in line:
                 files += 1
                 if f"(to {remote}...)" in line:
                     copied += 1
             log(logfile, f"{prefix} {line}")
-    else:
-        for line in copy_output.splitlines():
+        else:
             if f"(checking {remote}...)" in line:
                 log(logfile, f"{prefix} {line}")
                 files += 1
@@ -272,7 +289,7 @@ def _analyze_annex_copy_output(copy_output, remote, files, copied, prefix, logfi
                 if 'sending incremental file list' in line:
                     copied += 1
                 log(logfile, line)
-    return files,copied
+    return files,copied,errors
 
 # samples of `git annex copy` output
 
