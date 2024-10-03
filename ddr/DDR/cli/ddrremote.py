@@ -203,10 +203,10 @@ def copy(logdir, jobs, backoff, wait, remote, collection):
     try:
         repo = dvcs.repository(collection)
     except dvcs.git.exc.InvalidGitRepositoryError:
-        click.echo(f"ERROR: {collection} does not appear to be a Git repository.")
+        click.echo(f"{dtfmt()} ddrremote copy {remote} {collection} DONE ERROR: does not appear to be a Git repository.")
         sys.exit(1)
     if remote not in [r['name'] for r in dvcs.remotes(repo)]:
-        click.echo(f"ERROR: '{remote}' is not a remote of {collection}")
+        click.echo(f"{dtfmt()} ddrremote copy {remote} {collection} DONE ERROR: collection has no remote '{remote}'.")
         sys.exit(1)
     if jobs and not (jobs.isnumeric() or jobs == 'cpus'):
         click.echo('--jobs must be an int or "cpus". See git annex help copy.')
