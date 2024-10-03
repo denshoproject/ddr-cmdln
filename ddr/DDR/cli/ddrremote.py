@@ -122,7 +122,7 @@ def annex_find(collection_path):
     return [
         Path(relpath)
         for relpath in subprocess.check_output(
-                'git annex find', stderr=subprocess.STDOUT, shell=True,
+                'git annex find --include "*"', stderr=subprocess.STDOUT, shell=True,
                 encoding='utf-8'
         ).strip().splitlines()
     ]
@@ -218,22 +218,24 @@ def copy(logdir, jobs, backoff, wait, remote, collection):
     starttime = datetime.now()
     os.chdir(collection_path)
     log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} START")
-    files = 0; copied = 0; errors = 0
+    files = 0; ok = 0; copied = 0; errors = 0
     if backoff:
         for relpath in annex_find(collection):
-            files,copied,errors = _analyze_annex_copy_output(
+            files,ok,copied,errors = _analyze_annex_copy_output(
                 _annex_copy_file(relpath, remote),
-                remote, files, copied, errors, prefix, logfile
+                remote, files, ok, copied, errors, prefix, logfile
             )
             if backoff:
                 sleep(float(backoff))
     else:
-        files,copied,errors = _analyze_annex_copy_output(
+        files,ok,copied,errors = _analyze_annex_copy_output(
             _annex_copy_all(collection, remote, jobs),
-            remote, files, copied, errors, prefix, logfile
+            remote, files, ok, copied, errors, prefix, logfile
         )
+    operation = f"{dtfmt()} ddrremote copy {remote} {collection_path}"
     elapsed = str(datetime.now() - starttime)
-    log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} DONE {elapsed} {files} files {errors} errs {copied} copied")
+    status = f"files:{files} ok:{ok} copied:{copied} errs:{errors}"
+    log(logfile, f"{operation} DONE {elapsed} {status}")
     if wait:
         sleep(float(wait))
 
@@ -262,7 +264,7 @@ def _annex_copy_file(relpath, remote):
     except subprocess.CalledProcessError as err:
         return f"ERROR {str(err)}"
 
-def _analyze_annex_copy_output(copy_output, remote, files, copied, errors, prefix, logfile):
+def _analyze_annex_copy_output(copy_output, remote, files, ok, copied, errors, prefix, logfile):
     """Process git annex copy output, count number of files total and copied
     
     Sample logfiles for regular and Backblaze operations
@@ -270,25 +272,33 @@ def _analyze_annex_copy_output(copy_output, remote, files, copied, errors, prefi
     ANNEX_COPY_BACKBLAZE_SKIPPED, ANNEX_COPY_BACKBLAZE_COPIED
     """
     for line in copy_output.splitlines():
-        if ('error' in line.lower()) or ('non-zero exit status' in line):
+        if ('error' in line.lower()) \
+        or ('non-zero exit status' in line) \
+        or ("couldn't upload" in line):
             errors += 1
             log(logfile, f"ERROR {line}")
             log(logfile, traceback.format_exc().strip())
         elif 'b2' in remote:
+            # backblaze
             if 'copy' in line:
                 files += 1
-                if f"(to {remote}...)" in line:
+                if (link[-2:] == 'ok') and (not f"(to {remote}...)" in line):
+                    ok += 1
+                elif f"(to {remote}...)" in line:
                     copied += 1
             log(logfile, f"{prefix} {line}")
         else:
+            # everything else(?)
             if f"(checking {remote}...)" in line:
                 log(logfile, f"{prefix} {line}")
                 files += 1
+                if line[-2:] == 'ok':
+                    ok += 1
             else:
                 if 'sending incremental file list' in line:
                     copied += 1
                 log(logfile, line)
-    return files,copied,errors
+    return files,ok,copied,errors
 
 # samples of `git annex copy` output
 
