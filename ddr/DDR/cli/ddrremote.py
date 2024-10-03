@@ -265,14 +265,15 @@ def _annex_copy_file(relpath, remote):
     except subprocess.CalledProcessError as err:
         return f"ERROR {str(err)}"
 
-def _analyze_annex_copy_output(copy_output, remote, ok, copied, errors, prefix, logfile):
+def _analyze_annex_copy_output(output, remote, ok, copied, errors, prefix, logfile):
     """Process git annex copy output, count number of files total and copied
     
     Sample logfiles for regular and Backblaze operations
     ANNEX_COPY_REGULAR_SKIPPED, ANNEX_COPY_REGULAR_COPIED
     ANNEX_COPY_BACKBLAZE_SKIPPED, ANNEX_COPY_BACKBLAZE_COPIED
     """
-    for line in copy_output.splitlines():
+    for line in output.splitlines():
+        line = line.strip()
         if ('error' in line.lower()) \
         or ('non-zero exit status' in line) \
         or ("couldn't upload" in line):
@@ -326,6 +327,25 @@ ANNEX_COPY_BACKBLAZE_COPIED = """
 copy files/ddr-csujad-31-6/files/ddr-csujad-31-6-mezzanine-83a48fe38e-a.jpg (to b2...)
 ok
 """
+ANNEX_COPY_BACKBLAZE_ERROR = """
+Command 'git annex copy -c annex.sshcaching=true files/ddr-ajah-1-10/files/ddr-ajah-1-10-24/files/ddr-ajah-1-10-24-master-404314826e.mpg --to b2' returned non-zero exit status 1.
+"""
+
+def _test_analyze_annex_copy_output(logfile):
+    files=0; ok=0; copied=0; errors=0
+    prefix='000 ddrremote'
+    logfile = Path(logfile)
+    click.echo('(ok,copied,errors)')
+    click.echo('ANNEX_COPY_REGULAR_SKIPPED')
+    click.echo(_analyze_annex_copy_output(ANNEX_COPY_REGULAR_SKIPPED.strip(), 'hq-backup-montblanc', ok, copied, errors, prefix, logfile))
+    click.echo('ANNEX_COPY_REGULAR_COPIED')
+    click.echo(_analyze_annex_copy_output(ANNEX_COPY_REGULAR_COPIED.strip(), 'hq-backup-montblanc', ok, copied, errors, prefix, logfile))
+    click.echo('ANNEX_COPY_BACKBLAZE_SKIPPED')
+    click.echo(_analyze_annex_copy_output(ANNEX_COPY_BACKBLAZE_SKIPPED.strip(), 'b2', ok, copied, errors, prefix, logfile))
+    click.echo('ANNEX_COPY_BACKBLAZE_COPIED')
+    click.echo(_analyze_annex_copy_output(ANNEX_COPY_BACKBLAZE_COPIED.strip(), 'b2', ok, copied, errors, prefix, logfile))
+    click.echo('ANNEX_COPY_BACKBLAZE_ERROR')
+    click.echo(_analyze_annex_copy_output(ANNEX_COPY_BACKBLAZE_ERROR.strip(), 'b2', ok, copied, errors, prefix, logfile))
 
 
 if __name__ == '__main__':
