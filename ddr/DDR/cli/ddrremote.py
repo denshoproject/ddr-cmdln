@@ -233,8 +233,7 @@ def copy(logdir, jobs, backoff, wait, remote, collection):
             remote, files, copied, errors, prefix, logfile
         )
     elapsed = str(datetime.now() - starttime)
-    errors = f" {errors} errors" if errors else ''
-    log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} DONE {elapsed} {files} files {copied} copied{errors}")
+    log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} DONE {elapsed} {files} files {errors} errs {copied} copied")
     if wait:
         sleep(float(wait))
 
