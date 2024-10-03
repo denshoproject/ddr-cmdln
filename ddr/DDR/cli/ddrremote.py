@@ -200,19 +200,20 @@ def copy(logdir, jobs, backoff, wait, remote, collection):
     
     See `git annex help copy` for more information about --jobs.
     """
+    logfile = Path(logdir) / f"{cid}.log" if logdir else None
     try:
         repo = dvcs.repository(collection)
     except dvcs.git.exc.InvalidGitRepositoryError:
-        click.echo(f"{dtfmt()} ddrremote copy {remote} {collection} DONE ERROR: does not appear to be a Git repository.")
+        log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection} DONE ERROR Does not appear to be a Git repository")
         sys.exit(1)
     if remote not in [r['name'] for r in dvcs.remotes(repo)]:
-        click.echo(f"{dtfmt()} ddrremote copy {remote} {collection} DONE ERROR: collection has no remote '{remote}'.")
+        log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection} DONE ERROR Collection has no remote '{remote}'")
         sys.exit(1)
     if jobs and not (jobs.isnumeric() or jobs == 'cpus'):
-        click.echo('--jobs must be an int or "cpus". See git annex help copy.')
+        click.echo('--jobs must be an int or "cpus"')
+        sys.exit(1)
     collection_path = Path(collection).absolute()
     cid = collection_path.name
-    logfile = Path(logdir) / f"{cid}.log" if logdir else None
     prefix = f"{dtfmt()} ddrremote"
     # ok go
     starttime = datetime.now()
