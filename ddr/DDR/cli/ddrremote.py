@@ -208,7 +208,12 @@ def copy(logdir, jobs, backoff, wait, remote, collection):
     except dvcs.git.exc.InvalidGitRepositoryError:
         log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection} DONE ERROR Does not appear to be a Git repository")
         sys.exit(1)
-    if remote not in [r['name'] for r in dvcs.remotes(repo)]:
+    try:
+        remotes = [r['name'] for r in dvcs.remotes(repo)]
+    except Exception as err:
+        log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection} DONE ERROR Problems with this Git repository! {str(err)}")
+        sys.exit(1)
+    if remote not in remotes:
         log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection} DONE ERROR Collection has no remote '{remote}'")
         sys.exit(1)
     if jobs and not (jobs.isnumeric() or jobs == 'cpus'):
