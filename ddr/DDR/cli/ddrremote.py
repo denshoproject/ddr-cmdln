@@ -200,6 +200,8 @@ def copy(logdir, jobs, backoff, wait, remote, collection):
     
     See `git annex help copy` for more information about --jobs.
     """
+    collection_path = Path(collection).absolute()
+    cid = collection_path.name
     logfile = Path(logdir) / f"{cid}.log" if logdir else None
     try:
         repo = dvcs.repository(collection)
@@ -212,8 +214,6 @@ def copy(logdir, jobs, backoff, wait, remote, collection):
     if jobs and not (jobs.isnumeric() or jobs == 'cpus'):
         click.echo('--jobs must be an int or "cpus"')
         sys.exit(1)
-    collection_path = Path(collection).absolute()
-    cid = collection_path.name
     prefix = f"{dtfmt()} ddrremote"
     # ok go
     starttime = datetime.now()
