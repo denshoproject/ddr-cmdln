@@ -13,6 +13,7 @@ recap - Reports info about recent collection modifications.
 
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import json
 import os
 from pathlib import Path
@@ -28,13 +29,13 @@ from DDR import config
 from DDR import dvcs
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S'
 
 
 def dtfmt(dt=None):
     if not dt:
-        dt = datetime.now()
-    return dt.strftime(TIMESTAMP_FORMAT)
+        dt = datetime.now(tz=config.TZ)
+    return dt.isoformat(timespec='seconds')
+
 
 def log(logfile, line):
     if logfile:
