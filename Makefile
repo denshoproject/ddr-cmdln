@@ -285,6 +285,7 @@ install-dependencies: apt-backports
 	apt-get --assume-yes install libxml2-dev libxslt1-dev libz-dev pmount udisks2
 	apt-get --assume-yes install imagemagick libssl-dev libxml2 libxml2-dev libxslt1-dev
 	apt-get --assume-yes install $(LIBEXEMPI3_PKG)
+	apt-get --assume-yes install ack-grep
 	apt-get --assume-yes install git-annex git-core
 
 mkdirs: mkdir-ddr-cmdln
