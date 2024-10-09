@@ -298,15 +298,22 @@ def _commit_modified_files(repo, repository, commit, totals):
 def report(username, password, remotes, absentok, verbose, basedir, logsdir):
     """Status of local repos, annex special remotes, actions to be taken
     """
+    start = datetime.now()
     remotes = remotes.strip().split(',')
-    repos = _combine_local_cgit(basedir, username, password, logsdir, remotes)
+    repos,num_local,num_cgit = _combine_local_cgit(basedir, username, password, logsdir, remotes)
+    num_total = len(repos.items())
+    num_notok = 0
     for cid,repo in repos.items():
         ok,notok = _repository_status(repo, remotes, absentok)
         if verbose:
             click.echo(f"{cid} {','.join(ok)} {','.join(notok)}")
         else:
             if notok:
+                num_notok += 1
                 click.echo(f"{cid} {','.join(notok)}")
+    now = datetime.now()
+    e = now - start
+    click.echo(f"{now} Checked {num_local} of {num_total} collections in {e} -- {num_notok} issues")
 
 def _combine_local_cgit(basedir, username, password, logsdir, remotes):
     """Combine data from local repos, cgit repos, and remtoe copy logs
@@ -323,6 +330,8 @@ def _combine_local_cgit(basedir, username, password, logsdir, remotes):
     ids_local = [repo['id'] for repo in repos_local]
     ids_cgit = [repo['id'] for repo in repos_cgit]
     ids_combined = sorted(set(ids_local + ids_cgit))
+    num_local = len(ids_local)
+    num_cgit = len(ids_cgit)
     # format data
     repositories = {}
     for cid in ids_combined:
@@ -357,8 +366,8 @@ def _combine_local_cgit(basedir, username, password, logsdir, remotes):
             for line in fails:
                 if cid in line:
                     repositories[cid]['remotes'][remote]['FAIL'] = line
-    return repositories
-    
+    return repositories,num_local,num_cgit
+
 #from concurrent.futures import ThreadPoolExecutor
 # 
 #def run_io_tasks_in_parallel(tasks):
