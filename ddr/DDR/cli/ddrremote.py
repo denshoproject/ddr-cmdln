@@ -200,6 +200,33 @@ def copy(logdir, jobs, backoff, wait, remote, collection):
     to Backblaze remotes.
     
     See `git annex help copy` for more information about --jobs.
+    
+    \b
+    Assuming that the copy operation run to completion, the last line
+    contains the following info:
+    "TIMESTAMP ddrremote copy REMOTE COLLECTIONPATH DONE elapsedtime STATUS"
+    The status block tells you:
+    - files: Number of annex files in the repository.
+    - ok: Number of files present in remote (didn't need to be copied).
+    - copied: Number of files copied.
+    - errs: Number of errors.
+    
+    \b
+    Patterns:
+    \b
+    `files:123 ok:123`
+    Everything's up to date, no files were copied.
+    \b
+    `files:123 ok:100 copied:23 errs:0`
+    Some files copied, some errors.
+    \b
+    `files:123 ok:100 copied:20 errs:3`
+    20 files copied and 3 files failed.
+    \b
+    `files:123 ok:0 copied:0 errs:1`
+    The command attempted to copy the whole collection but the operation failed.
+    Try again using the `--backoff` flag to copy on the per-file basis.
+    On the next run you should see which files had problems.
     """
     collection_path = Path(collection).absolute()
     cid = collection_path.name
