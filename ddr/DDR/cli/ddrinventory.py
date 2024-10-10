@@ -70,7 +70,7 @@ def cgit(username, password, jsonl, testing, debug):
                 f"{repo['lastmod']} {repo['id']} {repo['title']}"
             )
 
-def _repositories_cgit(username, password, testing=False, cid=None):
+def _repositories_cgit(username, password, testing=False):
     cgit = dvcs.Cgit()
     cgit.username = username
     cgit.password = password
@@ -81,11 +81,9 @@ def _repositories_cgit(username, password, testing=False, cid=None):
         #    click.echo(f"{pagenum=} {offset=}")
         for data in cgit._page_repos(offset, testing):
             # only collection repositories
-            collectionid = data['id']
-            if cid and cid != collectionid:
-                continue
+            cid = data['id']
             try:
-                ci = identifier.Identifier(collectionid)
+                ci = identifier.Identifier(cid)
             except identifier.InvalidIdentifierException:
                 ci = None
             except identifier.InvalidInputException:
@@ -122,21 +120,11 @@ def local(jsonl, testing, base):
         else:
             click.echo(f"{repo['lastmod']} {repo['path']} {repo['title']}")
 
-def _repositories_local(path, testing=False):
-    # select/filter paths
-    # path is either a directory containing collections
-    # or a single collection path
-    ci = identifier.Identifier(path)
-    if ci and ci.model == 'collection':
-        # the user may specify a single repo
-        paths = [ci.path_abs()]
-    elif testing:
-        # include ddr-testing-* repos
-        paths = [p for p in dvcs.repos(path)]
+def _repositories_local(basedir, testing=False):
+    if testing:
+        paths = [p for p in dvcs.repos(basedir)]
     else:
-        # default is to get everything but testing repos
-        paths = [p for p in dvcs.repos(path) if not 'testing' in p]
-    # gather data
+        paths = [p for p in dvcs.repos(basedir) if not 'testing' in p]
     for path in sorted(paths):
         cpath = Path(path)
         cid = cpath.name
@@ -322,12 +310,9 @@ def report(username, password, logsdir, remotes, absentok, verbose, quiet, based
     repos,num_local,num_cgit = _combine_local_cgit(
         basedir, username, password, logsdir, remotes, quiet
     )
+    cidw = _collection_id_width(repos)
     num_total = len(repos.items())
     num_notok = 0
-    if num_total == 1:
-        _display_detailed(repos)
-        return
-    cidw = _collection_id_width(repos)
     for collectionid,repo in repos.items():
         cid = collectionid.ljust(cidw)  # pad collection id
         ok,notok = _analyze_repository(repo, remotes, absentok)
@@ -353,18 +338,12 @@ def _combine_local_cgit(basedir, username, password, logsdir, remotes, quiet=Fal
     if not quiet:
         click.echo(f"Getting repos in {basedir}...")
     repos_local = [repo for repo in _repositories_local(basedir)]
-    if len(repos_local) == 1:
-        cid = repos_local[0]['id']
-    else:
-        cid = None
     if not quiet:
         click.echo(f"{len(repos_local)} local repositories")
     # cgit
     if not quiet:
         click.echo(f"Getting repos from cgit...")
-    repos_cgit = [
-        repo for repo in _repositories_cgit(username, password, cid=cid)
-    ]
+    repos_cgit = [repo for repo in _repositories_cgit(username, password)]
     if not quiet:
         click.echo(f"{len(repos_cgit)} cgit repositories")
     ids_local = [repo['id'] for repo in repos_local]
@@ -400,7 +379,7 @@ def _combine_local_cgit(basedir, username, password, logsdir, remotes, quiet=Fal
         logdir = f"{logsdir}/{remote}"
         if not quiet:
             print(f"Reading remote logs {logdir}")
-        stats,fails = _copy_done_lines(logdir, cid=cid)
+        stats,fails = _copy_done_lines(logdir)
         for cid,data in stats.items():
             repositories[cid]['remotes'][remote] = data
         for cid in ids_combined:
@@ -489,22 +468,6 @@ def _analyze_repository(repo, remotes, absentok=False):
                 notok.append(f"{remote}_ERRS")
     return ok,notok
 
-def _display_detailed(repos):
-    def print_dict(name,data):
-        click.echo(name)
-        keywidth = 0
-        for key in data.keys():
-            if len(key) > keywidth: keywidth = len(key)
-        for key,val in data.items():
-            if key not in ['ts','el','gitpython',]:
-                click.echo(f"    {key.ljust(keywidth)} {val}")
-    for cid,data in repos.items():
-        click.echo(cid)
-        print_dict('here', data['here'])
-        print_dict('cgit', data['cgit'])
-        for key,remote in data['remotes'].items():
-            print_dict(key, remote)
-
 
 @ddrinventory.command()
 @click.option('-s','--sort', default='collectionid', help='Sort order. See --help for options.')
@@ -536,14 +499,11 @@ def copylogs(sort, jsonl, logsdir):
             files = val['files']; ok = val['ok']; copied = val['copied']; errs = val['errs']
             click.echo(f"{timestamp} ddrremote copy {remote} {collectionpath} DONE {elapsed} files:{files} ok:{ok} copied:{copied} errs:{errs}")
 
-def _copy_done_lines(logsdir, cid=None):
+def _copy_done_lines(logsdir):
     os.chdir(logsdir)
     # Get only the last line of each `ddrremote copy` run,
     # sorted in ascending order by timestamp
     cmd = 'ack "ddrremote copy" -h --nobreak | grep DONE | sort'
-    if cid:
-        # just get the one line
-        cmd = f'ack "ddrremote copy" -h --nobreak {cid}.log | grep DONE | sort'
     out = subprocess.check_output(
         cmd, stderr=subprocess.STDOUT, shell=True, encoding='utf-8'
     )
