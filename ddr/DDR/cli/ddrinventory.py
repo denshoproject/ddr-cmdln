@@ -452,12 +452,14 @@ def _analyze_repository(repo, remotes, absentok=False):
         rok     = repo['remotes'][remote].get('ok')
         rcopied = repo['remotes'][remote].get('copied')
         rerrs   = repo['remotes'][remote].get('errs')
-        if rok + rcopied == rfiles:
-            ok.append(f"{remote}_count_ok")
-        else:
-            notok.append(f"{remote}_COUNT_BAD")
-        if rerrs:
-            notok.append(f"{remote}_ERRS")
+        # account for old copylog format which is missing ok,errs data
+        if (rok > -1) and (rerrs > -1):
+            if rok + rcopied == rfiles:
+                ok.append(f"{remote}_count_ok")
+            else:
+                notok.append(f"{remote}_COUNT_BAD")
+            if rerrs:
+                notok.append(f"{remote}_ERRS")
     return ok,notok
 
 
