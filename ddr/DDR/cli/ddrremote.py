@@ -230,7 +230,15 @@ def copy(logdir, jobs, backoff, wait, remote, collection):
     """
     collection_path = Path(collection).absolute()
     cid = collection_path.name
-    logfile = Path(logdir) / f"{cid}.log" if logdir else None
+    if logdir:
+        # add remote to logdir if not present
+        if remote not in logdir:
+            logdir = Path(logdir) / remote
+        else:
+            logdir = Path(logdir)
+        logfile = logdir / f"{cid}.log"
+    else:
+        logfile = None
     try:
         repo = dvcs.repository(collection)
     except dvcs.git.exc.InvalidGitRepositoryError:
