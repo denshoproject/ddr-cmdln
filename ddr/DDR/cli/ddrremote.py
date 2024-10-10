@@ -184,7 +184,7 @@ def annex_info_remote(collection_path, remote):
 
 
 @ddrremote.command()
-@click.option('-l','--logdir', default=None, help='Write output to log file in directory.')
+@click.option('-l','--logdir', default=config.INVENTORY_LOGS_DIR, help=f"Directory containing special-remote copylogs. (default: {config.INVENTORY_LOGS_DIR}).")
 @click.option('-j','--jobs', default='', help='Run N transfer jobs in parallel.')
 @click.option('-b','--backoff', default=0.0, help='Wait N seconds between files.')
 @click.option('-w','--wait', default=0, help='Wait N seconds after checking a collection.')
