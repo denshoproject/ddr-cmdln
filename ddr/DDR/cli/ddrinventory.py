@@ -293,14 +293,17 @@ def _commit_modified_files(repo, repository, commit, totals):
 @click.option('--remotes','-r', help='Comma-separated list of remotes.')
 @click.option('--absentok','-a', is_flag=True, default=False, help="Absent repositories not considered to be an error.")
 @click.option('--verbose','-v', is_flag=True, default=False, help='Print ok status info not just bad.')
+@click.option('--quiet','-q', is_flag=True, default=False, help='In UNIX fashion, only print bad status info.')
 @click.argument('basedir')
 @click.argument('logsdir')
-def report(username, password, remotes, absentok, verbose, basedir, logsdir):
+def report(username, password, remotes, absentok, verbose, quiet, basedir, logsdir):
     """Status of local repos, annex special remotes, actions to be taken
     """
     start = datetime.now()
     remotes = remotes.strip().split(',')
-    repos,num_local,num_cgit = _combine_local_cgit(basedir, username, password, logsdir, remotes)
+    repos,num_local,num_cgit = _combine_local_cgit(
+        basedir, username, password, logsdir, remotes, quiet
+    )
     num_total = len(repos.items())
     num_notok = 0
     for cid,repo in repos.items():
@@ -311,22 +314,29 @@ def report(username, password, remotes, absentok, verbose, basedir, logsdir):
             if notok:
                 num_notok += 1
                 click.echo(f"{cid} {','.join(notok)}")
+            elif not quiet:
+                # show *something* for all collections
+                click.echo(f"{cid} ok")
     now = datetime.now()
     e = now - start
     click.echo(f"{now} Checked {num_local} of {num_total} collections in {e} -- {num_notok} issues")
 
-def _combine_local_cgit(basedir, username, password, logsdir, remotes):
+def _combine_local_cgit(basedir, username, password, logsdir, remotes, quiet=False):
     """Combine data from local repos, cgit repos, and remtoe copy logs
     """
     # load repository data
     # local
-    click.echo(f"Getting repos in {basedir}...")
+    if not quiet:
+        click.echo(f"Getting repos in {basedir}...")
     repos_local = [repo for repo in _repositories_local(basedir)]
-    click.echo(f"{len(repos_local)} local repositories")
+    if not quiet:
+        click.echo(f"{len(repos_local)} local repositories")
     # cgit
-    click.echo(f"Getting repos from cgit...")
+    if not quiet:
+        click.echo(f"Getting repos from cgit...")
     repos_cgit = [repo for repo in _repositories_cgit(username, password)]
-    click.echo(f"{len(repos_cgit)} cgit repositories")
+    if not quiet:
+        click.echo(f"{len(repos_cgit)} cgit repositories")
     ids_local = [repo['id'] for repo in repos_local]
     ids_cgit = [repo['id'] for repo in repos_cgit]
     ids_combined = sorted(set(ids_local + ids_cgit))
@@ -358,7 +368,8 @@ def _combine_local_cgit(basedir, username, password, logsdir, remotes):
     # remote logs data
     for remote in remotes:
         logdir = f"{logsdir}/{remote}"
-        print(f"Reading remote logs {logdir}")
+        if not quiet:
+            print(f"Reading remote logs {logdir}")
         stats,fails = _copy_done_lines(logdir)
         for cid,data in stats.items():
             repositories[cid]['remotes'][remote] = data
