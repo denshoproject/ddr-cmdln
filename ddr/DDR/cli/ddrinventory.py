@@ -424,7 +424,7 @@ def _analyze_repository(repo, remotes, absentok=False):
         return ok,notok
     # does local repo have changes since last sync?
     if repo['here']['lastmod'] > repo['cgit']['lastmod']:
-        notok.append('SYNC')
+        notok.append('SYNC_CGIT')
     # remotes
     for remote in remotes:
         # does repo have remote X?
