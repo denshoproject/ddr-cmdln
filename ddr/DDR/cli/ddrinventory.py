@@ -532,7 +532,7 @@ LOG_V2_PATTERN = re.compile(
 
 LOG_V3_SAMPLE = '2024-10-03T14:57:40 ddrremote copy b2 /media/qnfs/kinkura/gold/ddr-njpa-11 DONE 0:01:50.543381 files:9661 ok:9661 copied:0 errs:0'
 LOG_V3_PATTERN = re.compile(
-    "(?P<timestamp>[\d-]+T[\d:]+) "
+    "(?P<timestamp>[\d-]+T[\d)]+) "  # isoformat without timezone
     "(?P<command>ddrremote copy) "
     "(?P<remote>[\w\d-]+) "
     "(?P<collectionpath>[\w\d/-]+) "
@@ -540,23 +540,40 @@ LOG_V3_PATTERN = re.compile(
     "(?P<elapsed>[\d]+:[\d]+:[\d]+.[\d]+) "
     "files:(?P<files>[\d]+) ok:(?P<ok>[\d]+) copied:(?P<copied>[\d]+) errs:(?P<errs>[\d]+)"
 )
+
+LOG_V4_SAMPLE = '2024-10-10T12:14:26-07:00 ddrremote copy hq-backup-montblanc /media/qnfs/kinkura/gold/ddr-phljacl-2 DONE 0:00:00.122655 files:0 ok:0 copied:0 errs:0'
+LOG_V4_PATTERN = re.compile(
+    "(?P<timestamp>[\d-]+T[\d:)]+-[\d:]+) "  # isoformat with timezone
+    "(?P<command>ddrremote copy) "
+    "(?P<remote>[\w\d-]+) "
+    "(?P<collectionpath>[\w\d/-]+) "
+    "DONE "
+    "(?P<elapsed>[\d]+:[\d]+:[\d]+.[\d]+) "
+    "files:(?P<files>[\d]+) ok:(?P<ok>[\d]+) copied:(?P<copied>[\d]+) errs:(?P<errs>[\d]+)"
+)
+
 LOG_STATS = ['files','ok','copied','errs']
 
 def _parse_copy_done_line(line):
     data = {'collectionid':None,'remote':None,'timestamp':None,'elapsed':None}
-    m = LOG_V3_PATTERN.match(line)
+    m = LOG_V4_PATTERN.match(line)
     if m:
         for key,val in m.groupdict().items():
             data[key] = val
     else:
-        # old format
-        m = LOG_V2_PATTERN.match(line)
+        m = LOG_V3_PATTERN.match(line)
         if m:
             for key,val in m.groupdict().items():
                 data[key] = val
         else:
-            # couldn't figure it out so punt
-            return None,line
+            # old format
+            m = LOG_V2_PATTERN.match(line)
+            if m:
+                for key,val in m.groupdict().items():
+                    data[key] = val
+            else:
+                # couldn't figure it out so punt
+                return None,line
     # type conversions
     if data.get('collectionpath'):
         # TODO check for legal collection path?
