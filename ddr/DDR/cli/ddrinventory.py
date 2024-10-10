@@ -299,7 +299,7 @@ def _commit_modified_files(repo, repository, commit, totals):
 def report(username, password, remotes, absentok, verbose, quiet, basedir, logsdir):
     """Status of local repos, annex special remotes, actions to be taken
     """
-    start = datetime.now()
+    start = datetime.now(tz=config.TZ)
     remotes = remotes.strip().split(',')
     repos,num_local,num_cgit = _combine_local_cgit(
         basedir, username, password, logsdir, remotes, quiet
@@ -317,9 +317,10 @@ def report(username, password, remotes, absentok, verbose, quiet, basedir, logsd
             elif not quiet:
                 # show *something* for all collections
                 click.echo(f"{cid} ok")
-    now = datetime.now()
+    now = datetime.now(tz=config.TZ)
     e = now - start
-    click.echo(f"{now} Checked {num_local} of {num_total} collections in {e} -- {num_notok} issues")
+    now = now.isoformat(timespec='seconds')
+    click.echo(f"{now} ({e}) Checked {num_local} of {num_total} collections: {num_notok} issues")
 
 def _combine_local_cgit(basedir, username, password, logsdir, remotes, quiet=False):
     """Combine data from local repos, cgit repos, and remtoe copy logs
