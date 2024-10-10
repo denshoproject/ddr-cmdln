@@ -304,10 +304,12 @@ def report(username, password, remotes, absentok, verbose, quiet, basedir, logsd
     repos,num_local,num_cgit = _combine_local_cgit(
         basedir, username, password, logsdir, remotes, quiet
     )
+    cidw = _collection_id_width(repos)
     num_total = len(repos.items())
     num_notok = 0
-    for cid,repo in repos.items():
-        ok,notok = _repository_status(repo, remotes, absentok)
+    for collectionid,repo in repos.items():
+        cid = collectionid.ljust(cidw)  # pad collection id
+        ok,notok = _analyze_repository(repo, remotes, absentok)
         if verbose:
             click.echo(f"{cid} {','.join(ok)} {','.join(notok)}")
         else:
@@ -380,6 +382,14 @@ def _combine_local_cgit(basedir, username, password, logsdir, remotes, quiet=Fal
                     repositories[cid]['remotes'][remote]['FAIL'] = line
     return repositories,num_local,num_cgit
 
+def _collection_id_width(repos):
+    """Return width of widest collection id"""
+    width = 0
+    for cid in repos.keys():
+        if len(cid) > width:
+           width = len(cid)
+    return width
+
 #from concurrent.futures import ThreadPoolExecutor
 # 
 #def run_io_tasks_in_parallel(tasks):
@@ -393,8 +403,7 @@ def _combine_local_cgit(basedir, username, password, logsdir, remotes, quiet=Fal
 #    lambda: print('IO task 2 running!'),
 #])
 
-
-def _repository_status(repo, remotes, absentok=False):
+def _analyze_repository(repo, remotes, absentok=False):
     """Answer questions about individual repositories
     """
     ok = []     # things that are okay
