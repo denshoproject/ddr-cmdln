@@ -44,6 +44,7 @@ CONF_PRODUCTION=$(CONF_BASE)/ddrlocal.cfg
 CONF_LOCAL=$(CONF_BASE)/ddrlocal-local.cfg
 
 LOG_BASE=/var/log/ddr
+INVENTORY_LOG_BASE=$(LOG_BASE)/inventory
 
 DDR_REPO_BASE=/var/www/media/ddr
 
@@ -352,6 +353,9 @@ mkdir-ddr-cmdln:
 	-mkdir $(LOG_BASE)
 	chown -R ddr.ddr $(LOG_BASE)
 	chmod -R 775 $(LOG_BASE)
+	-mkdir $(INVENTORY_LOG_BASE)
+	chown -R ddr.ddr $(INVENTORY_LOG_BASE)
+	chmod -R 775 $(INVENTORY_LOG_BASE)
 	-mkdir -p $(MEDIA_ROOT)
 	chown -R ddr.ddr $(MEDIA_ROOT)
 	chmod -R 775 $(MEDIA_ROOT)

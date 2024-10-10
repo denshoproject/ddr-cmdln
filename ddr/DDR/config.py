@@ -102,6 +102,8 @@ REQUESTS_TIMEOUT = 30
 CGIT_URL = CONFIG.get('workbench','cgit_url')
 CGIT_USERNAME = CONFIG.get('workbench','cgit_username', fallback='')
 CGIT_PASSWORD = CONFIG.get('workbench','cgit_password', fallback='')
+INVENTORY_LOGS_DIR = CONFIG.get('inventory', 'logs_dir', fallback='')
+INVENTORY_REMOTES = CONFIG.get('inventory', 'remotes', fallback='').strip()
 GIT_REMOTE_NAME = 'origin'  # CONFIG.get('workbench','remote')
 GITOLITE = CONFIG.get('workbench','gitolite')
 GITOLITE_TIMEOUT = CONFIG.get('workbench','gitolite_timeout')

@@ -290,17 +290,23 @@ def _commit_modified_files(repo, repository, commit, totals):
 @click.option('--password','-P',
               default=config.CGIT_PASSWORD, envvar='CGIT_PASSWORD',
               help='HTTP Basic auth password.')
-@click.option('--remotes','-r', help='Comma-separated list of remotes.')
+@click.option('--logsdir','-l', default=config.INVENTORY_LOGS_DIR, help=f"Directory containing special-remote copylogs. (default: {config.INVENTORY_LOGS_DIR}).")
+@click.option('--remotes','-r', default=config.INVENTORY_REMOTES, help=f"Comma-separated list of remotes. (default: {config.INVENTORY_REMOTES}).")
 @click.option('--absentok','-a', is_flag=True, default=False, help="Absent repositories not considered to be an error.")
 @click.option('--verbose','-v', is_flag=True, default=False, help='Print ok status info not just bad.')
 @click.option('--quiet','-q', is_flag=True, default=False, help='In UNIX fashion, only print bad status info.')
 @click.argument('basedir')
-@click.argument('logsdir')
-def report(username, password, remotes, absentok, verbose, quiet, basedir, logsdir):
+def report(username, password, logsdir, remotes, absentok, verbose, quiet, basedir):
     """Status of local repos, annex special remotes, actions to be taken
     """
     start = datetime.now(tz=config.TZ)
-    remotes = remotes.strip().split(',')
+    if isinstance(remotes, str):
+        remotes = remotes.strip().split(',')
+    for remote in remotes:
+        logdir = Path(logsdir) / remote
+        if not logdir.exists():
+            click.echo(f"ERROR: Log directory does not exist: {logdir}.")
+            sys.exit(1)
     repos,num_local,num_cgit = _combine_local_cgit(
         basedir, username, password, logsdir, remotes, quiet
     )
