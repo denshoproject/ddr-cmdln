@@ -532,7 +532,7 @@ LOG_V2_PATTERN = re.compile(
 
 LOG_V3_SAMPLE = '2024-10-03T14:57:40 ddrremote copy b2 /media/qnfs/kinkura/gold/ddr-njpa-11 DONE 0:01:50.543381 files:9661 ok:9661 copied:0 errs:0'
 LOG_V3_PATTERN = re.compile(
-    "(?P<timestamp>[\d-]+T[\d)]+) "  # isoformat without timezone
+    "(?P<timestamp>[\d-]+T[\d:)]+) "  # isoformat without timezone
     "(?P<command>ddrremote copy) "
     "(?P<remote>[\w\d-]+) "
     "(?P<collectionpath>[\w\d/-]+) "
@@ -573,7 +573,7 @@ def _parse_copy_done_line(line):
                     data[key] = val
             else:
                 # couldn't figure it out so punt
-                return None,line
+                return None,f"unknown_line_format"
     # type conversions
     if data.get('collectionpath'):
         # TODO check for legal collection path?
