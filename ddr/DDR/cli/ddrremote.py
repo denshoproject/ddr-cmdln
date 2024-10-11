@@ -83,11 +83,11 @@ def check(fast, logdir, verbose, wait, remote, collection):
     cid = collection_path.name
     prefix = f"{dtfmt()} ddrremote check"
     logfile = Path(logdir) / f"{cid}.log" if logdir else None
-    starttime = datetime.now()
+    starttime = datetime.now(tz=config.TZ)
     log(logfile, f"{dtfmt()} ddrremote check {remote} {collection_path} START")
     if fast:
         size_here,size_remote,diff = annex_info_remote(collection_path, remote)
-        endtime = datetime.now(); elapsed = endtime - starttime
+        endtime = datetime.now(tz=config.TZ); elapsed = endtime - starttime
         def natural(filesize):
             if filesize == None: return '---'
             if filesize == 0: return '0'
@@ -111,7 +111,7 @@ def check(fast, logdir, verbose, wait, remote, collection):
                 if 'missing' in output:
                     missing += 1
                 log(logfile, f"{prefix} {output}")
-        endtime = datetime.now(); elapsed = endtime - starttime
+        endtime = datetime.now(tz=config.TZ); elapsed = endtime - starttime
         log(logfile, f"{dtfmt()} ddrremote check {remote} {collection_path} DONE {str(elapsed)} {len(annex_files)} files {errors} errs {missing} missing")
     if wait:
         sleep(int(wait))
@@ -257,7 +257,7 @@ def copy(logdir, jobs, backoff, wait, remote, collection):
         sys.exit(1)
     prefix = f"{dtfmt()} ddrremote"
     # ok go
-    starttime = datetime.now()
+    starttime = datetime.now(tz=config.TZ)
     os.chdir(collection_path)
     log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} START")
     files = len(annex_find(collection_path))
@@ -276,7 +276,7 @@ def copy(logdir, jobs, backoff, wait, remote, collection):
             remote, ok, copied, errors, prefix, logfile
         )
     operation = f"{dtfmt()} ddrremote copy {remote} {collection_path}"
-    elapsed = str(datetime.now() - starttime)
+    elapsed = str(datetime.now(tz=config.TZ) - starttime)
     status = f"files:{files} ok:{ok} copied:{copied} errs:{errors}"
     log(logfile, f"{operation} DONE {elapsed} {status}")
     if wait:
