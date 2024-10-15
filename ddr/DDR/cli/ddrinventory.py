@@ -385,6 +385,13 @@ def _combine_local_cgit(basedir, username, password, logsdir, remotes, quiet=Fal
             print(f"Reading remote logs {logdir}")
         stats,fails = _copy_done_lines(logdir)
         for cid,data in stats.items():
+            if not repositories.get(cid):
+                # in case of logs for collections that have been deleted?
+                repositories[cid] = {
+                    'here': {},
+                    'cgit': {},
+                    'remotes': {},
+                }
             repositories[cid]['remotes'][remote] = data
         for cid in ids_combined:
             for line in fails:
@@ -416,6 +423,7 @@ def _collection_id_width(repos):
 def _analyze_repository(repo, remotes, absentok=False):
     """Answer questions about individual repositories
     """
+    # TODO break this into sub-functions, it's too complicated
     ok = []     # things that are okay
     notok = []  # something's not right
     # is repo in cgit?
@@ -424,19 +432,17 @@ def _analyze_repository(repo, remotes, absentok=False):
         ok.append('cgit')
     else:
         notok.append('NOT_CGIT')
-        return ok,notok
     # is repo present in local filesystem?
     if repo.get('here'):
         ok.append('here')
     else:
-        if not absentok:
-            notok.append('NOT_HERE')
-        return ok,notok
+        notok.append('NOT_HERE')
     # does local repo have changes since last sync?
-    if repo['here']['lastmod'] <= repo['cgit']['lastmod']:
-        notok.append('sync_ok')
-    elif repo['here']['lastmod'] > repo['cgit']['lastmod']:
-        notok.append('SYNC_CGIT')
+    if repo['here'].get('lastmod') and repo['cgit'].get('lastmod'):
+        if repo['here']['lastmod'] <= repo['cgit']['lastmod']:
+            notok.append('sync_ok')
+        elif repo['here']['lastmod'] > repo['cgit']['lastmod']:
+            notok.append('SYNC_CGIT')
     # remotes
     for remote in remotes:
         # does repo have remote X?
@@ -457,10 +463,14 @@ def _analyze_repository(repo, remotes, absentok=False):
         # remote timestamp ahead of lastmod == OK
         # remote timestamp behind lastmod == UPDATE
         rts = repo['remotes'][remote].get('timestamp')
-        if rts >= repo['here']['lastmod']:
-            ok.append(f"{remote}_current")
-        elif rts < repo['here']['lastmod']:
-            notok.append(f"{remote}_BEHIND")
+        if repo['here'].get('lastmod'):
+            if rts >= repo['here']['lastmod']:
+                ok.append(f"{remote}_current")
+            elif rts < repo['here']['lastmod']:
+                notok.append(f"{remote}_BEHIND")
+        else:
+            # there is a remote but no local repo to compare to
+            notok.append(f"{remote}_ORPHAN")
         # does ok+copied == files?
         rfiles  = repo['remotes'][remote].get('files')
         rok     = repo['remotes'][remote].get('ok')
@@ -474,6 +484,8 @@ def _analyze_repository(repo, remotes, absentok=False):
                 notok.append(f"{remote}_COUNT_BAD")
             if rerrs:
                 notok.append(f"{remote}_ERRS")
+    if absentok:
+        notok = [x for x in notok if x != 'NOT_HERE']
     return ok,notok
 
 
