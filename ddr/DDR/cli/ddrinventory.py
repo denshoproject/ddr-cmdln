@@ -433,13 +433,17 @@ def _analyze_repository(repo, remotes, absentok=False):
             notok.append('NOT_HERE')
         return ok,notok
     # does local repo have changes since last sync?
-    if repo['here']['lastmod'] > repo['cgit']['lastmod']:
+    if repo['here']['lastmod'] <= repo['cgit']['lastmod']:
+        notok.append('sync_ok')
+    elif repo['here']['lastmod'] > repo['cgit']['lastmod']:
         notok.append('SYNC_CGIT')
     # remotes
     for remote in remotes:
         # does repo have remote X?
         r = repo['remotes'].get(remote)
-        if not r:
+        if r:
+            ok.append(f"{remote}_ok")
+        else:
             notok.append(f"{remote}_ABSENT")
             continue
         # repo FAIL
