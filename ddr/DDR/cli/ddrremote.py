@@ -44,12 +44,11 @@ def ddrremote(debug):
 
 @ddrremote.command()
 @click.option('-l','--logdir', default=config.INVENTORY_LOGS_DIR, help=f"Directory containing special-remote copylogs. (default: {config.INVENTORY_LOGS_DIR}).")
-@click.option('-j','--jobs', default='', help='Run N transfer jobs in parallel.')
 @click.option('-b','--backoff', default=0.0, help='Wait N seconds between files.')
 @click.option('-w','--wait', default=0, help='Wait N seconds after checking a collection.')
 @click.argument('remote')
 @click.argument('collection')
-def copy(logdir, jobs, backoff, wait, remote, collection):
+def copy(logdir, backoff, wait, remote, collection):
     """git annex copy collection files to the remote and log
     
     Runs `git annex copy -c annex.sshcaching=true . --to=REMOTE`
@@ -111,9 +110,6 @@ def copy(logdir, jobs, backoff, wait, remote, collection):
     if remote not in remotes:
         log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection} DONE ERROR Collection has no remote '{remote}'")
         sys.exit(1)
-    if jobs and not (jobs.isnumeric() or jobs == 'cpus'):
-        click.echo('--jobs must be an int or "cpus"')
-        sys.exit(1)
     prefix = f"{dtfmt()} ddrremote"
     # ok go
     starttime = datetime.now(tz=config.TZ)
@@ -132,7 +128,7 @@ def copy(logdir, jobs, backoff, wait, remote, collection):
                 sleep(float(backoff))
     else:
         ok,copied,errors = _analyze_annex_copy_output(
-            _annex_copy_all(collection, remote, jobs),
+            _annex_copy_all(collection, remote),
             remote, ok, copied, errors, prefix, logfile
         )
     operation = f"{dtfmt()} ddrremote copy {remote} {collection_path}"
@@ -154,15 +150,13 @@ def _annex_find(collection_path):
         ).strip().splitlines()
     ]
 
-def _annex_copy_all(collection_path, remote, jobs=''):
+def _annex_copy_all(collection_path, remote):
     """git annex copy . and return output or error
     """
     # TODO yield lines instead of returning one big str
-    if jobs:
-        jobs = f"--jobs={jobs}"
     try:
         return subprocess.check_output(
-            f"git annex copy -c annex.sshcaching=true {jobs} . --to {remote}",
+            f"git annex copy -c annex.sshcaching=true --jobs=cpus . --to {remote}",
             stderr=subprocess.STDOUT, shell=True, encoding='utf-8'
         )
     except subprocess.CalledProcessError as err:

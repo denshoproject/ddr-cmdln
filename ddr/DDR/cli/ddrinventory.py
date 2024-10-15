@@ -290,13 +290,13 @@ def _commit_modified_files(repo, repository, commit, totals):
 @click.option('--password','-P',
               default=config.CGIT_PASSWORD, envvar='CGIT_PASSWORD',
               help='HTTP Basic auth password.')
+@click.option('--base','-b', default=config.MEDIA_BASE, help=f"Base path containing collection repositories (default: {config.MEDIA_BASE}).")
 @click.option('--logsdir','-l', default=config.INVENTORY_LOGS_DIR, help=f"Directory containing special-remote copylogs. (default: {config.INVENTORY_LOGS_DIR}).")
 @click.option('--remotes','-r', default=config.INVENTORY_REMOTES, help=f"Comma-separated list of remotes. (default: {config.INVENTORY_REMOTES}).")
 @click.option('--absentok','-a', is_flag=True, default=False, help="Absent repositories not considered to be an error.")
 @click.option('--verbose','-v', is_flag=True, default=False, help='Print ok status info not just bad.')
 @click.option('--quiet','-q', is_flag=True, default=False, help='In UNIX fashion, only print bad status info.')
-@click.argument('basedir')
-def report(username, password, logsdir, remotes, absentok, verbose, quiet, basedir):
+def report(username, password, logsdir, remotes, absentok, verbose, quiet, base):
     """Status of local repos, annex special remotes, actions to be taken
     """
     start = datetime.now(tz=config.TZ)
@@ -307,6 +307,10 @@ def report(username, password, logsdir, remotes, absentok, verbose, quiet, based
         if not logdir.exists():
             click.echo(f"ERROR: Log directory does not exist: {logdir}.")
             sys.exit(1)
+    basedir = Path(base)
+    if not basedir.exists():
+        click.echo(f"ERROR: Repositories base directory does not exist: {basedir}.")
+        sys.exit(1)
     repos,num_local,num_cgit = _combine_local_cgit(
         basedir, username, password, logsdir, remotes, quiet
     )
@@ -472,7 +476,7 @@ def _analyze_repository(repo, remotes, absentok=False):
 @ddrinventory.command()
 @click.option('-s','--sort', default='collectionid', help='Sort order. See --help for options.')
 @click.option('-j','--jsonl', is_flag=True, default=False, help='Output JSONL aka list of JSONs.')
-@click.argument('logsdir')
+@click.option('--logsdir','-l', default=config.INVENTORY_LOGS_DIR, help=f"Directory containing special-remote copylogs. (default: {config.INVENTORY_LOGS_DIR}).")
 def copylogs(sort, jsonl, logsdir):
     """Report recent activity in synced repositories.
     
