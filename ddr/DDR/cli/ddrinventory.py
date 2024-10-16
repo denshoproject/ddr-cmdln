@@ -11,6 +11,7 @@ import json
 import logging
 import os
 from pathlib import Path
+import pprint
 import re
 import subprocess
 import sys
@@ -73,7 +74,7 @@ def cgit(username, password, jsonl, testing, debug):
                 f"{repo['lastmod']} {repo['id']} {repo['title']}"
             )
 
-def _repositories_cgit(username, password, testing=False):
+def _repositories_cgit(username, password, testing=False, collectionids=[]):
     cgit = dvcs.Cgit()
     cgit.username = username
     cgit.password = password
@@ -85,6 +86,8 @@ def _repositories_cgit(username, password, testing=False):
         for data in cgit._page_repos(offset, testing):
             # only collection repositories
             cid = data['id']
+            if collectionids and not cid in collectionids:
+                continue
             try:
                 ci = identifier.Identifier(cid)
             except identifier.InvalidIdentifierException:
@@ -123,7 +126,7 @@ def local(jsonl, testing, base):
         else:
             click.echo(f"{repo['lastmod']} {repo['path']} {repo['title']}")
 
-def _repositories_local(basedir, testing=False):
+def _repositories_local(basedir, testing=False, collectionids=[]):
     if testing:
         paths = [p for p in dvcs.repos(basedir)]
     else:
@@ -131,6 +134,8 @@ def _repositories_local(basedir, testing=False):
     for path in sorted(paths):
         cpath = Path(path)
         cid = cpath.name
+        if collectionids and not cid in collectionids:
+            continue
         try:
             ci = identifier.Identifier(cid)
         except identifier.InvalidIdentifierException:
@@ -299,7 +304,8 @@ def _commit_modified_files(repo, repository, commit, totals):
 @click.option('--absentok','-a', is_flag=True, default=False, help="Absent repositories not considered to be an error.")
 @click.option('--verbose','-v', is_flag=True, default=False, help='Print ok status info not just bad.')
 @click.option('--quiet','-q', is_flag=True, default=False, help='In UNIX fashion, only print bad status info.')
-def report(username, password, logsdir, remotes, absentok, verbose, quiet, base):
+@click.option('--collection','-c', default='', help=f"Get detailed information for just one collection..")
+def report(username, password, logsdir, remotes, absentok, verbose, quiet, collection, base):
     """Status of local repos, annex special remotes, actions to be taken
     
     \b
@@ -376,8 +382,9 @@ def report(username, password, logsdir, remotes, absentok, verbose, quiet, base)
     if not basedir.exists():
         click.echo(f"ERROR: Repositories base directory does not exist: {basedir}.")
         sys.exit(1)
+    collectionids = [collection] if collection else []
     repos,num_local,num_cgit = _combine_local_cgit(
-        basedir, username, password, logsdir, remotes, quiet
+        basedir, username, password, logsdir, remotes, collectionids, quiet,
     )
     cidw = _collection_id_width(repos)
     num_total = len(repos.items())
@@ -385,6 +392,11 @@ def report(username, password, logsdir, remotes, absentok, verbose, quiet, base)
     for collectionid,repo in repos.items():
         cid = collectionid.ljust(cidw)  # pad collection id
         ok,notok = _analyze_repository(repo, remotes, absentok)
+        if collectionids and collectionid in collectionids:
+            repo['ok'] = ok
+            repo['notok'] = notok
+            _display_collection_detail(collectionid, repo)
+            continue
         if verbose:
             click.echo(f"{cid} {','.join(ok)} {','.join(notok)}")
         else:
@@ -399,20 +411,20 @@ def report(username, password, logsdir, remotes, absentok, verbose, quiet, base)
     now = now.isoformat(timespec='seconds')
     click.echo(f"{now} ({e}) Checked {num_local} of {num_total} collections: {num_notok} issues")
 
-def _combine_local_cgit(basedir, username, password, logsdir, remotes, quiet=False):
+def _combine_local_cgit(basedir, username, password, logsdir, remotes, collectionids=[], quiet=False):
     """Combine data from local repos, cgit repos, and remtoe copy logs
     """
     # load repository data
     # local
     if not quiet:
         click.echo(f"Getting repos in {basedir}...")
-    repos_local = [repo for repo in _repositories_local(basedir)]
+    repos_local = [repo for repo in _repositories_local(basedir, collectionids=collectionids)]
     if not quiet:
         click.echo(f"{len(repos_local)} local repositories")
     # cgit
     if not quiet:
         click.echo(f"Getting repos from cgit...")
-    repos_cgit = [repo for repo in _repositories_cgit(username, password)]
+    repos_cgit = [repo for repo in _repositories_cgit(username, password, collectionids=collectionids)]
     if not quiet:
         click.echo(f"{len(repos_cgit)} cgit repositories")
     ids_local = [repo['id'] for repo in repos_local]
@@ -449,7 +461,7 @@ def _combine_local_cgit(basedir, username, password, logsdir, remotes, quiet=Fal
         logdir = f"{logsdir}/{remote}"
         if not quiet:
             print(f"Reading remote logs {logdir}")
-        stats,fails = _copy_done_lines(logdir)
+        stats,fails = _copy_done_lines(logdir, collectionids=collectionids)
         for cid,data in stats.items():
             if not repositories.get(cid):
                 # in case of logs for collections that have been deleted?
@@ -550,6 +562,9 @@ def _analyze_repository(repo, remotes, absentok=False):
         notok = [x for x in notok if x != 'NOT_HERE']
     return ok,notok
 
+def _display_collection_detail(collectionid, repo):
+    click.echo(pprint.pformat(repo, compact=False, sort_dicts=False))
+
 
 @ddrinventory.command()
 @click.option('-s','--sort', default='collectionid', help='Sort order. See --help for options.')
@@ -590,11 +605,14 @@ def copylogs(sort, jsonl, logsdir):
             files = val['files']; ok = val['ok']; copied = val['copied']; errs = val['errs']
             click.echo(f"{timestamp} ddrremote copy {remote} {collectionpath} DONE {elapsed} files:{files} ok:{ok} copied:{copied} errs:{errs}")
 
-def _copy_done_lines(logsdir):
+def _copy_done_lines(logsdir, collectionids=[]):
     os.chdir(logsdir)
     # Get only the last line of each `ddrremote copy` run,
     # sorted in ascending order by timestamp
-    cmd = 'ack "ddrremote copy" -h --nobreak | grep DONE | sort'
+    grep = 'grep DONE'
+    for cid in collectionids:
+        grep = f"{grep} | grep -e {cid}"
+    cmd = f'ack "ddrremote copy" -h --nobreak | {grep} | sort'
     out = subprocess.check_output(
         cmd, stderr=subprocess.STDOUT, shell=True, encoding='utf-8'
     )
