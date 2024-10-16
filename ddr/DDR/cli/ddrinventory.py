@@ -2,6 +2,7 @@ HELP = """
 ddrinventory - Gather and report inventory data
 """
 
+from copy import deepcopy
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 import json
@@ -356,13 +357,14 @@ def _combine_local_cgit(basedir, username, password, logsdir, remotes, quiet=Fal
     num_local = len(ids_local)
     num_cgit = len(ids_cgit)
     # format data
+    repo_prototype = {
+        'here': {},
+        'cgit': {},
+        'remotes': {},
+    }
     repositories = {}
     for cid in ids_combined:
-        repositories[cid] = {
-            'here': {},
-            'cgit': {},
-            'remotes': {},
-        }
+        repositories[cid] = deepcopy(repo_prototype)
         for remote in remotes:
             repositories[cid]['remotes'][remote] = {}
     for r in repos_local:
@@ -387,11 +389,7 @@ def _combine_local_cgit(basedir, username, password, logsdir, remotes, quiet=Fal
         for cid,data in stats.items():
             if not repositories.get(cid):
                 # in case of logs for collections that have been deleted?
-                repositories[cid] = {
-                    'here': {},
-                    'cgit': {},
-                    'remotes': {},
-                }
+                repositories[cid] = deepcopy(repo_prototype)
             repositories[cid]['remotes'][remote] = data
         for cid in ids_combined:
             for line in fails:
