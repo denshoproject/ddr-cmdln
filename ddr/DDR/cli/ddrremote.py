@@ -51,40 +51,61 @@ def ddrremote(debug):
 def copy(logdir, backoff, wait, remote, collection):
     """git annex copy collection files to the remote and log
     
-    Runs `git annex copy -c annex.sshcaching=true . --to=REMOTE`
-    and adds info to the output.
+    IMPORTANT: Remember to set B2_ACCOUNT_ID and B2_APP_KEY before copying
+    to Backblaze remotes!
     
-    Remember to set B2_ACCOUNT_ID and B2_APP_KEY before attempting to copy
-    to Backblaze remotes.
-    
-    See `git annex help copy` for more information about --jobs.
+    USAGE
     
     \b
-    Assuming that the copy operation run to completion, the last line
-    contains the following info:
-    "TIMESTAMP ddrremote copy REMOTE COLLECTIONPATH DONE elapsedtime STATUS"
-    The status block tells you:
+    Copy the entire collection at full speed.
+        ddrremote copy REMOTE COLLECTIONPATH
+    
+    \b
+    Backoff N.N seconds between each file. Useful if the full-speed copy
+    fails. This method is less efficient and runs git-annex-copy separately
+    for each file but will keep going if individual files fail to copy.
+        ddrremote copy --backoff=0.1 REMOTE COLLECTIONPATH
+    
+    \b
+    Wait N seconds after completing the collection copy. Useful for giving
+    servers a rest between collections when doing batch scripts.
+        ddrremote copy --wait=15 REMOTE COLLECTIONPATH
+    
+    ANALYSIS
+    
+    \b
+    Assuming that the copy operation runs to completion, the last line contains
+    the following info:
+        timestamp, command ('ddr remote copy'), remote, collectionpath,
+        elapsed time, status
+    STATUS consists of the following fields:
     - files: Number of annex files in the repository.
     - ok: Number of files present in remote (didn't need to be copied).
     - copied: Number of files copied.
     - errs: Number of errors.
     
     \b
-    Patterns:
+    Interpreting status data:
     \b
-    `files:123 ok:123`
+    `files:123 ok:123 copied:0 errs:0`
     Everything's up to date, no files were copied.
     \b
     `files:123 ok:100 copied:23 errs:0`
-    Some files copied, some errors.
+    Some files copied but no errors.
     \b
     `files:123 ok:100 copied:20 errs:3`
     20 files copied and 3 files failed.
     \b
     `files:123 ok:0 copied:0 errs:1`
     The command attempted to copy the whole collection but the operation failed.
-    Try again using the `--backoff` flag to copy on the per-file basis.
-    On the next run you should see which files had problems.
+    
+    \b
+    This command is a wrapper around the regular `git annex copy` command:
+        `git annex copy -c annex.sshcaching=true --jobs=cpus . --to=REMOTE`
+    
+    It writes for each collection to `LOGDIR/REMOTE/COLLECTIONID.log`. `LOGDIR`
+    is set in `ddrlocal(-local).cfg [inventory] logs_dir` and can be overridden
+    by `--logdir`.
     """
     collection_path = Path(collection).absolute()
     cid = collection_path.name

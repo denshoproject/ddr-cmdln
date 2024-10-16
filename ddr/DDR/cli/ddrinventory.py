@@ -1,5 +1,7 @@
 HELP = """
 ddrinventory - Gather and report inventory data
+
+
 """
 
 from copy import deepcopy
@@ -299,6 +301,68 @@ def _commit_modified_files(repo, repository, commit, totals):
 @click.option('--quiet','-q', is_flag=True, default=False, help='In UNIX fashion, only print bad status info.')
 def report(username, password, logsdir, remotes, absentok, verbose, quiet, base):
     """Status of local repos, annex special remotes, actions to be taken
+    
+    \b
+    ddrinventory report
+    tells:
+    - which collections are present on cgit (should be all of them)
+    - which collections are present on the local filesystem
+    
+    USAGE
+    
+    \b
+    Print status of every available collection. Include bad-status marks but print 'ok' instead of listing good-status marks.
+        ddrinventory report
+    
+    \b
+    List all good-status marks along with bad-status ones. Useful for audits.
+        ddrinventory report -v
+    
+    \b
+    Only list collections that had bad-status marks. Useful for checking status and for making batch scripts:
+        ddrinventory report -q
+    
+    SOURCES
+    
+    \b
+    `ddrinventory report` gathers information from three places:
+    - Lists of collections and timestamps of most recent commits from local filesystem.
+    - Lists of collections and last-sync times from Cgit on the hub server (mits3).
+    - Logfiles of `git annex special-remote copy` operations. Specifically the last lines containing summary data.
+     
+    ANALYSIS
+    
+    \b
+    The ddrinventory._analyze_repository() function examines the data and returns two lists:
+    - An "ok list" indicating nominal results for various tests, and
+    - A "notok list" of errors or bad results.
+    Good/nominal results are indicated by lower-case marks.
+    Bad results are indicated by UPPER CASE marks.
+    Nominal status marks are hidden from output by default.  To see them use the --verbose/-v flag.
+    
+    \b
+    The presence or ABSENCE of the local repository, the Cgit repository, and each special-remote are indicated by:
+    - cgit / NOT_CGIT
+    - here / NOT_HERE
+    - remote_ok / remote_ABSENT
+    
+    \b
+    Timestamps of the local-repository's latest commit, Cgit's lastmod, and each remote's most recent copy are compared to indicate whether the local repository needs to be synced, or if binaries need to be copied to remotes:
+    - sync_ok / SYNC_CGIT
+    - remote_ok / remote_BEHIND
+    
+    \b
+    Copy logs' files/ok/copied/errs status numbers are analyzed to indicate whether counts match the expected:
+    - remote_count_ok / remote_COUNT_BAD,remote_ERRS
+    Run `ddrremote copy --help` for an explanation of various possible status patterns and their meanings.
+    
+    \b
+    Problems encountered with a collection's remote(s) are indicated by:
+    - FAIL
+    
+    \b
+    Extreme edge case, in which the collection has been removed from local and cgit but copy logs remain:
+    - remote_ORPHAN
     """
     start = datetime.now(tz=config.TZ)
     if isinstance(remotes, str):
@@ -492,8 +556,17 @@ def _analyze_repository(repo, remotes, absentok=False):
 @click.option('-j','--jsonl', is_flag=True, default=False, help='Output JSONL aka list of JSONs.')
 @click.option('--logsdir','-l', default=config.INVENTORY_LOGS_DIR, help=f"Directory containing special-remote copylogs. (default: {config.INVENTORY_LOGS_DIR}).")
 def copylogs(sort, jsonl, logsdir):
-    """Report recent activity in synced repositories.
+    """List summary data from logfiles of `git annex special-remote copy` operations.
     
+    Specifically the last lines containing summary data. See `ddrlocal(-local).cfg [inventory] logs_dir`.
+
+    LOGSDIR can be either the main logs directory or the dir for a specific remote.
+    
+    Logs can be sorted on any of the following fields:
+    - timestamp, elapsed, collectionid, remote, files, ok, copied, errs
+    Put a dash in front of the fieldname to reverse the sorting order.
+    
+    See `ddrremote copy --help` for the exact logfile syntax.
     """
     stats_by_collection,fails = _copy_done_lines(logsdir)
     if '-' in sort:
