@@ -443,15 +443,15 @@ def _combine_local_cgit(basedir, username, password, logsdir, remotes, collectio
             repositories[cid]['remotes'][remote] = {}
     for r in repos_local:
         cid = r['id']
-        repositories[cid]['here']['lastmod'] = r['lastmod']
         repositories[cid]['here']['ts'] = r['ts']
+        repositories[cid]['here']['lastmod'] = r['lastmod']
         repositories[cid]['here']['path'] = r['path']
         repositories[cid]['here']['title'] = r['title']
         repositories[cid]['here']['gitpython'] = r['repo']
     for r in repos_cgit:
         cid = r['id']
-        repositories[cid]['cgit']['lastmod'] = r['lastmod']
         repositories[cid]['cgit']['ts'] = r['ts']
+        repositories[cid]['cgit']['lastmod'] = r['lastmod']
         repositories[cid]['cgit']['href'] = r['href']
         repositories[cid]['cgit']['title'] = r['title']
     # remote logs data
@@ -668,7 +668,10 @@ LOG_V4_PATTERN = re.compile(
 LOG_STATS = ['files','ok','copied','errs']
 
 def _parse_copy_done_line(line):
-    data = {'collectionid':None,'remote':None,'timestamp':None,'elapsed':None}
+    data = {
+        'collectionid':None,'remote':None,'command':None,'collectionpath':None,
+        'ts':None,'el':None,'timestamp':None,'elapsed':None,
+    }
     m = LOG_V4_PATTERN.match(line)
     if m:
         for key,val in m.groupdict().items():
