@@ -393,9 +393,7 @@ def report(username, password, logsdir, remotes, absentok, verbose, quiet, colle
         cid = collectionid.ljust(cidw)  # pad collection id
         ok,notok = _analyze_repository(repo, remotes, absentok)
         if collectionids and collectionid in collectionids:
-            repo['ok'] = ok
-            repo['notok'] = notok
-            _display_collection_detail(collectionid, repo)
+            _display_collection_detail(collectionid, repo, ok, notok)
             continue
         if verbose:
             click.echo(f"{cid} {','.join(ok)} {','.join(notok)}")
@@ -562,8 +560,14 @@ def _analyze_repository(repo, remotes, absentok=False):
         notok = [x for x in notok if x != 'NOT_HERE']
     return ok,notok
 
-def _display_collection_detail(collectionid, repo):
+def _display_collection_detail(collectionid, repo, ok, notok):
+    # remove some things
+    if repo.get('here') and repo['here'].get('gitpython'):
+        repo['here'].pop('gitpython')
+    # prettyprint
     click.echo(pprint.pformat(repo, compact=False, sort_dicts=False))
+    click.echo(f"GOOD {pprint.pformat(ok, compact=False, sort_dicts=False)}")
+    click.echo(f"BAD {pprint.pformat(notok, compact=False, sort_dicts=False)}")
 
 
 @ddrinventory.command()
