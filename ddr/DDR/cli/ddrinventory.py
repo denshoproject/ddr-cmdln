@@ -1,13 +1,19 @@
 HELP = """
 ddrinventory - Gather and report inventory data
+
+
 """
 
-from datetime import datetime
+from copy import deepcopy
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 import json
 import logging
 import os
 from pathlib import Path
+import pprint
+import re
+import subprocess
 import sys
 
 import click
@@ -50,30 +56,119 @@ def conf():
 @click.option('--password','-P',
               default=config.CGIT_PASSWORD, envvar='CGIT_PASSWORD',
               help='HTTP Basic auth password.')
-@click.option('--format','-f', default='text', help="Output format (text,jsonl).")
+@click.option('--jsonl','-j', is_flag=True, default=False, help="Output in JSONL.")
 @click.option('--testing','-t', is_flag=True, default=False, help='Include ddr-testing-* repos.')
 @click.option('--debug','-d', is_flag=True, default=False)
-def cgit(username, password, format, testing, debug):
+def cgit(username, password, jsonl, testing, debug):
     """Scrapes Cgit and gets basic data for all repositories
     """
-    assert format in ['text', 'json', 'jsonl']
+    for repo in _repositories_cgit(username, password, testing):
+        if repo.get('lastmod'):
+            repo['lastmod'] = repo['lastmod'].isoformat()
+        if jsonl:
+            if repo.get('datetime'):
+                repo.pop('datetime')
+            click.echo(json.dumps(repo))
+        else:
+            click.echo(
+                f"{repo['lastmod']} {repo['id']} {repo['title']}"
+            )
+
+def _repositories_cgit(username, password, testing=False, collectionids=[]):
     cgit = dvcs.Cgit()
     cgit.username = username
     cgit.password = password
-    if debug:
-        click.echo(f"{cgit.url=}")
+    #if debug:
+    #    click.echo(f"{cgit.url=}")
     for pagenum,offset in cgit._pages():
-        if debug:
-            click.echo(f"{pagenum=} {offset=}")
-        for repo in cgit._page_repos(offset, testing):
-            if 'json' in format:
-                if repo.get('datetime'):
-                    repo.pop('datetime')
-                click.echo(json.dumps(repo))
-            else:
-                click.echo(
-                    f"{repo.get('timestamp','')}  {repo['id']}  {repo.get('url','')}  {repo['title']}"
-                )
+        #if debug:
+        #    click.echo(f"{pagenum=} {offset=}")
+        for data in cgit._page_repos(offset, testing):
+            # only collection repositories
+            cid = data['id']
+            if collectionids and not cid in collectionids:
+                continue
+            try:
+                ci = identifier.Identifier(cid)
+            except identifier.InvalidIdentifierException:
+                ci = None
+            except identifier.InvalidInputException:
+                ci = None
+            if (ci == None) or (ci.model != 'collection'):
+                continue
+            repo = {
+                'id': data['id'],
+                'lastmod': data['timestamp'],
+                'ts': data['timestamp'],
+                'href': data['href'],
+                'title': data['title'],
+            }
+            if repo['lastmod']:
+                repo['lastmod'] = parser.parse(repo['lastmod'])
+            yield repo
+
+
+@ddrinventory.command()
+@click.option('--jsonl','-j', is_flag=True, default=False, help="Format output as JSONL.")
+@click.option('--testing','-t', is_flag=True, default=False, help='Include ddr-testing-* repos.')
+@click.option('-b','--base', default=config.MEDIA_BASE, help=f"Base path containing collection repositories (default: {config.MEDIA_BASE}).")
+def local(jsonl, testing, base):
+    """Crawls local filesystem and gets basic data for all repositories
+    """
+    for repo in _repositories_local(base, testing):
+        repo.pop('repo')
+        if jsonl:
+            if isinstance(repo['lastmod'], datetime):
+                repo['lastmod'] = repo['lastmod'].isoformat()
+            if isinstance(repo['path'], Path):
+                repo['path'] = str(repo['path'])
+            click.echo(json.dumps(repo))
+        else:
+            click.echo(f"{repo['lastmod']} {repo['path']} {repo['title']}")
+
+def _repositories_local(basedir, testing=False, collectionids=[]):
+    if testing:
+        paths = [p for p in dvcs.repos(basedir)]
+    else:
+        paths = [p for p in dvcs.repos(basedir) if not 'testing' in p]
+    for path in sorted(paths):
+        cpath = Path(path)
+        cid = cpath.name
+        if collectionids and not cid in collectionids:
+            continue
+        try:
+            ci = identifier.Identifier(cid)
+        except identifier.InvalidIdentifierException:
+            ci = None
+        except identifier.InvalidInputException:
+            ci = None
+        if (ci == None) or (ci.model != 'collection'):
+            continue
+        repo = dvcs.repository(path)
+        cjson = cpath / 'collection.json'
+        # ignore repo and org repositories
+        if not cjson.exists():
+            continue
+        cid = cpath.name
+        try:
+            latest_commit = dvcs.latest_commit(path)
+            timestamp = ' '.join(latest_commit.split()[-3:])
+            lastmod = parser.parse(timestamp)
+        except Exception as err:
+            timestamp = ''
+            lastmod = f"{err=}"
+        try:
+            with cjson.open('r') as f:
+                for line in f.readlines():
+                    if 'title' in line:
+                        title = line.strip()
+                        title = title.replace('"title": "', '')
+                        if title[-1] == '"':
+                            title = title[:-1]
+                        continue
+        except FileNotFoundError:
+            title = ''
+        yield {'id':cid, 'lastmod':lastmod, 'ts':timestamp, 'path':cpath, 'title':title, 'repo':repo}
 
 
 @ddrinventory.command()
@@ -93,6 +188,12 @@ def recent(username, password, days, base):
     
     Note: The last-modification dates come from *Cgit* on mits3.
     Collections will NOT be listed unless they have been synced!
+    
+    TODO indicate changes since last copy
+    if given a checklog dir,
+    - find the logfile for each collection
+    - find the most recent ddrremote copy DONE line
+    - see if any commits since last ddrremote copy DONE timestamp
     """
     basepath = Path(base)
     days = int(days)
@@ -128,18 +229,10 @@ def recent(username, password, days, base):
 def _cgit_recently_modified(days, username, password):
     """Scrape Cgit and return info for repositories modified in last N days
     """
-    cgit = dvcs.Cgit()
-    if username: cgit.username = username
-    if password: cgit.password = password
-    # TODO get timezone from OS
-    now = datetime.now(tz=ZoneInfo('America/Los_Angeles'))
+    now = datetime.now(tz=config.TZ)
     recent = []
-    for repo in cgit.repositories():
-        ts = repo.get('timestamp')
-        if ts:
-            # TODO parse the time zones correctly this is dumb
-            ts = ts.replace('-0800','PST').replace('-0700','PDT')
-            repo['timestamp'] = parser.parse(ts)
+    for repo in _repositories_cgit(username, password, testing=False):
+        if repo.get('timestamp'):
             delta = now - repo['timestamp']
             if delta.days <= days:
                 recent.append(repo)
@@ -166,8 +259,7 @@ def _recent_commits(repo, days, now=None):
     if now:
         now = parser.parse(f"{now} PST")
     else:
-        # TODO get timezone from OS
-        now = datetime.now(tz=ZoneInfo('America/Los_Angeles'))
+        now = datetime.now(tz=config.TZ)
     commits = []
     for commit in repo.iter_commits('master'):
         delta = now - commit.committed_datetime
@@ -197,3 +289,429 @@ def _commit_modified_files(repo, repository, commit, totals):
         and 'SHA' in rpath:
             totals['annex'].append(relpath)
     return totals
+
+
+@ddrinventory.command()
+@click.option('--username','-U',
+              default=config.CGIT_USERNAME, envvar='CGIT_USERNAME',
+              help='HTTP Basic auth username.')
+@click.option('--password','-P',
+              default=config.CGIT_PASSWORD, envvar='CGIT_PASSWORD',
+              help='HTTP Basic auth password.')
+@click.option('--base','-b', default=config.MEDIA_BASE, help=f"Base path containing collection repositories (default: {config.MEDIA_BASE}).")
+@click.option('--logsdir','-l', default=config.INVENTORY_LOGS_DIR, help=f"Directory containing special-remote copylogs. (default: {config.INVENTORY_LOGS_DIR}).")
+@click.option('--remotes','-r', default=config.INVENTORY_REMOTES, help=f"Comma-separated list of remotes. (default: {config.INVENTORY_REMOTES}).")
+@click.option('--absentok','-a', is_flag=True, default=False, help="Absent repositories not considered to be an error.")
+@click.option('--verbose','-v', is_flag=True, default=False, help='Print ok status info not just bad.')
+@click.option('--quiet','-q', is_flag=True, default=False, help='In UNIX fashion, only print bad status info.')
+@click.option('--collection','-c', default='', help=f"Get detailed information for just one collection..")
+def report(username, password, logsdir, remotes, absentok, verbose, quiet, collection, base):
+    """Status of local repos, annex special remotes, actions to be taken
+    
+    \b
+    ddrinventory report
+    tells:
+    - which collections are present on cgit (should be all of them)
+    - which collections are present on the local filesystem
+    
+    USAGE
+    
+    \b
+    Print status of every available collection. Include bad-status marks but print 'ok' instead of listing good-status marks.
+        ddrinventory report
+    
+    \b
+    List all good-status marks along with bad-status ones. Useful for audits.
+        ddrinventory report -v
+    
+    \b
+    Only list collections that had bad-status marks. Useful for checking status and for making batch scripts:
+        ddrinventory report -q
+    
+    SOURCES
+    
+    \b
+    `ddrinventory report` gathers information from three places:
+    - Lists of collections and timestamps of most recent commits from local filesystem.
+    - Lists of collections and last-sync times from Cgit on the hub server (mits3).
+    - Logfiles of `git annex special-remote copy` operations. Specifically the last lines containing summary data.
+     
+    ANALYSIS
+    
+    \b
+    The ddrinventory._analyze_repository() function examines the data and returns two lists:
+    - An "ok list" indicating nominal results for various tests, and
+    - A "notok list" of errors or bad results.
+    Good/nominal results are indicated by lower-case marks.
+    Bad results are indicated by UPPER CASE marks.
+    Nominal status marks are hidden from output by default.  To see them use the --verbose/-v flag.
+    
+    \b
+    The presence or ABSENCE of the local repository, the Cgit repository, and each special-remote are indicated by:
+    - cgit / NOT_CGIT
+    - here / NOT_HERE
+    - remote_ok / remote_ABSENT
+    
+    \b
+    Timestamps of the local-repository's latest commit, Cgit's lastmod, and each remote's most recent copy are compared to indicate whether the local repository needs to be synced, or if binaries need to be copied to remotes:
+    - sync_ok / SYNC_CGIT
+    - remote_ok / remote_BEHIND
+    
+    \b
+    Copy logs' files/ok/copied/errs status numbers are analyzed to indicate whether counts match the expected:
+    - remote_count_ok / remote_COUNT_BAD,remote_ERRS
+    Run `ddrremote copy --help` for an explanation of various possible status patterns and their meanings.
+    
+    \b
+    Problems encountered with a collection's remote(s) are indicated by:
+    - FAIL
+    
+    \b
+    Extreme edge case, in which the collection has been removed from local and cgit but copy logs remain:
+    - remote_ORPHAN
+    """
+    start = datetime.now(tz=config.TZ)
+    if isinstance(remotes, str):
+        remotes = remotes.strip().split(',')
+    for remote in remotes:
+        logdir = Path(logsdir) / remote
+        if not logdir.exists():
+            click.echo(f"ERROR: Log directory does not exist: {logdir}.")
+            sys.exit(1)
+    basedir = Path(base)
+    if not basedir.exists():
+        click.echo(f"ERROR: Repositories base directory does not exist: {basedir}.")
+        sys.exit(1)
+    collectionids = [collection] if collection else []
+    repos,num_local,num_cgit = _combine_local_cgit(
+        basedir, username, password, logsdir, remotes, collectionids, quiet,
+    )
+    cidw = _collection_id_width(repos)
+    num_total = len(repos.items())
+    num_notok = 0
+    for collectionid,repo in repos.items():
+        cid = collectionid.ljust(cidw)  # pad collection id
+        ok,notok = _analyze_repository(repo, remotes, absentok)
+        if collectionids and collectionid in collectionids:
+            _display_collection_detail(collectionid, repo, ok, notok)
+            continue
+        if verbose:
+            click.echo(f"{cid} {','.join(ok)} {','.join(notok)}")
+        else:
+            if notok:
+                num_notok += 1
+                click.echo(f"{cid} {','.join(notok)}")
+            elif not quiet:
+                # show *something* for all collections
+                click.echo(f"{cid} ok")
+    now = datetime.now(tz=config.TZ)
+    e = now - start
+    now = now.isoformat(timespec='seconds')
+    click.echo(f"{now} ({e}) Checked {num_local} of {num_total} collections: {num_notok} issues")
+
+def _combine_local_cgit(basedir, username, password, logsdir, remotes, collectionids=[], quiet=False):
+    """Combine data from local repos, cgit repos, and remtoe copy logs
+    """
+    # load repository data
+    # local
+    if not quiet:
+        click.echo(f"Getting repos in {basedir}...")
+    repos_local = [repo for repo in _repositories_local(basedir, collectionids=collectionids)]
+    if not quiet:
+        click.echo(f"{len(repos_local)} local repositories")
+    # cgit
+    if not quiet:
+        click.echo(f"Getting repos from cgit...")
+    repos_cgit = [repo for repo in _repositories_cgit(username, password, collectionids=collectionids)]
+    if not quiet:
+        click.echo(f"{len(repos_cgit)} cgit repositories")
+    ids_local = [repo['id'] for repo in repos_local]
+    ids_cgit = [repo['id'] for repo in repos_cgit]
+    ids_combined = sorted(set(ids_local + ids_cgit))
+    num_local = len(ids_local)
+    num_cgit = len(ids_cgit)
+    # format data
+    repo_prototype = {
+        'here': {},
+        'cgit': {},
+        'remotes': {},
+    }
+    repositories = {}
+    for cid in ids_combined:
+        repositories[cid] = deepcopy(repo_prototype)
+        for remote in remotes:
+            repositories[cid]['remotes'][remote] = {}
+    for r in repos_local:
+        cid = r['id']
+        repositories[cid]['here']['ts'] = r['ts']
+        repositories[cid]['here']['lastmod'] = r['lastmod']
+        repositories[cid]['here']['path'] = r['path']
+        repositories[cid]['here']['title'] = r['title']
+        repositories[cid]['here']['gitpython'] = r['repo']
+    for r in repos_cgit:
+        cid = r['id']
+        repositories[cid]['cgit']['ts'] = r['ts']
+        repositories[cid]['cgit']['lastmod'] = r['lastmod']
+        repositories[cid]['cgit']['href'] = r['href']
+        repositories[cid]['cgit']['title'] = r['title']
+    # remote logs data
+    for remote in remotes:
+        logdir = f"{logsdir}/{remote}"
+        if not quiet:
+            print(f"Reading remote logs {logdir}")
+        stats,fails = _copy_done_lines(logdir, collectionids=collectionids)
+        for cid,data in stats.items():
+            if not repositories.get(cid):
+                # in case of logs for collections that have been deleted?
+                repositories[cid] = deepcopy(repo_prototype)
+            repositories[cid]['remotes'][remote] = data
+        for cid in ids_combined:
+            for line in fails:
+                if cid in line:
+                    repositories[cid]['remotes'][remote]['FAIL'] = line
+    return repositories,num_local,num_cgit
+
+def _collection_id_width(repos):
+    """Return width of widest collection id"""
+    width = 0
+    for cid in repos.keys():
+        if len(cid) > width:
+           width = len(cid)
+    return width
+
+#from concurrent.futures import ThreadPoolExecutor
+# 
+#def run_io_tasks_in_parallel(tasks):
+#    with ThreadPoolExecutor() as executor:
+#        running_tasks = [executor.submit(task) for task in tasks]
+#        for running_task in running_tasks:
+#            running_task.result()
+# 
+#run_io_tasks_in_parallel([
+#    lambda: print('IO task 1 running!'),
+#    lambda: print('IO task 2 running!'),
+#])
+
+def _analyze_repository(repo, remotes, absentok=False):
+    """Answer questions about individual repositories
+    """
+    # TODO break this into sub-functions, it's too complicated
+    ok = []     # things that are okay
+    notok = []  # something's not right
+    # is repo in cgit?
+    # (should always be in cgit see clone procedures)
+    if repo.get('cgit'):
+        ok.append('cgit')
+    else:
+        notok.append('NOT_CGIT')
+    # is repo present in local filesystem?
+    if repo.get('here'):
+        ok.append('here')
+    else:
+        notok.append('NOT_HERE')
+    # does local repo have changes since last sync?
+    if repo['here'].get('lastmod') and repo['cgit'].get('lastmod'):
+        if repo['here']['lastmod'] <= repo['cgit']['lastmod']:
+            ok.append('sync_ok')
+        elif repo['here']['lastmod'] > repo['cgit']['lastmod']:
+            notok.append('SYNC_CGIT')
+    # remotes
+    for remote in remotes:
+        # does repo have remote X?
+        r = repo['remotes'].get(remote)
+        if r:
+            ok.append(f"{remote}_ok")
+        else:
+            notok.append(f"{remote}_ABSENT")
+            continue
+        # repo FAIL
+        if r.get('FAIL'):
+            if 'has no remote' in r['FAIL']:
+                notok.append(f"{remote}_ABSENT")
+            else:
+                notok.append(f"FAIL {r['FAIL']}")
+            continue
+        # is remote current with here?
+        # remote timestamp ahead of lastmod == OK
+        # remote timestamp behind lastmod == UPDATE
+        rts = repo['remotes'][remote].get('timestamp')
+        if repo['here'].get('lastmod'):
+            if rts >= repo['here']['lastmod']:
+                ok.append(f"{remote}_current")
+            elif rts < repo['here']['lastmod']:
+                notok.append(f"{remote}_BEHIND")
+        else:
+            # there is a remote but no local repo to compare to
+            notok.append(f"{remote}_ORPHAN")
+        # does ok+copied == files?
+        rfiles  = repo['remotes'][remote].get('files')
+        rok     = repo['remotes'][remote].get('ok')
+        rcopied = repo['remotes'][remote].get('copied')
+        rerrs   = repo['remotes'][remote].get('errs')
+        # account for old copylog format which is missing ok,errs data
+        if (rok > -1) and (rerrs > -1):
+            if rok + rcopied == rfiles:
+                ok.append(f"{remote}_count_ok")
+            else:
+                notok.append(f"{remote}_COUNT_BAD")
+            if rerrs:
+                notok.append(f"{remote}_ERRS")
+    if absentok:
+        notok = [x for x in notok if x != 'NOT_HERE']
+    return ok,notok
+
+def _display_collection_detail(collectionid, repo, ok, notok):
+    # remove some things
+    if repo.get('here') and repo['here'].get('gitpython'):
+        repo['here'].pop('gitpython')
+    # prettyprint
+    click.echo(pprint.pformat(repo, compact=False, sort_dicts=False))
+    click.echo(f"GOOD {pprint.pformat(ok, compact=False, sort_dicts=False)}")
+    click.echo(f"BAD {pprint.pformat(notok, compact=False, sort_dicts=False)}")
+
+
+@ddrinventory.command()
+@click.option('-s','--sort', default='collectionid', help='Sort order. See --help for options.')
+@click.option('-j','--jsonl', is_flag=True, default=False, help='Output JSONL aka list of JSONs.')
+@click.option('--logsdir','-l', default=config.INVENTORY_LOGS_DIR, help=f"Directory containing special-remote copylogs. (default: {config.INVENTORY_LOGS_DIR}).")
+def copylogs(sort, jsonl, logsdir):
+    """List summary data from logfiles of `git annex special-remote copy` operations.
+    
+    Specifically the last lines containing summary data. See `ddrlocal(-local).cfg [inventory] logs_dir`.
+
+    LOGSDIR can be either the main logs directory or the dir for a specific remote.
+    
+    Logs can be sorted on any of the following fields:
+    - timestamp, elapsed, collectionid, remote, files, ok, copied, errs
+    Put a dash in front of the fieldname to reverse the sorting order.
+    
+    See `ddrremote copy --help` for the exact logfile syntax.
+    """
+    stats_by_collection,fails = _copy_done_lines(logsdir)
+    if '-' in sort:
+        reverse = True
+        sort = sort.replace('-','')
+    else:
+        reverse = False
+    for val in sorted(
+            stats_by_collection.values(),
+            key=lambda d: d[sort],
+            reverse=reverse
+    ):
+        if jsonl:
+            val.pop('ts')
+            val.pop('delta')
+            click.echo(json.dumps(val))
+        else:
+            timestamp = val['ts']  # print the str not the datetime
+            remote = val['remote']; collectionpath = val['collectionpath']
+            elapsed = val['el']    # print the str not the timedelta
+            files = val['files']; ok = val['ok']; copied = val['copied']; errs = val['errs']
+            click.echo(f"{timestamp} ddrremote copy {remote} {collectionpath} DONE {elapsed} files:{files} ok:{ok} copied:{copied} errs:{errs}")
+
+def _copy_done_lines(logsdir, collectionids=[]):
+    os.chdir(logsdir)
+    # Get only the last line of each `ddrremote copy` run,
+    # sorted in ascending order by timestamp
+    grep = 'grep DONE'
+    for cid in collectionids:
+        grep = f"{grep} | grep -e {cid}"
+    cmd = f'ack "ddrremote copy" -h --nobreak | {grep} | sort'
+    out = subprocess.check_output(
+        cmd, stderr=subprocess.STDOUT, shell=True, encoding='utf-8'
+    )
+    stats = {}
+    fails = []
+    for line in [line.strip() for line in out.splitlines()]:
+        data,bad = _parse_copy_done_line(line)
+        if data and data.get('collectionid'):
+            stats[data['collectionid']] = data
+        elif bad:
+            fails.append(bad)
+        else:
+            print(f"FAIL {data=} {bad=}")
+    return stats,fails
+
+LOG_V2_SAMPLE = '2024-09-24T16:45:24 ddrremote copy hq-backup-montblanc /media/qnfs/kinkura/gold/ddr-ajah-8 DONE 0:00:06.409915 36 files 0 copied'
+LOG_V2_PATTERN = re.compile(
+    "(?P<timestamp>[\d-]+T[\d:]+) "
+    "(?P<command>ddrremote copy) "
+    "(?P<remote>[\w\d-]+) "
+    "(?P<collectionpath>[\w\d/-]+) "
+    "DONE "
+    "(?P<elapsed>[\d]+:[\d]+:[\d]+.[\d]+) "
+    "(?P<files>[\d]+) files (?P<copied>[\d]+) copied"
+)
+
+LOG_V3_SAMPLE = '2024-10-03T14:57:40 ddrremote copy b2 /media/qnfs/kinkura/gold/ddr-njpa-11 DONE 0:01:50.543381 files:9661 ok:9661 copied:0 errs:0'
+LOG_V3_PATTERN = re.compile(
+    "(?P<timestamp>[\d-]+T[\d:)]+) "  # isoformat without timezone
+    "(?P<command>ddrremote copy) "
+    "(?P<remote>[\w\d-]+) "
+    "(?P<collectionpath>[\w\d/-]+) "
+    "DONE "
+    "(?P<elapsed>[\d]+:[\d]+:[\d]+.[\d]+) "
+    "files:(?P<files>[\d]+) ok:(?P<ok>[\d]+) copied:(?P<copied>[\d]+) errs:(?P<errs>[\d]+)"
+)
+
+LOG_V4_SAMPLE = '2024-10-10T12:14:26-07:00 ddrremote copy hq-backup-montblanc /media/qnfs/kinkura/gold/ddr-phljacl-2 DONE 0:00:00.122655 files:0 ok:0 copied:0 errs:0'
+LOG_V4_PATTERN = re.compile(
+    "(?P<timestamp>[\d-]+T[\d:)]+-[\d:]+) "  # isoformat with timezone
+    "(?P<command>ddrremote copy) "
+    "(?P<remote>[\w\d-]+) "
+    "(?P<collectionpath>[\w\d/-]+) "
+    "DONE "
+    "(?P<elapsed>[\d]+:[\d]+:[\d]+.[\d]+) "
+    "files:(?P<files>[\d]+) ok:(?P<ok>[\d]+) copied:(?P<copied>[\d]+) errs:(?P<errs>[\d]+)"
+)
+
+LOG_STATS = ['files','ok','copied','errs']
+
+def _parse_copy_done_line(line):
+    data = {
+        'collectionid':None,'remote':None,'command':None,'collectionpath':None,
+        'ts':None,'el':None,'timestamp':None,'elapsed':None,
+    }
+    m = LOG_V4_PATTERN.match(line)
+    if m:
+        for key,val in m.groupdict().items():
+            data[key] = val
+    else:
+        m = LOG_V3_PATTERN.match(line)
+        if m:
+            for key,val in m.groupdict().items():
+                data[key] = val
+        else:
+            # old format
+            m = LOG_V2_PATTERN.match(line)
+            if m:
+                for key,val in m.groupdict().items():
+                    data[key] = val
+            else:
+                # couldn't figure it out so punt
+                return None,f"unknown_line_format"
+    # type conversions
+    if data.get('collectionpath'):
+        # TODO check for legal collection path?
+        # TODO check for legal collection id?
+        path = Path(data['collectionpath'])
+        data['collectionid'] = path.name
+    if data.get('timestamp'):
+        data['ts'] = data['timestamp']
+        ts = datetime.fromisoformat(data['timestamp'])
+        if not ts.tzinfo:
+            ts = ts.astimezone(config.TZ)
+        data['timestamp'] = ts
+    if data.get('elapsed'):
+        data['el'] = data['elapsed']
+        h,m,ss = data['elapsed'].split(':')
+        s,ms = ss.split('.')
+        data['elapsed'] = timedelta(
+            hours=int(h), minutes=int(m), seconds=int(s), milliseconds=int(ms)
+        )
+    for key in LOG_STATS:
+        if data.get(key):
+            data[key] = int(data[key])
+        else:
+            data[key] = -1
+    return data,None

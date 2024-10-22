@@ -1,24 +1,15 @@
 DESCRIPTION = """ddrremote - Tools for working with DDR git-annex special remotes"""
 
-HELP = """Tools for working with DDR git-annex special remotes.
-
-check - Verifies that all the annex files in the collection are present in
-        the specified special remote. Optionally writes to --log.
-copy  - Runs git annex copy to the specified special remote, and
-        optionally writes to --log.
-recap - Reports info about recent collection modifications.
-
-- Works best if the ddr user has passwordless SSH keys for each remote.
-"""
-
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import json
 import os
 from pathlib import Path
 import subprocess
 import sys
 from time import sleep
+import traceback
 
 import click
 import humanize
@@ -27,13 +18,13 @@ from DDR import config
 from DDR import dvcs
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-TIMESTAMP_FORMAT = '%Y-%m-%dT%H:%M:%S'
 
 
 def dtfmt(dt=None):
     if not dt:
-        dt = datetime.now()
-    return dt.strftime(TIMESTAMP_FORMAT)
+        dt = datetime.now(tz=config.TZ)
+    return dt.isoformat(timespec='seconds')
+
 
 def log(logfile, line):
     if logfile:
@@ -46,205 +37,197 @@ def log(logfile, line):
 @click.option('--debug','-d', is_flag=True, default=False)
 def ddrremote(debug):
     """ddrremote - Tools for working with DDR git-annex special remotes
-
-    \b
-    See "ddrremote help" for examples.
     """
     if debug:
         click.echo('Debug mode is on')
 
 
 @ddrremote.command()
-def help():
-    """Detailed help and usage examples
-    """
-    click.echo(HELP)
-
-
-@ddrremote.command()
-@click.option('-f','--fast', is_flag=True, default=False, help='Faster check using git annex info.')
-@click.option('-l','--logfile', default=None, help='Write output to log file.')
-@click.option('-v','--verbose', is_flag=True, default=False, help='Show all files not just missing ones.')
+@click.option('-l','--logdir', default=config.INVENTORY_LOGS_DIR, help=f"Directory containing special-remote copylogs. (default: {config.INVENTORY_LOGS_DIR}).")
+@click.option('-b','--backoff', default=0.0, help='Wait N seconds between files.')
 @click.option('-w','--wait', default=0, help='Wait N seconds after checking a collection.')
 @click.argument('remote')
 @click.argument('collection')
-def check(fast, logfile, verbose, wait, remote, collection):
-    """Check that annex files in the collection are present in the special remote
+def copy(logdir, backoff, wait, remote, collection):
+    """git annex copy collection files to the remote and log
     
-    Under the hood, uses the git annex checkpresentkey plumbing command,
-    which reaches out to the special remote.
+    IMPORTANT: Remember to set B2_ACCOUNT_ID and B2_APP_KEY before copying
+    to Backblaze remotes!
     
-    Write output to files for use by compare command:
-    ddrremote check REMOTE COLLECTIONPATH | tee /PATH/REMOTE/COLLECTION
+    USAGE
+    
+    \b
+    Copy the entire collection at full speed.
+        ddrremote copy REMOTE COLLECTIONPATH
+    
+    \b
+    Backoff N.N seconds between each file. Useful if the full-speed copy
+    fails. This method is less efficient and runs git-annex-copy separately
+    for each file but will keep going if individual files fail to copy.
+        ddrremote copy --backoff=0.1 REMOTE COLLECTIONPATH
+    
+    \b
+    Wait N seconds after completing the collection copy. Useful for giving
+    servers a rest between collections when doing batch scripts.
+        ddrremote copy --wait=15 REMOTE COLLECTIONPATH
+    
+    ANALYSIS
+    
+    \b
+    Assuming that the copy operation runs to completion, the last line contains
+    the following info:
+        timestamp, command ('ddr remote copy'), remote, collectionpath,
+        elapsed time, status
+    STATUS consists of the following fields:
+    - files: Number of annex files in the repository.
+    - ok: Number of files present in remote (didn't need to be copied).
+    - copied: Number of files copied.
+    - errs: Number of errors.
+    
+    \b
+    Interpreting status data:
+    \b
+    `files:123 ok:123 copied:0 errs:0`
+    Everything's up to date, no files were copied.
+    \b
+    `files:123 ok:100 copied:23 errs:0`
+    Some files copied but no errors.
+    \b
+    `files:123 ok:100 copied:20 errs:3`
+    20 files copied and 3 files failed.
+    \b
+    `files:123 ok:0 copied:0 errs:1`
+    The command attempted to copy the whole collection but the operation failed.
+    
+    \b
+    This command is a wrapper around the regular `git annex copy` command:
+        `git annex copy -c annex.sshcaching=true --jobs=cpus . --to=REMOTE`
+    
+    It writes for each collection to `LOGDIR/REMOTE/COLLECTIONID.log`. `LOGDIR`
+    is set in `ddrlocal(-local).cfg [inventory] logs_dir` and can be overridden
+    by `--logdir`.
     """
-    if logfile:
-        logfile = Path(logfile)
     collection_path = Path(collection).absolute()
     cid = collection_path.name
-    prefix = f"{dtfmt()} ddrremote check"
-    starttime = datetime.now()
-    log(logfile, f"{dtfmt()} ddrremote check {remote} {collection_path} START")
-    if fast:
-        size_here,size_remote,diff = annex_info_remote(collection_path, remote)
-        endtime = datetime.now(); elapsed = endtime - starttime
-        def natural(filesize):
-            if filesize == None: return '---'
-            if filesize == 0: return '0'
-            return humanize.naturalsize(filesize).replace(' ','') if filesize else '---'
-        here_nat = natural(size_here)
-        remote_nat = natural(size_remote)
-        diff_nat = natural(diff)
-        log(logfile, f"{dtfmt()} ddrremote check {remote} {collection_path} DONE {elapsed} {here_nat} here {remote_nat} remote {diff_nat} missing")
+    if logdir:
+        # add remote to logdir if not present
+        if remote not in logdir:
+            logdir = Path(logdir) / remote
+        else:
+            logdir = Path(logdir)
+        logfile = logdir / f"{cid}.log"
     else:
-        startdir = os.getcwd()
-        annex_files = annex_find(collection_path)
-        errors = 0
-        missing = 0
-        for rel_path in annex_files:
-            output = checkpresentkey(collection_path, rel_path, remote)
-            if output.split()[0] == 'ok':
-                if (verbose):
-                    log(logfile, f"{prefix} {output}")
-            else:
-                errors += 1
-                if 'missing' in output:
-                    missing += 1
-                log(logfile, f"{prefix} {output}")
-        endtime = datetime.now(); elapsed = endtime - starttime
-        log(logfile, f"{dtfmt()} ddrremote check {remote} {collection_path} DONE {str(elapsed)} {len(annex_files)} files {errors} errs {missing} missing")
+        logfile = None
+    try:
+        repo = dvcs.repository(collection)
+    except dvcs.git.exc.InvalidGitRepositoryError:
+        log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection} DONE ERROR Does not appear to be a Git repository")
+        sys.exit(1)
+    try:
+        remotes = [r['name'] for r in dvcs.remotes(repo)]
+    except Exception as err:
+        log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection} DONE ERROR Problems with this Git repository! {str(err)}")
+        sys.exit(1)
+    if remote not in remotes:
+        log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection} DONE ERROR Collection has no remote '{remote}'")
+        sys.exit(1)
+    prefix = f"{dtfmt()} ddrremote"
+    # ok go
+    starttime = datetime.now(tz=config.TZ)
+    os.chdir(collection_path)
+    log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} START")
+    annex_files = _annex_find(collection_path)
+    files = len(annex_files)
+    ok = 0; copied = 0; errors = 0
+    if backoff:
+        for relpath in annex_files:
+            ok,copied,errors = _analyze_annex_copy_output(
+                _annex_copy_file(relpath, remote),
+                remote, ok, copied, errors, prefix, logfile
+            )
+            if backoff:
+                sleep(float(backoff))
+    else:
+        ok,copied,errors = _analyze_annex_copy_output(
+            _annex_copy_all(collection, remote),
+            remote, ok, copied, errors, prefix, logfile
+        )
+    operation = f"{dtfmt()} ddrremote copy {remote} {collection_path}"
+    elapsed = str(datetime.now(tz=config.TZ) - starttime)
+    status = f"files:{files} ok:{ok} copied:{copied} errs:{errors}"
+    log(logfile, f"{operation} DONE {elapsed} {status}")
     if wait:
-        sleep(int(wait))
+        sleep(float(wait))
 
-def annex_find(collection_path):
+def _annex_find(collection_path):
     """Gets list of relative file paths using git annex find
     """
     os.chdir(collection_path)
     return [
         Path(relpath)
         for relpath in subprocess.check_output(
-                'git annex find', stderr=subprocess.STDOUT, shell=True,
+                'git annex find --include "*"', stderr=subprocess.STDOUT, shell=True,
                 encoding='utf-8'
         ).strip().splitlines()
     ]
 
-def checkpresentkey(collection_path, rel_path, remote):
-    # get file's annex filename AKA key
-    os.chdir(collection_path)
-    key = None
-    rpath = str(rel_path.resolve())
-    if rel_path.is_symlink() and '.git/annex/objects' in rpath and 'SHA' in rpath:
-        key = rel_path.resolve().name
-    if not key:
-        return f"ERROR nokey {str(rel_path)}"
-    # git annex checkpresentkey
-    cmd = f"git annex checkpresentkey {key} {remote}"
-    try:
-        # checkpresentkey returns 0 if file is present
-        output = subprocess.check_output(
-            cmd, stderr=subprocess.STDOUT, shell=True,
-            encoding='utf-8'
-        )
-        if output == '':
-            return f"ok {str(rel_path)}"
-    except subprocess.CalledProcessError as err:
-        # checkpresentkey returns 1 if file is *absent*
-        if err.returncode == 1:
-            return f"ERROR missing {remote} {str(rel_path)}"
-        # checkpresentkey returns 100 if something went wrong
-        return f"ERROR {err}"
-    return f"ERROR fellout {str(rel_path)}"
-
-def annex_info_remote(collection_path, remote):
-    """Get size diff between here and specified remote
-    
-    Uses `git annex info .`
-    """
-    os.chdir(collection_path)
-    cmd = 'git annex info . --bytes --json'
-    data = json.loads(subprocess.check_output(
-        cmd, stderr=subprocess.STDOUT, shell=True,
-        encoding='utf-8'
-    ))
-    here = None
-    for r in data['repositories containing these files']:
-        if r['here']:
-            r['size'] = int(r['size'])
-            here = r; continue
-    there = None
-    for r in data['repositories containing these files']:
-        if remote in r['description']:
-            r['size'] = int(r['size'])
-            there = r; continue
-    if there:
-        return here['size'], there['size'], here['size'] - there['size']
-    if here:
-        return here['size'],None,None
-    return None,None,None
-
-
-@ddrremote.command()
-@click.option('-l','--logfile', default=None, help='Write output to log file.')
-@click.option('-w','--wait', default=0, help='Wait N seconds after checking a collection.')
-@click.argument('remote')
-@click.argument('collection')
-def copy(logfile, wait, remote, collection):
-    """git annex copy collection files to the remote and log
-    
-    Runs `git annex copy -c annex.sshcaching=true . --to=REMOTE`
-    and adds info to the output.
-    """
-    if logfile:
-        logfile = Path(logfile)
-    collection_path = Path(collection).absolute()
-    cid = collection_path.name
-    prefix = f"{dtfmt()} ddrremote"
-    starttime = datetime.now()
-    log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} START")
-    files,copied = _analyze_annex_copy_output(
-        prefix, _annex_copy(collection, remote)
-    )
-    elapsed = str(datetime.now() - starttime)
-    log(logfile, f"{dtfmt()} ddrremote copy {remote} {collection_path} DONE {elapsed} {files} files {copied} copied")
-    if wait:
-        sleep(int(wait))
-
-def _annex_copy(collection_path, remote):
-    """Run git annex copy command and return output or error
+def _annex_copy_all(collection_path, remote):
+    """git annex copy . and return output or error
     """
     # TODO yield lines instead of returning one big str
-    os.chdir(collection_path)
-    cmd = f"git annex copy -c annex.sshcaching=true . --to {remote}"
     try:
-        return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True,encoding='utf-8')
+        return subprocess.check_output(
+            f"git annex copy -c annex.sshcaching=true --jobs=cpus . --to {remote}",
+            stderr=subprocess.STDOUT, shell=True, encoding='utf-8'
+        )
     except subprocess.CalledProcessError as err:
         return f"ERROR {str(err)}"
 
-def _analyze_annex_copy_output(copy_output, remote, prefix, logfile):
+def _annex_copy_file(relpath, remote):
+    """git annex copy FILE and return output or error
+    """
+    try:
+        return subprocess.check_output(
+            f"git annex copy -c annex.sshcaching=true {relpath} --to {remote}",
+            stderr=subprocess.STDOUT, shell=True, encoding='utf-8'
+        )
+    except subprocess.CalledProcessError as err:
+        return f"ERROR {str(err)}"
+
+def _analyze_annex_copy_output(output, remote, ok, copied, errors, prefix, logfile):
     """Process git annex copy output, count number of files total and copied
     
     Sample logfiles for regular and Backblaze operations
     ANNEX_COPY_REGULAR_SKIPPED, ANNEX_COPY_REGULAR_COPIED
     ANNEX_COPY_BACKBLAZE_SKIPPED, ANNEX_COPY_BACKBLAZE_COPIED
     """
-    files = 0
-    copied = 0
-    if 'b2' in remote:
-        for line in copy_output.splitlines():
+    for line in output.splitlines():
+        line = line.strip()
+        if ('error' in line.lower()) \
+        or ('non-zero exit status' in line) \
+        or ("couldn't upload" in line):
+            errors += 1
+            log(logfile, f"ERROR {line}")
+            log(logfile, traceback.format_exc().strip())
+        elif 'b2' in remote:
+            # backblaze
             if 'copy' in line:
-                files += 1
-                if f"(to {remote}...)" in line:
+                if (line[-2:] == 'ok') and (not f"(to {remote}...)" in line):
+                    ok += 1
+                elif f"(to {remote}...)" in line:
                     copied += 1
             log(logfile, f"{prefix} {line}")
-    else:
-        for line in copy_output.splitlines():
+        else:
+            # everything else(?)
             if f"(checking {remote}...)" in line:
                 log(logfile, f"{prefix} {line}")
-                files += 1
+                if line[-2:] == 'ok':
+                    ok += 1
             else:
                 if 'sending incremental file list' in line:
                     copied += 1
                 log(logfile, line)
-    return files,copied
+    return ok,copied,errors
 
 # samples of `git annex copy` output
 
@@ -273,6 +256,25 @@ ANNEX_COPY_BACKBLAZE_COPIED = """
 copy files/ddr-csujad-31-6/files/ddr-csujad-31-6-mezzanine-83a48fe38e-a.jpg (to b2...)
 ok
 """
+ANNEX_COPY_BACKBLAZE_ERROR = """
+Command 'git annex copy -c annex.sshcaching=true files/ddr-ajah-1-10/files/ddr-ajah-1-10-24/files/ddr-ajah-1-10-24-master-404314826e.mpg --to b2' returned non-zero exit status 1.
+"""
+
+def _test_analyze_annex_copy_output(logfile):
+    files=0; ok=0; copied=0; errors=0
+    prefix='000 ddrremote'
+    logfile = Path(logfile)
+    click.echo('(ok,copied,errors)')
+    click.echo('ANNEX_COPY_REGULAR_SKIPPED')
+    click.echo(_analyze_annex_copy_output(ANNEX_COPY_REGULAR_SKIPPED.strip(), 'hq-backup-montblanc', ok, copied, errors, prefix, logfile))
+    click.echo('ANNEX_COPY_REGULAR_COPIED')
+    click.echo(_analyze_annex_copy_output(ANNEX_COPY_REGULAR_COPIED.strip(), 'hq-backup-montblanc', ok, copied, errors, prefix, logfile))
+    click.echo('ANNEX_COPY_BACKBLAZE_SKIPPED')
+    click.echo(_analyze_annex_copy_output(ANNEX_COPY_BACKBLAZE_SKIPPED.strip(), 'b2', ok, copied, errors, prefix, logfile))
+    click.echo('ANNEX_COPY_BACKBLAZE_COPIED')
+    click.echo(_analyze_annex_copy_output(ANNEX_COPY_BACKBLAZE_COPIED.strip(), 'b2', ok, copied, errors, prefix, logfile))
+    click.echo('ANNEX_COPY_BACKBLAZE_ERROR')
+    click.echo(_analyze_annex_copy_output(ANNEX_COPY_BACKBLAZE_ERROR.strip(), 'b2', ok, copied, errors, prefix, logfile))
 
 
 if __name__ == '__main__':
