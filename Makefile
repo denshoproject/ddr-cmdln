@@ -44,6 +44,7 @@ CONF_PRODUCTION=$(CONF_BASE)/ddrlocal.cfg
 CONF_LOCAL=$(CONF_BASE)/ddrlocal-local.cfg
 
 LOG_BASE=/var/log/ddr
+INVENTORY_LOG_BASE=$(LOG_BASE)/inventory
 
 DDR_REPO_BASE=/var/www/media/ddr
 
@@ -285,6 +286,7 @@ install-dependencies: apt-backports
 	apt-get --assume-yes install libxml2-dev libxslt1-dev libz-dev pmount udisks2
 	apt-get --assume-yes install imagemagick libssl-dev libxml2 libxml2-dev libxslt1-dev
 	apt-get --assume-yes install $(LIBEXEMPI3_PKG)
+	apt-get --assume-yes install ack-grep
 	apt-get --assume-yes install git-annex git-core
 
 mkdirs: mkdir-ddr-cmdln
@@ -351,6 +353,9 @@ mkdir-ddr-cmdln:
 	-mkdir $(LOG_BASE)
 	chown -R ddr.ddr $(LOG_BASE)
 	chmod -R 775 $(LOG_BASE)
+	-mkdir $(INVENTORY_LOG_BASE)
+	chown -R ddr.ddr $(INVENTORY_LOG_BASE)
+	chmod -R 775 $(INVENTORY_LOG_BASE)
 	-mkdir -p $(MEDIA_ROOT)
 	chown -R ddr.ddr $(MEDIA_ROOT)
 	chmod -R 775 $(MEDIA_ROOT)
