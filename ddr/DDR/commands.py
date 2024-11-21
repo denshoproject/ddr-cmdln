@@ -207,7 +207,7 @@ def create(user_name, user_mail, identifier, agent=''):
     Clones a blank collection object from workbench server, adds files, commits.
     
     - clones new repo from gitolite server
-    # Easier to have Gitolite create repo then clone (http://sitaramc.github.com/gitolite/repos.html)
+    # Easier to have Gitolite create repo then clone (http://gitolite.com/gitolite/)
     # than to add existing to Gitolite (http://sitaramc.github.com/gitolite/rare.html#existing).
     local requests CID from workbench API
     background:collection init: $ collection -cCID -oinit]
