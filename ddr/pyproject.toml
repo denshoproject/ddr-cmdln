@@ -1,0 +1,93 @@
+[project]
+name = "ddr-cmdln"
+description = "Densho Digital Repository core tools"
+authors = [
+    {name = "Geoffrey Jost", email = "geoffrey.jost@densho.us"}
+]
+maintainers = [
+    {name = "Geoffrey Jost", email="geoffrey.jost@densho.us"},
+]
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["repository"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Environment :: Console",
+    "License :: TBD",
+    "Topic :: Other/Nonlisted Topic",
+    "Topic :: Sociology :: History",
+]
+
+dynamic = ["version"]  # will read __version__ from DDR/__init__.py
+requires-python = ">=3.9"
+# Non-Python dependencies
+# sudo apt-get install imagemagick libexempi3 libxml2-dev python-dev pmount udisks
+# Elasticsearch 2.4.3
+dependencies = [
+    "beautifulsoup4>=4.12,<4.13", # MIT
+    "b2sdk>=1.14.1,<1.15.0",      # MIT      y
+    "click>=8.1.0,<8.2",          # BSD      y
+    "deepdiff>=3.3.0,<4.0",       # MIT      y
+    "envoy==0.0.3",               # MIT             TODO replace!
+    "gitpython>=3.1.0,<3.2",      # BSD
+    "humanize==4.10.0",           # MIT
+    "Jinja2>=3.1.4,<3.1.5",       # BSD
+    "natsort>=8.1.0,<8.2",        # MIT
+    "psutil>=5.9.1,<6.0",         # BSD      y
+    "python-dateutil==2.8.1",     # BSD
+    "python-xmp-toolkit==2.0.1",  # New BSD
+    "requests>=2.32.0,<2.33",     # Apache   y
+    "elastictools @ git+https://github.com/denshoproject/densho-elastictools.git@v1.0.2",
+]
+
+[project.optional-dependencies]
+testing = [
+    "bpython",
+    "mypy",
+    "nose",
+    "pytest",
+    "pytest-cov",
+]
+
+[project.scripts]
+ddr2 = "DDR.cli.ddr:ddr"
+ddrcheck = "DDR.cli.ddrcheck:ddrcheck"
+ddrcheckbinaries = "DDR.cli.ddrcheckbinaries:ddrcheckbinaries"
+ddrcheckencoding = "DDR.cli.ddrcheckencoding:ddrcheckencoding"
+ddrconfig = "DDR.cli.ddrconfig:ddrconfig"
+ddrdesc = "DDR.cli.ddrdesc:ddrdesc"
+ddrexport = "DDR.cli.ddrexport:ddrexport"
+ddriaconvert = "DDR.cli.ddriaconvert:ddriaconvert"
+ddrindex = "DDR.cli.ddrindex:ddrindex"
+ddrinfo = "DDR.cli.ddrinfo:ddrinfo"
+ddrinventory = "DDR.cli.ddrinventory:ddrinventory"
+ddrimport = "DDR.cli.ddrimport:ddrimport"
+ddrnames = "DDR.cli.ddrnames:ddrnames"
+ddrpubcopy = "DDR.cli.ddrpubcopy:ddrpubcopy"
+ddrremote = "DDR.cli.ddrremote:ddrremote"
+ddrsignatures = "DDR.cli.ddrsignatures:ddrsignatures"
+ddrtransform = "DDR.cli.ddrtransform:ddrtransform"
+ddrvhfileprep = "DDR.cli.ddrvhfileprep:ddrvhfileprep"
+ddrvocab = "DDR.cli.ddrvocab:ddrvocab"
+
+[project.urls]
+Repository = "https://github.com/denshoproject/ddr-cmdln"
+
+
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+
+[tool.setuptools]
+packages = ['DDR']
+
+#[tool.setuptools.dynamic]
+#version = {attr = "DDR.__init__.__version__"}
+#version = {file = ["VERSION"]}
