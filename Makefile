@@ -332,13 +332,17 @@ pip-download-cmdln:
 	source $(VIRTUALENV)/bin/activate; \
 	uv pip download --no-binary=:all: --destination-directory=$(INSTALL_CMDLN)/vendor -r $(INSTALL_CMDLN)/requirements.txt
 
-install-ddr-cmdln: install-virtualenv install-setuptools
+install-ddr-cmdln: install-virtualenv install-setuptools git-safe-dir
 	@echo ""
 	@echo "install-ddr-cmdln ------------------------------------------------------"
 	git status | grep "On branch"
 	cd ddr/; source $(VIRTUALENV)/bin/activate; uv pip install .
 	source $(VIRTUALENV)/bin/activate; \
 	uv pip install -U --cache-dir=$(PIP_CACHE_DIR) internetarchive
+
+git-safe-dir:
+	@echo ""
+	@echo "git-safe-dir -----------------------------------------------------------"
 	sudo -u ddr git config --global --add safe.directory $(INSTALL_CMDLN)
 	sudo -u ddr git config --global --add safe.directory $(INSTALL_DEFS)
 	sudo -u ddr git config --global --add safe.directory $(INSTALL_VOCAB)
