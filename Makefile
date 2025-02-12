@@ -267,9 +267,16 @@ install-virtualenv:
 	@echo ""
 	@echo "install-virtualenv -----------------------------------------------------"
 	apt-get --assume-yes install python3-pip python3-venv
+	python3 -m venv $(VIRTUALENV)
 	source $(VIRTUALENV)/bin/activate; \
-	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) pip uv
-	uv venv -p $(PYTHON_VERSION) $(VIRTUALENV)
+	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) uv
+
+install-setuptools: install-virtualenv
+	@echo ""
+	@echo "install-setuptools -----------------------------------------------------"
+	apt-get --assume-yes install python3-dev
+	source $(VIRTUALENV)/bin/activate; \
+	uv pip install -U --cache-dir=$(PIP_CACHE_DIR) setuptools
 
 install-dependencies: apt-backports
 	@echo ""
@@ -325,7 +332,7 @@ pip-download-cmdln:
 	source $(VIRTUALENV)/bin/activate; \
 	uv pip download --no-binary=:all: --destination-directory=$(INSTALL_CMDLN)/vendor -r $(INSTALL_CMDLN)/requirements.txt
 
-install-ddr-cmdln: install-virtualenv
+install-ddr-cmdln: install-virtualenv install-setuptools
 	@echo ""
 	@echo "install-ddr-cmdln ------------------------------------------------------"
 	git status | grep "On branch"
