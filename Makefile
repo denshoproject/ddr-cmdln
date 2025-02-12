@@ -340,6 +340,12 @@ install-ddr-cmdln: install-virtualenv install-setuptools git-safe-dir
 	source $(VIRTUALENV)/bin/activate; \
 	uv pip install -U --cache-dir=$(PIP_CACHE_DIR) internetarchive
 
+install-testing: install-virtualenv install-setuptools
+	@echo ""
+	@echo "install-ddr-cmdln ------------------------------------------------------"
+	git status | grep "On branch"
+	cd ddr/; source $(VIRTUALENV)/bin/activate; uv pip install .[testing]
+
 git-safe-dir:
 	@echo ""
 	@echo "git-safe-dir -----------------------------------------------------------"
