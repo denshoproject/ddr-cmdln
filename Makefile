@@ -295,7 +295,7 @@ get-app: get-ddr-cmdln get-ddr-cmdln-assets get-ddr-manual
 
 pip-download: pip-download-cmdln
 
-install-app: install-dependencies install-ddr-cmdln install-configs mkdir-ddr-cmdln
+install-app: install-dependencies install-ddr-cmdln install-configs
 
 test-app: test-ddr-cmdln
 
