@@ -25,7 +25,7 @@ classifiers = [
 ]
 
 dynamic = ["version"]  # will read __version__ from DDR/__init__.py
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 # Non-Python dependencies
 # sudo apt-get install imagemagick libexempi3 libxml2-dev python-dev pmount udisks
 # Elasticsearch 2.4.3
