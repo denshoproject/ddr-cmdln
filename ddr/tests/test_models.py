@@ -6,7 +6,6 @@ import os
 import random
 import shutil
 
-from deepdiff import DeepDiff
 import pytest
 
 from DDR import models
@@ -592,14 +591,14 @@ def test_children():
 def test_add_child():
     new_child = CHILDREN_FILES[0]
     e = deepcopy(CHILDREN_ENTITY)
-    before = deepcopy(e._children_objects)
+    before = [o for o in e._children_objects]
+    print(f"{before=}")
+    assert len(before) == 0
     e.add_child(new_child)
-    after = deepcopy(e._children_objects)
-    diff = DeepDiff(before, after, ignore_order=True)
-    assert diff
-    assert diff.get('iterable_item_added')
-    assert diff['iterable_item_added'].get('root[0]')
-    added = diff['iterable_item_added']['root[0]']
+    after = [o for o in e._children_objects]
+    print(f"{after=}")
+    assert len(after) == 1
+    added = after[0]
     assert added not in before
     assert added in after
     assert added.id == new_child.id

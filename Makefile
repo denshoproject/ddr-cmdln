@@ -247,7 +247,7 @@ install-elasticsearch: install-core
 	apt-get --assume-yes install $(OPENJDK_PKG)
 	-gdebi --non-interactive /tmp/downloads/$(ELASTICSEARCH)
 #cp $(INSTALL_CMDLN)/conf/elasticsearch.yml /etc/elasticsearch/
-#chown root.root /etc/elasticsearch/elasticsearch.yml
+#chown root:root /etc/elasticsearch/elasticsearch.yml
 #chmod 644 /etc/elasticsearch/elasticsearch.yml
 # 	@echo "${bldgrn}search engine (re)start${txtrst}"
 	-service elasticsearch stop
@@ -267,9 +267,9 @@ install-virtualenv:
 	@echo ""
 	@echo "install-virtualenv -----------------------------------------------------"
 	apt-get --assume-yes install python3-pip python3-venv
+	python3 -m venv $(VIRTUALENV)
 	source $(VIRTUALENV)/bin/activate; \
-	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) pip uv
-	uv venv $(VIRTUALENV)
+	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) uv
 
 install-setuptools: install-virtualenv
 	@echo ""
@@ -277,7 +277,6 @@ install-setuptools: install-virtualenv
 	apt-get --assume-yes install python3-dev
 	source $(VIRTUALENV)/bin/activate; \
 	uv pip install -U --cache-dir=$(PIP_CACHE_DIR) setuptools
-
 
 install-dependencies: apt-backports
 	@echo ""
@@ -296,7 +295,7 @@ get-app: get-ddr-cmdln get-ddr-cmdln-assets get-ddr-manual
 
 pip-download: pip-download-cmdln
 
-install-app: install-dependencies install-setuptools install-ddr-cmdln install-configs mkdir-ddr-cmdln
+install-app: install-dependencies install-ddr-cmdln install-configs
 
 test-app: test-ddr-cmdln
 
@@ -333,16 +332,23 @@ pip-download-cmdln:
 	source $(VIRTUALENV)/bin/activate; \
 	uv pip download --no-binary=:all: --destination-directory=$(INSTALL_CMDLN)/vendor -r $(INSTALL_CMDLN)/requirements.txt
 
-install-ddr-cmdln: install-setuptools
+install-ddr-cmdln: install-virtualenv install-setuptools git-safe-dir
 	@echo ""
 	@echo "install-ddr-cmdln ------------------------------------------------------"
 	git status | grep "On branch"
-	source $(VIRTUALENV)/bin/activate; \
-	cd $(INSTALL_CMDLN)/ddr; python setup.py install
-	source $(VIRTUALENV)/bin/activate; \
-	uv pip install -U --cache-dir=$(PIP_CACHE_DIR) -r $(INSTALL_CMDLN)/requirements.txt
+	cd ddr/; source $(VIRTUALENV)/bin/activate; uv pip install .
 	source $(VIRTUALENV)/bin/activate; \
 	uv pip install -U --cache-dir=$(PIP_CACHE_DIR) internetarchive
+
+install-testing: install-virtualenv install-setuptools
+	@echo ""
+	@echo "install-ddr-cmdln ------------------------------------------------------"
+	git status | grep "On branch"
+	cd ddr/; source $(VIRTUALENV)/bin/activate; uv pip install .[testing]
+
+git-safe-dir:
+	@echo ""
+	@echo "git-safe-dir -----------------------------------------------------------"
 	sudo -u ddr git config --global --add safe.directory $(INSTALL_CMDLN)
 	sudo -u ddr git config --global --add safe.directory $(INSTALL_DEFS)
 	sudo -u ddr git config --global --add safe.directory $(INSTALL_VOCAB)
@@ -351,13 +357,13 @@ mkdir-ddr-cmdln:
 	@echo ""
 	@echo "mkdir-ddr-cmdln --------------------------------------------------------"
 	-mkdir $(LOG_BASE)
-	chown -R ddr.ddr $(LOG_BASE)
+	chown -R ddr:ddr $(LOG_BASE)
 	chmod -R 775 $(LOG_BASE)
 	-mkdir $(INVENTORY_LOG_BASE)
-	chown -R ddr.ddr $(INVENTORY_LOG_BASE)
+	chown -R ddr:ddr $(INVENTORY_LOG_BASE)
 	chmod -R 775 $(INVENTORY_LOG_BASE)
 	-mkdir -p $(MEDIA_ROOT)
-	chown -R ddr.ddr $(MEDIA_ROOT)
+	chown -R ddr:ddr $(MEDIA_ROOT)
 	chmod -R 775 $(MEDIA_ROOT)
 
 test-ddr-cmdln:
@@ -378,7 +384,7 @@ mypy-ddr-cmdln:
 	source $(VIRTUALENV)/bin/activate; \
 	cd $(INSTALL_CMDLN)/; mypy ddr/DDR/
 
-uninstall-ddr-cmdln: install-setuptools
+uninstall-ddr-cmdln:
 	@echo ""
 	@echo "uninstall-ddr-cmdln ----------------------------------------------------"
 	source $(VIRTUALENV)/bin/activate; \
@@ -415,10 +421,10 @@ install-configs:
 # base settings file
 	-mkdir /etc/ddr
 	cp $(INSTALL_CMDLN)/conf/ddrlocal.cfg $(CONF_PRODUCTION)
-	chown root.root $(CONF_PRODUCTION)
+	chown root:root $(CONF_PRODUCTION)
 	chmod 644 $(CONF_PRODUCTION)
 	touch $(CONF_LOCAL)
-	chown ddr.ddr $(CONF_LOCAL)
+	chown ddr:ddr $(CONF_LOCAL)
 	chmod 640 $(CONF_LOCAL)
 	-mkdir -p /etc/ImageMagick-6/
 	-cp /etc/ImageMagick-6/policy.xml /etc/ImageMagick-6/policy.xml.orig
@@ -437,7 +443,7 @@ get-ddr-manual:
 	else git clone $(SRC_REPO_MANUAL) $(INSTALL_MANUAL); \
 	fi
 
-install-ddr-manual: install-setuptools
+install-ddr-manual:
 	@echo ""
 	@echo "install-ddr-manual -----------------------------------------------------"
 	source $(VIRTUALENV)/bin/activate; \
