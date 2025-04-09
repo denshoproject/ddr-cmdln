@@ -336,15 +336,15 @@ install-ddr-cmdln: install-virtualenv install-setuptools git-safe-dir
 	@echo ""
 	@echo "install-ddr-cmdln ------------------------------------------------------"
 	git status | grep "On branch"
-	cd ddr/; source $(VIRTUALENV)/bin/activate; uv pip install .
-	source $(VIRTUALENV)/bin/activate; \
+	cd $(INSTALL_CMDLN)/ddr; source $(VIRTUALENV)/bin/activate; uv pip install .
+	cd $(INSTALL_CMDLN)/ddr; source $(VIRTUALENV)/bin/activate; \
 	uv pip install -U --cache-dir=$(PIP_CACHE_DIR) internetarchive
 
 install-testing: install-virtualenv install-setuptools
 	@echo ""
 	@echo "install-ddr-cmdln ------------------------------------------------------"
 	git status | grep "On branch"
-	cd ddr/; source $(VIRTUALENV)/bin/activate; uv pip install .[testing]
+	cd $(INSTALL_CMDLN)/ddr; source $(VIRTUALENV)/bin/activate; uv pip install .[testing]
 
 git-safe-dir:
 	@echo ""
@@ -484,7 +484,7 @@ install-fpm:
 
 # https://stackoverflow.com/questions/32094205/set-a-custom-install-directory-when-making-a-deb-package-with-fpm
 # https://brejoc.com/tag/fpm/
-deb: deb-bullseye
+deb: deb-bookworm
 
 deb-bullseye:
 	@echo ""
@@ -534,8 +534,8 @@ deb-bullseye:
 	INSTALL.rst=$(DEB_BASE)   \
 	LICENSE=$(DEB_BASE)   \
 	Makefile=$(DEB_BASE)   \
+	pyproject.toml=$(DEB_BASE)   \
 	README.rst=$(DEB_BASE)   \
-	requirements.txt=$(DEB_BASE)   \
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
@@ -589,8 +589,8 @@ deb-bookworm:
 	INSTALL.rst=$(DEB_BASE)   \
 	LICENSE=$(DEB_BASE)   \
 	Makefile=$(DEB_BASE)   \
+	pyproject.toml=$(DEB_BASE)   \
 	README.rst=$(DEB_BASE)   \
-	requirements.txt=$(DEB_BASE)   \
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
@@ -644,8 +644,8 @@ deb-trixie:
 	INSTALL.rst=$(DEB_BASE)   \
 	LICENSE=$(DEB_BASE)   \
 	Makefile=$(DEB_BASE)   \
+	pyproject.toml=$(DEB_BASE)   \
 	README.rst=$(DEB_BASE)   \
-	requirements.txt=$(DEB_BASE)   \
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
