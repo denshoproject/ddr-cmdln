@@ -247,7 +247,7 @@ install-elasticsearch: install-core
 	apt-get --assume-yes install $(OPENJDK_PKG)
 	-gdebi --non-interactive /tmp/downloads/$(ELASTICSEARCH)
 #cp $(INSTALL_CMDLN)/conf/elasticsearch.yml /etc/elasticsearch/
-#chown root.root /etc/elasticsearch/elasticsearch.yml
+#chown root:root /etc/elasticsearch/elasticsearch.yml
 #chmod 644 /etc/elasticsearch/elasticsearch.yml
 # 	@echo "${bldgrn}search engine (re)start${txtrst}"
 	-service elasticsearch stop
@@ -357,13 +357,13 @@ mkdir-ddr-cmdln:
 	@echo ""
 	@echo "mkdir-ddr-cmdln --------------------------------------------------------"
 	-mkdir $(LOG_BASE)
-	chown -R ddr.ddr $(LOG_BASE)
+	chown -R ddr:ddr $(LOG_BASE)
 	chmod -R 775 $(LOG_BASE)
 	-mkdir $(INVENTORY_LOG_BASE)
-	chown -R ddr.ddr $(INVENTORY_LOG_BASE)
+	chown -R ddr:ddr $(INVENTORY_LOG_BASE)
 	chmod -R 775 $(INVENTORY_LOG_BASE)
 	-mkdir -p $(MEDIA_ROOT)
-	chown -R ddr.ddr $(MEDIA_ROOT)
+	chown -R ddr:ddr $(MEDIA_ROOT)
 	chmod -R 775 $(MEDIA_ROOT)
 
 test-ddr-cmdln:
@@ -421,10 +421,10 @@ install-configs:
 # base settings file
 	-mkdir /etc/ddr
 	cp $(INSTALL_CMDLN)/conf/ddrlocal.cfg $(CONF_PRODUCTION)
-	chown root.root $(CONF_PRODUCTION)
+	chown root:root $(CONF_PRODUCTION)
 	chmod 644 $(CONF_PRODUCTION)
 	touch $(CONF_LOCAL)
-	chown ddr.ddr $(CONF_LOCAL)
+	chown ddr:ddr $(CONF_LOCAL)
 	chmod 640 $(CONF_LOCAL)
 	-mkdir -p /etc/ImageMagick-6/
 	-cp /etc/ImageMagick-6/policy.xml /etc/ImageMagick-6/policy.xml.orig
