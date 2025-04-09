@@ -534,8 +534,8 @@ deb-bullseye:
 	INSTALL.rst=$(DEB_BASE)   \
 	LICENSE=$(DEB_BASE)   \
 	Makefile=$(DEB_BASE)   \
+	pyproject.toml=$(DEB_BASE)   \
 	README.rst=$(DEB_BASE)   \
-	requirements.txt=$(DEB_BASE)   \
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
@@ -589,8 +589,8 @@ deb-bookworm:
 	INSTALL.rst=$(DEB_BASE)   \
 	LICENSE=$(DEB_BASE)   \
 	Makefile=$(DEB_BASE)   \
+	pyproject.toml=$(DEB_BASE)   \
 	README.rst=$(DEB_BASE)   \
-	requirements.txt=$(DEB_BASE)   \
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
@@ -644,8 +644,8 @@ deb-trixie:
 	INSTALL.rst=$(DEB_BASE)   \
 	LICENSE=$(DEB_BASE)   \
 	Makefile=$(DEB_BASE)   \
+	pyproject.toml=$(DEB_BASE)   \
 	README.rst=$(DEB_BASE)   \
-	requirements.txt=$(DEB_BASE)   \
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
