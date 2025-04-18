@@ -100,6 +100,7 @@ TEMPLATE_METS_JINJA2 = os.path.join(REPO_MODELS_PATH, 'templates', 'mets.xml.j2'
 REQUESTS_TIMEOUT = 30
 
 CGIT_URL = CONFIG.get('workbench','cgit_url')
+CGIT_SSL_CERTFILE = CONFIG.get('workbench', 'cgit_ssl_certfile')
 CGIT_USERNAME = CONFIG.get('workbench','cgit_username', fallback='')
 CGIT_PASSWORD = CONFIG.get('workbench','cgit_password', fallback='')
 INVENTORY_LOGS_DIR = CONFIG.get('inventory', 'logs_dir', fallback='')
