@@ -326,7 +326,7 @@ get-ddr-cmdln-assets:
 setup-ddr-cmdln:
 	git status | grep "On branch"
 	source $(VIRTUALENV)/bin/activate; \
-	cd $(INSTALL_CMDLN)/ddr; python setup.py install
+	cd $(INSTALL_CMDLN)/ddr; uv pip install .
 
 pip-download-cmdln:
 	source $(VIRTUALENV)/bin/activate; \
