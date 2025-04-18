@@ -16,12 +16,13 @@ from dateutil import parser
 import envoy
 import git
 from git.exc import GitCommandError
-import requests
+import httpx
 
 from DDR import config
 from DDR import fileio
 from DDR import storage
 from DDR import util
+from DDR.www import httpx_client
 
 # values are set after defining latest_commit()
 APP_COMMITS = {}
@@ -1266,15 +1267,14 @@ CGIT_BROWSER_HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)
 
 class Cgit():
     url = None
-    session = None
+    client = None
     
     def __init__(self, cgit_url: str=config.CGIT_URL):
         self.url = cgit_url
-        self.session = requests.Session()
+        self.client = httpx_client(cafile=config.CGIT_SSL_CERTFILE)
     
     def collection_title(self,
                          repo: str,
-                         session: requests.Session,
                          timeout: int=config.REQUESTS_TIMEOUT) -> str:
         """Gets collection title from CGit
         
@@ -1282,7 +1282,6 @@ class Cgit():
         PROBLEM: requires knowledge of repository internals.
         
         @param repo: str Repository name
-        @param session: requests.Session
         @param timeout: int
         @returns: str Repository collection title
         """
@@ -1291,9 +1290,9 @@ class Cgit():
         url = URL_TEMPLATE % (self.url, repo)
         logging.debug(url)
         try:
-            r = session.get(url, timeout=timeout)
+            r = self.client.get(url, timeout=timeout)
             logging.debug(str(r.status_code))
-        except requests.ConnectionError:
+        except ConnectError:
             title = '[ConnectionError]'
         data = None
         if r and r.status_code == 200:
@@ -1331,15 +1330,15 @@ class Cgit():
         """
         url = f"{self.url}/cgit.cgi/?ofs=0"
         if hasattr(self, 'username') and hasattr(self, 'password'):
-            r = self.session.get(
+            r = self.client.get(
                 url, auth=(self.username,self.password),
                 headers=CGIT_BROWSER_HEADERS
             )
         else:
-            r = self.session.get(url, headers=CGIT_BROWSER_HEADERS)
+            r = self.client.get(url, headers=CGIT_BROWSER_HEADERS)
         #if not HTTPStatus(r.status_code).is_success:
         if not (r.status_code <= 200 <= 299):
-            msg = f"Cgit returned HTTP {r.status_code} {r.reason}.\n" \
+            msg = f"Cgit returned HTTP {r.status_code} {r.reason_phrase}.\n" \
                 "Set username/password in DDR config ([workbench] cgit_username and cgit_password)\n" \
                 "or set environment variables CGIT_USERNAME and CGIT_PASSWORD."
             raise Exception(msg)
@@ -1365,7 +1364,7 @@ class Cgit():
         }
         """
         url = f"{self.url}/cgit.cgi/?ofs={offset}"
-        r = self.session.get(
+        r = self.client.get(
             url, auth=(self.username,self.password),
             headers=CGIT_BROWSER_HEADERS
         )
@@ -1523,24 +1522,22 @@ class Gitolite(object):
             ]
         return self.repos()
 
-    def collection_titles(self,
-                          username: str,
-                          password: str,
-                          timeout: int=5) -> List[Tuple[str, str]]:
-        """Returns IDs:titles dict for all collections to which user has access.
-        
-        TODO Page through the Cgit index pages (fewer HTTP requests)?
-        TODO Set REPO/.git/description to collection title, read via Gitolite?
-        
-        @param username: str [optional] Cgit server HTTP Auth username
-        @param password: str [optional] Cgit server HTTP Auth password
-        @param timeout: int Timeout for getting individual collection info
-        @returns: list of (repo,title) tuples
-        """
-        session = requests.Session()
-        session.auth = (username,password)
-        collections = [
-            (repo,Cgit().collection_title(repo,session,timeout))
-            for repo in self.repos()
-        ]
-        return collections
+    #def collection_titles(self,
+    #                      username: str=None,
+    #                      password: str=None,
+    #                      timeout: int=5) -> List[Tuple[str, str]]:
+    #    """Returns IDs:titles dict for all collections to which user has access.
+    #    
+    #    TODO Page through the Cgit index pages (fewer HTTP requests)?
+    #    TODO Set REPO/.git/description to collection title, read via Gitolite?
+    #    
+    #    @param username: str [optional] Cgit server HTTP Auth username
+    #    @param password: str [optional] Cgit server HTTP Auth password
+    #    @param timeout: int Timeout for getting individual collection info
+    #    @returns: list of (repo,title) tuples
+    #    """
+    #    collections = [
+    #        (repo,Cgit().collection_title(repo,timeout))
+    #        for repo in self.repos()
+    #    ]
+    #    return collections
