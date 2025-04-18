@@ -103,12 +103,12 @@ from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 import urllib.parse
 
 from dateutil import parser
-import requests
 
 from DDR import config
 from DDR import converters
 from DDR import format_json
 from DDR import fileio
+from DDR.www import httpx_client
 
 CSV_HEADERS = [
     'id',
@@ -583,7 +583,8 @@ def _get_vocab_http(url: str) -> Dict[str,str]:
     @param path: str URL of vocabulary file (.json)
     """
     logging.debug('getting vocab: %s' % url)
-    r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
+    client = httpx_client(cafile=config.IDSERVICE_SSL_CERTFILE)
+    r = client.get(url, timeout=config.REQUESTS_TIMEOUT)
     if r.status_code != 200:
         raise Exception(
             'vocabulary file missing: %s' % (url))
@@ -610,7 +611,8 @@ def _get_vocabs_all_http(base_url, exclude=['index','narrators']):
     @returns: dict
     """
     url = os.path.join(base_url, 'index.json')
-    r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
+    client = httpx_client(cafile=config.IDSERVICE_SSL_CERTFILE)
+    r = client.get(url, timeout=config.REQUESTS_TIMEOUT)
     if r.status_code != 200:
         try:
             r_json = r.json()
