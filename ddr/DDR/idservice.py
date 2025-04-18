@@ -2,10 +2,9 @@ import logging
 logger = logging.getLogger(__name__)
 from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
-import requests
-
 from DDR import config
 from DDR import identifier
+from DDR.www import httpx_client
 
 
 class IDServiceClient():
@@ -39,10 +38,18 @@ class IDServiceClient():
     >>> ic.resume('gjost', u'9b68187429be07506dae2d1a493b74afd4ef7c35')
     >>> ic.logout()
     """
+    client = None
     url = None
     debug = False
     username = None
     token = None
+
+    def _httpx_client(self):
+        """Get an httpx client with SSL cacert if specified otherwise default
+        """
+        if not self.client:
+            self.client = httpx_client(cafile=config.IDSERVICE_SSL_CERTFILE)
+        return self.client
 
     def login(self,
               username: str,
@@ -58,15 +65,16 @@ class IDServiceClient():
         self.url = url
         self.username = username
         logging.debug('idservice.IDServiceClient.login(%s)' % (self.username))
-        r = requests.post(
+        client = self._httpx_client()
+        r = client.post(
             config.IDSERVICE_LOGIN_URL,
-            data = {'username':username, 'password':password,},
+            data={'username':username, 'password':password,},
         )
         try:
             self.token = r.json().get('key')
         except ValueError:
             pass
-        return r.status_code,r.reason
+        return r.status_code,r.reason_phrase
     
     def _auth_headers(self) -> Dict[str,str]:
         return {'Authorization': 'Token %s' % self.token}
@@ -87,24 +95,26 @@ class IDServiceClient():
         @return: int,str (status_code,reason)
         """
         logging.debug('idservice.IDServiceClient.logout() %s' % (self.username))
-        r = requests.post(
+        client = self._httpx_client()
+        r = client.post(
             config.IDSERVICE_LOGOUT_URL,
             headers=self._auth_headers(),
             timeout=config.REQUESTS_TIMEOUT
         )
-        return r.status_code,r.reason
+        return r.status_code,r.reason_phrase
     
     def user_info(self) -> Tuple[int,str,str]:
         """Get user information (username, first/last name, email)
         
         @return: int,str,dict (status code, reason, userinfo dict)
         """
-        r = requests.get(
+        client = self._httpx_client()
+        r = client.get(
             config.IDSERVICE_USERINFO_URL,
             headers=self._auth_headers(),
             timeout=config.REQUESTS_TIMEOUT
         )
-        return r.status_code,r.reason,r.json()
+        return r.status_code,r.reason_phrase,r.json()
     
     def next_object_id(self,
                        oidentifier: identifier.Identifier,
@@ -122,23 +132,29 @@ class IDServiceClient():
             model=model,
             objectid=oidentifier.id,
         )
+        client = self._httpx_client()
         if register:
             # POST - register new ID
-            r = requests.post(url, headers=self._auth_headers(), timeout=config.REQUESTS_TIMEOUT)
+            r = client.post(
+                url, headers=self._auth_headers(), timeout=config.REQUESTS_TIMEOUT
+            )
         else:
             # GET - just find out what next ID is
-            r = requests.get(url, headers=self._auth_headers(), timeout=config.REQUESTS_TIMEOUT)
+            r = client.get(
+                url, headers=self._auth_headers(), timeout=config.REQUESTS_TIMEOUT
+            )
         objectid = None
         if r.status_code in [200,201]:
             objectid = r.json()['id']
             logging.debug(objectid)
-        return r.status_code,r.reason,objectid
+        return r.status_code,r.reason_phrase,objectid
     
     @staticmethod
     def check_object_id(object_id: str) -> Dict[str, Union[str,int]]:
         url = '%s/objectids/%s/' % (config.IDSERVICE_API_BASE, object_id)
+        client = self._httpx_client()
         try:
-            r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
+            r = client.get(url, timeout=config.REQUESTS_TIMEOUT)
             status = r.status_code
         except:
             status = 500
@@ -156,11 +172,12 @@ class IDServiceClient():
         @returns: (status_code,reason,object_ids)
         """
         url = '%s/objectids/%s/children/' % (config.IDSERVICE_API_BASE, object_id)
-        r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
+        client = self._httpx_client()
+        r = client.get(url, timeout=config.REQUESTS_TIMEOUT)
         oids = []
         if r.status_code == 200:
             oids = [o['id'] for o in r.json()]
-        return r.status_code,r.reason,oids
+        return r.status_code,r.reason_phrase,oids
     
     # TODO type hints
     @staticmethod
@@ -187,7 +204,8 @@ class IDServiceClient():
         @returns: (status_code,reason,registered,unregistered)
         """
         logging.debug('idservice.IDServiceClient.check_eids(%s, %s entity_ids)' % (cidentifier, len(entity_ids)))
-        r = requests.post(
+        client = self._httpx_client()
+        r = client.post(
             config.IDSERVICE_CHECKIDS_URL.format(objectid=cidentifier.id),
             headers=self._auth_headers(),
             data={'object_ids': entity_ids},
@@ -195,7 +213,7 @@ class IDServiceClient():
         )
         data = r.json()
         #logging.debug(data)
-        return r.status_code,r.reason,data['registered'],data['unregistered']
+        return r.status_code,r.reason_phrase,data['registered'],data['unregistered']
     
     def register_eids(self,
                       cidentifier: identifier.Identifier,
@@ -207,7 +225,8 @@ class IDServiceClient():
         @returns: (status_code,reason,added_ids_list)
         """
         logging.debug('idservice.IDServiceClient.register_eids(%s, %s)' % (cidentifier, entity_ids))
-        r = requests.post(
+        client = self._httpx_client()
+        r = client.post(
             config.IDSERVICE_REGISTERIDS_URL.format(objectid=cidentifier.id),
             headers=self._auth_headers(),
             data={'object_ids': entity_ids},
@@ -215,4 +234,4 @@ class IDServiceClient():
         )
         data = r.json()
         logging.debug(data)
-        return r.status_code,r.reason,data['created']
+        return r.status_code,r.reason_phrase,data['created']
