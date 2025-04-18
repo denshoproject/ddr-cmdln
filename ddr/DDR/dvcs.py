@@ -1523,24 +1523,22 @@ class Gitolite(object):
             ]
         return self.repos()
 
-    def collection_titles(self,
-                          username: str,
-                          password: str,
-                          timeout: int=5) -> List[Tuple[str, str]]:
-        """Returns IDs:titles dict for all collections to which user has access.
-        
-        TODO Page through the Cgit index pages (fewer HTTP requests)?
-        TODO Set REPO/.git/description to collection title, read via Gitolite?
-        
-        @param username: str [optional] Cgit server HTTP Auth username
-        @param password: str [optional] Cgit server HTTP Auth password
-        @param timeout: int Timeout for getting individual collection info
-        @returns: list of (repo,title) tuples
-        """
-        session = requests.Session()
-        session.auth = (username,password)
-        collections = [
-            (repo,Cgit().collection_title(repo,session,timeout))
-            for repo in self.repos()
-        ]
-        return collections
+    #def collection_titles(self,
+    #                      username: str=None,
+    #                      password: str=None,
+    #                      timeout: int=5) -> List[Tuple[str, str]]:
+    #    """Returns IDs:titles dict for all collections to which user has access.
+    #    
+    #    TODO Page through the Cgit index pages (fewer HTTP requests)?
+    #    TODO Set REPO/.git/description to collection title, read via Gitolite?
+    #    
+    #    @param username: str [optional] Cgit server HTTP Auth username
+    #    @param password: str [optional] Cgit server HTTP Auth password
+    #    @param timeout: int Timeout for getting individual collection info
+    #    @returns: list of (repo,title) tuples
+    #    """
+    #    collections = [
+    #        (repo,Cgit().collection_title(repo,timeout))
+    #        for repo in self.repos()
+    #    ]
+    #    return collections
