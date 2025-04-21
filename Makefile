@@ -522,7 +522,6 @@ deb-bullseye:
 	ddr-cmdln-assets=$(DEB_BASE)   \
 	../ddr-defs=opt   \
 	../densho-vocab=opt   \
-	docs=$(DEB_BASE)   \
 	files=$(DEB_BASE)   \
 	.git=$(DEB_BASE)   \
 	.gitattributes=$(DEB_BASE)   \
@@ -584,7 +583,6 @@ deb-bookworm:
 	ddr-cmdln-assets=$(DEB_BASE)   \
 	../ddr-defs=opt   \
 	../densho-vocab=opt   \
-	docs=$(DEB_BASE)   \
 	files=$(DEB_BASE)   \
 	.git=$(DEB_BASE)   \
 	.gitattributes=$(DEB_BASE)   \
@@ -646,7 +644,6 @@ deb-trixie:
 	ddr-cmdln-assets=$(DEB_BASE)   \
 	../ddr-defs=opt   \
 	../densho-vocab=opt   \
-	docs=$(DEB_BASE)   \
 	files=$(DEB_BASE)   \
 	.git=$(DEB_BASE)   \
 	.gitattributes=$(DEB_BASE)   \
