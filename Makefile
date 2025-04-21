@@ -367,20 +367,17 @@ mkdir-ddr-cmdln:
 test-ddr-cmdln:
 	@echo ""
 	@echo "test-ddr-cmdln ---------------------------------------------------------"
-	source $(VIRTUALENV)/bin/activate; \
-	cd $(INSTALL_CMDLN)/; pytest --disable-warnings ddr/tests/
+	source $(VIRTUALENV)/bin/activate; pytest --disable-warnings tests/
 
 coverage-ddr-cmdln:
 	@echo ""
 	@echo "coverage-ddr-cmdln -----------------------------------------------------"
-	source $(VIRTUALENV)/bin/activate; \
-	cd $(INSTALL_CMDLN)/; pytest --cov-config=ddr-cmdln/.coveragerc --cov-report=html --cov=DDR ddr-cmdln/ddr/tests/
+	source $(VIRTUALENV)/bin/activate; pytest --cov-config=ddr-cmdln/.coveragerc --cov-report=html --cov=DDR ddr-cmdln/tests/
 
 mypy-ddr-cmdln:
 	@echo ""
 	@echo "mypy-ddr-cmdln ---------------------------------------------------------"
-	source $(VIRTUALENV)/bin/activate; \
-	cd $(INSTALL_CMDLN)/; mypy ddr/DDR/
+	source $(VIRTUALENV)/bin/activate; mypy src/DDR/
 
 uninstall-ddr-cmdln:
 	@echo ""
