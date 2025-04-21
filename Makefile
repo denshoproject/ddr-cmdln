@@ -325,8 +325,7 @@ get-ddr-cmdln-assets:
 
 setup-ddr-cmdln:
 	git status | grep "On branch"
-	source $(VIRTUALENV)/bin/activate; \
-	cd $(INSTALL_CMDLN)/ddr; uv pip install .
+	source $(VIRTUALENV)/bin/activate; uv pip install .
 
 pip-download-cmdln:
 	source $(VIRTUALENV)/bin/activate; \
@@ -336,15 +335,14 @@ install-ddr-cmdln: install-virtualenv install-setuptools git-safe-dir
 	@echo ""
 	@echo "install-ddr-cmdln ------------------------------------------------------"
 	git status | grep "On branch"
-	cd $(INSTALL_CMDLN)/ddr; source $(VIRTUALENV)/bin/activate; uv pip install .
-	cd $(INSTALL_CMDLN)/ddr; source $(VIRTUALENV)/bin/activate; \
-	uv pip install -U --cache-dir=$(PIP_CACHE_DIR) internetarchive
+	source $(VIRTUALENV)/bin/activate; uv pip install .
+	source $(VIRTUALENV)/bin/activate; uv pip install -U --cache-dir=$(PIP_CACHE_DIR) internetarchive
 
 install-testing: install-virtualenv install-setuptools
 	@echo ""
 	@echo "install-ddr-cmdln ------------------------------------------------------"
 	git status | grep "On branch"
-	cd $(INSTALL_CMDLN)/ddr; source $(VIRTUALENV)/bin/activate; uv pip install .[testing]
+	source $(VIRTUALENV)/bin/activate; uv pip install .[testing]
 
 git-safe-dir:
 	@echo ""
@@ -387,8 +385,7 @@ mypy-ddr-cmdln:
 uninstall-ddr-cmdln:
 	@echo ""
 	@echo "uninstall-ddr-cmdln ----------------------------------------------------"
-	source $(VIRTUALENV)/bin/activate; \
-	cd $(INSTALL_CMDLN)/ddr && uv pip uninstall -y -r requirements.txt
+	source $(VIRTUALENV)/bin/activate; uv pip uninstall -y .
 
 clean-ddr-cmdln:
 	-rm -Rf $(INSTALL_CMDLN)/ddr/build
