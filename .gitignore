@@ -8,9 +8,9 @@
 .testmondata
 .tox/
 coverage-*
-ddr/build/
-ddr/ddr_cmdln.egg-info/
-ddr/dist/
+build/
+ddr_cmdln.egg-info/
+dist/
 ddr-cmdln-assets/
 ddr-defs/
 debs/
