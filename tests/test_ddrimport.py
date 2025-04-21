@@ -25,12 +25,12 @@ AGENT = 'pytest'
 
 # ddr-cmdln standalone
 TEST_CSV_DIR = os.path.join(
-    os.getcwd(), 'ddr/tests/ddrimport'
+    os.getcwd(), 'tests/ddrimport'
 )
 if not os.path.exists(TEST_CSV_DIR):
     # ddr-cmdln as part of ddr-local
     TEST_CSV_DIR = os.path.join(
-        os.getcwd(), 'ddr-cmdln/ddr/tests/ddrimport'
+        os.getcwd(), 'ddr-cmdln/tests/ddrimport'
     )
 
 TEST_FILES_DIR = os.path.join(
