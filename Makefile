@@ -514,22 +514,29 @@ deb-bullseye:
 	--depends "udisks2"   \
 	--after-install "bin/fpm-after-install.sh"   \
 	--chdir $(INSTALL_CMDLN)   \
+	bin=$(DEB_BASE)   \
 	conf/ddrlocal.cfg=etc/ddr/ddrlocal.cfg   \
 	conf/README-logs=$(LOG_BASE)/README  \
-	bin=$(DEB_BASE)   \
 	conf=$(DEB_BASE)   \
 	COPYRIGHT=$(DEB_BASE)   \
-	ddr=$(DEB_BASE)   \
 	ddr-cmdln-assets=$(DEB_BASE)   \
 	../ddr-defs=opt   \
 	../densho-vocab=opt   \
+	docs=$(DEB_BASE)   \
+	files=$(DEB_BASE)   \
 	.git=$(DEB_BASE)   \
+	.gitattributes=$(DEB_BASE)   \
 	.gitignore=$(DEB_BASE)   \
 	INSTALL.rst=$(DEB_BASE)   \
 	LICENSE=$(DEB_BASE)   \
 	Makefile=$(DEB_BASE)   \
-	ddr/pyproject.toml=$(DEB_BASE)   \
+	mypy.ini=$(DEB_BASE)   \
+	NOTES=$(DEB_BASE)   \
+	pyproject.toml=$(DEB_BASE)   \
 	README.rst=$(DEB_BASE)   \
+	src=$(DEB_BASE)   \
+	tests=$(DEB_BASE)   \
+	tox.ini=$(DEB_BASE)   \
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
@@ -569,22 +576,29 @@ deb-bookworm:
 	--depends "udisks2"   \
 	--after-install "bin/fpm-after-install.sh"   \
 	--chdir $(INSTALL_CMDLN)   \
+	bin=$(DEB_BASE)   \
 	conf/ddrlocal.cfg=etc/ddr/ddrlocal.cfg   \
 	conf/README-logs=$(LOG_BASE)/README  \
-	bin=$(DEB_BASE)   \
 	conf=$(DEB_BASE)   \
 	COPYRIGHT=$(DEB_BASE)   \
-	ddr=$(DEB_BASE)   \
 	ddr-cmdln-assets=$(DEB_BASE)   \
 	../ddr-defs=opt   \
 	../densho-vocab=opt   \
+	docs=$(DEB_BASE)   \
+	files=$(DEB_BASE)   \
 	.git=$(DEB_BASE)   \
+	.gitattributes=$(DEB_BASE)   \
 	.gitignore=$(DEB_BASE)   \
 	INSTALL.rst=$(DEB_BASE)   \
 	LICENSE=$(DEB_BASE)   \
 	Makefile=$(DEB_BASE)   \
-	ddr/pyproject.toml=$(DEB_BASE)   \
+	mypy.ini=$(DEB_BASE)   \
+	NOTES=$(DEB_BASE)   \
+	pyproject.toml=$(DEB_BASE)   \
 	README.rst=$(DEB_BASE)   \
+	src=$(DEB_BASE)   \
+	tests=$(DEB_BASE)   \
+	tox.ini=$(DEB_BASE)   \
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
@@ -624,22 +638,29 @@ deb-trixie:
 	--depends "udisks2"   \
 	--after-install "bin/fpm-after-install.sh"   \
 	--chdir $(INSTALL_CMDLN)   \
+	bin=$(DEB_BASE)   \
 	conf/ddrlocal.cfg=etc/ddr/ddrlocal.cfg   \
 	conf/README-logs=$(LOG_BASE)/README  \
-	bin=$(DEB_BASE)   \
 	conf=$(DEB_BASE)   \
 	COPYRIGHT=$(DEB_BASE)   \
-	ddr=$(DEB_BASE)   \
 	ddr-cmdln-assets=$(DEB_BASE)   \
 	../ddr-defs=opt   \
 	../densho-vocab=opt   \
+	docs=$(DEB_BASE)   \
+	files=$(DEB_BASE)   \
 	.git=$(DEB_BASE)   \
+	.gitattributes=$(DEB_BASE)   \
 	.gitignore=$(DEB_BASE)   \
 	INSTALL.rst=$(DEB_BASE)   \
 	LICENSE=$(DEB_BASE)   \
 	Makefile=$(DEB_BASE)   \
-	ddr/pyproject.toml=$(DEB_BASE)   \
+	mypy.ini=$(DEB_BASE)   \
+	NOTES=$(DEB_BASE)   \
+	pyproject.toml=$(DEB_BASE)   \
 	README.rst=$(DEB_BASE)   \
+	src=$(DEB_BASE)   \
+	tests=$(DEB_BASE)   \
+	tox.ini=$(DEB_BASE)   \
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
