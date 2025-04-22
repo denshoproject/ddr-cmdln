@@ -15,15 +15,11 @@ chown -R ddr.ddr /var/log/ddr
 echo "Installing custom Imagemagick policy.xml"
 # Release name e.g. jessie
 DEBIAN_CODENAME=$(lsb_release -sc)
-if [ $DEBIAN_CODENAME = 'stretch' ]
-then
-    cp /opt/ddr-cmdln/conf/imagemagick-policy.xml.deb9 /etc/ImageMagick-6/policy.xml
-fi
-if [ $DEBIAN_CODENAME = 'buster' ]
-then
-    cp /opt/ddr-cmdln/conf/imagemagick-policy.xml.deb10 /etc/ImageMagick-6/policy.xml
-fi
 if [ $DEBIAN_CODENAME = 'bullseye' ]
 then
     cp /opt/ddr-cmdln/conf/imagemagick-policy.xml.deb11 /etc/ImageMagick-6/policy.xml
+fi
+if [ $DEBIAN_CODENAME = 'bookworm' ]
+then
+    cp /opt/ddr-cmdln/conf/imagemagick-policy.xml.deb12 /etc/ImageMagick-6/policy.xml
 fi
