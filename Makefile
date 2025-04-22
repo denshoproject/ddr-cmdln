@@ -325,8 +325,7 @@ get-ddr-cmdln-assets:
 
 setup-ddr-cmdln:
 	git status | grep "On branch"
-	source $(VIRTUALENV)/bin/activate; \
-	cd $(INSTALL_CMDLN)/ddr; uv pip install .
+	source $(VIRTUALENV)/bin/activate; uv pip install .
 
 pip-download-cmdln:
 	source $(VIRTUALENV)/bin/activate; \
@@ -336,15 +335,14 @@ install-ddr-cmdln: install-virtualenv install-setuptools git-safe-dir
 	@echo ""
 	@echo "install-ddr-cmdln ------------------------------------------------------"
 	git status | grep "On branch"
-	cd $(INSTALL_CMDLN)/ddr; source $(VIRTUALENV)/bin/activate; uv pip install .
-	cd $(INSTALL_CMDLN)/ddr; source $(VIRTUALENV)/bin/activate; \
-	uv pip install -U --cache-dir=$(PIP_CACHE_DIR) internetarchive
+	source $(VIRTUALENV)/bin/activate; uv pip install .
+	source $(VIRTUALENV)/bin/activate; uv pip install -U --cache-dir=$(PIP_CACHE_DIR) internetarchive
 
 install-testing: install-virtualenv install-setuptools
 	@echo ""
 	@echo "install-ddr-cmdln ------------------------------------------------------"
 	git status | grep "On branch"
-	cd $(INSTALL_CMDLN)/ddr; source $(VIRTUALENV)/bin/activate; uv pip install .[testing]
+	source $(VIRTUALENV)/bin/activate; uv pip install .[testing]
 
 git-safe-dir:
 	@echo ""
@@ -369,26 +367,22 @@ mkdir-ddr-cmdln:
 test-ddr-cmdln:
 	@echo ""
 	@echo "test-ddr-cmdln ---------------------------------------------------------"
-	source $(VIRTUALENV)/bin/activate; \
-	cd $(INSTALL_CMDLN)/; pytest --disable-warnings ddr/tests/
+	source $(VIRTUALENV)/bin/activate; pytest --disable-warnings tests/
 
 coverage-ddr-cmdln:
 	@echo ""
 	@echo "coverage-ddr-cmdln -----------------------------------------------------"
-	source $(VIRTUALENV)/bin/activate; \
-	cd $(INSTALL_CMDLN)/; pytest --cov-config=ddr-cmdln/.coveragerc --cov-report=html --cov=DDR ddr-cmdln/ddr/tests/
+	source $(VIRTUALENV)/bin/activate; pytest --cov-config=ddr-cmdln/.coveragerc --cov-report=html --cov=DDR ddr-cmdln/tests/
 
 mypy-ddr-cmdln:
 	@echo ""
 	@echo "mypy-ddr-cmdln ---------------------------------------------------------"
-	source $(VIRTUALENV)/bin/activate; \
-	cd $(INSTALL_CMDLN)/; mypy ddr/DDR/
+	source $(VIRTUALENV)/bin/activate; mypy src/DDR/
 
 uninstall-ddr-cmdln:
 	@echo ""
 	@echo "uninstall-ddr-cmdln ----------------------------------------------------"
-	source $(VIRTUALENV)/bin/activate; \
-	cd $(INSTALL_CMDLN)/ddr && uv pip uninstall -y -r requirements.txt
+	source $(VIRTUALENV)/bin/activate; uv pip uninstall -y .
 
 clean-ddr-cmdln:
 	-rm -Rf $(INSTALL_CMDLN)/ddr/build
@@ -460,13 +454,29 @@ clean-ddr-manual:
 	-rm -Rf $(INSTALL_MANUAL)/build
 
 
-tgz:
+tgz-local:
 	rm -Rf $(TGZ_DIR)
 	git clone $(INSTALL_CMDLN) $(TGZ_CMDLN)
 	git clone $(INSTALL_CMDLN_ASSETS) $(TGZ_CMDLN_ASSETS)
 	git clone $(INSTALL_DEFS) $(TGZ_DEFS)
 	git clone $(INSTALL_VOCAB) $(TGZ_VOCAB)
 	git clone $(INSTALL_MANUAL) $(TGZ_MANUAL)
+	cd $(TGZ_CMDLN); git checkout develop; git checkout master
+	cd $(TGZ_CMDLN_ASSETS); git checkout develop; git checkout master
+	cd $(TGZ_DEFS); git checkout develop; git checkout master
+	cd $(TGZ_VOCAB); git checkout develop; git checkout master
+	cd $(TGZ_MANUAL); git checkout develop; git checkout master
+	tar czf $(TGZ_FILE).tgz $(TGZ_FILE)
+	rm -Rf $(TGZ_DIR)
+
+
+tgz:
+	rm -Rf $(TGZ_DIR)
+	git clone $(SRC_REPO_CMDLN) $(TGZ_CMDLN)
+	git clone $(SRC_REPO_CMDLN_ASSETS) $(TGZ_CMDLN_ASSETS)
+	git clone $(SRC_REPO_DEFS) $(TGZ_DEFS)
+	git clone $(SRC_REPO_VOCAB) $(TGZ_VOCAB)
+	git clone $(SRC_REPO_MANUAL) $(TGZ_MANUAL)
 	cd $(TGZ_CMDLN); git checkout develop; git checkout master
 	cd $(TGZ_CMDLN_ASSETS); git checkout develop; git checkout master
 	cd $(TGZ_DEFS); git checkout develop; git checkout master
@@ -520,22 +530,28 @@ deb-bullseye:
 	--depends "udisks2"   \
 	--after-install "bin/fpm-after-install.sh"   \
 	--chdir $(INSTALL_CMDLN)   \
+	bin=$(DEB_BASE)   \
 	conf/ddrlocal.cfg=etc/ddr/ddrlocal.cfg   \
 	conf/README-logs=$(LOG_BASE)/README  \
-	bin=$(DEB_BASE)   \
 	conf=$(DEB_BASE)   \
 	COPYRIGHT=$(DEB_BASE)   \
-	ddr=$(DEB_BASE)   \
 	ddr-cmdln-assets=$(DEB_BASE)   \
 	../ddr-defs=opt   \
 	../densho-vocab=opt   \
+	files=$(DEB_BASE)   \
 	.git=$(DEB_BASE)   \
+	.gitattributes=$(DEB_BASE)   \
 	.gitignore=$(DEB_BASE)   \
 	INSTALL.rst=$(DEB_BASE)   \
 	LICENSE=$(DEB_BASE)   \
 	Makefile=$(DEB_BASE)   \
-	ddr/pyproject.toml=$(DEB_BASE)   \
+	mypy.ini=$(DEB_BASE)   \
+	NOTES=$(DEB_BASE)   \
+	pyproject.toml=$(DEB_BASE)   \
 	README.rst=$(DEB_BASE)   \
+	src=$(DEB_BASE)   \
+	tests=$(DEB_BASE)   \
+	tox.ini=$(DEB_BASE)   \
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
@@ -575,22 +591,28 @@ deb-bookworm:
 	--depends "udisks2"   \
 	--after-install "bin/fpm-after-install.sh"   \
 	--chdir $(INSTALL_CMDLN)   \
+	bin=$(DEB_BASE)   \
 	conf/ddrlocal.cfg=etc/ddr/ddrlocal.cfg   \
 	conf/README-logs=$(LOG_BASE)/README  \
-	bin=$(DEB_BASE)   \
 	conf=$(DEB_BASE)   \
 	COPYRIGHT=$(DEB_BASE)   \
-	ddr=$(DEB_BASE)   \
 	ddr-cmdln-assets=$(DEB_BASE)   \
 	../ddr-defs=opt   \
 	../densho-vocab=opt   \
+	files=$(DEB_BASE)   \
 	.git=$(DEB_BASE)   \
+	.gitattributes=$(DEB_BASE)   \
 	.gitignore=$(DEB_BASE)   \
 	INSTALL.rst=$(DEB_BASE)   \
 	LICENSE=$(DEB_BASE)   \
 	Makefile=$(DEB_BASE)   \
-	ddr/pyproject.toml=$(DEB_BASE)   \
+	mypy.ini=$(DEB_BASE)   \
+	NOTES=$(DEB_BASE)   \
+	pyproject.toml=$(DEB_BASE)   \
 	README.rst=$(DEB_BASE)   \
+	src=$(DEB_BASE)   \
+	tests=$(DEB_BASE)   \
+	tox.ini=$(DEB_BASE)   \
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
@@ -630,22 +652,28 @@ deb-trixie:
 	--depends "udisks2"   \
 	--after-install "bin/fpm-after-install.sh"   \
 	--chdir $(INSTALL_CMDLN)   \
+	bin=$(DEB_BASE)   \
 	conf/ddrlocal.cfg=etc/ddr/ddrlocal.cfg   \
 	conf/README-logs=$(LOG_BASE)/README  \
-	bin=$(DEB_BASE)   \
 	conf=$(DEB_BASE)   \
 	COPYRIGHT=$(DEB_BASE)   \
-	ddr=$(DEB_BASE)   \
 	ddr-cmdln-assets=$(DEB_BASE)   \
 	../ddr-defs=opt   \
 	../densho-vocab=opt   \
+	files=$(DEB_BASE)   \
 	.git=$(DEB_BASE)   \
+	.gitattributes=$(DEB_BASE)   \
 	.gitignore=$(DEB_BASE)   \
 	INSTALL.rst=$(DEB_BASE)   \
 	LICENSE=$(DEB_BASE)   \
 	Makefile=$(DEB_BASE)   \
-	ddr/pyproject.toml=$(DEB_BASE)   \
+	mypy.ini=$(DEB_BASE)   \
+	NOTES=$(DEB_BASE)   \
+	pyproject.toml=$(DEB_BASE)   \
 	README.rst=$(DEB_BASE)   \
+	src=$(DEB_BASE)   \
+	tests=$(DEB_BASE)   \
+	tox.ini=$(DEB_BASE)   \
 	venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
