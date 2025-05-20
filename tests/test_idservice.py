@@ -2,11 +2,11 @@ from pathlib import Path
 from urllib.parse import urlparse, urlunparse
 
 import pytest
+import requests
 
 from DDR import config
 from DDR import identifier
 from DDR import idservice
-from DDR.www import httpx_client
 
 
 def mkurl(fragment):
@@ -28,8 +28,7 @@ def no_idservice():
     """
     try:
         print(config.IDSERVICE_API_BASE)
-        client = httpx_client(cafile=config.IDSERVICE_SSL_CERTFILE)
-        r = client.get(config.IDSERVICE_API_BASE, timeout=1)
+        r = requests.get(config.IDSERVICE_API_BASE, timeout=1)
         print(r.status_code)
         if r.status_code == 200:
             return False
@@ -42,32 +41,28 @@ def no_idservice():
 @pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_groups():
     url = mkurl('groups')
-    client = httpx_client(cafile=config.IDSERVICE_SSL_CERTFILE)
-    response = client.get(url)
+    response = requests.get(url)
     assert response.status_code == 200
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
 @pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_group():
     url = mkurl('groups/1')
-    client = httpx_client(cafile=config.IDSERVICE_SSL_CERTFILE)
-    response = client.get(url)
+    response = requests.get(url)
     assert response.status_code == 200
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
 @pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_users():
     url = mkurl('users')
-    client = httpx_client(cafile=config.IDSERVICE_SSL_CERTFILE)
-    response = client.get(url)
+    response = requests.get(url)
     assert response.status_code == 401
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
 @pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_user():
     url = mkurl('users/1')
-    client = httpx_client(cafile=config.IDSERVICE_SSL_CERTFILE)
-    response = client.get(url)
+    response = requests.get(url)
     assert response.status_code == 401
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
@@ -104,8 +99,7 @@ def test_detail():
     print(code,status)
     url = mkurl('objectids/ddr-testing-1/')
     print(url)
-    client = httpx_client(cafile=config.IDSERVICE_SSL_CERTFILE)
-    r = client.get(url)
+    r = requests.get(url)
     print(r.status_code,r.reason)
     assert r.status_code == 200
 
@@ -118,8 +112,7 @@ def test_children():
     code,status = ic.login(config.IDSERVICE_USERNAME, config.IDSERVICE_PASSWORD)
     assert code == 200
     url = mkurl('objectids/ddr-testing-1/children/')
-    client = httpx_client(cafile=config.IDSERVICE_SSL_CERTFILE)
-    r = client.get(url)
+    r = requests.get(url)
     assert r.status_code == 200
     print(r.text)
     data = r.json()
@@ -192,8 +185,7 @@ def test_next_collection():
     url = mkurl('objectids/ddr-testing/next/collection/')
     # GET
     print(url)
-    client = httpx_client(cafile=config.IDSERVICE_SSL_CERTFILE)
-    r = client.get(url)
+    r = requests.get(url)
     assert r.status_code == 200
     print(r.status_code)
     print(r.text)
@@ -224,8 +216,7 @@ def test_next_entity():
     assert code == 200
     url = mkurl('objectids/ddr-testing-1/next/entity/')
     print(url)
-    client = httpx_client(cafile=config.IDSERVICE_SSL_CERTFILE)
-    r = client.get(url)
+    r = requests.get(url)
     assert r.status_code == 200
     print(r.status_code)
     print(r.text)
@@ -253,8 +244,7 @@ def test_next_entity():
 #    print(code,status)
 #    url = mkurl('objectids/ddr-testing-1/')
 #    print(url)
-#    client = httpx_client(cafile=config.IDSERVICE_SSL_CERTFILE)
-#    r = client.get(url)
+#    r = requests.get(url)
 #    print(r.status_code,r.reason)
 #    assert r.status_code == 200
 
