@@ -216,4 +216,3 @@ class IDServiceClient():
         data = r.json()
         logging.debug(data)
         return r.status_code,r.reason,data['created']
-

@@ -118,7 +118,6 @@ WORKBENCH_URL = CONFIG.get('workbench','workbench_url')
 WORKBENCH_USERINFO = CONFIG.get('workbench','workbench_userinfo_url')
 
 IDSERVICE_API_BASE = CONFIG.get('cmdln', 'idservice_api_base')
-IDSERVICE_SSL_CERTFILE = CONFIG.get('cmdln', 'idservice_ssl_certfile')
 IDSERVICE_LOGIN_URL = IDSERVICE_API_BASE + '/rest-auth/login/'
 IDSERVICE_LOGOUT_URL = IDSERVICE_API_BASE + '/rest-auth/logout/'
 IDSERVICE_USERINFO_URL = IDSERVICE_API_BASE + '/rest-auth/user/'
