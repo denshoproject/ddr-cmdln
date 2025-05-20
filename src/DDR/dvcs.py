@@ -1375,10 +1375,14 @@ class Cgit():
             cols = row.find_all('td')
             if not cols:
                 continue
+            if cols[0].a.get('title'):
+                repo_id = cols[0].a['title'].strip()
+            else:
+                repo_id = cols[0].a.contents[0]
             #print(f"{n} {cols[1]=}")
             #print(f"{n} {cols[3]=}")
             data = {
-                'id': cols[0].a['title'].strip(),
+                'id': repo_id,
                 'href': cols[0].a['href'].strip(),
                 'timestamp': '',
                 'title': cols[1].a.contents[0].strip(),
