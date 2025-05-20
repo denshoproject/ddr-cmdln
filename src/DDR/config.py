@@ -100,6 +100,7 @@ TEMPLATE_METS_JINJA2 = os.path.join(REPO_MODELS_PATH, 'templates', 'mets.xml.j2'
 REQUESTS_TIMEOUT = 30
 
 CGIT_URL = CONFIG.get('workbench','cgit_url')
+CGIT_SSL_CERTFILE = CONFIG.get('workbench', 'cgit_ssl_certfile')
 CGIT_USERNAME = CONFIG.get('workbench','cgit_username', fallback='')
 CGIT_PASSWORD = CONFIG.get('workbench','cgit_password', fallback='')
 INVENTORY_LOGS_DIR = CONFIG.get('inventory', 'logs_dir', fallback='')
@@ -117,6 +118,7 @@ WORKBENCH_URL = CONFIG.get('workbench','workbench_url')
 WORKBENCH_USERINFO = CONFIG.get('workbench','workbench_userinfo_url')
 
 IDSERVICE_API_BASE = CONFIG.get('cmdln', 'idservice_api_base')
+IDSERVICE_SSL_CERTFILE = CONFIG.get('cmdln', 'idservice_ssl_certfile')
 IDSERVICE_LOGIN_URL = IDSERVICE_API_BASE + '/rest-auth/login/'
 IDSERVICE_LOGOUT_URL = IDSERVICE_API_BASE + '/rest-auth/logout/'
 IDSERVICE_USERINFO_URL = IDSERVICE_API_BASE + '/rest-auth/user/'
