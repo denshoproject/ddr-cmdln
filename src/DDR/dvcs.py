@@ -16,13 +16,12 @@ from dateutil import parser
 import envoy
 import git
 from git.exc import GitCommandError
-import httpx
+import requests
 
 from DDR import config
 from DDR import fileio
 from DDR import storage
 from DDR import util
-from DDR.www import httpx_client
 
 # values are set after defining latest_commit()
 APP_COMMITS = {}
@@ -1267,14 +1266,15 @@ CGIT_BROWSER_HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)
 
 class Cgit():
     url = None
-    client = None
+    session = None
     
     def __init__(self, cgit_url: str=config.CGIT_URL):
         self.url = cgit_url
-        self.client = httpx_client(cafile=config.CGIT_SSL_CERTFILE)
+        self.session = requests.Session()
     
     def collection_title(self,
                          repo: str,
+                         session: requests.Session,
                          timeout: int=config.REQUESTS_TIMEOUT) -> str:
         """Gets collection title from CGit
         
@@ -1282,6 +1282,7 @@ class Cgit():
         PROBLEM: requires knowledge of repository internals.
         
         @param repo: str Repository name
+        @param session: requests.Session
         @param timeout: int
         @returns: str Repository collection title
         """
@@ -1290,9 +1291,9 @@ class Cgit():
         url = URL_TEMPLATE % (self.url, repo)
         logging.debug(url)
         try:
-            r = self.client.get(url, timeout=timeout)
+            r = session.get(url, timeout=timeout)
             logging.debug(str(r.status_code))
-        except ConnectError:
+        except requests.ConnectionError:
             title = '[ConnectionError]'
         data = None
         if r and r.status_code == 200:
@@ -1330,15 +1331,15 @@ class Cgit():
         """
         url = f"{self.url}/cgit.cgi/?ofs=0"
         if hasattr(self, 'username') and hasattr(self, 'password'):
-            r = self.client.get(
+            r = self.session.get(
                 url, auth=(self.username,self.password),
                 headers=CGIT_BROWSER_HEADERS
             )
         else:
-            r = self.client.get(url, headers=CGIT_BROWSER_HEADERS)
+            r = self.session.get(url, headers=CGIT_BROWSER_HEADERS)
         #if not HTTPStatus(r.status_code).is_success:
         if not (r.status_code <= 200 <= 299):
-            msg = f"Cgit returned HTTP {r.status_code} {r.reason_phrase}.\n" \
+            msg = f"Cgit returned HTTP {r.status_code} {r.reason}.\n" \
                 "Set username/password in DDR config ([workbench] cgit_username and cgit_password)\n" \
                 "or set environment variables CGIT_USERNAME and CGIT_PASSWORD."
             raise Exception(msg)
@@ -1364,7 +1365,7 @@ class Cgit():
         }
         """
         url = f"{self.url}/cgit.cgi/?ofs={offset}"
-        r = self.client.get(
+        r = self.session.get(
             url, auth=(self.username,self.password),
             headers=CGIT_BROWSER_HEADERS
         )
