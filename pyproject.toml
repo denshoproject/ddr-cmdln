@@ -42,6 +42,7 @@ dependencies = [
     "psutil>=5.9.1,<6.0",         # BSD      y
     "python-dateutil==2.8.1",     # BSD
     "python-xmp-toolkit==2.0.1",  # New BSD
+    "requests>=2.32.0,<2.33",     # Apache   y
     "elastictools @ git+https://github.com/denshoproject/densho-elastictools.git@v1.0.2",
 ]
 
