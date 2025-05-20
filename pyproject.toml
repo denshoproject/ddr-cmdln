@@ -36,7 +36,6 @@ dependencies = [
     "deepdiff==8.2.0",            # MIT      y
     "envoy==0.0.3",               # MIT             TODO replace!
     "gitpython>=3.1.0,<3.2",      # BSD
-    "httpx==0.28.1",              # BSD
     "humanize==4.10.0",           # MIT
     "Jinja2>=3.1.5,<3.2.0",       # BSD
     "natsort>=8.1.0,<8.2",        # MIT
