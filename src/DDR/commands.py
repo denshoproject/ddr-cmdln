@@ -1,6 +1,7 @@
 from functools import wraps
 import logging
 import os
+from pathlib import Path
 import re
 import shutil
 import sys
@@ -14,9 +15,8 @@ from DDR.changelog import write_changelog_entry
 from DDR.organization import group_repo_level, repo_level, repo_annex_get, read_group_file
 
 MODULE_PATH = os.path.dirname(os.path.abspath(__file__))
-TEMPLATE_PATH = os.path.join(MODULE_PATH, 'templates')
-GITIGNORE_TEMPLATE = os.path.join(TEMPLATE_PATH, 'gitignore.tpl')
-
+TEMPLATE_PATH = str(Path(MODULE_PATH) / 'templates')
+GITIGNORE_TEMPLATE = str(Path(TEMPLATE_PATH) / 'gitignore.tpl')
 
 
 def requires_network(f):

@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 import os
+from pathlib import Path
 from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 from dateutil import parser
@@ -146,9 +147,9 @@ def make_changelog(entries):
 
 
 MODULE_PATH   = os.path.dirname(os.path.abspath(__file__))
-TEMPLATE_PATH = os.path.join(MODULE_PATH, 'templates')
-CHANGELOG_TEMPLATE    = os.path.join(TEMPLATE_PATH, 'changelog.tpl')
-CHANGELOG_DATE_FORMAT = os.path.join(TEMPLATE_PATH, 'changelog-date.tpl')
+TEMPLATE_PATH = str(Path(MODULE_PATH) / 'templates')
+CHANGELOG_TEMPLATE    = str(Path(TEMPLATE_PATH) / 'changelog.tpl')
+CHANGELOG_DATE_FORMAT = str(Path(TEMPLATE_PATH) / 'changelog-date.tpl')
 
 def load_template(filename: str) -> str:
     return fileio.read_text(filename)

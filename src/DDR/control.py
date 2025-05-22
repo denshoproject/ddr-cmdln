@@ -1,15 +1,16 @@
 import configparser
 import logging
 import os
+from pathlib import Path
 import sys
 from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
 from DDR import fileio
 
 MODULE_PATH = os.path.dirname(os.path.abspath(__file__))
-TEMPLATE_PATH = os.path.join(MODULE_PATH, 'templates')
-COLLECTION_CONTROL_TEMPLATE = os.path.join(TEMPLATE_PATH, 'collection_control.tpl')
-ENTITY_CONTROL_TEMPLATE     = os.path.join(TEMPLATE_PATH, 'entity_control.tpl' )
+TEMPLATE_PATH = str(Path(MODULE_PATH) / 'templates')
+COLLECTION_CONTROL_TEMPLATE = str(Path(TEMPLATE_PATH) / 'collection_control.tpl')
+ENTITY_CONTROL_TEMPLATE     = str(Path(TEMPLATE_PATH) / 'entity_control.tpl' )
 
 
 def load_template(filename: str) -> str:
