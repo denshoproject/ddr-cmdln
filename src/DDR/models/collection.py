@@ -3,6 +3,7 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 import os
+from pathlib import Path
 import re
 from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
@@ -25,8 +26,9 @@ from DDR import util
 
 COLLECTION_FILES_PREFIX = 'files'
 
-TEMPLATE_PATH = os.path.join(config.INSTALL_PATH, 'ddr', 'DDR', 'templates')
-GITIGNORE_TEMPLATE = os.path.join(TEMPLATE_PATH, 'gitignore.tpl')
+MODULE_PATH = os.path.dirname(os.path.abspath(__file__))
+TEMPLATE_PATH = str(Path(MODULE_PATH) / 'templates')
+GITIGNORE_TEMPLATE = str(Path(TEMPLATE_PATH) / 'gitignore.tpl')
 
 
 class Collection(common.DDRObject):
