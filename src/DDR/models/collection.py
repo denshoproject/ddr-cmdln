@@ -27,7 +27,7 @@ from DDR import util
 COLLECTION_FILES_PREFIX = 'files'
 
 MODULE_PATH = os.path.dirname(os.path.abspath(__file__))
-TEMPLATE_PATH = str(Path(MODULE_PATH) / 'templates')
+TEMPLATE_PATH = str(Path(MODULE_PATH) / '..' / 'templates')
 GITIGNORE_TEMPLATE = str(Path(TEMPLATE_PATH) / 'gitignore.tpl')
 
 
