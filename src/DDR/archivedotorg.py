@@ -1,6 +1,7 @@
 import json
 import mimetypes
 mimetypes.init()
+import re
 import subprocess
 import sys
 
@@ -20,11 +21,21 @@ def get_ia_meta(o):
     """
     data = {}
     if is_iaobject(o):
-        iaobject = get_ia_metadata(o.identifier.id)
-        if iaobject:
-            if 'error' in iaobject.keys():
-                raise FileNotFoundError(iaobject)
-            data = process_ia_metadata(o.identifier.id, iaobject['files'])
+        oid = o.identifier.id
+        # Certain objects point to an external/non-Densho IA video
+        external_id = external_ia_id(o)
+        if external_id:
+            oid = external_id
+        # Get metadata from Internet Archive via their "ia metadata" tool
+        iameta = get_ia_metadata(oid)
+        if iameta:
+            if 'error' in iameta.keys():
+                raise FileNotFoundError(iameta)
+            # format just the info DDR needs
+            data = process_ia_metadata(o.identifier.id, iameta['files'])
+            if external_id:
+                # rewrite MP4 URL for external object
+                data = fix_external_mp4_url(iameta, data)
         else:
             raise FileNotFoundError(f'No Internet Archive data for {o.identifier.id}.')
     return data
@@ -40,8 +51,28 @@ def is_iaobject(o):
         return True
     return False
 
-def get_ia_metadata(oid):
-    """Use official IA client to get metadata
+# "... [ia_external_id:EXTERNALID]; ..."
+EXTERNAL_OBJECT_ID_PATTERN = re.compile(r'ia_external_id:(\w+)')
+
+def external_ia_id(o):
+    """Look in DDR object's notes for external/non-Densho IA object ID
+
+    Certain DDR objects point to IA media that was not uploaded by Densho
+    example: IA Hundred Films project
+
+    These objects will have a special marker in their notes field in
+    this format: "... [ia_external_id:EXTERNALID]; ..."  Example:
+    "...[ia_external_id:cabemrc_000010];..."
+
+    """
+    if hasattr(o, 'notes') and isinstance(o.notes, str):
+        match = re.search(EXTERNAL_OBJECT_ID_PATTERN, o.notes)
+        if match:
+            return match.groups()[0]
+    return None
+
+def get_ia_metadata(oid: str) -> dict:
+    """Use official IA client to get metadata for an IA object
     """
     cmd = f'ia metadata {oid}'
     try:
@@ -136,6 +167,22 @@ def process_ia_metadata(oid, files_list):
     if data['original']:
         data['mimetype'],encoding = mimetypes.guess_type(data['original'])
     data['files'] = files
+    return data
+
+def fix_external_mp4_url(iameta, data):
+    """Fix mp4 file URL for external objects
+
+    process_ia_metadata() assembles URLs for MP4s in the following form:
+    https://archive.org/download/ddr-testing-40439-1/cabemrc_000010_access.mp4
+    It assumes the MP4s were uploaded by Densho
+
+    iameta dict: Output of "ia metadata EXTERNALID"
+    data dict: Output of process_ia_metadata
+    """
+    iaserver = iameta['server']
+    iadir = iameta['dir']
+    filename = data['files']['mp4']['name']
+    data['files']['mp4']['url'] = f"https://{iaserver}{iadir}/{filename}"
     return data
 
 def format_mimetype(o, meta):
