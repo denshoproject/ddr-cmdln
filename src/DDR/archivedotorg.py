@@ -65,8 +65,8 @@ def external_ia_id(o):
     "...[ia_external_id:cabemrc_000010];..."
 
     """
-    if hasattr(o, 'notes') and isinstance(o.notes, str):
-        match = re.search(EXTERNAL_OBJECT_ID_PATTERN, o.notes)
+    if hasattr(o, 'alternate_id') and isinstance(o.alternate_id, str):
+        match = re.search(EXTERNAL_OBJECT_ID_PATTERN, o.alternate_id)
         if match:
             return match.groups()[0]
     return None

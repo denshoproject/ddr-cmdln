@@ -69,15 +69,15 @@ def test_external_ia_id():
     class DummyObject():
         pass
 
-    o = DummyObject(); o.notes = None
+    o = DummyObject(); o.alternate_id = None
     assert archivedotorg.external_ia_id(o) == None
-    o = DummyObject(); o.notes = ''
+    o = DummyObject(); o.alternate_id = ''
     assert archivedotorg.external_ia_id(o) == None
-    o = DummyObject(); o.notes = 'a bunch of random text'
+    o = DummyObject(); o.alternate_id = 'a bunch of random text'
     assert archivedotorg.external_ia_id(o) == None
-    o = DummyObject(); o.notes = '[ia_external_id:abc123_11001];'
+    o = DummyObject(); o.alternate_id = '[ia_external_id:abc123_11001];'
     assert archivedotorg.external_ia_id(o) == 'abc123_11001'
-    o = DummyObject(); o.notes = 'before [ia_external_id:abc123_11001]; after'
+    o = DummyObject(); o.alternate_id = 'before [ia_external_id:abc123_11001]; after'
     assert archivedotorg.external_ia_id(o) == 'abc123_11001'
 
 def load_ia_json(oid):
