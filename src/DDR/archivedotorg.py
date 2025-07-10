@@ -51,26 +51,6 @@ def is_iaobject(o):
         return True
     return False
 
-# "... [ia_external_id:EXTERNALID]; ..."
-EXTERNAL_OBJECT_ID_PATTERN = re.compile(r'ia_external_id:(\w+)')
-
-def external_ia_id(o):
-    """Look in DDR object's notes for external/non-Densho IA object ID
-
-    Certain DDR objects point to IA media that was not uploaded by Densho
-    example: IA Hundred Films project
-
-    These objects will have a special marker in their notes field in
-    this format: "... [ia_external_id:EXTERNALID]; ..."  Example:
-    "...[ia_external_id:cabemrc_000010];..."
-
-    """
-    if hasattr(o, 'alternate_id') and isinstance(o.alternate_id, str):
-        match = re.search(EXTERNAL_OBJECT_ID_PATTERN, o.alternate_id)
-        if match:
-            return match.groups()[0]
-    return None
-
 def get_ia_metadata(oid: str) -> dict:
     """Use official IA client to get metadata for an IA object
     """
@@ -169,6 +149,44 @@ def process_ia_metadata(oid, files_list):
     data['files'] = files
     return data
 
+def format_mimetype(o, meta):
+    """Returns object format and mimetype if present in Internet Archive
+    
+    @param o: models.Entity
+    @param meta: dict
+    @returns: str
+    """
+    if meta:
+        return ':'.join([
+            o.format,
+            meta['mimetype'].split('/')[0]
+        ])
+    return ''
+
+# functions for supporting external IA media
+# See https://github.com/denshoproject/ddr-cmdln/issues/245
+# See https://github.com/denshoproject/ddr-public/issues/230
+
+# "... [ia_external_id:EXTERNALID]; ..."
+EXTERNAL_OBJECT_ID_PATTERN = re.compile(r'ia_external_id:(\w+)')
+
+def external_ia_id(o):
+    """Look in DDR object's notes for external/non-Densho IA object ID
+
+    Certain DDR objects point to IA media that was not uploaded by Densho
+    example: IA Hundred Films project
+
+    These objects will have a special marker in their notes field in
+    this format: "... [ia_external_id:EXTERNALID]; ..."  Example:
+    "...[ia_external_id:cabemrc_000010];..."
+
+    """
+    if hasattr(o, 'alternate_id') and isinstance(o.alternate_id, str):
+        match = re.search(EXTERNAL_OBJECT_ID_PATTERN, o.alternate_id)
+        if match:
+            return match.groups()[0]
+    return None
+
 def fix_external_mp4_url(iameta, data):
     """Fix mp4 file URL for external objects
 
@@ -184,17 +202,3 @@ def fix_external_mp4_url(iameta, data):
     filename = data['files']['mp4']['name']
     data['files']['mp4']['url'] = f"https://{iaserver}{iadir}/{filename}"
     return data
-
-def format_mimetype(o, meta):
-    """Returns object format and mimetype if present in Internet Archive
-    
-    @param o: models.Entity
-    @param meta: dict
-    @returns: str
-    """
-    if meta:
-        return ':'.join([
-            o.format,
-            meta['mimetype'].split('/')[0]
-        ])
-    return ''
