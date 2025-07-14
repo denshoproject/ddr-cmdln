@@ -168,7 +168,7 @@ def format_mimetype(o, meta):
 # See https://github.com/denshoproject/ddr-public/issues/230
 
 # "... [ia_external_id:EXTERNALID]; ..."
-EXTERNAL_OBJECT_ID_PATTERN = re.compile(r'ia_external_id:(\w+)')
+EXTERNAL_OBJECT_ID_PATTERN = re.compile(r'ia_external_id:([\w._-]+)')
 
 def external_ia_id(o):
     """Look in DDR object's notes for external/non-Densho IA object ID
