@@ -37,7 +37,9 @@ def get_ia_meta(o):
                 # rewrite MP4 URL for external object
                 data = fix_external_mp4_url(iameta, data)
         else:
-            raise FileNotFoundError(f'No Internet Archive data for {o.identifier.id}.')
+            raise FileNotFoundError(
+                f'No Internet Archive data for {o.identifier.id}({oid=}).'
+            )
     return data
 
 def is_iaobject(o):
