@@ -148,6 +148,10 @@ def process_ia_metadata(oid, files_list):
     
     if data['original']:
         data['mimetype'],encoding = mimetypes.guess_type(data['original'])
+    # IA mpeg4 files sometimes have no mimetype
+    if data['mimetype'] == None and 'mpeg4' in data['original']:
+        mimetypes.add_type('video/mp4','.mpeg4')
+        data['mimetype'],encoding = mimetypes.guess_type(data['original'])
     data['files'] = files
     return data
 
