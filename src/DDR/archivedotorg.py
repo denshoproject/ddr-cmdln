@@ -33,9 +33,9 @@ def get_ia_meta(o):
                 raise FileNotFoundError(iameta)
             # format just the info DDR needs
             data = process_ia_metadata(o.identifier.id, iameta['files'])
+            # Add ia_external_id if present
             if external_id:
-                # rewrite MP4 URL for external object
-                data = fix_external_mp4_url(iameta, data)
+                data['ia_external_id'] = external_id
         else:
             raise FileNotFoundError(
                 f'No Internet Archive data for {o.identifier.id}({oid=}).'
