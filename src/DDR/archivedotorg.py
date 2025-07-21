@@ -1,3 +1,10 @@
+# NOTE re streaming-only videos
+# We don't have a mechanism in DDR for marking videos stream-only/no-download.
+# This is done as part of the process of uploading videos to Internet Archive.
+# See Gitbook:
+# Densho Internal Wiki > Archives Team Wiki > Audio/Visual Material Workflow \
+# > Internet Archive Preparation & Upload
+
 import json
 import mimetypes
 mimetypes.init()
