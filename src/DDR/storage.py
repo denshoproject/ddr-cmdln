@@ -11,9 +11,10 @@ import sys
 import time
 from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
-from b2sdk.bucket import Bucket
-from b2sdk.v1 import B2Api, CompareVersionMode, InMemoryAccountInfo, ScanPoliciesManager
-from b2sdk.v1 import Synchronizer, SyncReport, parse_sync_folder
+from b2sdk.v2 import B2Api, CompareVersionMode, InMemoryAccountInfo
+from b2sdk.v2 import ScanPoliciesManager, Synchronizer, SyncReport
+from b2sdk.v2 import parse_folder
+
 import envoy
 import psutil
 
@@ -507,9 +508,10 @@ class Backblaze():
             self.keyid, self.appkey, self.bucketname
         )
 
-    def _authorize(self, keyid: str, appkey: str, bucketname: str):
-        b2_api = B2Api(InMemoryAccountInfo())
-        b2_api.authorize_account("production", keyid, appkey)
+    def _authorize(self, application_key_id: str, application_key: str, bucketname: str):
+        info = InMemoryAccountInfo()  # store credentials, tokens and cache in memory
+        b2_api = B2Api(info)
+        b2_api.authorize_account("production", application_key_id, application_key)
         bucket = b2_api.get_bucket_by_name(bucketname,)
         return b2_api,bucket
 
@@ -543,8 +545,8 @@ class Backblaze():
         """
         destpath = Path(self.bucket.name) / basedir
         dest = f'b2://{destpath}'
-        source = parse_sync_folder(str(srcdir), self.b2_api)
-        destination = parse_sync_folder(dest, self.b2_api)
+        source = parse_folder(str(srcdir), self.b2_api)
+        destination = parse_folder(dest, self.b2_api)
         synchronizer = Synchronizer(
             max_workers=8,
             policies_manager=ScanPoliciesManager(exclude_all_symlinks=True),
@@ -567,10 +569,11 @@ class Backblaze():
         """List contents of S2-style bucket (expects no nesting)
         """
         files = []
-        for f,dir in self.bucket.ls(
-                folder_to_list=folder, recursive=True, show_versions=False
-        ):
-            files.append(f.file_name)
+        for file_version, folder_name in self.bucket.ls(latest_only=True, recursive=True):
+            if folder and folder_name == folder:
+                files.append(file_version.file_name)
+            else:
+                files.append(file_version.file_name)
         return files
 
 def oid_from_path(path: Path) -> str:
