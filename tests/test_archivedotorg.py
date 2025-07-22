@@ -65,6 +65,21 @@ def test_is_iaobject():
     out3 = archivedotorg.is_iaobject(thing3)
     assert out3 == False
 
+def test_external_ia_id():
+    class DummyObject():
+        pass
+
+    o = DummyObject(); o.alternate_id = None
+    assert archivedotorg.external_ia_id(o) == None
+    o = DummyObject(); o.alternate_id = ''
+    assert archivedotorg.external_ia_id(o) == None
+    o = DummyObject(); o.alternate_id = 'a bunch of random text'
+    assert archivedotorg.external_ia_id(o) == None
+    o = DummyObject(); o.alternate_id = '[ia_external_id:abc123_11001];'
+    assert archivedotorg.external_ia_id(o) == 'abc123_11001'
+    o = DummyObject(); o.alternate_id = 'before [ia_external_id:abc123_11001]; after'
+    assert archivedotorg.external_ia_id(o) == 'abc123_11001'
+
 def load_ia_json(oid):
     """Load local copy of metadata
     
@@ -139,7 +154,28 @@ def test_format_mimetype():
     out = archivedotorg.format_mimetype(o, data)
     assert out == 'av:video'
 
-    
+# TODO test_process_ia_metadata
+
+def test_fix_external_mp4_url():
+    iameta = {
+        'server': 'ia903207.us.archive.org',
+        'dir': '/34/items/cabemrc_000010',
+    }
+    data = {
+        'id': 'ddr-testing-40439-1',
+        'original': 'cabemrc_000010_access.ogv',
+        'mimetype': 'video/ogg',
+        'files': {
+            'mp4': {
+                'name': 'cabemrc_000010_access.mp4',
+                '...other': 'fields...',
+                'url': 'https://archive.org/download/ddr-testing-40439-1/cabemrc_000010_access.mp4'},
+        }
+    }
+    expected = 'https://ia903207.us.archive.org/34/items/cabemrc_000010/cabemrc_000010_access.mp4'
+    out = archivedotorg.fix_external_mp4_url(iameta, data)
+    assert out['files']['mp4']['url'] == expected
+
 def test_filter_ia_files():
     """
     Prep test metadata thusly:
