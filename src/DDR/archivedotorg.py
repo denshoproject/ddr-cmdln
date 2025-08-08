@@ -39,7 +39,7 @@ def get_ia_meta(o):
             if 'error' in iameta.keys():
                 raise FileNotFoundError(iameta)
             # format just the info DDR needs
-            data = process_ia_metadata(o.identifier.id, iameta['files'])
+            data = process_ia_metadata(o.identifier.id, iameta)
             # Add ia_external_id if present
             if external_id:
                 data['ia_external_id'] = external_id
@@ -72,7 +72,7 @@ def get_ia_metadata(oid: str) -> dict:
         raise Exception(msg)
     return json.loads(out)
 
-def process_ia_metadata(oid, files_list):
+def process_ia_metadata(oid, iameta):
     """Filter IA files list
 
     ddr-densho-400-1    (mp3, simple entity)
@@ -93,7 +93,11 @@ def process_ia_metadata(oid, files_list):
         'original': '',
         'mimetype': '',
         'files': {},
+        'stream_only': False,
     }
+    if iameta.get('metadata',{}).get('collection',{}) \
+    and 'stream_only' in iameta['metadata']['collection']:
+        data['stream_only'] = True
     
     # IA metadata includes files we're not interested in.
     # Keep only these formats.
@@ -112,7 +116,7 @@ def process_ia_metadata(oid, files_list):
         'vbr mp3': 'mp3',
     }
     files = {}
-    for f in files_list:
+    for f in iameta['files']:
         if f['format'].lower() in FORMATS_ALLOW:
             fmt = f['format'].lower()
             if fmt in FORMATS_REPLACE.keys():
