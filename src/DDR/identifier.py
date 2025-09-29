@@ -258,7 +258,7 @@ class Definitions():
 
     @staticmethod
     def filename_regexes(identifiers):
-        """List of regexes for matching metadata filenames
+        r"""List of regexes for matching metadata filenames
         
         #META_FILENAME_REGEX = {
         #    'repository': re.compile(r'repository.json'),

@@ -290,7 +290,7 @@ def _parse_list_committed(entry: str) -> List[str]:
     return files
     
 def list_committed(repo: git.Repo, commit: git.Commit) -> List[str]:
-    """Returns list of all files in the commit
+    r"""Returns list of all files in the commit
 
     $ git log -1 --stat 0a1b2c3d4e...|grep \|
 
