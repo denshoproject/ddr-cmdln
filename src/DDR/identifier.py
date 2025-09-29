@@ -259,15 +259,16 @@ class Definitions():
     @staticmethod
     def filename_regexes(identifiers):
         """List of regexes for matching metadata filenames
-        """
+        
         #META_FILENAME_REGEX = {
-        #    'repository': re.compile('repository.json'),
-        #    'organization': re.compile('organization.json'),
-        #    'collection': re.compile('collection.json'),
-        #    'entity': re.compile('entity.json'),
-        #    'segment': re.compile('entity.json'),
-        #    'file': re.compile(r'-([\d]+)-([\w]+)-([\w\d]+).json'),
+        #    'repository': re.compile(r'repository.json'),
+        #    'organization': re.compile(r'organization.json'),
+        #    'collection': re.compile(r'collection.json'),
+        #    'entity': re.compile(r'entity.json'),
+        #    'segment': re.compile(r'entity.json'),
+        #    'file': re.compile(r"-([\d]+)-([\w]+)-([\w\d]+).json"),
         #}
+        """
         return {
             i['model']: re.compile(i.get('filename_regex'))
             for i in identifiers
