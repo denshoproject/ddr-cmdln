@@ -420,9 +420,8 @@ install-configs:
 	touch $(CONF_LOCAL)
 	chown ddr:ddr $(CONF_LOCAL)
 	chmod 640 $(CONF_LOCAL)
-	-mkdir -p /etc/ImageMagick-6/
-	-cp /etc/ImageMagick-6/policy.xml /etc/ImageMagick-6/policy.xml.orig
-	cp $(INSTALL_CMDLN)/conf/$(IMAGEMAGICK_CONF) /etc/ImageMagick-6/policy.xml
+	-cp /etc/ImageMagick-7/policy.xml /etc/ImageMagick-7/policy.xml.orig
+	cp $(INSTALL_CMDLN)/conf/$(IMAGEMAGICK_CONF) /etc/ImageMagick-7/policy.xml
 
 uninstall-configs:
 	-rm $(CONF_PRODUCTION)
