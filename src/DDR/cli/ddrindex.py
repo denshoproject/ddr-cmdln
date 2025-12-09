@@ -448,18 +448,23 @@ def narrators(hosts, path):
               help='Elasticsearch hosts.')
 @click.option('--recurse','-r', is_flag=True, help='Delete documents under this one.')
 @click.option('--confirm', is_flag=True, help='Yes I really want to delete these objects.')
+@click.argument('doctype')
 @click.argument('object_id')
-def delete(hosts, recurse, confirm, object_id):
+def delete(hosts, recurse, confirm, doctype, object_id):
     """Delete the specified document from Elasticsearch
     """
     ds = get_docstore(hosts)
+    try:
+        es_class = identifier.ELASTICSEARCH_CLASSES_BY_MODEL[doctype]
+    except:
+        click.echo(f"No index named {doctype}.")
     if confirm:
         if object_id == '-':  # objectids from STDIN
             object_ids = click.get_text_stream('stdin').read().strip().split('\n')
         else:
             object_ids = [object_id]
         for object_id in object_ids:
-            click.echo(ds.delete(object_id, recursive=recurse))
+            click.echo(ds.delete(object_id, doctype=doctype, recursive=recurse))
     else:
         click.echo("Add '--confirm' if you're sure you want to do this.")
 
