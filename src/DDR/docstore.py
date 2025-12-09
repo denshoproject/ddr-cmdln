@@ -47,7 +47,8 @@ from DDR import fileio
 from DDR.identifier import Identifier
 from DDR.identifier import ELASTICSEARCH_CLASSES
 from DDR.identifier import ELASTICSEARCH_CLASSES_BY_MODEL
-from DDR.identifier import ID_COMPONENTS, InvalidInputException
+from DDR.identifier import ID_COMPONENTS
+from DDR.identifier import InvalidInputException, InvalidIdentifierException
 from DDR.identifier import MODEL_REPO_MODELS
 from DDR.identifier import MODULES, module_for_name
 from DDR import modules
@@ -605,7 +606,7 @@ class DocstoreManager(docstore.DocstoreManager):
         logger.debug('INDEXING COMPLETED')
         return {'total':len(paths), 'skipped':skipped, 'successful':successful, 'bad':bad_paths}
 
-    def delete(self, document_id, recursive=False):
+    def delete(self, document_id, doctype=None, recursive=False):
         """Delete a document and optionally its children.
         
         TODO refactor after upgrading Elasticsearch past 2.4.
@@ -616,11 +617,21 @@ class DocstoreManager(docstore.DocstoreManager):
         document_id, find all paths beneath it in the filesystem,
         and curl DELETE url each individual document from Elasticsearch.
         
+        @param doctype:
         @param document_id:
         @param recursive: True or False
         """
         logger.debug('delete(%s, %s)' % (document_id, recursive))
-        oi = Identifier(document_id, config.MEDIA_BASE)
+        try:
+            oi = Identifier(document_id, config.MEDIA_BASE)
+        except InvalidIdentifierException:
+            if doctype and document_id:
+                return self._delete_other(doctype, document_id)
+            else:
+                raise Exception(f"I don't know how to delete this.")
+        return self._delete_ddr_object(oi, recursive=recursive)
+
+    def _delete_ddr_object(self, oi, recursive=False):
         if recursive:
             paths = util.find_meta_files(
                 oi.path_abs(), recursive=recursive, files_first=1
@@ -637,10 +648,18 @@ class DocstoreManager(docstore.DocstoreManager):
                 model = oi.model
             try:
                 result = self.es.delete(index=self.index_name(model), id=oi.id)
-                print(f'{n}/{num} DELETE {self.index_name(model)} {oi.id} -> {result["result"]}')
+                return f'{n}/{num} DELETE {self.index_name(model)} {oi.id} -> {result["result"]}'
             except docstore.NotFoundError as err:
-                print(f'{n}/{num} DELETE {self.index_name(model)} {oi.id} -> 404 Not Found')
+                return f'{n}/{num} DELETE {self.index_name(model)} {oi.id} -> 404 Not Found'
 
+    def _delete_other(self, doctype, document_id):
+        # not a DDR collection object
+        index = self.index_name(doctype)
+        try:
+            result = self.es.delete(index=index, id=document_id)
+            return f'DELETE {doctype} {document_id} -> {result["result"]}'
+        except docstore.NotFoundError as err:
+            return f'{doctype} {document_id} -> 404 Not Found'
 
 def make_index_name(text):
     """Takes input text and generates a legal Elasticsearch index name.
