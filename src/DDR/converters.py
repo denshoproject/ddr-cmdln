@@ -811,12 +811,12 @@ def _parse_rolepeople_text(texts, default):
             # obsolete/original narrator ID format: 'Masuda, Kikuye [42]'
             if item.get('role') and item['role'] == 'narrator' and not item.get('oh_id'):
                 # "namepart: Masuda, Kikuye [42] | role: narrator"
-                m = re.search('([\w\s,-]+) \[(\d+)]', item['namepart'])
+                m = re.search(r'([\w\s,-]+) \[(\d+)]', item['namepart'])
                 if m and m.groups() and len(m.groups()) == 2:
                     item['namepart'] = m.groups()[0]
                     item['oh_id'] = m.groups()[1]
                 # "Masuda, Kikuye [42]:narrator"
-                m1 = re.search('([\w\s,-]+) \[(\d+)]:narrator', txt)
+                m1 = re.search(r'([\w\s,-]+) \[(\d+)]:narrator', txt)
                 if m1 and m1.groups() and len(m1.groups()) == 2:
                     item['namepart'] = m1.groups()[0]
                     item['oh_id'] = m1.groups()[1]
