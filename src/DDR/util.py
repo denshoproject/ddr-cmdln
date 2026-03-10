@@ -108,7 +108,7 @@ def natural_order_string(id: str) -> str:
     
     @param id: A valid format DDR ID
     """
-    alnum = re.findall('\d+', id)
+    alnum = re.findall(r'\d+', id)
     if not alnum:
         raise Exception('Valid DDR ID required.')
     return alnum.pop()
