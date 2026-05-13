@@ -48,13 +48,14 @@ def no_files():
     return True
 
 
-@pytest.mark.skipif(no_files(), reason=NO_FILES_ERR)
 @pytest.fixture(scope="session")
 def test_files(tmpdir_factory):
     """
     Keep downloaded files in TESTING_BASE_DIR instead of pytest tmpdir
     so we don't have to download them every time
     """
+    if no_files():
+        pytest.skip(NO_FILES_ERR)
     tmpdir = tmpdir_factory.mktemp('images')
     for fmt,data in TEST_FILES.items():
         # /tmp/pytest-of-USER/imaging
@@ -67,9 +68,10 @@ def test_files(tmpdir_factory):
                     fd.write(chunk)
     TEST_FILES['tmpdir'] = tmpdir
     return TEST_FILES
-        
-@pytest.mark.skipif(no_files(), reason=NO_FILES_ERR)
+
 def test_analyze_magick(test_files):
+    if no_files():
+        pytest.skip(NO_FILES_ERR)
     print(test_files['jpg']['path'])
     jpeg = imaging.analyze(str(test_files['jpg']['path']))
     print(jpeg)
@@ -97,8 +99,9 @@ def test_analyze_magick(test_files):
     #assert docx['format'] == None
     #assert docx['image'] == False
 
-@pytest.mark.skipif(no_files(), reason=NO_FILES_ERR)
 def test_analyze(test_files):
+    if no_files():
+        pytest.skip(NO_FILES_ERR)
     path0 = '/tmp/missingfile.jpg'
     with pytest.raises(Exception):
         imaging.analyze(path0)
@@ -138,8 +141,9 @@ def test_geometry_is_ok():
     for s in GEOMETRY['bad']:
         assert imaging.geometry_is_ok(s) == False
 
-@pytest.mark.skipif(no_files(), reason=NO_FILES_ERR)
 def test_thumbnail(test_files):
+    if no_files():
+        pytest.skip(NO_FILES_ERR)
     src = str(test_files['jpg']['path'])
     dest = str(test_files['tmpdir'] / 'test-imaging-thumb.jpg')
     geometry = '100x100'
@@ -147,8 +151,9 @@ def test_thumbnail(test_files):
     imaging.thumbnail(src, dest, geometry)
     assert os.path.exists(dest)
 
-@pytest.mark.skipif(no_files(), reason=NO_FILES_ERR)
 def test_extract_xmp(test_files):
+    if no_files():
+        pytest.skip(NO_FILES_ERR)
     exempi = '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>' \
         '<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Exempi + XMP Core {}">' \
         '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">' \
