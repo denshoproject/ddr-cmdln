@@ -109,7 +109,9 @@ def test_analyze(test_files):
     path1 = str(test_files['jpg']['path'])
     assert os.path.exists(path1)
     out1 = imaging.analyze(path1)
-    if config.PYTHON_VERSION == '3.11':   # Debian 12 python3
+    if config.PYTHON_VERSION == '3.13':   # Debian 13 python3
+        STDOUT = '{} JPEG 1024x588 1024x588+0+0 8-bit Grayscale Gray 256c 123971B 0.000u 0:00.000'
+    elif config.PYTHON_VERSION == '3.11':   # Debian 12 python3
         STDOUT = '{} JPEG 1024x588 1024x588+0+0 8-bit Gray 256c 123971B 0.000u 0:00.000'
     elif config.PYTHON_VERSION == '3.9':   # Debian 11 python3
         STDOUT = '{} JPEG 1024x588 1024x588+0+0 8-bit Gray 256c 123971B 0.000u 0:00.000'
@@ -158,7 +160,9 @@ def test_extract_xmp(test_files):
         '<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Exempi + XMP Core {}">' \
         '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">' \
         '<rdf:Description rdf:about=""/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>'
-    if config.PYTHON_VERSION == '3.11':
+    if config.PYTHON_VERSION == '3.13':
+        expected0 = exempi.format('6.0.0')  # Debian 13 python3
+    elif config.PYTHON_VERSION == '3.11':
         expected0 = exempi.format('6.0.0')  # Debian 12 python3
     elif config.PYTHON_VERSION == '3.9':
         expected0 = exempi.format('5.6.0')  # Debian 11 python3
