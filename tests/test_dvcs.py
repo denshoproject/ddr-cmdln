@@ -3,7 +3,6 @@ import os
 import re
 import shutil
 
-from nose.tools import assert_raises
 import git
 
 from DDR import config

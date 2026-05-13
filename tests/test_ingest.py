@@ -4,7 +4,6 @@ import shutil
 import urllib
 
 import git
-from nose.tools import assert_raises
 import pytest
 
 from DDR import dvcs
@@ -107,10 +106,8 @@ def test_check_dir(tmpdir, entity_identifier):
     log = util.FileLogger(identifier=entity_identifier, base_dir=str(tmpdir))
     label = 'testing'
     assert ingest.check_dir('tmp', '/tmp', log)
-    assert_raises(
-        Exception,
-        ingest.check_dir, 'var', '/var', log
-    )
+    with pytest.raises(Exception):
+        ingest.check_dir('var', '/var', log)
 
 def test_checksums(tmpdir, test_base_dir, entity_identifier, test_image):
     log = util.FileLogger(identifier=entity_identifier, base_dir=test_base_dir)

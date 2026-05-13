@@ -4,8 +4,6 @@ import os
 import sys
 
 from elasticsearch.connection.base import TransportError
-from nose.tools import assert_raises
-from nose.plugins.attrib import attr
 import pytest
 import requests
 from requests import ConnectionError

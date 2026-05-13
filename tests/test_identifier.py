@@ -4,7 +4,7 @@ import json
 import os
 import re
 
-from nose.tools import assert_raises
+import pytest
 
 from DDR import identifier
 
@@ -371,9 +371,11 @@ def test_validate_idparts():
     oid = 'ddr-densho-1000-485-master'
     identifier.validate_idparts('ddr-densho-1000-485-master', idparts, VALID_COMPONENTS)
     idparts['repo'] = 'dd'; oid = 'dd-densho-1000-485-master'
-    assert_raises(Exception, identifier.validate_idparts, oid, idparts, VALID_COMPONENTS)
+    with pytest.raises(Exception):
+        identifier.validate_idparts(oid, idparts, VALID_COMPONENTS)
     idparts['repo'] = 'ddr'; idparts['role'] = '0'; oid = 'ddr-densho-1000-485-0'
-    assert_raises(Exception, identifier.validate_idparts, oid, idparts, VALID_COMPONENTS)
+    with pytest.raises(Exception):
+        identifier.validate_idparts(oid, idparts, VALID_COMPONENTS)
 
 def test_identify_filepath():
     assert identifier.identify_filepath('something-a.jpg') == 'access'
@@ -411,11 +413,10 @@ def test_format_id():
     # child identifiers (e.g. entity) can get ID of parents (e.g. collection)
     assert identifier.format_id(identifier.Identifier(i1), 'collection', templates) == i0
     # but not the other way around
-    assert_raises(
-        identifier.IdentifierFormatException,
-        identifier.format_id,
-        identifier.Identifier(i0), 'entity', templates
-    )
+    with pytest.raises(identifier.IdentifierFormatException):
+        identifier.format_id(
+            identifier.Identifier(i0), 'entity', templates
+        )
 
 def test_format_path():
     for base_path in BASE_PATHS:
@@ -443,11 +444,10 @@ def test_format_path():
             path3 = None
         assert path3 == None
         # no base_path in identifier
-        assert_raises(
-            Exception,
-            identifier.format_path,
-            identifier.Identifier(i0), 'collection', 'abs', templates
-        )
+        with pytest.raises(Exception):
+            identifier.format_path(
+                identifier.Identifier(i0), 'collection', 'abs', templates
+            )
 
 def test_format_url():
     templates = {
@@ -574,10 +574,8 @@ def test_identifier_max_id():
         identifier.Identifier('ddr-testing-123-1'),
         identifier.Identifier('ddr-testing-123-2'),
     ]
-    assert_raises(
-        Exception,
-        identifier.max_id, model2, identifiers2
-    )
+    with pytest.raises(Exception):
+        identifier.max_id(model2, identifiers2)
 
     # different model
     model3 = 'entity'
@@ -586,18 +584,14 @@ def test_identifier_max_id():
         identifier.Identifier('ddr-testing-123-2'),
         identifier.Identifier('ddr-testing-124'),
     ]
-    assert_raises(
-        Exception,
-        identifier.max_id, model3, identifiers3
-    )
+    with pytest.raises(Exception):
+        identifier.max_id(model3, identifiers3)
 
     # empty list
     model4 = 'entity'
     identifiers4 = []
-    assert_raises(
-        Exception,
-        identifier.max_id, model4, identifiers4
-    )
+    with pytest.raises(Exception):
+        identifier.max_id(model4, identifiers4)
 
 ADD_ID_INPUT0 = {
     'num_new': 5,
@@ -670,10 +664,8 @@ def test_identifier_wellformed():
         assert identifier.Identifier.wellformed('id', COLLECTION_ID)
         assert identifier.Identifier.wellformed('id', ENTITY_ID)
         assert identifier.Identifier.wellformed('id', FILE_ID)
-        assert_raises(
-            Exception,
+        with pytest.raises(Exception):
             identifier.Identifier.wellformed('id', 'ddr_test_123_456_master_abcde12345')
-        )
         assert identifier.Identifier.wellformed('path', REPO_PATH_ABS)
         assert identifier.Identifier.wellformed('path', ORG_PATH_ABS)
         assert identifier.Identifier.wellformed('path', COLLECTION_PATH_ABS)
@@ -709,24 +701,16 @@ def test_identifier_next():
     i5 = identifier.Identifier('ddr-testing-123-456-master-a1b2c3d4e5')
     expected2 = identifier.Identifier('ddr-testing-124')
     expected3 = identifier.Identifier('ddr-testing-123-457')
-    assert_raises(
-        Exception,
-        i0.next,
-    )
-    assert_raises(
-        Exception,
-        i1.next,
-    )
+    with pytest.raises(Exception):
+        i0.next()
+    with pytest.raises(Exception):
+        i1.next()
     out2 = i2.next()
     out3 = i3.next()
-    assert_raises(
-        Exception,
-        i4.next,
-    )
-    assert_raises(
-        Exception,
-        i5.next,
-    )
+    with pytest.raises(Exception):
+        i4.next()
+    with pytest.raises(Exception):
+        i5.next()
     assert out2.id == expected2.id
     assert out3.id == expected3.id
 
@@ -1001,12 +985,11 @@ def test_collection_from_url():
         i0 = identifier.Identifier(url='http://192.168.56.101/ddr/test/123')
         i1 = identifier.Identifier(url='http://192.168.56.101/ddr/test/123/')
         i2 = identifier.Identifier(url='http://192.168.56.101/ddr/test/123/', base_path=base_path)
-        assert_raises(
-            Exception,
-            identifier.Identifier,
-            url='http://192.168.56.101/ddr/test/123/',
-            base_path='ddr/test/123'
-        )
+        with pytest.raises(Exception):
+            identifier.Identifier(
+                url='http://192.168.56.101/ddr/test/123/',
+                base_path='ddr/test/123'
+            )
         assert str(i0)  == str(i1)  == COLLECTION_REPR
         assert i0.id    == i1.id    == COLLECTION_ID
         assert i0.model == i1.model == COLLECTION_MODEL
@@ -1017,12 +1000,11 @@ def test_entity_from_url():
     for base_path in BASE_PATHS:
         i0 = identifier.Identifier(url='http://192.168.56.101/ddr/test/123/456')
         i1 = identifier.Identifier(url='http://192.168.56.101/ddr/test/123/456/', base_path=base_path)
-        assert_raises(
-            Exception,
-            identifier.Identifier,
-            url='http://192.168.56.101/ddr/test/123/456/',
-            base_path='ddr/test/123/456'
-        )
+        with pytest.raises(Exception):
+            identifier.Identifier(
+                url='http://192.168.56.101/ddr/test/123/456/',
+                base_path='ddr/test/123/456'
+            )
         assert str(i0)  == str(i1)  == ENTITY_REPR
         assert i0.id    == i1.id    == ENTITY_ID
         assert i0.model == i1.model == ENTITY_MODEL
@@ -1040,12 +1022,11 @@ def test_file_from_url():
             url='http://192.168.56.101/ddr/test/123/456/master/a1b2c3d4e5/',
             base_path=base_path
         )
-        assert_raises(
-            Exception,
-            identifier.Identifier,
-            url='http://192.168.56.101/ddr/test/123/456/master/a1b2c3d4e5/',
-            base_path='ddr/test/123/456/master/a1b2c3d4e5'
-        )
+        with pytest.raises(Exception):
+            identifier.Identifier(
+                url='http://192.168.56.101/ddr/test/123/456/master/a1b2c3d4e5/',
+                base_path='ddr/test/123/456/master/a1b2c3d4e5'
+            )
         assert str(i0)  == str(i1)  == FILE_REPR
         assert i0.id    == i1.id    == FILE_ID
         assert i0.model == i1.model == FILE_MODEL
@@ -1065,8 +1046,10 @@ def test_collection_id():
     i2 = identifier.Identifier('ddr-test-123')
     i3 = identifier.Identifier('ddr-test-123-456')
     i4 = identifier.Identifier('ddr-test-123-456-master-a1b2c3d4e5')
-    assert_raises(Exception, i0, 'collection_id')
-    assert_raises(Exception, i1, 'collection_id')
+    with pytest.raises(Exception):
+        i0('collection_id')
+    with pytest.raises(Exception):
+        i1('collection_id')
     assert i2.collection_id() == COLLECTION_COLLECTION_ID
     assert i3.collection_id() == ENTITY_COLLECTION_ID
     assert i4.collection_id() == FILE_COLLECTION_ID
@@ -1085,19 +1068,26 @@ def test_collection_path():
         i2 = identifier.Identifier('ddr-test-123')
         i3 = identifier.Identifier('ddr-test-123-456')
         i4 = identifier.Identifier('ddr-test-123-456-master-a1b2c3d4e5')
-        assert_raises(Exception, i0, 'collection_path')
-        assert_raises(Exception, i1, 'collection_path')
-        assert_raises(Exception, i2, 'collection_path')
-        assert_raises(Exception, i3, 'collection_path')
-        assert_raises(Exception, i4, 'collection_path')
+        with pytest.raises(Exception):
+            i0('collection_path')
+        with pytest.raises(Exception):
+            i1('collection_path')
+        with pytest.raises(Exception):
+            i2('collection_path')
+        with pytest.raises(Exception):
+            i3('collection_path')
+        with pytest.raises(Exception):
+            i4('collection_path')
          
         i0 = identifier.Identifier('ddr', base_path)
         i1 = identifier.Identifier('ddr-test', base_path)
         i2 = identifier.Identifier('ddr-test-123', base_path)
         i3 = identifier.Identifier('ddr-test-123-456', base_path)
         i4 = identifier.Identifier('ddr-test-123-456-master-a1b2c3d4e5', base_path)
-        assert_raises(Exception, i0, 'collection_path')
-        assert_raises(Exception, i1, 'collection_path')
+        with pytest.raises(Exception):
+            i0('collection_path')
+        with pytest.raises(Exception):
+            i1('collection_path')
         assert i2.collection_path() == COLLECTION_COLLECTION_PATH
         assert i3.collection_path() == ENTITY_COLLECTION_PATH
         assert i4.collection_path() == FILE_COLLECTION_PATH
@@ -1170,11 +1160,10 @@ def test_child():
     i = identifier.Identifier(id='ddr-test-123')
     assert i.child('entity', {'eid':'456'}).id == 'ddr-test-123-456'
     assert i.child('entity', {'eid':'456'}).__class__ == i.__class__
-    assert_raises(
-        Exception,
-        i.child,
-        'file', {'eid':'456'}
-    )
+    with pytest.raises(Exception):
+        i.child(
+            'file', {'eid':'456'}
+        )
 
 def test_lineage():
     re = identifier.Identifier(id='ddr')
@@ -1212,66 +1201,86 @@ def test_path_abs():
         ri0 = identifier.Identifier(
             'ddr'
         )
-        assert_raises(Exception, ri0, 'path_abs')
-        assert_raises(Exception, ri0, 'path_abs', 'json')
-        assert_raises(Exception, ri0, 'path_abs', 'BAD')
+        with pytest.raises(Exception):
+            ri0('path_abs')
+        with pytest.raises(Exception):
+            ri0('path_abs', 'json')
+        with pytest.raises(Exception):
+            ri0('path_abs', 'BAD')
         ri1 = identifier.Identifier(
             'ddr',
             base_path
         )
         assert ri1.path_abs()       == REPO_PATH_ABS
         assert ri1.path_abs('json') == REPO_PATH_ABS_JSON
-        assert_raises(Exception, ri1, 'path_abs', 'BAD')
+        with pytest.raises(Exception):
+            ri1('path_abs', 'BAD')
         
         oi0 = identifier.Identifier(
             'ddr-test'
         )
-        assert_raises(Exception, oi0, 'path_abs')
-        assert_raises(Exception, oi0, 'path_abs', 'json')
-        assert_raises(Exception, oi0, 'path_abs', 'BAD')
+        with pytest.raises(Exception):
+            oi0('path_abs')
+        with pytest.raises(Exception):
+            oi0('path_abs', 'json')
+        with pytest.raises(Exception):
+            oi0('path_abs', 'BAD')
         oi1 = identifier.Identifier(
             'ddr-test',
             base_path
         )
         assert oi1.path_abs()       == ORG_PATH_ABS
         assert oi1.path_abs('json') == ORG_PATH_ABS_JSON
-        assert_raises(Exception, oi1, 'path_abs', 'BAD')
+        with pytest.raises(Exception):
+            oi1('path_abs', 'BAD')
         
         ci0 = identifier.Identifier(
             'ddr-test-123'
         )
-        assert_raises(Exception, ci0, 'path_abs')
-        assert_raises(Exception, ci0, 'path_abs', 'json')
-        assert_raises(Exception, ci0, 'path_abs', 'BAD')
+        with pytest.raises(Exception):
+            ci0('path_abs')
+        with pytest.raises(Exception):
+            ci0('path_abs', 'json')
+        with pytest.raises(Exception):
+            ci0('path_abs', 'BAD')
         ci1 = identifier.Identifier(
             'ddr-test-123',
             base_path
         )
         assert ci1.path_abs()       == COLLECTION_PATH_ABS
         assert ci1.path_abs('json') == COLLECTION_PATH_ABS_JSON
-        assert_raises(Exception, ci1, 'path_abs', 'BAD')
+        with pytest.raises(Exception):
+            ci1('path_abs', 'BAD')
         
         ei0 = identifier.Identifier(
             'ddr-test-123-456'
         )
-        assert_raises(Exception, ei0, 'path_abs')
-        assert_raises(Exception, ei0, 'path_abs', 'json')
-        assert_raises(Exception, ei0, 'path_abs', 'BAD')
+        with pytest.raises(Exception):
+            ei0('path_abs')
+        with pytest.raises(Exception):
+            ei0('path_abs', 'json')
+        with pytest.raises(Exception):
+            ei0('path_abs', 'BAD')
         ei1 = identifier.Identifier(
             'ddr-test-123-456',
             base_path
         )
         assert ei1.path_abs()       == ENTITY_PATH_ABS
         assert ei1.path_abs('json') == ENTITY_PATH_ABS_JSON
-        assert_raises(Exception, ei1, 'path_abs', 'BAD')
+        with pytest.raises(Exception):
+            ei1('path_abs', 'BAD')
         
         fi0 = identifier.Identifier(
             'ddr-test-123-456-master-a1b2c3d4e5'
         )
-        assert_raises(Exception, fi0, 'path_abs')
-        assert_raises(Exception, fi0, 'path_abs', 'access')
-        assert_raises(Exception, fi0, 'path_abs', 'json')
-        assert_raises(Exception, fi0, 'path_abs', 'BAD')
+        with pytest.raises(Exception):
+            fi0('path_abs')
+        with pytest.raises(Exception):
+            fi0('path_abs', 'access')
+        with pytest.raises(Exception):
+            fi0('path_abs', 'json')
+        with pytest.raises(Exception):
+            fi0('path_abs', 'BAD')
         fi1 = identifier.Identifier(
             'ddr-test-123-456-master-a1b2c3d4e5',
             base_path
@@ -1279,7 +1288,8 @@ def test_path_abs():
         assert fi1.path_abs()         == FILE_PATH_ABS
         assert fi1.path_abs('access') == FILE_PATH_ABS_ACCESS
         assert fi1.path_abs('json')   == FILE_PATH_ABS_JSON
-        assert_raises(Exception, fi1, 'path_abs', 'BAD')
+        with pytest.raises(Exception):
+            fi1('path_abs', 'BAD')
 
 
 REPO_PATH_REL       = ''
@@ -1298,28 +1308,33 @@ def test_path_rel():
     i0 = identifier.Identifier('ddr')
     assert i0.path_rel()         == REPO_PATH_REL
     assert i0.path_rel('json')   == REPO_PATH_REL_JSON
-    assert_raises(Exception, i0, 'path_rel', 'BAD')
+    with pytest.raises(Exception):
+        i0('path_rel', 'BAD')
     
     i1 = identifier.Identifier('ddr-test')
     assert i1.path_rel()         == ORG_PATH_REL
     assert i1.path_rel('json')   == ORG_PATH_REL_JSON
-    assert_raises(Exception, i1, 'path_rel', 'BAD')
+    with pytest.raises(Exception):
+        i1('path_rel', 'BAD')
     
     i2 = identifier.Identifier('ddr-test-123')
     assert i2.path_rel()         == COLLECTION_PATH_REL
     assert i2.path_rel('json')   == COLLECTION_PATH_REL_JSON
-    assert_raises(Exception, i2, 'path_rel', 'BAD')
+    with pytest.raises(Exception):
+        i2('path_rel', 'BAD')
     
     i3 = identifier.Identifier('ddr-test-123-456')
     assert i3.path_rel()         == ENTITY_PATH_REL
     assert i3.path_rel('json')   == ENTITY_PATH_REL_JSON
-    assert_raises(Exception, i3, 'path_rel', 'BAD')
+    with pytest.raises(Exception):
+        i3('path_rel', 'BAD')
     
     i4 = identifier.Identifier('ddr-test-123-456-master-a1b2c3d4e5')
     assert i4.path_rel()         == FILE_PATH_REL
     assert i4.path_rel('access') == FILE_PATH_REL_ACCESS
     assert i4.path_rel('json')   == FILE_PATH_REL_JSON
-    assert_raises(Exception, i4, 'path_rel', 'BAD')
+    with pytest.raises(Exception):
+        i4('path_rel', 'BAD')
 
 
 REPO_EDITOR_URL       = '/ui/ddr'

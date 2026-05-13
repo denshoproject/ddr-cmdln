@@ -1,6 +1,5 @@
 import os
 
-from nose.tools import assert_raises
 import pytest
 import requests
 
@@ -101,7 +100,8 @@ def test_analyze_magick(test_files):
 @pytest.mark.skipif(no_files(), reason=NO_FILES_ERR)
 def test_analyze(test_files):
     path0 = '/tmp/missingfile.jpg'
-    assert_raises(Exception, imaging.analyze, path0)
+    with pytest.raises(Exception):
+        imaging.analyze(path0)
     
     path1 = str(test_files['jpg']['path'])
     assert os.path.exists(path1)

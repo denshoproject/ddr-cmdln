@@ -4,7 +4,6 @@ from collections import OrderedDict
 from copy import deepcopy
 
 import git
-from nose.tools import assert_raises
 
 from DDR import csvfile
 from DDR import identifier

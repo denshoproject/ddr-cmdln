@@ -8,7 +8,6 @@ import unittest
 
 import envoy
 import git
-from nose.tools import nottest
 import pytest
 import requests
 

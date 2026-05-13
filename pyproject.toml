@@ -51,7 +51,6 @@ dependencies = [
 [project.optional-dependencies]
 testing = [
     "mypy",
-    "nose",
     "pytest",
     "pytest-cov",
 ]
