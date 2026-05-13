@@ -37,7 +37,7 @@ COMMIT_CMDLN := $(shell git -C $(INSTALL_CMDLN) log --decorate --abbrev-commit -
 COMMIT_DEFS := $(shell git -C $(INSTALL_DEFS) log --decorate --abbrev-commit --pretty=oneline -1)
 COMMIT_VOCAB := $(shell git -C $(INSTALL_VOCAB) log --decorate --abbrev-commit --pretty=oneline -1)
 
-VIRTUALENV=$(INSTALL_CMDLN)/venv/cmdln
+VIRTUALENV=$(INSTALL_CMDLN)/.venv
 
 CONF_BASE=/etc/ddr
 CONF_PRODUCTION=$(CONF_BASE)/ddrlocal.cfg
@@ -266,17 +266,10 @@ remove-elasticsearch:
 install-virtualenv:
 	@echo ""
 	@echo "install-virtualenv -----------------------------------------------------"
-	apt-get --assume-yes install python3-pip python3-venv
-	python3 -m venv $(VIRTUALENV)
-	source $(VIRTUALENV)/bin/activate; \
-	pip3 install -U --cache-dir=$(PIP_CACHE_DIR) uv
-
-install-setuptools: install-virtualenv
-	@echo ""
-	@echo "install-setuptools -----------------------------------------------------"
-	apt-get --assume-yes install python3-dev
-	source $(VIRTUALENV)/bin/activate; \
-	uv pip install -U --cache-dir=$(PIP_CACHE_DIR) setuptools
+	apt-get install --assume-yes extrepo
+	extrepo enable uv
+	apt-get install --assume-yes uv
+	uv venv --relocatable --managed-python --allow-existing --python /usr/bin/python3
 
 install-dependencies: apt-backports
 	@echo ""
@@ -331,14 +324,17 @@ pip-download-cmdln:
 	source $(VIRTUALENV)/bin/activate; \
 	uv pip download --no-binary=:all: --destination-directory=$(INSTALL_CMDLN)/vendor -r $(INSTALL_CMDLN)/requirements.txt
 
-install-ddr-cmdln: install-virtualenv install-setuptools git-safe-dir
+install-pyproject: install-virtualenv
+	@echo ""
+	@echo "install pyproject -------------------------------------------------"
+	source $(VIRTUALENV)/bin/activate; uv sync
+
+install-ddr-cmdln: install-pyproject git-safe-dir
 	@echo ""
 	@echo "install-ddr-cmdln ------------------------------------------------------"
 	git status | grep "On branch"
-	source $(VIRTUALENV)/bin/activate; uv pip install .
-	source $(VIRTUALENV)/bin/activate; uv pip install -U --cache-dir=$(PIP_CACHE_DIR) internetarchive
 
-install-testing: install-virtualenv install-setuptools
+install-testing: install-pyproject
 	@echo ""
 	@echo "install-ddr-cmdln ------------------------------------------------------"
 	git status | grep "On branch"
