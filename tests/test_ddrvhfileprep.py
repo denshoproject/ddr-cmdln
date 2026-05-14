@@ -5,8 +5,8 @@ from pathlib import Path
 import shutil
 import urllib
 
+import httpx2
 import pytest
-import requests
 
 from DDR.cli import ddrvhfileprep
 from DDR import fileio
@@ -30,7 +30,7 @@ def test_images(tmpdir_factory):
         # download to /tmp/
         img_path_tmp = Path('/tmp/') / img_filename
         if not img_path_tmp.exists():
-            r = requests.get(url)
+            r = httpx2.get(url)
             if not r.status_code == HTTPStatus.OK:
                 raise Exception(
                     f"ERROR: test_ddrvhfileprep got HTTP {r.status_code} " \

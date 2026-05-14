@@ -8,8 +8,8 @@ import unittest
 
 import envoy
 import git
+import httpx2
 import pytest
-import requests
 
 from DDR import commands
 from DDR import config
@@ -130,7 +130,7 @@ def file_in_remote_commit(collection_cid, commit, filename, debug=False):
         gitweb=GITWEB_URL, repo=collection_cid, hash=commit)
     logging.debug('    {}'.format(url))
     try:
-        r = requests.get(url)
+        r = httpx2.get(url)
     except:
         return None
     logging.debug(r.status_code)

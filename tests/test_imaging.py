@@ -1,7 +1,7 @@
 import os
 
+import httpx2
 import pytest
-import requests
 
 from DDR import config
 from DDR import imaging
@@ -38,7 +38,7 @@ def no_files():
     """
     try:
         print(TEST_FILES['jpg']['url'])
-        r = requests.get(TEST_FILES['jpg']['url'], timeout=3)
+        r = httpx2.get(TEST_FILES['jpg']['url'], timeout=30)
         print(r.status_code)
         if r.status_code == 200:
             return False
@@ -62,7 +62,7 @@ def test_files(tmpdir_factory):
         data['path'] = tmpdir / '..' / '..' / data['filename']
         if not data['path'].exists():
             headers = {'user-agent': REQUEST_USER_AGENT}
-            r = requests.get(data['url'], headers=headers, stream=True)
+            r = httpx2.get(data['url'], headers=headers, stream=True)
             with data['path'].open('wb') as fd:
                 for chunk in r.iter_content():
                     fd.write(chunk)

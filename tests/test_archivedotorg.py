@@ -5,8 +5,8 @@ import json
 import os
 from pathlib import Path
 
+import httpx2
 import pytest
-import requests
 
 from DDR import format_json
 from DDR import archivedotorg
@@ -28,7 +28,7 @@ def no_iarchive():
     """
     try:
         print(archivedotorg.IA_SAMPLE_URL)
-        r = requests.get(archivedotorg.IA_SAMPLE_URL, timeout=3)
+        r = httpx2.get(archivedotorg.IA_SAMPLE_URL, timeout=10)
         print(r.status_code)
         if r.status_code == 200:
             return False
