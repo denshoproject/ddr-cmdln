@@ -30,7 +30,7 @@ def test_images(tmpdir_factory):
         # download to /tmp/
         img_path_tmp = Path('/tmp/') / img_filename
         if not img_path_tmp.exists():
-            r = httpx2.get(url)
+            r = httpx2.get(url, follow_redirects=True)
             if not r.status_code == HTTPStatus.OK:
                 raise Exception(
                     f"ERROR: test_ddrvhfileprep got HTTP {r.status_code} " \
