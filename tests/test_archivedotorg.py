@@ -107,7 +107,7 @@ def test_format_mimetype():
     oid = 'ddr-densho-400-1'; o = DummyObject(); o.format = 'av'
     print(oid)
     meta = load_ia_json(oid)
-    data = archivedotorg.process_ia_metadata(oid, meta['files'])    
+    data = archivedotorg.process_ia_metadata(oid, meta)
     assert data
     out = archivedotorg.format_mimetype(o, data)
     assert out == 'av:audio'
@@ -115,7 +115,7 @@ def test_format_mimetype():
     oid = 'ddr-csujad-29-1'; o = DummyObject(); o.format = 'av'
     print(oid)
     meta = load_ia_json(oid)
-    data = archivedotorg.process_ia_metadata(oid, meta['files'])
+    data = archivedotorg.process_ia_metadata(oid, meta)
     assert data
     out = archivedotorg.format_mimetype(o, data)
     assert out == 'av:audio'
@@ -125,7 +125,7 @@ def test_format_mimetype():
     oid = 'ddr-densho-1000-1-1'; o = DummyObject(); o.format = 'vh'
     print(oid)
     meta = load_ia_json(oid)
-    data = archivedotorg.process_ia_metadata(oid, meta['files'])    
+    data = archivedotorg.process_ia_metadata(oid, meta)
     assert data
     out = archivedotorg.format_mimetype(o, data)
     assert out == 'vh:video'
@@ -133,7 +133,7 @@ def test_format_mimetype():
     oid = 'ddr-densho-1020-13'; o = DummyObject(); o.format = 'av'
     print(oid)
     meta = load_ia_json(oid)
-    data = archivedotorg.process_ia_metadata(oid, meta['files'])    
+    data = archivedotorg.process_ia_metadata(oid, meta)
     assert data
     out = archivedotorg.format_mimetype(o, data)
     assert out == 'av:video'
@@ -141,7 +141,7 @@ def test_format_mimetype():
     oid = 'ddr-densho-122-4-1'; o = DummyObject(); o.format = 'vh'
     print(oid)
     meta = load_ia_json(oid)
-    data = archivedotorg.process_ia_metadata(oid, meta['files'])    
+    data = archivedotorg.process_ia_metadata(oid, meta)
     assert data
     out = archivedotorg.format_mimetype(o, data)
     assert out == 'vh:video'
@@ -149,7 +149,7 @@ def test_format_mimetype():
     oid = 'ddr-csujad-51-1'; o = DummyObject(); o.format = 'av'
     print(oid)
     meta = load_ia_json(oid)
-    data = archivedotorg.process_ia_metadata(oid, meta['files'])
+    data = archivedotorg.process_ia_metadata(oid, meta)
     assert data
     out = archivedotorg.format_mimetype(o, data)
     assert out == 'av:video'
@@ -193,7 +193,7 @@ def test_filter_ia_files():
     
     oid = 'ddr-densho-400-1'
     ia_meta = load_ia_json(oid)
-    data = archivedotorg.process_ia_metadata(oid, ia_meta['files'])
+    data = archivedotorg.process_ia_metadata(oid, ia_meta)
     assert data['mimetype'] == 'audio/mpeg'
     assert data['original'] == 'ddr-densho-400-1-mezzanine-70dda47d00.mp3'
     assert data['files'].get('mp3')
@@ -205,7 +205,7 @@ def test_filter_ia_files():
     
     oid = 'ddr-densho-1000-1-1'
     ia_meta = load_ia_json(oid)
-    data = archivedotorg.process_ia_metadata(oid, ia_meta['files'])
+    data = archivedotorg.process_ia_metadata(oid, ia_meta)
     assert data['mimetype'] == 'video/mpeg'
     assert data['original'] == 'ddr-densho-1000-1-1-mezzanine-0762419626.mpg'
     assert data['files'].get('mpg')
@@ -219,7 +219,7 @@ def test_filter_ia_files():
 
     oid = 'ddr-densho-1020-13'
     ia_meta = load_ia_json(oid)
-    data = archivedotorg.process_ia_metadata(oid, ia_meta['files'])
+    data = archivedotorg.process_ia_metadata(oid, ia_meta)
     assert data['mimetype'] == 'video/mp4'
     assert data['original'] == 'ddr-densho-1020-13-mezzanine-5c4e884556.ia.mp4'
     assert data['files'].get('mp4')
@@ -229,7 +229,7 @@ def test_filter_ia_files():
 
     oid = 'ddr-densho-122-4-1'
     ia_meta = load_ia_json(oid)
-    data = archivedotorg.process_ia_metadata(oid, ia_meta['files'])
+    data = archivedotorg.process_ia_metadata(oid, ia_meta)
     assert data['mimetype'] == 'video/mp4'
     assert data['original'] == 'ddr-densho-122-4-1-mezzanine-51479225cf.mp4'
     assert data['files'].get('mp4')
