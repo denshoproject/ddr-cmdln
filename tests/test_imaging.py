@@ -1,8 +1,7 @@
 import os
 
-from nose.tools import assert_raises
+import httpx2
 import pytest
-import requests
 
 from DDR import config
 from DDR import imaging
@@ -39,7 +38,7 @@ def no_files():
     """
     try:
         print(TEST_FILES['jpg']['url'])
-        r = requests.get(TEST_FILES['jpg']['url'], timeout=3)
+        r = httpx2.get(TEST_FILES['jpg']['url'], timeout=30)
         print(r.status_code)
         if r.status_code == 200:
             return False
@@ -49,28 +48,30 @@ def no_files():
     return True
 
 
-@pytest.mark.skipif(no_files(), reason=NO_FILES_ERR)
 @pytest.fixture(scope="session")
 def test_files(tmpdir_factory):
     """
     Keep downloaded files in TESTING_BASE_DIR instead of pytest tmpdir
     so we don't have to download them every time
     """
+    if no_files():
+        pytest.skip(NO_FILES_ERR)
     tmpdir = tmpdir_factory.mktemp('images')
     for fmt,data in TEST_FILES.items():
         # /tmp/pytest-of-USER/imaging
         data['path'] = tmpdir / '..' / '..' / data['filename']
         if not data['path'].exists():
             headers = {'user-agent': REQUEST_USER_AGENT}
-            r = requests.get(data['url'], headers=headers, stream=True)
+            r = httpx2.get(data['url'], headers=headers, stream=True)
             with data['path'].open('wb') as fd:
                 for chunk in r.iter_content():
                     fd.write(chunk)
     TEST_FILES['tmpdir'] = tmpdir
     return TEST_FILES
-        
-@pytest.mark.skipif(no_files(), reason=NO_FILES_ERR)
+
 def test_analyze_magick(test_files):
+    if no_files():
+        pytest.skip(NO_FILES_ERR)
     print(test_files['jpg']['path'])
     jpeg = imaging.analyze(str(test_files['jpg']['path']))
     print(jpeg)
@@ -98,15 +99,19 @@ def test_analyze_magick(test_files):
     #assert docx['format'] == None
     #assert docx['image'] == False
 
-@pytest.mark.skipif(no_files(), reason=NO_FILES_ERR)
 def test_analyze(test_files):
+    if no_files():
+        pytest.skip(NO_FILES_ERR)
     path0 = '/tmp/missingfile.jpg'
-    assert_raises(Exception, imaging.analyze, path0)
+    with pytest.raises(Exception):
+        imaging.analyze(path0)
     
     path1 = str(test_files['jpg']['path'])
     assert os.path.exists(path1)
     out1 = imaging.analyze(path1)
-    if config.PYTHON_VERSION == '3.11':   # Debian 12 python3
+    if config.PYTHON_VERSION == '3.13':   # Debian 13 python3
+        STDOUT = '{} JPEG 1024x588 1024x588+0+0 8-bit Grayscale Gray 256c 123971B 0.000u 0:00.000'
+    elif config.PYTHON_VERSION == '3.11':   # Debian 12 python3
         STDOUT = '{} JPEG 1024x588 1024x588+0+0 8-bit Gray 256c 123971B 0.000u 0:00.000'
     elif config.PYTHON_VERSION == '3.9':   # Debian 11 python3
         STDOUT = '{} JPEG 1024x588 1024x588+0+0 8-bit Gray 256c 123971B 0.000u 0:00.000'
@@ -138,8 +143,9 @@ def test_geometry_is_ok():
     for s in GEOMETRY['bad']:
         assert imaging.geometry_is_ok(s) == False
 
-@pytest.mark.skipif(no_files(), reason=NO_FILES_ERR)
 def test_thumbnail(test_files):
+    if no_files():
+        pytest.skip(NO_FILES_ERR)
     src = str(test_files['jpg']['path'])
     dest = str(test_files['tmpdir'] / 'test-imaging-thumb.jpg')
     geometry = '100x100'
@@ -147,13 +153,16 @@ def test_thumbnail(test_files):
     imaging.thumbnail(src, dest, geometry)
     assert os.path.exists(dest)
 
-@pytest.mark.skipif(no_files(), reason=NO_FILES_ERR)
 def test_extract_xmp(test_files):
+    if no_files():
+        pytest.skip(NO_FILES_ERR)
     exempi = '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>' \
         '<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Exempi + XMP Core {}">' \
         '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">' \
         '<rdf:Description rdf:about=""/></rdf:RDF></x:xmpmeta><?xpacket end="w"?>'
-    if config.PYTHON_VERSION == '3.11':
+    if config.PYTHON_VERSION == '3.13':
+        expected0 = exempi.format('6.0.0')  # Debian 13 python3
+    elif config.PYTHON_VERSION == '3.11':
         expected0 = exempi.format('6.0.0')  # Debian 12 python3
     elif config.PYTHON_VERSION == '3.9':
         expected0 = exempi.format('5.6.0')  # Debian 11 python3

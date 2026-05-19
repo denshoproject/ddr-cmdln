@@ -3,7 +3,6 @@ import os
 import re
 import shutil
 
-from nose.tools import assert_raises
 import git
 
 from DDR import config
@@ -227,25 +226,42 @@ def test_repo_status(tmpdir):
     assert out0 in STATUS_LONG
     assert out1 in STATUS_SHORT
 
-ANNEX_STATUS = """root: DEBUG: 
-supported backends: SHA256 SHA1 SHA512 SHA224 SHA384 SHA256E SHA1E SHA512E SHA224E SHA384E WORM URL
-supported remote types: git S3 bup directory rsync web hook
-trusted repositories: 0
-semitrusted repositories: 2
+ANNEX_STATUS = """trusted repositories: 0
+semitrusted repositories: 13
         00000000-0000-0000-0000-000000000001 -- web
-        6a1a6842-7916-11e5-bae8-87adf3053078 -- here
+        00000000-0000-0000-0000-000000000002 -- bittorrent
+        01ced719-fc35-47c3-a236-315f73f87695 -- hq-qnfs-gold
+        851de54d-ad61-4f68-ab72-2ad2ee337d66 -- ddr@dev8:/var/www/base/ddr-densho-10
+        a39a106a-e5c7-11e3-8996-bfa1bcf63a02 -- ddrworkstation
+        a587a176-3dca-11e3-b491-9baacb8840e9
+        a5f4d94d-2073-4b59-8c98-9372012a6cbb -- qnfs
+        be8e3e2c-b7af-439a-a2e0-ff74eab7d055 -- cloud-backblaze-b2
+        c52c412e-467d-11e3-b428-7fb930a6e21c
+        e0cfdea6-9f45-11e3-acd9-5f2053c99e7b -- WD5000BMV-2
+        e40dadbc-3dc7-11e3-b055-b3451fbaf671 -- origin
+        e79156ac-c211-491a-a077-a971535a45bb -- hq-shenandoah
+        eade660b-9e5b-4faf-82b5-75ba9c489ada -- ddr@denshodeb10:/var/www/media/ddr/ddr-densho-10 [here]
 untrusted repositories: 0
-dead repositories: 0
-available local disk space: 2 gigabytes (+1 megabyte reserved)
-local annex keys: 0
-local annex size: 0 bytes
-known annex keys: 0
-known annex size: 0 bytes
-bloom filter size: 16 mebibytes (0% full)
+transfers in progress: none
+available local disk space: 76.97 gigabytes (+100 megabytes reserved)
+local annex keys: 2
+local annex size: 537.5 kilobytes
+annexed files in working tree: 1240
+size of annexed files in working tree: 77.38 gigabytes
+combined annex size of all repositories: 154.48 gigabytes
+annex sizes of repositories: 
+         77.29 GB: 01ced719-fc35-47c3-a236-315f73f87695 -- hq-qnfs-gold
+         76.98 GB: e79156ac-c211-491a-a077-a971535a45bb -- hq-shenandoah
+        105.91 MB: a5f4d94d-2073-4b59-8c98-9372012a6cbb -- qnfs
+        105.91 MB: be8e3e2c-b7af-439a-a2e0-ff74eab7d055 -- cloud-backblaze-b2
+         537.5 kB: eade660b-9e5b-4faf-82b5-75ba9c489ada -- ddr@denshodeb10:/var/www/media/ddr/ddr-densho-10 [here]
 backend usage: 
-"""
+        SHA256E: 1240
+bloom filter size: 32 mebibytes (0% full)"""
 
 def test_annex_status(tmpdir):
+    """Cursory test that output of dvcs.annex_status is properly formed
+    """
     path = str(tmpdir / 'test-repo')
     repo = make_repo(path, ['testing'])
     annex_init(repo)
@@ -253,9 +269,9 @@ def test_annex_status(tmpdir):
     cleanup_repo(path)
     found = False
     for key in status.keys():
-        if 'repositories' in key:
+        if key == 'semitrusted repositories':
             for r in status[key]:
-                if r['here']:
+                if r.get('here') and r['here']:
                     found = True
     assert found
 

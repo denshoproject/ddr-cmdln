@@ -50,7 +50,7 @@ def group_files( path ):
     return [f for f in os.listdir(path) if pattern.search(f)]
  
 def group_file_path( path ):
-    """Gets path to CSV file for the specified group based on orgrepo's location.
+    r"""Gets path to CSV file for the specified group based on orgrepo's location.
     
     This is a holdover from when group files were called "drive files"
     and when the group label was always assumed to match a drive label.

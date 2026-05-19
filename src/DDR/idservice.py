@@ -2,7 +2,7 @@ import logging
 logger = logging.getLogger(__name__)
 from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 
-import requests
+import httpx2
 
 from DDR import config
 from DDR import identifier
@@ -58,7 +58,7 @@ class IDServiceClient():
         self.url = url
         self.username = username
         logging.debug('idservice.IDServiceClient.login(%s)' % (self.username))
-        r = requests.post(
+        r = httpx2.post(
             config.IDSERVICE_LOGIN_URL,
             data = {'username':username, 'password':password,},
         )
@@ -87,7 +87,7 @@ class IDServiceClient():
         @return: int,str (status_code,reason)
         """
         logging.debug('idservice.IDServiceClient.logout() %s' % (self.username))
-        r = requests.post(
+        r = httpx2.post(
             config.IDSERVICE_LOGOUT_URL,
             headers=self._auth_headers(),
             timeout=config.REQUESTS_TIMEOUT
@@ -99,7 +99,7 @@ class IDServiceClient():
         
         @return: int,str,dict (status code, reason, userinfo dict)
         """
-        r = requests.get(
+        r = httpx2.get(
             config.IDSERVICE_USERINFO_URL,
             headers=self._auth_headers(),
             timeout=config.REQUESTS_TIMEOUT
@@ -124,10 +124,10 @@ class IDServiceClient():
         )
         if register:
             # POST - register new ID
-            r = requests.post(url, headers=self._auth_headers(), timeout=config.REQUESTS_TIMEOUT)
+            r = httpx2.post(url, headers=self._auth_headers(), timeout=config.REQUESTS_TIMEOUT)
         else:
             # GET - just find out what next ID is
-            r = requests.get(url, headers=self._auth_headers(), timeout=config.REQUESTS_TIMEOUT)
+            r = httpx2.get(url, headers=self._auth_headers(), timeout=config.REQUESTS_TIMEOUT)
         objectid = None
         if r.status_code in [200,201]:
             objectid = r.json()['id']
@@ -138,7 +138,7 @@ class IDServiceClient():
     def check_object_id(object_id: str) -> Dict[str, Union[str,int]]:
         url = '%s/objectids/%s/' % (config.IDSERVICE_API_BASE, object_id)
         try:
-            r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
+            r = httpx2.get(url, timeout=config.REQUESTS_TIMEOUT)
             status = r.status_code
         except:
             status = 500
@@ -156,7 +156,7 @@ class IDServiceClient():
         @returns: (status_code,reason,object_ids)
         """
         url = '%s/objectids/%s/children/' % (config.IDSERVICE_API_BASE, object_id)
-        r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
+        r = httpx2.get(url, timeout=config.REQUESTS_TIMEOUT)
         oids = []
         if r.status_code == 200:
             oids = [o['id'] for o in r.json()]
@@ -187,7 +187,7 @@ class IDServiceClient():
         @returns: (status_code,reason,registered,unregistered)
         """
         logging.debug('idservice.IDServiceClient.check_eids(%s, %s entity_ids)' % (cidentifier, len(entity_ids)))
-        r = requests.post(
+        r = httpx2.post(
             config.IDSERVICE_CHECKIDS_URL.format(objectid=cidentifier.id),
             headers=self._auth_headers(),
             data={'object_ids': entity_ids},
@@ -207,7 +207,7 @@ class IDServiceClient():
         @returns: (status_code,reason,added_ids_list)
         """
         logging.debug('idservice.IDServiceClient.register_eids(%s, %s)' % (cidentifier, entity_ids))
-        r = requests.post(
+        r = httpx2.post(
             config.IDSERVICE_REGISTERIDS_URL.format(objectid=cidentifier.id),
             headers=self._auth_headers(),
             data={'object_ids': entity_ids},
