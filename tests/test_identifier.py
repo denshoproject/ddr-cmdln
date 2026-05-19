@@ -652,20 +652,33 @@ def test_identifier_available():
     assert identifier.available(a, c) == a_c
 
 def test_identifier_wellformed():
+    expected0 = identifier.Identifier.wellformed('id', REPO_ID)
+    assert expected0
+    assert expected0['model'] == 'repository'
+    expected1 = identifier.Identifier.wellformed('id', ORG_ID)
+    assert expected1
+    assert expected1['model']== 'organization'
+    expected2 = identifier.Identifier.wellformed('id', COLLECTION_ID)
+    assert expected2
+    assert expected2['model'] == 'collection'
+    expected3 = identifier.Identifier.wellformed('id', ENTITY_ID)
+    assert expected3
+    assert expected3['model'] == 'entity'
+    expected4 = identifier.Identifier.wellformed('id', FILE_ID)
+    assert expected4
+    assert expected4['model'] == 'file'
+    with pytest.raises(Exception):
+        expected5 = identifier.Identifier.wellformed(
+            'id', 'ddr_test_123_456_master_abcde12345'
+        )
+        assert expected5
+        assert expected5['model'] == 'file'
     for base_path in BASE_PATHS:
         REPO_PATH_ABS       = os.path.join(base_path, 'ddr')
         ORG_PATH_ABS        = os.path.join(base_path, 'ddr-test')
         COLLECTION_PATH_ABS = os.path.join(base_path, 'ddr-test-123')
         ENTITY_PATH_ABS     = os.path.join(base_path, 'ddr-test-123/files/ddr-test-123-456')
         FILE_PATH_ABS       = os.path.join(base_path, 'ddr-test-123/files/ddr-test-123-456/files/ddr-test-123-456-master-a1b2c3d4e5')
-        
-        assert identifier.Identifier.wellformed('id', REPO_ID)
-        assert identifier.Identifier.wellformed('id', ORG_ID)
-        assert identifier.Identifier.wellformed('id', COLLECTION_ID)
-        assert identifier.Identifier.wellformed('id', ENTITY_ID)
-        assert identifier.Identifier.wellformed('id', FILE_ID)
-        with pytest.raises(Exception):
-            identifier.Identifier.wellformed('id', 'ddr_test_123_456_master_abcde12345')
         assert identifier.Identifier.wellformed('path', REPO_PATH_ABS)
         assert identifier.Identifier.wellformed('path', ORG_PATH_ABS)
         assert identifier.Identifier.wellformed('path', COLLECTION_PATH_ABS)
