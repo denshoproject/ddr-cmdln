@@ -1339,7 +1339,7 @@ class Cgit():
             r = self.client.get(url, headers=CGIT_BROWSER_HEADERS)
         #if not HTTPStatus(r.status_code).is_success:
         if not (r.status_code <= 200 <= 299):
-            msg = f"Cgit returned HTTP {r.status_code} {r.reason}.\n" \
+            msg = f"Cgit returned HTTP {r.status_code} {r.reason_phrase}.\n" \
                 "Set username/password in DDR config ([workbench] cgit_username and cgit_password)\n" \
                 "or set environment variables CGIT_USERNAME and CGIT_PASSWORD."
             raise Exception(msg)
