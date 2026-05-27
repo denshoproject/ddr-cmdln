@@ -30,29 +30,29 @@ requires-python = ">=3.13"
 # sudo apt-get install imagemagick libexempi8 libxml2-dev python-dev pmount udisks
 # Elasticsearch 2.4.3
 dependencies = [
-    "beautifulsoup4>=4.12,<4.13", # MIT
-    "b2sdk==2.9.4",               # MIT      y
-    "bpython",
-    "click>=8.1.0,<8.2",          # BSD      y
-    "deepdiff==8.6.1",            # MIT      y
-    "envoy==0.0.3",               # MIT             TODO replace!
-    "gitpython>=3.1.0,<3.2",      # BSD
-    "httpx2",                     # BSD
-    "humanize==4.10.0",           # MIT
-    "internetarchive",
-    "Jinja2>=3.1.5,<3.2.0",       # BSD
-    "natsort>=8.1.0,<8.2",        # MIT
-    "psutil>=5.9.1,<6.0",         # BSD      y
-    "python-dateutil==2.8.1",     # BSD
-    "python-xmp-toolkit==2.1.0",  # New BSD
+    "beautifulsoup4==4.12.3",      # MIT
+    "b2sdk==2.9.4",                # MIT      y
+    "bpython==0.26",
+    "click==8.3.3",                # BSD      y
+    "deepdiff==8.6.1",             # MIT      y
+    "envoy==0.0.3",                # MIT             TODO replace!
+    "gitpython==3.1.46",           # BSD
+    "httpx2==2.0.0",               # BSD
+    "humanize==4.10.0",            # MIT
+    "internetarchive==5.8.0",
+    "jinja2==3.1.6",               # BSD
+    "natsort==8.1.0",              # MIT
+    "psutil==5.9.8",               # BSD      y
+    "python-dateutil==2.9.0.post0",# BSD
+    "python-xmp-toolkit==2.1.0",   # New BSD
     "elastictools @ git+https://github.com/denshoproject/densho-elastictools.git@v1.0.2",
 ]
 
 [project.optional-dependencies]
 testing = [
     "mypy",
-    "pytest",
-    "pytest-cov",
+    "pytest==9.0.3",
+    "pytest-cov==7.1.0",
 ]
 
 [project.scripts]

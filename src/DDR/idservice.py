@@ -66,7 +66,7 @@ class IDServiceClient():
             self.token = r.json().get('key')
         except ValueError:
             pass
-        return r.status_code,r.reason
+        return r.status_code,r.reason_phrase
     
     def _auth_headers(self) -> Dict[str,str]:
         return {'Authorization': 'Token %s' % self.token}
@@ -92,7 +92,7 @@ class IDServiceClient():
             headers=self._auth_headers(),
             timeout=config.REQUESTS_TIMEOUT
         )
-        return r.status_code,r.reason
+        return r.status_code,r.reason_phrase
     
     def user_info(self) -> Tuple[int,str,str]:
         """Get user information (username, first/last name, email)
@@ -104,7 +104,7 @@ class IDServiceClient():
             headers=self._auth_headers(),
             timeout=config.REQUESTS_TIMEOUT
         )
-        return r.status_code,r.reason,r.json()
+        return r.status_code,r.reason_phrase,r.json()
     
     def next_object_id(self,
                        oidentifier: identifier.Identifier,
@@ -132,7 +132,7 @@ class IDServiceClient():
         if r.status_code in [200,201]:
             objectid = r.json()['id']
             logging.debug(objectid)
-        return r.status_code,r.reason,objectid
+        return r.status_code,r.reason_phrase,objectid
     
     @staticmethod
     def check_object_id(object_id: str) -> Dict[str, Union[str,int]]:
@@ -160,7 +160,7 @@ class IDServiceClient():
         oids = []
         if r.status_code == 200:
             oids = [o['id'] for o in r.json()]
-        return r.status_code,r.reason,oids
+        return r.status_code,r.reason_phrase,oids
     
     # TODO type hints
     @staticmethod
@@ -195,7 +195,7 @@ class IDServiceClient():
         )
         data = r.json()
         #logging.debug(data)
-        return r.status_code,r.reason,data['registered'],data['unregistered']
+        return r.status_code,r.reason_phrase,data['registered'],data['unregistered']
     
     def register_eids(self,
                       cidentifier: identifier.Identifier,
@@ -215,4 +215,4 @@ class IDServiceClient():
         )
         data = r.json()
         logging.debug(data)
-        return r.status_code,r.reason,data['created']
+        return r.status_code,r.reason_phrase,data['created']
