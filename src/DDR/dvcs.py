@@ -1422,12 +1422,14 @@ class Gitolite(object):
     
     def __init__(self,
                  server: str=config.GITOLITE,
+                 identity: str=config.GITOLITE_IDENTITY,
                  timeout: int=config.GITOLITE_TIMEOUT):
         """
         @param server: USERNAME@DOMAIN
         @param timeout: int Maximum seconds to wait for reponse
         """
         self.server = server
+        self.identity = identity
         self.timeout = timeout
     
     def __repr__(self) -> str:
@@ -1446,10 +1448,12 @@ class Gitolite(object):
     def initialize(self):
         """Connect to Gitolite server.
         """
-        cmd = 'ssh {} info'.format(self.server)
-        logging.debug('        {}'.format(cmd))
+        cmd = f"ssh {self.server} info"
+        if self.identity:
+            cmd = f"ssh -i {self.identity} {self.server} info"
+        logging.debug(f"        {cmd} timeout={self.timeout}")
         r = envoy.run(cmd, timeout=int(self.timeout))
-        logging.debug('        {}'.format(r.status_code))
+        logging.debug(f"        {r.status_code}")
         self.status = r.status_code
         if self.status == 0:
             self.info = r.std_out
