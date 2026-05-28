@@ -1,8 +1,8 @@
 from pathlib import Path
 from urllib.parse import urlparse, urlunparse
 
+import httpx2
 import pytest
-import requests
 
 from DDR import config
 from DDR import identifier
@@ -28,7 +28,7 @@ def no_idservice():
     """
     try:
         print(config.IDSERVICE_API_BASE)
-        r = requests.get(config.IDSERVICE_API_BASE, timeout=1)
+        r = httpx2.get(config.IDSERVICE_API_BASE, timeout=10)
         print(r.status_code)
         if r.status_code == 200:
             return False
@@ -41,28 +41,28 @@ def no_idservice():
 @pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_groups():
     url = mkurl('groups')
-    response = requests.get(url)
+    response = httpx2.get(url)
     assert response.status_code == 200
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
 @pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_group():
     url = mkurl('groups/1')
-    response = requests.get(url)
+    response = httpx2.get(url)
     assert response.status_code == 200
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
 @pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_users():
     url = mkurl('users')
-    response = requests.get(url)
+    response = httpx2.get(url)
     assert response.status_code == 401
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
 @pytest.mark.skipif(no_idservice(), reason=NO_IDSERVICE_ERR)
 def test_user():
     url = mkurl('users/1')
-    response = requests.get(url)
+    response = httpx2.get(url)
     assert response.status_code == 401
 
 @pytest.mark.skipif(no_username_password(), reason=SKIP_REASON)
@@ -99,7 +99,7 @@ def test_detail():
     print(code,status)
     url = mkurl('objectids/ddr-testing-1/')
     print(url)
-    r = requests.get(url)
+    r = httpx2.get(url)
     print(r.status_code,r.reason)
     assert r.status_code == 200
 
@@ -112,7 +112,7 @@ def test_children():
     code,status = ic.login(config.IDSERVICE_USERNAME, config.IDSERVICE_PASSWORD)
     assert code == 200
     url = mkurl('objectids/ddr-testing-1/children/')
-    r = requests.get(url)
+    r = httpx2.get(url)
     assert r.status_code == 200
     print(r.text)
     data = r.json()
@@ -135,7 +135,7 @@ def test_children():
 #    url = mkurl('objectids/ddr-testing-1/check/')
 #    print(url)
 #    data = {"object_ids": ["ddr-testing-1","ddr-testing-2"]}
-#    r = requests.post(url, data=data)
+#    r = httpx2.post(url, data=data)
 #    print(r.status_code)
 #    print(r.reason)
 #    assert r.status_code == 200
@@ -159,7 +159,7 @@ def test_children():
 #    data = {'object_ids': [
 #        'ddr-testing-1-1','ddr-testing-1-2','ddr-testing-1-3',
 #    ]}
-#    r = requests.post(url, data=data)
+#    r = httpx2.post(url, data=data)
 #    print(r.status_code)
 #    print(r.reason)
 #    assert r.status_code == 200
@@ -185,7 +185,7 @@ def test_next_collection():
     url = mkurl('objectids/ddr-testing/next/collection/')
     # GET
     print(url)
-    r = requests.get(url)
+    r = httpx2.get(url)
     assert r.status_code == 200
     print(r.status_code)
     print(r.text)
@@ -216,7 +216,7 @@ def test_next_entity():
     assert code == 200
     url = mkurl('objectids/ddr-testing-1/next/entity/')
     print(url)
-    r = requests.get(url)
+    r = httpx2.get(url)
     assert r.status_code == 200
     print(r.status_code)
     print(r.text)
@@ -244,7 +244,7 @@ def test_next_entity():
 #    print(code,status)
 #    url = mkurl('objectids/ddr-testing-1/')
 #    print(url)
-#    r = requests.get(url)
+#    r = httpx2.get(url)
 #    print(r.status_code,r.reason)
 #    assert r.status_code == 200
 

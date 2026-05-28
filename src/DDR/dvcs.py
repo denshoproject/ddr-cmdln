@@ -16,7 +16,7 @@ from dateutil import parser
 import envoy
 import git
 from git.exc import GitCommandError
-import requests
+import httpx2
 
 from DDR import config
 from DDR import fileio
@@ -290,7 +290,7 @@ def _parse_list_committed(entry: str) -> List[str]:
     return files
     
 def list_committed(repo: git.Repo, commit: git.Commit) -> List[str]:
-    """Returns list of all files in the commit
+    r"""Returns list of all files in the commit
 
     $ git log -1 --stat 0a1b2c3d4e...|grep \|
 
@@ -1270,11 +1270,11 @@ class Cgit():
     
     def __init__(self, cgit_url: str=config.CGIT_URL):
         self.url = cgit_url
-        self.session = requests.Session()
+        self.client = httpx2.Client()
     
     def collection_title(self,
                          repo: str,
-                         session: requests.Session,
+                         session: httpx2.Client,
                          timeout: int=config.REQUESTS_TIMEOUT) -> str:
         """Gets collection title from CGit
         
@@ -1282,7 +1282,7 @@ class Cgit():
         PROBLEM: requires knowledge of repository internals.
         
         @param repo: str Repository name
-        @param session: requests.Session
+        @param session: httpx2.Client
         @param timeout: int
         @returns: str Repository collection title
         """
@@ -1293,8 +1293,8 @@ class Cgit():
         try:
             r = session.get(url, timeout=timeout)
             logging.debug(str(r.status_code))
-        except requests.ConnectionError:
-            title = '[ConnectionError]'
+        except httpx2.ConnectError:
+            title = '[ConnectError]'
         data = None
         if r and r.status_code == 200:
             try:
@@ -1331,15 +1331,15 @@ class Cgit():
         """
         url = f"{self.url}/cgit.cgi/?ofs=0"
         if hasattr(self, 'username') and hasattr(self, 'password'):
-            r = self.session.get(
+            r = self.client.get(
                 url, auth=(self.username,self.password),
                 headers=CGIT_BROWSER_HEADERS
             )
         else:
-            r = self.session.get(url, headers=CGIT_BROWSER_HEADERS)
+            r = self.client.get(url, headers=CGIT_BROWSER_HEADERS)
         #if not HTTPStatus(r.status_code).is_success:
         if not (r.status_code <= 200 <= 299):
-            msg = f"Cgit returned HTTP {r.status_code} {r.reason}.\n" \
+            msg = f"Cgit returned HTTP {r.status_code} {r.reason_phrase}.\n" \
                 "Set username/password in DDR config ([workbench] cgit_username and cgit_password)\n" \
                 "or set environment variables CGIT_USERNAME and CGIT_PASSWORD."
             raise Exception(msg)
@@ -1365,7 +1365,7 @@ class Cgit():
         }
         """
         url = f"{self.url}/cgit.cgi/?ofs={offset}"
-        r = self.session.get(
+        r = self.client.get(
             url, auth=(self.username,self.password),
             headers=CGIT_BROWSER_HEADERS
         )
@@ -1422,12 +1422,14 @@ class Gitolite(object):
     
     def __init__(self,
                  server: str=config.GITOLITE,
+                 identity: str=config.GITOLITE_IDENTITY,
                  timeout: int=config.GITOLITE_TIMEOUT):
         """
         @param server: USERNAME@DOMAIN
         @param timeout: int Maximum seconds to wait for reponse
         """
         self.server = server
+        self.identity = identity
         self.timeout = timeout
     
     def __repr__(self) -> str:
@@ -1446,10 +1448,12 @@ class Gitolite(object):
     def initialize(self):
         """Connect to Gitolite server.
         """
-        cmd = 'ssh {} info'.format(self.server)
-        logging.debug('        {}'.format(cmd))
+        cmd = f"ssh {self.server} info"
+        if self.identity:
+            cmd = f"ssh -i {self.identity} {self.server} info"
+        logging.debug(f"        {cmd} timeout={self.timeout}")
         r = envoy.run(cmd, timeout=int(self.timeout))
-        logging.debug('        {}'.format(r.status_code))
+        logging.debug(f"        {r.status_code}")
         self.status = r.status_code
         if self.status == 0:
             self.info = r.std_out

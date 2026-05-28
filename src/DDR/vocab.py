@@ -103,7 +103,7 @@ from typing import Any, Dict, List, Match, Optional, Set, Tuple, Union
 import urllib.parse
 
 from dateutil import parser
-import requests
+import httpx2
 
 from DDR import config
 from DDR import converters
@@ -583,7 +583,7 @@ def _get_vocab_http(url: str) -> Dict[str,str]:
     @param path: str URL of vocabulary file (.json)
     """
     logging.debug('getting vocab: %s' % url)
-    r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
+    r = httpx2.get(url, timeout=config.REQUESTS_TIMEOUT)
     if r.status_code != 200:
         raise Exception(
             'vocabulary file missing: %s' % (url))
@@ -610,7 +610,7 @@ def _get_vocabs_all_http(base_url, exclude=['index','narrators']):
     @returns: dict
     """
     url = os.path.join(base_url, 'index.json')
-    r = requests.get(url, timeout=config.REQUESTS_TIMEOUT)
+    r = httpx2.get(url, timeout=config.REQUESTS_TIMEOUT)
     if r.status_code != 200:
         try:
             r_json = r.json()

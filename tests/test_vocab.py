@@ -19,7 +19,7 @@ def no_vocabs():
         return False
     try:
         print(config.VOCABS_URL)
-        r = requests.get(config.VOCABS_URL, timeout=1)
+        r = httpx2.get(config.VOCABS_URL, timeout=10)
         print(r.status_code)
         if r.status_code == 200:
             return False

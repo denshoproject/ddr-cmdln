@@ -4,11 +4,8 @@ import os
 import sys
 
 from elasticsearch.connection.base import TransportError
-from nose.tools import assert_raises
-from nose.plugins.attrib import attr
+import httpx2
 import pytest
-import requests
-from requests import ConnectionError
 
 from DDR import config
 from DDR import docstore
@@ -27,11 +24,11 @@ def no_elasticsearch():
     if DISABLE_SKIP:
         return False
     try:
-        r = requests.get(HOST_CHECK_URL, timeout=1)
+        r = httpx2.get(HOST_CHECK_URL, timeout=10)
         if r.status_code == 200:
             return False
-    except ConnectionError:
-        print('ConnectionError')
+    except httpx2.ConnectError:
+        print('ConnectError')
         return True
     except TransportError:
         print('TransportError')

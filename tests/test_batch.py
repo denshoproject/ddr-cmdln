@@ -5,7 +5,6 @@ from pathlib import Path
 import urllib
 
 import git
-from nose.tools import assert_raises
 import pytest
 
 from DDR import batch
