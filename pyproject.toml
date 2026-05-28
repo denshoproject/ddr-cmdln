@@ -34,7 +34,7 @@ dependencies = [
     "b2sdk==2.9.4",                # MIT      y
     "bpython==0.26",
     "click==8.3.3",                # BSD      y
-    "deepdiff==8.6.1",             # MIT      y
+    "deepdiff==8.6.2",             # MIT      y
     "envoy==0.0.3",                # MIT             TODO replace!
     "gitpython==3.1.46",           # BSD
     "httpx2==2.0.0",               # BSD
@@ -45,7 +45,7 @@ dependencies = [
     "psutil==5.9.8",               # BSD      y
     "python-dateutil==2.9.0.post0",# BSD
     "python-xmp-toolkit==2.1.0",   # New BSD
-    "elastictools @ git+https://github.com/denshoproject/densho-elastictools.git@v1.0.2",
+    "elastictools @ git+https://github.com/denshoproject/densho-elastictools.git@v1.1.3",
 ]
 
 [project.optional-dependencies]
