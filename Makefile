@@ -256,7 +256,7 @@ install-virtualenv:
 install-dependencies: apt-backports
 	@echo ""
 	@echo "install-dependencies ---------------------------------------------------"
-	apt-get --assume-yes install python3-dev python3-pip python3-venv ntpsec
+	apt-get --assume-yes install python3-dev ntpsec
 	apt-get --assume-yes install libxml2-dev libxslt1-dev libz-dev pmount udisks2
 	apt-get --assume-yes install imagemagick libssl-dev libxml2 libxml2-dev libxslt1-dev
 	apt-get --assume-yes install $(LIBEXEMPI3_PKG)
@@ -502,8 +502,6 @@ deb-trixie:
 	--depends "libz-dev"   \
 	--depends "pmount"   \
 	--depends "python3-dev"   \
-	--depends "python3-pip"   \
-	--depends "python3-venv"   \
 	--depends "udisks2"   \
 	--after-install "bin/fpm-after-install.sh"   \
 	--chdir $(INSTALL_CMDLN)   \
