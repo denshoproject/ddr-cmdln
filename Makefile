@@ -527,7 +527,7 @@ deb-trixie:
 	src=$(DEB_BASE)   \
 	tests=$(DEB_BASE)   \
 	tox.ini=$(DEB_BASE)   \
-	venv=$(DEB_BASE)   \
+	.venv=$(DEB_BASE)   \
 	VERSION=$(DEB_BASE)
 # Put worktree pointer file back in place
 	python3 bin/deb-prep-post.py after
